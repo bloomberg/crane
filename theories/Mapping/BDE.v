@@ -5,7 +5,7 @@
     Maps [option], [prod], [string], [int63], and [float] to their
     BDE equivalents ([bsl::optional], [bsl::pair], [bsl::string] with a
     [bsl::string_view] read view, [int64_t], [double]), and [char63] to
-    [char], as typed mappings (docs/typed-mappings-design.md): they
+    [int64_t], as typed mappings (docs/typed-mappings-design.md): they
     activate on [Import].  The descriptors are [Mapping.StdCore]'s and
     [Mapping.Std]'s with the [bsl] spellings.
 
@@ -100,8 +100,8 @@ Local Open Scope pstring_scope.
 
 From Corelib Require Import PrimString.
 #[export] Instance bde_char63_mapping : TypeMapping PrimString.char63 :=
-  {| type_headers := [];
-     type_cpp := Crane.Cpp.Name "char";
+  {| type_headers := ["bsl_cstdint.h"];
+     type_cpp := Crane.Cpp.Name "int64_t";
      type_components := [];
      type_copy := BitCopy;
      type_access := ReadOnlyValue ReadByValue;
@@ -151,7 +151,7 @@ From Corelib Require Import PrimString.
 
 #[export] Instance bde_string_get_mapping : OperationMapping (Ref PrimString.get) :=
   {| operation_headers := ["bsl_string_view.h"];
-     operation_cpp := Expr "((%arg(i) >= 0 && %arg(i) < static_cast<int64_t>(%arg(s).length())) ? %arg(s)[%arg(i)] : static_cast<char>(0))";
+     operation_cpp := Expr "((%arg(i) >= 0 && %arg(i) < static_cast<int64_t>(%arg(s).length())) ? static_cast<int64_t>(static_cast<unsigned char>(%arg(s)[%arg(i)])) : INT64_C(0))";
      operation_contract :=
        PureOperation
          [{| argument_name := "s"; argument_use := Read |};

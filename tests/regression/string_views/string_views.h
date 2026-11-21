@@ -9,7 +9,7 @@
 struct StringViews {
   static int64_t size_of(std::string_view x0_);
   static std::string describe(const std::string &name, std::string greeting);
-  static char initial(std::string_view s);
+  static int64_t initial(std::string_view s);
   static int64_t c_size(const std::string &x0_);
   static std::string nonempty_or(std::string s, std::string fallback);
   static std::string first_two(std::string_view s);

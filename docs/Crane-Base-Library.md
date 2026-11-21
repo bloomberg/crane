@@ -37,7 +37,7 @@ Imports and re-exports `Mapping/Shared.v`.
 - **`option`** → `std::optional<T>`
 - **`prod`** → `std::pair<T, U>`
 - **`fst`, `snd`** → `.first`, `.second`
-- **`PrimString.char63`** → `char`
+- **`PrimString.char63`** → `int64_t` (it is `int` by definition; `get` reads a byte as 0..255)
 - **`PrimString.string`** → `std::string`
 - **`PrimInt63.int`** → `int64_t` (with 63-bit masking for arithmetic operations)
 - **`PrimFloat.float`** → `double`
@@ -52,7 +52,7 @@ Imports and re-exports `Mapping/Shared.v`.
 - **`option`** → `bsl::optional<T>`
 - **`prod`** → `bsl::pair<T, U>`
 - **`fst`, `snd`** → `.first`, `.second`
-- **`PrimString.char63`** → `char`
+- **`PrimString.char63`** → `int64_t` (it is `int` by definition; `get` reads a byte as 0..255)
 - **`PrimString.string`** → `std::string` (via `bsl_string.h`)
 - **`PrimInt63.int`** → `int64_t` (via `bsl_cstdint.h`, no masking)
 - **`PrimFloat.float`** → `double`

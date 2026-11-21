@@ -4,7 +4,7 @@
 
     Maps [option], [prod], [int63], and [float] to their C++ standard
     library equivalents ([std::optional], [std::pair], [int64_t],
-    [double]), and [char63] to [char], as typed mappings
+    [double]), and [char63] to [int64_t] (see below), as typed mappings
     (docs/typed-mappings-design.md 15): they activate on [Import].  [Std]
     adds the [string] mapping.
 
@@ -100,10 +100,14 @@ Local Open Scope pstring_scope.
        PureOperation [{| argument_name := "p"; argument_use := Read |}]
          (ReturnBorrowed CanonicalBorrow {| path_argument := "p"; path_components := ["second"] |}) [] |}.
 
+(** [char63] is [int] by definition: [get] reads a byte as 0..255, and
+    any [int] is a [char63].  So it is [int63]'s [int64_t]; a [char] would
+    read a byte at or above 128 as negative, and drop all but a byte of
+    any larger value. *)
 From Corelib Require Import PrimString.
 #[export] Instance std_char63_mapping : TypeMapping PrimString.char63 :=
-  {| type_headers := [];
-     type_cpp := Crane.Cpp.Name "char";
+  {| type_headers := ["cstdint"];
+     type_cpp := Crane.Cpp.Name "int64_t";
      type_components := [];
      type_copy := BitCopy;
      type_access := ReadOnlyValue ReadByValue;

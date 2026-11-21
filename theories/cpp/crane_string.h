@@ -25,10 +25,11 @@ inline std::string string_cat(std::string_view left, std::string_view right) {
 }
 
 // PrimString.get: total, an index out of range reads the null character.
-inline char string_get(std::string_view text, std::int64_t i) {
+// The byte is read unsigned, 0..255, as Rocq's char63.
+inline std::int64_t string_get(std::string_view text, std::int64_t i) {
   return (i >= 0 && static_cast<std::uint64_t>(i) < text.size())
-             ? text[static_cast<std::size_t>(i)]
-             : static_cast<char>(0);
+             ? static_cast<unsigned char>(text[static_cast<std::size_t>(i)])
+             : 0;
 }
 
 // PrimString.sub: total, an offset at or past the end gives the empty

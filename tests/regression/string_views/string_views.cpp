@@ -15,7 +15,7 @@ std::string StringViews::describe(const std::string &name,
   }
 }
 
-char StringViews::initial(std::string_view s) {
+int64_t StringViews::initial(std::string_view s) {
   return crane::string_get(s, INT64_C(0));
 }
 

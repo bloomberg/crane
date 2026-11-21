@@ -30,7 +30,7 @@ static_assert(
     std::is_same_v<decltype(&StringViews::describe),
                    std::string (*)(const std::string &, std::string)>);
 static_assert(std::is_same_v<decltype(&StringViews::initial),
-                             char (*)(std::string_view)>);
+                             int64_t (*)(std::string_view)>);
 static_assert(std::is_same_v<decltype(&StringViews::c_size),
                              int64_t (*)(const std::string &)>);
 static_assert(std::is_same_v<decltype(&StringViews::nonempty_or),

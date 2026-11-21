@@ -1,6 +1,7 @@
 #pragma once
 
 #include "crane_fn.h"
+#include "obj.h"
 #include <atomic>
 #include <crane_string.h>
 #include <cstdint>
@@ -174,4 +175,12 @@ struct StringGetHighByte {
   static inline const bool high_above_low =
       crane::string_get(std::string_view("a"), INT64_C(0)) <
       crane::string_get(accented, INT64_C(0));
+  /// A char63 is any int: one above 255 keeps its value.
+  static inline const int64_t wide = crane::any_cast<int64_t>(
+      static_cast<int64_t>(
+          (static_cast<uint64_t>(crane::string_get(accented, INT64_C(0))) +
+           static_cast<uint64_t>(INT64_C(100))) &
+          0x7FFFFFFFFFFFFFFFULL));
+  static inline const uint64_t wide_code =
+      BinInt::to_nat(Uint63Axioms::to_Z(wide));
 };

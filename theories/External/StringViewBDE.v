@@ -19,14 +19,14 @@ Crane Extract Inlined Constant substr =>
   "((%a1 >= 0 && %a1 <= static_cast<int64_t>(%a0.length())) ? %a0.substr(%a1, %a2) : bsl::basic_string_view<char>())"
   From "bsl_string_view.h".
 Crane Extract Inlined Constant sv_of_string => "{%a0.data(), %a0.size()}" From "bsl_string_view.h".
-Crane Extract Inlined Constant contains => "%a0.contains(%a1)" From "bsl_string_view.h".
+Crane Extract Inlined Constant contains => "%a0.contains(static_cast<char>(%a1))" From "bsl_string_view.h".
 (* The [sv_get] axioms (StringViewDefs.v) constrain only in-range indices, so
    returning the null char for an out-of-range index is consistent with the
    specification and makes the operation total. The bounds check prevents an
    out-of-bounds read of a possibly non-owning [bsl::string_view] (CWE-125).
    Use [sv_at] when a throwing, checked accessor is desired instead. *)
 Crane Extract Inlined Constant sv_get =>
-  "((%a1 >= 0 && %a1 < static_cast<int64_t>(%a0.length())) ? %a0[%a1] : static_cast<char>(0))"
+  "((%a1 >= 0 && %a1 < static_cast<int64_t>(%a0.length())) ? static_cast<int64_t>(static_cast<unsigned char>(%a0[%a1])) : INT64_C(0))"
   From "bsl_string_view.h".
-Crane Extract Inlined Constant sv_at => "%a0.at(%a1)" From "bsl_string_view.h".
+Crane Extract Inlined Constant sv_at => "static_cast<int64_t>(static_cast<unsigned char>(%a0.at(%a1)))" From "bsl_string_view.h".
 Crane Extract Inlined Constant empty_sv => "bsl::string_view(nullptr, 0)" From "bsl_string_view.h".

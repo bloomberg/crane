@@ -251,17 +251,6 @@
   (deps bake_prim_string.t.exe)
   (action (run ./bake_prim_string.t.exe))))
 
-(subdir string_get_high_byte
- (rule
-  (targets string_get_high_byte.t.exe)
-  (deps StringGetHighByte.vo string_get_high_byte.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} string_get_high_byte.t.exe string_get_high_byte.t.cpp string_get_high_byte.cpp)))
- (rule
-  (alias runtest)
-  (deps string_get_high_byte.t.exe)
-  (action (run ./string_get_high_byte.t.exe))))
-
 (subdir ascii_char_without_bool_mapping
  (rule
   (targets ascii_char_without_bool_mapping.t.exe)
