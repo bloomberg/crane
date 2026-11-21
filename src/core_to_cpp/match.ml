@@ -1993,7 +1993,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
           (stmts, taken || (is_typeclass && match decl_ty with Reference _ -> false | _ -> true)) )
         (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
     in
-    Cpp_ir.Build.iife None
+    Match_types.value_iife ?ret:expected_ty cx env (Some r)
       (cache @ List.concat_map fst asgns
        @ Binders.with_binders cx env renamed_ids (fun () ->
              if Base.Probe.checking () then

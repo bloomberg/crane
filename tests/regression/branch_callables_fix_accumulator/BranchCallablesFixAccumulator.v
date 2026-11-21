@@ -4,16 +4,14 @@
     c)]) and a plain lambda, passed as the accumulator argument of a local
     fixpoint, inside an argument of a beta-redex.
 
-    Expected: compiles; [t_1 = 0] (the fixpoint ignores its accumulator and
-    returns [fun _ => []]).
-
-    Actual: compile errors "return type '(lambda at ...)' must match
-    previous return type '(lambda at ...)' when lambda expression has
-    unspecified explicit return type" and "no viable overloaded '='": the
-    match becomes an immediately invoked lambda without a return type whose
-    branches return two distinct closure types; no common [crane::fn] type is
-    written for it in this position. Without the local fixpoint, or with a
-    plain [if] on the parameter, it compiles. Also on main. *)
+    Fixed: the match takes a record apart before its [if], and that
+    destructuring was an immediately invoked lambda built with no return
+    type, the one such lambda the callable join (a lambda returning from
+    several places, one a callable, is declared at a [crane::fn]) did not
+    reach: its branches returned two distinct closure types ("return type
+    '(lambda at ...)' must match previous return type"). Every immediately
+    invoked lambda computing a value now goes through one join
+    ([Match_types.value_iife]). Expected [t_1 = 0]. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
 From Stdlib Require Import List.

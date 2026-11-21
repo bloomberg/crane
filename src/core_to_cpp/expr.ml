@@ -269,7 +269,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
        Wrap in an IIFE, delegating to gen_stmts which handles Core.Expr.Apply(Core.Expr.Fixpoint
        ...). *)
     with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-      Cpp_ir.Build.iife None (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries, as Core decided it
      ({!Core_plan.Elaborate.static_projection_call}). *)
@@ -505,19 +505,16 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
         let body = gen_stmts cx ~slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a in
         (* Returning a closure from one path and another closure, or a
            function-typed local, from the next, the lambda deduces no
-           common type: it is declared at the let's own.  The expected
-           type, where there is one, is what the caller converts to, which
-           need not be a type the lambda's returns share. *)
-        let ret =
-          Option.bind (infer_core_body_type a) (fun rty ->
-              Match_types.iife_closure_return_at ~several:true cx env rty body )
-        in
-        Cpp_ir.Build.iife ret body ) ) )
+           common type: it is declared at the let's own, or at the expected
+           type where that only regroups its arrows.  Otherwise the expected
+           type is what the caller converts to, which need not be a type the
+           lambda's returns share. *)
+        Match_types.value_iife ?ret:expected_ty cx env (infer_core_body_type a) body ) ) )
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ as a ->
     (* Bare fixpoint in expression context: wrap in IIFE, delegate to
        gen_stmts. *)
     with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-      Cpp_ir.Build.iife None (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
   | Core.Expr.String s -> Literal (String s)
   | Core.Expr.UInt63 x -> Literal (Uint63 x)
   | Core.Expr.Numeral {inductive = ind; value = n} -> (

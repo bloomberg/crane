@@ -251,6 +251,14 @@ and iife_closure_return_at ?(several = false) ?ret cx env rty (stmts : Cpp_ir.Lo
   if not !found || (several && !returns < 2) then None
   else match Types.cpp_of_core cx env rty with Function _ as r -> joined_at ~ret r | _ -> None
 
+(** An immediately invoked lambda over [body], computing a value annotated
+    [rty] -- the Core type of the term it stands for -- whose returns are
+    written under [ret]: declared at the type its callables join at
+    ({!iife_closure_return_at}), deduced where they need none.  Every lambda
+    of the kind that returns from more than one place goes through it. *)
+and value_iife ?ret cx env (rty : Core.Type.t option) body : Cpp_ir.Lowered.Expr.t =
+  Cpp_ir.Build.iife (Option.bind rty (fun rty -> iife_closure_return_at ~several:true ?ret cx env rty body)) body
+
 (** [pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     ~non_erased_def_site_field_tys] -- what a pattern-match branch pins down
     about each of its [n_fields] fields, in field order: whether the field is

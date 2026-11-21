@@ -25,7 +25,7 @@ uint64_t BranchCallablesFixAccumulator::pick(bool b) {
   w = [=](crane::fn<uint64_t(uint64_t)> _pa0) {
     return go(
         List<uint64_t>::nil(),
-        [&]() {
+        [&]() -> crane::fn<List<uint64_t>(crane::fn<uint64_t(uint64_t)>)> {
           auto _cs =
               List<BranchCallablesFixAccumulator::r3>::nil().template fold_left<
                   BranchCallablesFixAccumulator::r3>(
