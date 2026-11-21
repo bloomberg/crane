@@ -29,6 +29,6 @@ SumSideSurvivesVis::first_side(const std::shared_ptr<ITree<uint64_t>> &t) {
     const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
     auto e = crane_event_as<Sum1<AE, AE, crane::obj>>(_itf.effect);
     auto _x = _itf.cont;
-    return side<void>(e);
+    return side<void>(std::move(e));
   }
 }

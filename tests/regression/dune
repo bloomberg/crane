@@ -15350,3 +15350,36 @@
   (alias runtest)
   (deps typed_mapping_exact_numbers.t.exe)
   (action (run ./typed_mapping_exact_numbers.t.exe))))
+
+(subdir loopify_final_move
+ (rule
+  (targets loopify_final_move.t.exe)
+  (deps LoopifyFinalMove.vo loopify_final_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_final_move.t.exe loopify_final_move.t.cpp loopify_final_move.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_final_move.t.exe)
+  (action (run ./loopify_final_move.t.exe))))
+
+(subdir pair_abstract_components_by_reference
+ (rule
+  (targets pair_abstract_components_by_reference.t.exe)
+  (deps PairAbstractComponentsByReference.vo pair_abstract_components_by_reference.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_abstract_components_by_reference.t.exe pair_abstract_components_by_reference.t.cpp pair_abstract_components_by_reference.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_abstract_components_by_reference.t.exe)
+  (action (run ./pair_abstract_components_by_reference.t.exe))))
+
+(subdir frame_save_copied_binder
+ (rule
+  (targets frame_save_copied_binder.t.exe)
+  (deps FrameSaveCopiedBinder.vo frame_save_copied_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} frame_save_copied_binder.t.exe frame_save_copied_binder.t.cpp frame_save_copied_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps frame_save_copied_binder.t.exe)
+  (action (run ./frame_save_copied_binder.t.exe))))

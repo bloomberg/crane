@@ -17,10 +17,10 @@ mpz_class Pos::add_carry(const mpz_class &x, const mpz_class &y) {
       return (2 * (p + 1) + 1);
     } else if (y % 2 != 0) {
       mpz_class q = (y - 1) / 2;
-      return (2 * add_carry(p, q) + 1);
+      return (2 * add_carry(std::move(p), std::move(q)) + 1);
     } else {
       mpz_class q = y / 2;
-      return (2 * add_carry(p, q));
+      return (2 * add_carry(std::move(p), std::move(q)));
     }
   } else {
     mpz_class p = x / 2;
@@ -28,7 +28,7 @@ mpz_class Pos::add_carry(const mpz_class &x, const mpz_class &y) {
       return (2 * (p + 1));
     } else if (y % 2 != 0) {
       mpz_class q = (y - 1) / 2;
-      return (2 * add_carry(p, q));
+      return (2 * add_carry(std::move(p), std::move(q)));
     } else {
       mpz_class q = y / 2;
       return (2 * (p + q) + 1);

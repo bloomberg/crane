@@ -222,22 +222,22 @@ Interp::interp(const std::type_identity_t<
           const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);
           auto r = _itf.value;
           return _tcI1::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
-              Sum<std::shared_ptr<ITree<T3>>, T3>::inr(r));
+              Sum<std::shared_ptr<ITree<T3>>, T3>::inr(std::move(r)));
         } else if (std::holds_alternative<typename ITree<T3>::Tau>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<T3>::Tau>(&_cs);
           auto t0 = _itf.next;
           return _tcI1::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
-              Sum<std::shared_ptr<ITree<T3>>, T3>::inl(t0));
+              Sum<std::shared_ptr<ITree<T3>>, T3>::inl(std::move(t0)));
         } else {
           const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
           auto e = crane_event_as<T1>(_itf.effect);
           auto k = _itf.cont;
           return _tcI2::template fmap<crane::obj,
                                       Sum<std::shared_ptr<ITree<T3>>, T3>>(
-              [=](const auto &x) {
+              [=, k = std::move(k)](const auto &x) {
                 return Sum<std::shared_ptr<ITree<T3>>, T3>::inl(k(x));
               },
-              h0(e));
+              h0(std::move(e)));
         }
       },
       x0_);

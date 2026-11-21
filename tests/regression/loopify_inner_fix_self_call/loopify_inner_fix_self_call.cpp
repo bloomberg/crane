@@ -110,7 +110,7 @@ LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
       LoopifyInnerFixSelfCall::tree l = std::move(_f.l);
       if (std::holds_alternative<typename LoopifyInnerFixSelfCall::tree::Leaf>(
               l.v_mut())) {
-        _result = add(x0_, x1_);
+        _result = add(x0_, std::move(x1_));
       } else {
         auto &[a0, a1, a2] =
             std::get<typename LoopifyInnerFixSelfCall::tree::Node>(l.v_mut());

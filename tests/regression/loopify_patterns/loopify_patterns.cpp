@@ -750,11 +750,12 @@ LoopifyPatterns::process_twice_fuel(uint64_t fuel,
       } else {
         uint64_t f = fuel - 1;
         if (std::holds_alternative<
-                typename LoopifyPatterns::list<uint64_t>::Nil>(l.v())) {
+                typename LoopifyPatterns::list<uint64_t>::Nil>(l.v_mut())) {
           _result = list<uint64_t>::nil();
         } else {
-          const auto &[a0, a1] =
-              std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(l.v());
+          auto &[a0, a1] =
+              std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
+                  l.v_mut());
           _stack.emplace_back(_after_process_twice_fuel_in_Cons{f, a0});
           _stack.emplace_back(_call{*a1, f});
         }
@@ -774,7 +775,7 @@ LoopifyPatterns::process_twice_fuel(uint64_t fuel,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       LoopifyPatterns::list<uint64_t> second = std::move(_result);
-      _result = list<uint64_t>::cons(a0, std::move(second));
+      _result = list<uint64_t>::cons(std::move(a0), std::move(second));
     }
   }
   return _result;

@@ -398,11 +398,11 @@ struct HofTreeLoopify {
         const tree<T1> &t = *_f.t;
         const T3 acc = std::move(_f.acc);
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-          _result = std::make_pair(acc, tree<T2>::leaf());
+          _result = std::make_pair(std::move(acc), tree<T2>::leaf());
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(t.v());
           _stack.emplace_back(_after_tree_map_accum_in_Node{a1, crane_raw(a2)});
-          _stack.emplace_back(_call{crane_raw(a0), acc});
+          _stack.emplace_back(_call{crane_raw(a0), std::move(acc)});
         }
       } else if (std::holds_alternative<_after_tree_map_accum_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tree_map_accum_in_Node>(_popped));

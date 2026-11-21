@@ -274,13 +274,14 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(uint64_t fuel,
         _result = std::move(l);
       } else {
         uint64_t f = fuel - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
           _result = List<uint64_t>::nil();
         } else {
-          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           auto &&_sv0 = *a1;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-            _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
+            _result =
+                List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil());
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());
@@ -305,7 +306,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(uint64_t fuel,
       uint64_t a0 = _f.a0;
       List<uint64_t> rec_result = std::move(_result);
       if (std::holds_alternative<typename List<uint64_t>::Nil>(rec_result.v())) {
-        _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
+        _result = List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil());
       } else {
         const auto &[a01, _] =
             std::get<typename List<uint64_t>::Cons>(rec_result.v());
@@ -319,7 +320,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(uint64_t fuel,
       auto _f = std::move(std::get<_after_longest_run_fuel_in_true>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = List<uint64_t>::cons(a0, std::move(_result));
+      _result = List<uint64_t>::cons(std::move(a0), std::move(_result));
     }
   }
   return _result;

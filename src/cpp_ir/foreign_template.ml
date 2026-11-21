@@ -418,6 +418,47 @@ let structured_binding s =
     | _ -> None )
   | _ -> None
 
+(* [<type> %b{i}a{j} = ...], the binder's one mention, its type [auto], a
+   type argument or its own type hole, with nothing else between it and the
+   statement's start: a variable of its own, initialised by a copy. *)
+let declared_by_value s i j =
+  let squeeze t = String.of_seq (Seq.filter (fun c -> not (List.mem c [' '; '\t'; '\n'; '\r'])) (String.to_seq t)) in
+  let tokens = match_template s in
+  let is_binder = function Br_var (i', j') -> i' = i && j' = j | _ -> false in
+  (* The tokens of the statement before the binder, innermost first: up to
+     the last [;], [{] or [}] of the literal text. *)
+  let rec prefix acc = function
+    | [] -> acc
+    | Text t :: rest -> (
+      match List.filter_map (fun c -> String.rindex_opt t c) [';'; '{'; '}'] with
+      | [] -> prefix (Text t :: acc) rest
+      | ks ->
+        let k = List.fold_left max 0 ks in
+        Text (String.sub t (k + 1) (String.length t - k - 1)) :: acc )
+    | tok :: rest -> prefix (tok :: acc) rest
+  in
+  let rec find before = function
+    | [] -> None
+    | tok :: rest when is_binder tok -> Some (before, rest)
+    | tok :: rest -> find (tok :: before) rest
+  in
+  List.length (List.filter is_binder tokens) = 1
+  &&
+  match find [] tokens with
+  | Some (before, Text after :: _) ->
+    let after = squeeze after in
+    let declared =
+      List.filter (function Text t -> squeeze t <> "" | _ -> true) (prefix [] before)
+    in
+    String.length after >= 1 && after.[0] = '='
+    && (String.length after < 2 || after.[1] <> '=')
+    && (match declared with
+        | [Text t] -> squeeze t = "auto"
+        | [Ty_arg _] | [Ty] -> true
+        | [Br_var_ty (i', j')] -> i' = i && j' = j
+        | _ -> false)
+  | _ -> false
+
 let bound_by_value s = "auto " ^ String.sub s (String.index s '[') (String.length s - String.index s '[')
 
 (* What the language spells without a declaration: a type template naming

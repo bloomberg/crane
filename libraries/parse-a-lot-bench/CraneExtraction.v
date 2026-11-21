@@ -3,6 +3,10 @@ From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Import Mapping.ZInt.
+From Crane Require Import Mapping.Descriptor.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
 (* Baseline list mapping (O(N) tail copy -> O(N^2) structural recursion): *)
 (* From Crane Require Import Mapping.DequeList. *)
 (* cons-list mapping (crane::list): O(1) cons/tail, no element boxing.
@@ -46,15 +50,38 @@ Crane Extract Inlined Constant Ascii.compare =>
 
 (* ----------------------------------------------------------------- *)
 (* Custom mapping: NativeMap -> immer::map (replaces HashTrie)         *)
-(* Keyed directly on the integer position (%t0 = key type -> int64_t   *)
-(* via Mapping.ZInt; %t1 = value type). immer::map's default           *)
-(* std::hash<int64_t>/std::equal_to suffice, so no custom hash needed. *)
+(* The lexer memo is keyed by a (pointer, position) pair; [crane::hash] *)
+(* hashes a pair from its components' [std::hash]es.                  *)
 (* ----------------------------------------------------------------- *)
-Crane Extract Inlined Constant NativeMap.t     => "immer::map<%t0, %t1>" From "immer/map.hpp".
-Crane Extract Inlined Constant NativeMap.empty => "immer::map<%t0, %t1>{}" From "immer/map.hpp".
-Crane Extract Inlined Constant NativeMap.set   => "(%a0).set(%a1, %a2)".
-Crane Extract Inlined Constant NativeMap.get   =>
-  "[&](){ auto _p = (%a0).find(%a1); return _p ? std::optional<%t1>(*_p) : std::optional<%t1>(); }()".
+Crane Extract Inlined Constant NativeMap.t     => "immer::map<%t0, %t1, crane::hash<%t0>>" From "immer/map.hpp" "crane_hash.h".
+Crane Extract Inlined Constant NativeMap.empty => "immer::map<%t0, %t1, crane::hash<%t0>>{}" From "immer/map.hpp" "crane_hash.h".
+
+(** [get] only reads its map. *)
+#[export] Instance native_map_get_mapping (K V : Type) :
+  OperationMapping (Ref (@NativeMap.get K V)) :=
+  {| operation_headers := ["immer/map.hpp"; "optional"; "type_traits"]%pstring;
+     operation_cpp :=
+       Expr "[&](){ auto _p = (%arg(m)).find(%arg(k)); using _v = std::decay_t<decltype(*_p)>; return _p ? std::optional<_v>(*_p) : std::optional<_v>(); }()"%pstring;
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "m"%pstring; argument_use := Read |};
+          {| argument_name := "k"%pstring; argument_use := Read |}]
+         ReturnValue [] |}.
+
+(** [set] takes its map: at the map's last use Crane passes it as an rvalue,
+    and immer's rvalue [set] then updates the map in place when nothing else
+    holds it.  Where the map stays live it is passed as an lvalue, and the
+    [const&] [set] copies the path as before. *)
+#[export] Instance native_map_set_mapping (K V : Type) :
+  OperationMapping (Ref (@NativeMap.set K V)) :=
+  {| operation_headers := ["immer/map.hpp"%pstring];
+     operation_cpp := Expr "(%arg(m)).set(%arg(k), %arg(v))"%pstring;
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "m"%pstring; argument_use := Take |};
+          {| argument_name := "k"%pstring; argument_use := Take |};
+          {| argument_name := "v"%pstring; argument_use := Take |}]
+         ReturnValue [] |}.
 
 (* ----------------------------------------------------------------- *)
 (* Custom mapping: IntDFA -> O(1) flex_vector operator[] / char cast   *)

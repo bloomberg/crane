@@ -99,14 +99,14 @@ uint64_t MemSafetyProbe21::double_grow(const MemSafetyProbe21::tree &t,
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      const MemSafetyProbe21::tree &t = _f.t;
+      MemSafetyProbe21::tree t = std::move(_f.t);
       if (n <= 0) {
-        _result = tree_sum(t);
+        _result = tree_sum(std::move(t));
       } else {
         uint64_t n_ = n - 1;
         _stack.emplace_back(_after_double_grow_in_S{t});
-        _stack.emplace_back(_call{n_,
-                                  tree::node(t, UINT64_C(0), tree::leaf())});
+        _stack.emplace_back(
+            _call{n_, tree::node(std::move(t), UINT64_C(0), tree::leaf())});
       }
     } else {
       auto _f = std::move(std::get<_after_double_grow_in_S>(_popped));
@@ -149,13 +149,13 @@ uint64_t MemSafetyProbe21::branch_grow(const MemSafetyProbe21::tree &t,
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      const MemSafetyProbe21::tree &t = _f.t;
+      MemSafetyProbe21::tree t = std::move(_f.t);
       if (n <= 0) {
-        _result = tree_sum(t);
+        _result = tree_sum(std::move(t));
       } else {
         uint64_t n_ = n - 1;
         _stack.emplace_back(_after_branch_grow_in_S{n, n_});
-        _stack.emplace_back(_call{n_, t});
+        _stack.emplace_back(_call{n_, std::move(t)});
       }
     } else if (std::holds_alternative<_after_branch_grow_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_branch_grow_in_S>(_popped));
@@ -264,14 +264,15 @@ uint64_t MemSafetyProbe21::sum_and_grow(const MemSafetyProbe21::tree &t,
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      const MemSafetyProbe21::tree &t = _f.t;
+      MemSafetyProbe21::tree t = std::move(_f.t);
       if (n <= 0) {
-        _result = tree_sum(t);
+        _result = tree_sum(std::move(t));
       } else {
         uint64_t n_ = n - 1;
         uint64_t s = tree_sum(t);
         _stack.emplace_back(_after_sum_and_grow_in_S{s});
-        _stack.emplace_back(_call{n_, tree::node(t, s, tree::leaf())});
+        _stack.emplace_back(
+            _call{n_, tree::node(std::move(t), s, tree::leaf())});
       }
     } else {
       auto _f = std::move(std::get<_after_sum_and_grow_in_S>(_popped));

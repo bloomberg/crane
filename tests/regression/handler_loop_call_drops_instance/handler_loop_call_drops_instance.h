@@ -261,12 +261,13 @@ struct Denot {
             auto a = _itf.value;
             return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
                                  Sum<dvalue<typename _tcI0::ptr>, T1>>::inr(
-                Sum<dvalue<typename _tcI0::ptr>, T1>::inr(a)));
+                Sum<dvalue<typename _tcI0::ptr>, T1>::inr(std::move(a))));
           } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
             const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
             auto u_ = _itf.next;
-            return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
-                                 Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(u_));
+            return itree_ret(
+                Sum<std::shared_ptr<ITree<T1>>,
+                    Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(std::move(u_)));
           } else {
             const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&_cs);
             auto e = crane_event_as<
@@ -280,11 +281,13 @@ struct Denot {
                                    Sum<dvalue<typename _tcI0::ptr>, T1>>::inr(
                   Sum<dvalue<typename _tcI0::ptr>, T1>::inl(x)));
             } else {
-              return itree_vis(e, [=](const auto &y) {
-                return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
-                                     Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(
-                    crane_call_erased(k, y)));
-              });
+              return itree_vis(
+                  std::move(e), [=, k = std::move(k)](const auto &y) {
+                    return itree_ret(
+                        Sum<std::shared_ptr<ITree<T1>>,
+                            Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(
+                            crane_call_erased(k, y)));
+                  });
             }
           }
         },

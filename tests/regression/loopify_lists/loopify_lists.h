@@ -1292,10 +1292,10 @@ struct LoopifyLists {
         const list<T1> &l = *_f.l;
         const T3 acc = std::move(_f.acc);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::make_pair(acc, list<T2>::nil());
+          _result = std::make_pair(std::move(acc), list<T2>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          auto [acc_, y] = f(acc, a0);
+          auto [acc_, y] = f(std::move(acc), a0);
           _stack.emplace_back(_after_map_accum_l_in_pair{std::move(y)});
           _stack.emplace_back(_call{crane_raw(a1), std::move(acc_)});
         }

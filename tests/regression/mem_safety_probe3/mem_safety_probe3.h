@@ -633,7 +633,7 @@ struct MemSafetyProbe3 {
         _stack.pop_back();
         uint64_t n = _f.n;
         if (n <= 0) {
-          _result = x;
+          _result = std::move(x);
         } else {
           uint64_t n_ = n - 1;
           _stack.emplace_back(_after_apply_n_times_in_S{});

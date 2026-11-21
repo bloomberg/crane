@@ -16,7 +16,7 @@ uint64_t BoxedElementDrain::total(const BoxedElementDrain::rose &r) {
           } else {
             const BoxedElementDrain::rose &k = l.front();
             auto t = l.tail();
-            return (total(k) + _self_go(_self_go, t));
+            return (total(k) + _self_go(_self_go, std::move(t)));
           }
         };
     auto go =

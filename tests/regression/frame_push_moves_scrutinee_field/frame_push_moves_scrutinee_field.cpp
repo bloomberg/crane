@@ -40,9 +40,9 @@ uint64_t FramePushMovesScrutineeField::weigh(List<List<uint64_t>> s,
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
-      const List<uint64_t> &x0_ = _f.x0_;
+      List<uint64_t> x0_ = std::move(_f.x0_);
       List<List<uint64_t>> s = std::move(_f.s);
-      _stack.emplace_back(_call_weigh1{x0_, std::move(s)});
+      _stack.emplace_back(_call_weigh1{std::move(x0_), std::move(s)});
     } else if (std::holds_alternative<_call_weigh1>(_popped)) {
       auto _f = std::move(std::get<_call_weigh1>(_popped));
       _stack.pop_back();

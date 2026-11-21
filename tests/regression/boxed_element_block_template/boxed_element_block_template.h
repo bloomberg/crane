@@ -129,7 +129,7 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
     auto l0 = l.tail();
     return [&]() -> crane::list<T2> {
       crane::list<T2> _r;
-      _r = crane::cons(f(a), ListDef::template map<T1, T2>(f, l0));
+      _r = crane::cons(f(a), ListDef::template map<T1, T2>(f, std::move(l0)));
       return _r;
     }();
   }

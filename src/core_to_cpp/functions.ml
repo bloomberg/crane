@@ -1458,10 +1458,26 @@ let gen_dfun cx ~minted n b cty ty temps =
     Control_to_cpp.Lower.function_resumes ~unit:(Lowering_state.unit_context cx) n ~depth:(List.length all_ids)
   in
   (* The parameters the body owns, at de Bruijn indices 1..n_params: those
-     the head declares by value. *)
+     the head declares by value, and, where the body is lowered as a machine,
+     those the frames entering it hold by value. *)
+  let frame_owned =
+    if not (Option.has_some resumes) then fun _ -> false
+    else
+      let binders = parameter_binders cx env all_ids in
+      let levels =
+        Control_to_cpp.Lower.frame_owned_parameters ~unit:(Lowering_state.unit_context cx) n ~params:scope.ids
+          ~modes:scope.modes ~binders
+      in
+      fun x ->
+        match List.assoc_opt x binders with
+        | Some (b : Core.Binder.t) -> List.mem b.level levels
+        | None -> false
+  in
   let owned_params =
     Ownership.owned_parameters (List.length owned_flags)
       ~owned:(fun i ->
+        frame_owned (fst (List.nth all_ids i))
+        ||
         match List.assoc_opt (fst (List.nth all_ids i)) scope.modes with
         | Some mode -> Cpp_ir.Param_mode.holds_own_value mode
         | None -> List.nth owned_flags i )

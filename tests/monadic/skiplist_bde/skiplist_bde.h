@@ -870,13 +870,12 @@ template <typename K, typename V> struct SkipList {
   template <typename T1, typename T2>
   static unsigned int
   length_aux(unsigned int fuel,
-             bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> node,
+             const bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> &node,
              unsigned int acc) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     unsigned int _loop_acc = acc;
-    bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> _loop_node =
-        bsl::move(node);
+    bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> _loop_node = node;
     unsigned int _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {
