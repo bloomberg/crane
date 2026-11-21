@@ -6,7 +6,8 @@
     a record or a list as well -- so copying or dropping any part of it
     leaves its counts alone.  A value built at run time is counted as
     before.  [long_table] is longer than the walk that marks a constant
-    recurses: past a bounded depth the rest is queued. *)
+    recurses: past a bounded depth the rest is queued, so marking it takes
+    no more stack than a short one. *)
 
 From Stdlib Require Import List.
 Import ListNotations.
@@ -48,4 +49,6 @@ Definition sizes (n : nat) : nat :=
 End ImmortalGlobalConstant.
 
 Set Crane SharedVariant.
+(** [upto] builds the long list in a loop rather than 100000 frames deep. *)
+Set Crane Loopify.
 Crane Extraction "immortal_global_constant" ImmortalGlobalConstant.
