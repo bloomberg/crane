@@ -14,9 +14,15 @@
 // An image is a stream of 64-bit words and a table of static blocks.
 //
 // - A scalar (integer, character, boolean, enumeration, floating point) is
-//   one word.  A [std::string] is its length and its bytes, eight to a word.
-//   A pair, a tuple and an [std::optional] (a presence word first) are their
-//   components in order; a type with no state is nothing.
+//   one word.  A string ([std::string], or any type with a [traits_type], an
+//   allocator and a constructor from a pointer and a length) is its length
+//   and its bytes, eight to a word.  A pair ([first] and [second]), a tuple
+//   and an optional (a presence word first) are their components in order; a
+//   type with no state is nothing.  A sequence container ([std::vector],
+//   [std::deque], ...) and a [persistent_array] (its default element after
+//   the length) are their length and elements.  A number with a text form
+//   ([mpz_class]: [get_str(16)] and a constructor from a string and a base) is
+//   its base-16 text.
 // - A value of a generated inductive, record or flat struct starts with a
 //   sharing word.  [k + 1] is the [k]th node already read, of this type: a
 //   subterm shared in the value stays shared, so the value is read back as
@@ -58,6 +64,7 @@
 #include <bit>
 #include <cinttypes>
 #include <climits>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -79,6 +86,8 @@
 #include "field.h"
 #include "shared_array.h"
 #include "shared_variant.h"
+
+template <typename T> class persistent_array;
 
 static_assert(CHAR_BIT == 8, "crane::bake: an image packs a string's bytes eight to a 64-bit word, "
                              "so a byte must have 8 bits");
@@ -105,19 +114,18 @@ inline constexpr std::uint64_t data_model =
     std::uint64_t(sizeof(long long)) << 24 | std::uint64_t(sizeof(wchar_t)) << 32 |
     std::uint64_t(sizeof(std::size_t)) << 40;
 
-
 namespace detail {
 
-template <class T> struct is_std_pair : std::false_type {};
-template <class A, class B> struct is_std_pair<std::pair<A, B>> : std::true_type {};
 template <class T> struct is_std_tuple : std::false_type {};
 template <class... A> struct is_std_tuple<std::tuple<A...>> : std::true_type {};
-template <class T> struct is_std_optional : std::false_type {};
-template <class A> struct is_std_optional<std::optional<A>> : std::true_type {};
 template <class T> struct is_list : std::false_type {};
 template <class A> struct is_list<crane::list<A>> : std::true_type {};
 template <class T> struct is_shared_array : std::false_type {};
 template <class A> struct is_shared_array<crane::shared_array<A>> : std::true_type {};
+template <class T> struct is_persistent_array : std::false_type {};
+template <class A> struct is_persistent_array<::persistent_array<A>> : std::true_type {
+  using element = A;
+};
 
 // A handle to one value of another type, written in place: what it points
 // to, and whether it shares that value by identity ([counted]), which
@@ -144,6 +152,50 @@ template <class A> struct handle<crane::field_box<A>> : std::true_type {
   static crane::field_box<A> make(A &&a) { return crane::field_box<A>(std::move(a)); }
 };
 
+// A field of a node of type [T] that holds another node of type [T]: the
+// spine the writer and reader walk with an explicit stack.
+template <class F, class T>
+concept self_handle = handle<F>::value && std::is_same_v<typename handle<F>::element, T>;
+
+template <class T>
+concept string_like = requires(const T &s, const char *p, std::size_t n) {
+  typename T::traits_type;
+  typename T::allocator_type;
+  { s.data() } -> std::convertible_to<const char *>;
+  { s.size() } -> std::convertible_to<std::size_t>;
+  T(p, n);
+};
+
+template <class T>
+concept pair_like = requires(const T &x) {
+  typename T::first_type;
+  typename T::second_type;
+  x.first;
+  x.second;
+} && std::is_constructible_v<T, typename T::first_type &&, typename T::second_type &&>;
+
+template <class T>
+concept optional_like = requires(const T &x) {
+  typename T::value_type;
+  { x.has_value() } -> std::same_as<bool>;
+  *x;
+} && std::is_default_constructible_v<T> && std::is_constructible_v<T, typename T::value_type &&>;
+
+// A number whose base-16 text is what it is ([mpz_class]).
+template <class T>
+concept textual_number = requires(const T &x) {
+  { x.get_str(16) } -> std::convertible_to<std::string>;
+} && std::is_constructible_v<T, const std::string &, int>;
+
+// A sequence container: built back element by element.
+template <class T>
+concept sequence = requires(T &c, const T &x, typename T::value_type &&e) {
+  typename T::allocator_type;
+  x.begin();
+  x.end();
+  { x.size() } -> std::convertible_to<std::size_t>;
+  c.push_back(std::move(e));
+} && std::is_default_constructible_v<T>;
 
 // The alternatives of a variant: std::variant, crane::variant or
 // crane::shared_variant.
@@ -154,11 +206,6 @@ template <template <class...> class V, class... Ts> struct alternatives<V<Ts...>
 
 // A generated inductive: its variant, the alternatives' structs, and a
 // constructor from each.
-// A field of a node of type [T] that holds another node of type [T]: the
-// spine the writer and reader walk with an explicit stack.
-template <class F, class T>
-concept self_handle = handle<F>::value && std::is_same_v<typename handle<F>::element, T>;
-
 template <class T>
 concept inductive = requires(const T &t) {
   typename T::variant_t;
@@ -249,7 +296,17 @@ template <class E> constexpr std::uint64_t type_code() {
   }
 }
 
+template <class T> constexpr bool dependent_false = false;
+
+// A scalar fits a word: an integer of at most 64 bits, a float or a double.
+template <class T> constexpr void check_scalar() {
+  static_assert(std::is_enum_v<T> || std::is_same_v<T, float> || std::is_same_v<T, double> ||
+                    (std::is_integral_v<T> && sizeof(T) <= sizeof(std::uint64_t)),
+                "crane::bake: a scalar wider than a word (long double, a 128-bit integer) has no image");
+}
+
 template <class T> std::uint64_t to_word(T x) {
+  check_scalar<T>();
   if constexpr (std::is_enum_v<T>) return static_cast<std::uint64_t>(static_cast<std::underlying_type_t<T>>(x));
   else if constexpr (std::is_same_v<T, float>) return std::bit_cast<std::uint32_t>(x);
   else if constexpr (std::is_same_v<T, double>) return std::bit_cast<std::uint64_t>(x);
@@ -258,14 +315,13 @@ template <class T> std::uint64_t to_word(T x) {
 }
 
 template <class T> T of_word(std::uint64_t w) {
+  check_scalar<T>();
   if constexpr (std::is_enum_v<T>) return static_cast<T>(static_cast<std::underlying_type_t<T>>(w));
   else if constexpr (std::is_same_v<T, float>) return std::bit_cast<float>(static_cast<std::uint32_t>(w));
   else if constexpr (std::is_same_v<T, double>) return std::bit_cast<double>(w);
   else if constexpr (std::is_signed_v<T>) return static_cast<T>(static_cast<std::int64_t>(w));
   else return static_cast<T>(w);
 }
-
-template <class T> constexpr bool dependent_false = false;
 
 } // namespace detail
 
@@ -304,6 +360,16 @@ class writer {
         std::fprintf(stderr, "crane::bake: a null pointer in the value\n");
         std::exit(2);
       }
+  }
+
+  void put_text(const char *p, std::size_t n) {
+    words_.push_back(n);
+    for (std::size_t i = 0; i < n; i += 8) {
+      std::uint64_t w = 0;
+      for (std::size_t j = 0; j < 8 && i + j < n; ++j)
+        w |= std::uint64_t(static_cast<unsigned char>(p[i + j])) << (8 * j);
+      words_.push_back(w);
+    }
   }
 
   template <class E> static std::string literal(const E &x) {
@@ -442,22 +508,16 @@ public:
       words_.push_back(to_word(x));
     } else if constexpr (std::is_arithmetic_v<T>) {
       words_.push_back(to_word(x));
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      words_.push_back(x.size());
-      for (std::size_t i = 0; i < x.size(); i += 8) {
-        std::uint64_t w = 0;
-        for (std::size_t j = 0; j < 8 && i + j < x.size(); ++j)
-          w |= std::uint64_t(static_cast<unsigned char>(x[i + j])) << (8 * j);
-        words_.push_back(w);
-      }
-    } else if constexpr (is_std_pair<T>::value) {
+    } else if constexpr (string_like<T>) {
+      put_text(x.data(), x.size());
+    } else if constexpr (pair_like<T>) {
       put(x.first);
       put(x.second);
     } else if constexpr (is_std_tuple<T>::value) {
       std::apply([&](const auto &...e) { (put(e), ...); }, x);
-    } else if constexpr (is_std_optional<T>::value) {
+    } else if constexpr (optional_like<T>) {
       words_.push_back(x.has_value());
-      if (x) put(*x);
+      if (x.has_value()) put(*x);
     } else if constexpr (handle<T>::value) {
       check_not_null(x);
       put(*x);
@@ -465,9 +525,20 @@ public:
       put_list(x);
     } else if constexpr (is_shared_array<T>::value) {
       put_array(x);
+    } else if constexpr (is_persistent_array<T>::value) {
+      std::int64_t n = x.length();
+      words_.push_back(static_cast<std::uint64_t>(n));
+      put(x.get(n));  // out of bounds: the default element
+      for (std::int64_t i = 0; i < n; ++i) put(x.get(i));
     } else if constexpr (inductive<T>) {
       put_inductive(x);
     } else if constexpr (std::is_empty_v<T>) {
+    } else if constexpr (textual_number<T>) {
+      std::string s = x.get_str(16);
+      put_text(s.data(), s.size());
+    } else if constexpr (sequence<T>) {
+      words_.push_back(x.size());
+      for (const auto &e : x) put(e);
     } else if constexpr (fielded<T>) {
       words_.push_back(0);
       words_.push_back(0);
@@ -568,6 +639,16 @@ class reader {
   std::uint64_t word() {
     if (pos_ >= img_.size) corrupt("too short");
     return img_.words[pos_++];
+  }
+
+  std::string get_text() {
+    std::size_t n = word();
+    std::string s(n, '\0');
+    for (std::size_t i = 0; i < n; i += 8) {
+      std::uint64_t w = word();
+      for (std::size_t j = 0; j < 8 && i + j < n; ++j) s[i + j] = static_cast<char>((w >> (8 * j)) & 0xff);
+    }
+    return s;
   }
 
   template <class A> A get_fields() {
@@ -728,15 +809,10 @@ public:
       return of_word<T>(word());
     } else if constexpr (std::is_arithmetic_v<T>) {
       return of_word<T>(word());
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      std::size_t n = word();
-      std::string s(n, '\0');
-      for (std::size_t i = 0; i < n; i += 8) {
-        std::uint64_t w = word();
-        for (std::size_t j = 0; j < 8 && i + j < n; ++j) s[i + j] = static_cast<char>((w >> (8 * j)) & 0xff);
-      }
-      return s;
-    } else if constexpr (is_std_pair<T>::value) {
+    } else if constexpr (string_like<T>) {
+      std::string s = get_text();
+      return T(s.data(), s.size());
+    } else if constexpr (pair_like<T>) {
       auto a = get<typename T::first_type>();
       auto b = get<typename T::second_type>();
       return T(std::move(a), std::move(b));
@@ -744,7 +820,7 @@ public:
       return [&]<std::size_t... K>(std::index_sequence<K...>) {
         return T{get<std::tuple_element_t<K, T>>()...};
       }(std::make_index_sequence<std::tuple_size_v<T>>{});
-    } else if constexpr (is_std_optional<T>::value) {
+    } else if constexpr (optional_like<T>) {
       if (!word()) return T{};
       return T(get<typename T::value_type>());
     } else if constexpr (handle<T>::value) {
@@ -753,10 +829,24 @@ public:
       return get_list<typename T::value_type>();
     } else if constexpr (is_shared_array<T>::value) {
       return get_array<typename T::value_type>();
+    } else if constexpr (is_persistent_array<T>::value) {
+      using E = typename is_persistent_array<T>::element;
+      std::int64_t n = static_cast<std::int64_t>(word());
+      E def = get<E>();
+      T a(n, def);
+      for (std::int64_t i = 0; i < n; ++i) a = std::move(a).set(i, get<E>());
+      return a;
     } else if constexpr (inductive<T>) {
       return get_inductive<T>();
     } else if constexpr (std::is_empty_v<T>) {
       return T{};
+    } else if constexpr (textual_number<T>) {
+      return T(get_text(), 16);
+    } else if constexpr (sequence<T>) {
+      std::size_t n = word();
+      T c;
+      for (std::size_t i = 0; i < n; ++i) c.push_back(get<typename T::value_type>());
+      return c;
     } else if constexpr (fielded<T>) {
       if (word() != 0 || word() != 0) corrupt("a record");
       return get_fields<T>();

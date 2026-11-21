@@ -68,10 +68,19 @@ serialiser is generic over the generated types. It uses C++26 structured
 binding packs to read a struct's fields, so no per-type code is generated;
 each type gets its own template instantiation.
 
-- A scalar (integer, char, bool, enum, floating point) is one word. A
-  `std::string` is its length and then its bytes, eight to a word. Pairs,
-  tuples and `std::optional` (presence word first) are their components. An
-  empty type is nothing.
+- A scalar (integer, char, bool, enum, `float`, `double`) is one word; a
+  wider one (`long double`, a 128-bit integer) is a compile error. A string
+  (`std::string`, `bsl::string`: a `traits_type`, an allocator and a
+  constructor from pointer and length) is its length and then its bytes,
+  eight to a word. Pairs (`first_type`/`second_type`), tuples and optionals
+  (`has_value`, presence word first) are their components. A sequence
+  container (`std::vector`, `std::deque`: an allocator and `push_back`) and a
+  `persistent_array` (its default element after the length) are their length
+  and elements. A number with a text form (`mpz_class`: `get_str(16)` and a
+  constructor from a string and a base) is its base-16 text. An empty type is
+  nothing. These hooks are structural, so the C++ type of every shipped
+  typed mapping (`Mapping/Std.v`, `BDE.v`, `DequeList.v`, the GMP mappings)
+  has one; `Real` (`Mapping/Real.v`, a private `long double`) does not.
 - A generated inductive, record or flat struct starts with a sharing word:
   `k+1` means the k-th node already read of that type, and `0` means a new node
   (constructor index, then fields). An enum is a new node with its index, so
@@ -148,7 +157,7 @@ the `crane::bake::value` proxy. The reader marks the decoded value itself
   sentinel object instead of odd tags.
 - **immer containers** (`immer::map`, `flex_vector`) have no hook. The plan
   is to write them as flat arrays of entries and rebuild on first use.
-- **`crane::obj` / erased values and persistent arrays** have no hook either.
+- **`crane::obj` / erased values** have no hook either.
   The C++ `static_assert` reports them at bake time as "no way to write a
   value of this type".
 - Heap `shared_array`s of non-scalar elements (`shared_array<Regex>`) are

@@ -15471,3 +15471,14 @@
   (alias runtest)
   (deps bake_long_list.t.exe)
   (action (run ./bake_long_list.t.exe))))
+
+(subdir bake_mapped_values
+ (rule
+  (targets bake_mapped_values.t.exe)
+  (deps BakeMappedValues.vo bake_mapped_values.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_mapped_values.t.exe bake_mapped_values.t.cpp bake_mapped_values.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_mapped_values.t.exe)
+  (action (run ./bake_mapped_values.t.exe))))
