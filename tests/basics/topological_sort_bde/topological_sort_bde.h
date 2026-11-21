@@ -12,6 +12,7 @@
 #include <bsl_optional.h>
 #include <bsl_stdexcept.h>
 #include <bsl_string.h>
+#include <bsl_string_view.h>
 #include <bsl_type_traits.h>
 #include <bsl_utility.h>
 #include <bsl_variant.h>
@@ -393,21 +394,22 @@ struct ToString {
   template <typename T1, typename T2, typename F0, typename F1>
   static bsl::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const bsl::pair<T1, T2> &x) {
-    auto [a, b] = x;
+    const auto &[a, b] = x;
     return bsl::string("(") + p1(a) + bsl::string(", ") + p2(b) +
            bsl::string(")");
   }
 
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<bsl::string, F0 &, const T1 &>
-  static bsl::string intersperse(F0 &&p, bsl::string sep, const List<T1> &l) {
+  static bsl::string intersperse(F0 &&p, const bsl::string &sep,
+                                 const List<T1> &l) {
     if (bsl::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "";
     } else {
       const auto &[d_a0, d_a1] = bsl::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *d_a1;
       if (bsl::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return bsl::move(sep) + p(d_a0);
+        return sep + p(d_a0);
       } else {
         return sep + p(d_a0) + intersperse<T1>(p, sep, *d_a1);
       }
@@ -457,15 +459,15 @@ struct TopologicalSort {
               bsl::get<typename List<bsl::pair<T1, T1>>::Cons>(
                   _lc1_loop_l0->v());
           const List<bsl::pair<T1, T1>> &d_a1_value = *d_a1;
-          auto [e1, e2] = d_a0;
+          const auto &[e1, e2] = d_a0;
           bsl::optional<T1> f1 =
               _lc1_loop_h.find([=](const T1 &x) { return eqb_node(e1, x); });
           bsl::optional<T1> f2 =
               _lc1_loop_h.find([=](const T1 &x) { return eqb_node(e2, x); });
           if (f1.has_value()) {
-            T1 _x = *f1;
+            const T1 &_x = *f1;
             if (f2.has_value()) {
-              T1 _x0 = *f2;
+              const T1 &_x0 = *f2;
               _lc1_loop_l0 = &d_a1_value;
             } else {
               _lc1_loop_h = List<T1>::cons(e2, bsl::move(_lc1_loop_h));
@@ -473,7 +475,7 @@ struct TopologicalSort {
             }
           } else {
             if (f2.has_value()) {
-              T1 _x = *f2;
+              const T1 &_x = *f2;
               _lc1_loop_h = List<T1>::cons(e1, bsl::move(_lc1_loop_h));
               _lc1_loop_l0 = &d_a1_value;
             } else {
@@ -536,8 +538,8 @@ struct TopologicalSort {
       return eqb_node(elem, entry0.first);
     });
     if (_cs.has_value()) {
-      bsl::pair<T1, List<T1>> p = *_cs;
-      auto [_x, es] = p;
+      const bsl::pair<T1, List<T1>> &p = *_cs;
+      const auto &[_x, es] = p;
       return es;
     } else {
       return List<T1>::nil();
@@ -552,7 +554,7 @@ struct TopologicalSort {
       return eqb_node(elem, x);
     });
     if (_cs.has_value()) {
-      T1 _x = *_cs;
+      const T1 &_x = *_cs;
       return true;
     } else {
       return false;
@@ -592,7 +594,7 @@ struct TopologicalSort {
     } else {
       const auto &[d_a0, _] =
           bsl::get<typename List<bsl::pair<T1, List<T1>>>::Cons>(graph0.v());
-      auto [e, _x0] = d_a0;
+      const auto &[e, _x0] = d_a0;
       return bsl::make_optional<T1>(cycle_entry_aux<T1>(
           eqb_node, graph0, List<T1>::nil(), e, graph0.length()));
     }
@@ -623,7 +625,7 @@ struct TopologicalSort {
                                 const List<bsl::pair<T1, List<T1>>> &graph0) {
     auto _cs = cycle_entry<T1>(eqb_node, graph0);
     if (_cs.has_value()) {
-      T1 elem = *_cs;
+      const T1 &elem = *_cs;
       return cycle_extract_aux<T1>(eqb_node, graph0, graph0.length(), elem,
                                    List<T1>::nil());
     } else {

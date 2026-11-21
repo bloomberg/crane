@@ -126,7 +126,7 @@ template <typename K, typename V> struct CHT {
   stm::TVar<List<bsl::pair<K, V>>> bucket_of(const K &k) const {
     auto _once1 = this->cht_hash(k);
     auto &&_once2 = this->cht_nbuckets;
-    int64_t i = (_once2 == 0 ? _once1 : _once1 % _once2);
+    int64_t i = (_once2 == 0 ? _once1 : _once1 % (_once2 | (_once2 == 0)));
     return this->cht_buckets.at(i);
   }
 
@@ -155,7 +155,7 @@ template <typename K, typename V> struct CHT {
                                                    bsl::move(xs));
     auto _cs = p.first;
     if (_cs.has_value()) {
-      V _x = *_cs;
+      const V &_x = *_cs;
       stm::writeTVar(bsl::move(b), bsl::move(p).second);
       return bsl::move(p).first;
     } else {
@@ -181,7 +181,7 @@ template <typename K, typename V> struct CHT {
   V stm_get_or(const K &k, const V &dflt) const {
     bsl::optional<V> v = this->stm_get(k);
     if (v.has_value()) {
-      V x = *v;
+      const V &x = *v;
       return x;
     } else {
       return dflt;
@@ -216,7 +216,7 @@ template <typename K, typename V> struct CHT {
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v());
-      auto [k_, v] = d_a0;
+      const auto &[k_, v] = d_a0;
       if (eqb(k, k_)) {
         return bsl::make_optional<T2>(v);
       } else {
@@ -235,7 +235,7 @@ template <typename K, typename V> struct CHT {
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v());
-      auto [k_, v_] = d_a0;
+      const auto &[k_, v_] = d_a0;
       if (eqb(k, k_)) {
         return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v), *d_a1);
       } else {
@@ -255,7 +255,7 @@ template <typename K, typename V> struct CHT {
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v());
-      auto [k_, v_] = d_a0;
+      const auto &[k_, v_] = d_a0;
       if (eqb(k, k_)) {
         return bsl::make_pair(bsl::make_optional<T2>(v_), *d_a1);
       } else {

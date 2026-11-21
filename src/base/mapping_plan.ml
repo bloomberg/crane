@@ -550,9 +550,10 @@ let constructor_templates ip =
   List.init (constructor_count ip) (fun j -> constructor_template (ip, j + 1))
 
 (* A structured binding of the scrutinee, when that is what the one
-   constructor's view says: the canonical type is a [std::pair] or a
-   [std::tuple] with as many elements as the constructor has fields, and
-   field [j] is borrowed as [std::get<j>(%scrut)] -- what a structured
+   constructor's view says: the canonical type is a [std::pair] (or
+   [bsl::pair]) or a [std::tuple] with as many elements as the constructor
+   has fields, and field [j] is borrowed as [std::get<j>(%scrut)] (a pair's
+   as [%scrut.first], [%scrut.second]) -- what a structured
    binding of a tuple-like type binds its [j]-th name to.  The binding
    form lets an owned scrutinee be taken apart by value
    ({!Cpp_ir.Foreign_template.structured_binding}). *)
@@ -560,7 +561,7 @@ let tuple_binding p ((mind, i) as ip) n =
   let arity = (Global.lookup_mind mind).Declarations.mind_packets.(i).Declarations.mind_consnrealdecls.(0) in
   let tuple_like =
     match p.canonical with
-    | Apply ("std::pair", args) -> List.length args = 2 && arity = 2
+    | Apply (("std::pair" | "bsl::pair"), args) -> List.length args = 2 && arity = 2
     | Apply ("std::tuple", args) -> List.length args = arity
     | _ -> false
   in
@@ -572,7 +573,10 @@ let tuple_binding p ((mind, i) as ip) n =
            && List.for_all
                 (fun (j, proj) ->
                   match proj with
-                  | Canonical_borrow_projection e -> String.equal e (Printf.sprintf "std::get<%d>(%%scrut)" j)
+                  | Canonical_borrow_projection e ->
+                    String.equal e (Printf.sprintf "std::get<%d>(%%scrut)" j)
+                    || (j = 0 && String.equal e "%scrut.first")
+                    || (j = 1 && String.equal e "%scrut.second")
                   | Owned_projection _ | Read_view_projection _ -> false)
                 v.fields ->
       Some
