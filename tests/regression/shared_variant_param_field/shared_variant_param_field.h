@@ -3,6 +3,7 @@
 #include "crane_fn.h"
 #include "crane_variant.h"
 #include "obj.h"
+#include "shared_block.h"
 #include "shared_variant.h"
 #include <cstdint>
 #include <optional>
@@ -297,7 +298,7 @@ struct SharedVariantParamField {
 
   static uint64_t pair_sum(std::pair<uint64_t, uint64_t> p);
   static inline const List<step<std::pair<uint64_t, uint64_t>,
-                                List<uint64_t>>> steps =
+                                List<uint64_t>>> steps = crane::immortal(
       List<step<std::pair<uint64_t, uint64_t>, List<uint64_t>>>::cons(
           step<std::pair<uint64_t, uint64_t>, List<uint64_t>>::done(
               std::make_pair(UINT64_C(1), UINT64_C(2))),
@@ -312,7 +313,7 @@ struct SharedVariantParamField {
                       std::make_pair(UINT64_C(5), UINT64_C(6)),
                       List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())),
                   List<step<std::pair<uint64_t, uint64_t>,
-                            List<uint64_t>>>::nil())));
+                            List<uint64_t>>>::nil()))));
   static inline const uint64_t result =
       steps.app(steps).template map<uint64_t>([](
           step<std::pair<uint64_t, uint64_t>, List<uint64_t>> _x0)

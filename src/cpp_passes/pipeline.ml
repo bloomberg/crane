@@ -88,6 +88,7 @@ let projections = Base.Pipeline_trace.pass "projections" Erasure.lower_projectio
 let conditionals = Base.Pipeline_trace.pass "conditionals" Erasure.lower_conditionals
 let access_moves = Base.Pipeline_trace.pass "access_moves" Erasure.lower_access_moves
 let constexpr = Base.Pipeline_trace.pass "constexpr" Erasure.decide_constexpr
+let immortal_globals = Base.Pipeline_trace.pass "immortal_globals" Erasure.immortal_globals
 let foreign = Base.Pipeline_trace.pass "foreign" Erasure.instantiate_foreign
 let qualifiers = Base.Pipeline_trace.pass "qualifiers" Erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
@@ -179,7 +180,9 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     (* A member read moves the member, not the object it is read from. *)
     access_moves;
     (* With every type final, which definitions may be [constexpr]. *)
-    constexpr ]
+    constexpr;
+    (* And which globals hold blocks to make immortal. *)
+    immortal_globals ]
 
 (** With the declaration resolved, each mapping's text is instantiated on
     the way to the printer: what is left to it is to write the pieces.  The

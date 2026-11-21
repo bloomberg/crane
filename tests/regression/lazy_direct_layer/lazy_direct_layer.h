@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
+#include "shared_block.h"
 #include "shared_variant.h"
 #include <cstdint>
 #include <memory>
@@ -147,7 +148,8 @@ struct LazyDirectLayer {
     return tree::go(treeF<tree>::visf(e, k));
   }
 
-  static inline const tree Stop = tree::go(treeF<tree>::stopf());
+  static inline const tree Stop =
+      crane::immortal(tree::go(treeF<tree>::stopf()));
   static tree taus(uint64_t n, uint64_t r);
   static tree ask(uint64_t n, uint64_t acc);
   /// The tree t runs to, answering every event with e + 1, within fuel

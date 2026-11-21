@@ -76,6 +76,13 @@ public:
       p_->release();
   }
 
+  // [crane::make_immortal]: the cell and what its value holds.
+  void make_immortal() const noexcept {
+    if (!p_ || p_->rc.is_immortal()) return;
+    p_->rc.make_immortal();
+    crane::make_immortal(p_->value);
+  }
+
   const T &operator*() const noexcept { return p_->value; }
   const T *operator->() const noexcept { return &p_->value; }
   operator const T &() const noexcept { return p_->value; }
