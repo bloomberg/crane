@@ -319,7 +319,7 @@ Module CorrectFn (Import MEM : Memo.T).
       lex_M rus code = lex rus code.
   Proof.
     intros. destruct (lex rus code) eqn:E.
-    unfold lex_M. unfold lex in E.
+    unfold lex_M, lex_M_pre. unfold lex in E.
     repeat dm.
     destruct p.
     eapply lex'_memo_eq in E0; eauto.

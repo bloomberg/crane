@@ -87,6 +87,19 @@ Module SemLexerFn (STT : State.T) (Export LXR : Lexer STT) (Import USER : SemUse
       | (ts, rest) => (lo2ol ts, rest)
       end.
 
+    (** [lex_sem] of what the raw lexer returned: for a lexer whose rules are prepared once,
+        ahead of the inputs, and run without [lex] ([lex_sem_of_lex] says it is [lex_sem]). *)
+    Definition lex_sem_of (lexed : list Token * String) : (option (list sem_token)) * String :=
+      match lexed with
+      | (ts, rest) => (lo2ol (map apply_sem ts), rest)
+      end.
+
+    (** [lex_sem_of] of [lex rus code] is [lex_sem rus code]; by unfolding both. *)
+    Lemma lex_sem_of_lex : forall rus code, lex_sem_of (lex rus code) = lex_sem rus code.
+    Proof.
+      intros. unfold lex_sem_of, lex_sem, lex_sem'. destruct (lex rus code). reflexivity.
+    Qed.
+
   End Impl.
 
   (** Auxiliary lemmas about [lo2ol] and the interaction between [apply_sem] and list combinators. *)
