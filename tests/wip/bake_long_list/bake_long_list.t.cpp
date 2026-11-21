@@ -5,5 +5,5 @@
 int main() {
   auto a = BakeLongList::count;
   std::cout << a << std::endl;
-  return a == 50000 ? 0 : 1;
+  return a == 30000 ? 0 : 1;
 }

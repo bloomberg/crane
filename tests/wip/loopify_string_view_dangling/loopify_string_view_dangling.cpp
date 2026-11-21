@@ -156,29 +156,21 @@ int64_t LoopifyStringViewDangling::n2i(uint64_t n) {
 }
 
 uint64_t LoopifyStringViewDangling::drop_each(const List<bool> &l,
-                                              std::string s) {
+                                              std::string_view s) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  std::string _loop_s = std::move(s);
+  std::string_view _loop_s = s;
   const List<bool> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<bool>::Nil>(_loop_l->v())) {
-      auto _once1 = n2i(UINT64_C(0));
-      return ((i2n(static_cast<int64_t>(_loop_s.length())) * UINT64_C(1000)) +
-              i2n(((_once1 >= 0 &&
-                    _once1 < static_cast<int64_t>(_loop_s.length()))
-                       ? _loop_s[_once1]
-                       : static_cast<char>(0))));
+      return (
+          (i2n(static_cast<int64_t>((std::string_view{_loop_s}).size())) *
+           UINT64_C(1000)) +
+          i2n(crane::string_get(std::string_view{_loop_s}, n2i(UINT64_C(0)))));
     } else {
       const auto &[_, a1] = std::get<typename List<bool>::Cons>(_loop_l->v());
-      auto _once2 = n2i(UINT64_C(1));
-      _loop_s = (
-          (_once2 >= 0 &&
-           _once2 <= static_cast<int64_t>(_loop_s.length())) ? _loop_s.substr(
-                                                                   _once2,
-                                                                   n2i(UINT64_C(
-                                                                       100)))
-                                                             : std::string());
+      _loop_s = crane::string_sub(std::string_view{_loop_s}, n2i(UINT64_C(1)),
+                                  n2i(UINT64_C(100)));
       _loop_l = crane_raw(a1);
     }
   }
