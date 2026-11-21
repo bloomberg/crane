@@ -8,7 +8,7 @@
 // in [crane::bake::root], links that unit with a driver whose [main] is
 // [crane::bake::main], and runs it.  The driver writes [c]'s value as C++
 // data: an image, which Crane appends to the unit's implementation file,
-// and the unit's [c] is then initialised with [crane::bake::value(image)]
+// and the unit's [c] is then initialised with [crane::bake::read<T>(image)]
 // instead of its body.
 //
 // An image is a stream of 64-bit words and a table of static blocks.
@@ -624,19 +624,25 @@ public:
   }
 };
 
-// The value of an image, at the type the declaration it initialises has.
+// The value of an image, at the type [T] of the declaration it initialises.
+template <class T> T read(const image &img) {
+  reader r(img);
+  T v = r.template get<T>();
+  crane::make_immortal(v);
+  if (!r.done()) {
+    std::fprintf(stderr, "crane::bake: the baked image does not match its type (too long)\n");
+    std::abort();
+  }
+  return v;
+}
+
+// The value of an image, at the type it converts to: for a declaration whose
+// type is not spelled.  A type with a converting constructor from anything
+// ([std::optional]) takes the proxy as its payload rather than converting
+// it, so a declaration that spells its type reads with [read<T>].
 struct value {
   const image &img;
-  template <class T> operator T() const {
-    reader r(img);
-    T v = r.template get<T>();
-    crane::make_immortal(v);
-    if (!r.done()) {
-      std::fprintf(stderr, "crane::bake: the baked image does not match its type (too long)\n");
-      std::abort();
-    }
-    return v;
-  }
+  template <class T> operator T() const { return read<T>(img); }
 };
 
 namespace detail {

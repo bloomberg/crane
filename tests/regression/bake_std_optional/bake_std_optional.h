@@ -10,8 +10,8 @@
 #include <variant>
 
 #include "crane_bake.h"
-extern const crane::bake::image crane_baked_node_834560d4a2a9;
-extern const crane::bake::image crane_baked_num_c5a052b74239;
+extern const crane::bake::image crane_baked_node_69f1091ccb63;
+extern const crane::bake::image crane_baked_num_a1e0aa6bd037;
 
 struct BakeStdOptional {
   struct tree {
@@ -108,9 +108,9 @@ struct BakeStdOptional {
   }
 
   static inline const std::optional<uint64_t> num =
-      crane::bake::value{crane_baked_num_c5a052b74239};
+      crane::bake::read<std::optional<uint64_t>>(crane_baked_num_a1e0aa6bd037);
   static inline const std::optional<tree> node =
-      crane::bake::value{crane_baked_node_834560d4a2a9};
+      crane::bake::read<std::optional<tree>>(crane_baked_node_69f1091ccb63);
   static inline const uint64_t num_value = []() -> uint64_t {
     if (num.has_value()) {
       const uint64_t &n = *num;

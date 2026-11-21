@@ -15427,3 +15427,14 @@
   (alias runtest)
   (deps frame_save_copied_binder.t.exe)
   (action (run ./frame_save_copied_binder.t.exe))))
+
+(subdir bake_std_optional
+ (rule
+  (targets bake_std_optional.t.exe)
+  (deps BakeStdOptional.vo bake_std_optional.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_std_optional.t.exe bake_std_optional.t.cpp bake_std_optional.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_std_optional.t.exe)
+  (action (run ./bake_std_optional.t.exe))))

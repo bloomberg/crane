@@ -49,7 +49,11 @@ Running the generated C++ once and emitting the value as data does work.
 3. **Use**. Lowering (`Functions.baked_initialiser`, on both the definition
    and the header specification path) still generates the body, so the unit
    plans and includes what it would. It then initialises the constant with
-   `crane::bake::value{<symbol>}`, which converts to the declared type.
+   `crane::bake::read<T>(<symbol>)` (CppIR `Baked_value`), `T` its declared
+   type. A proxy that converts to the declared type
+   (`crane::bake::value{<symbol>}`) is left for a declaration whose type is
+   `auto`: copy-initialising a `std::optional<U>` from it picks optional's
+   converting constructor, which reads the image as a bare `U`.
    `print_structure_to_file` declares the image `extern` in the header (after
    `#include "crane_bake.h"`, ahead of the namespace) and appends the image
    text, as the driver wrote it, to the implementation file.

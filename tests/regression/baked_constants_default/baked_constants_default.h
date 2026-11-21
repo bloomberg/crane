@@ -309,13 +309,14 @@ struct BakedConstantsDefault {
   static uint64_t sum_tree(const tree &t);
   /// Baked: a tree of 65535 nodes.
   [[gnu::used]] static inline const tree big =
-      crane::bake::value{crane_baked_big_6a150784210f};
+      crane::bake::read<tree>(crane_baked_big_6a150784210f);
   /// Baked: a table of rows, two of them the same row.
   static crane::shared_array<uint64_t> row(uint64_t k);
   [[gnu::used]] static inline const std::pair<
       crane::shared_array<crane::shared_array<uint64_t>>,
-      crane::shared_array<bool>> table =
-      crane::bake::value{crane_baked_table_6bda686fed62};
+      crane::shared_array<bool>> table = crane::bake::read<
+      std::pair<crane::shared_array<crane::shared_array<uint64_t>>,
+                crane::shared_array<bool>>>(crane_baked_table_6bda686fed62);
 
   /// Baked: a list of labelled records holding strings and options.
   struct entry {
@@ -325,7 +326,7 @@ struct BakedConstantsDefault {
   };
 
   [[gnu::used]] static inline const List<entry> entries =
-      crane::bake::value{crane_baked_entries_9913efaaf321};
+      crane::bake::read<List<entry>>(crane_baked_entries_9913efaaf321);
   static uint64_t big_size();
   static uint64_t big_sum();
   static uint64_t cell(uint64_t i, uint64_t j);

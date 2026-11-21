@@ -167,6 +167,7 @@ let expr : type p. p t -> p Expr.t -> p Expr.t =
     Variant_get (ty t, e)
   | Holds_alternative t -> Holds_alternative (ty t)
   | Declval t -> Declval (ty t)
+  | Baked_value (t, s) -> Baked_value (ty t, s)
   | Type_name t -> Type_name (ty t)
   | Binary (o, a, b) ->
     let b = ex b in

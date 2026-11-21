@@ -1148,6 +1148,8 @@ and pp_cpp_expr ctx env args (t : expr) =
   | Declval ty ->
     writes_standard "utility";
     str "std::declval<" ++ pp_cpp_type ctx false [] ty ++ str ">()"
+  | Baked_value (ty, image) ->
+    str "crane::bake::read<" ++ pp_cpp_type ctx false [] ty ++ str ">(" ++ str image ++ str ")"
   | Type_name ty -> pp_cpp_type ctx false [] ty
   (* A helper of Crane's runtime, named after the header declaring it is
      noted as needed. *)

@@ -159,6 +159,7 @@ and expr : l Expr.t -> r Expr.t = function
   | Variant_get (t, e) -> Variant_get (type_ t, opt expr e)
   | Holds_alternative t -> Holds_alternative (type_ t)
   | Declval t -> Declval (type_ t)
+  | Baked_value (t, s) -> Baked_value (type_ t, s)
   | Type_name t -> Type_name (type_ t)
   | Numeral (r, n) -> Numeral (r, n)
   | Foreign_text s -> Foreign_text s

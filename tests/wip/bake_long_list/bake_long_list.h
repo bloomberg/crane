@@ -12,7 +12,7 @@
 #include <variant>
 
 #include "crane_bake.h"
-extern const crane::bake::image crane_baked_flags_f402cfb1c658;
+extern const crane::bake::image crane_baked_flags_86057f5c044b;
 
 template <typename A> struct List;
 
@@ -173,7 +173,7 @@ struct ListDef {
 
 struct BakeLongList {
   static inline const List<bool> flags =
-      crane::bake::value{crane_baked_flags_f402cfb1c658};
+      crane::bake::read<List<bool>>(crane_baked_flags_86057f5c044b);
   static inline const uint64_t count =
       flags.filter([](bool b) { return b; }).length();
 };
