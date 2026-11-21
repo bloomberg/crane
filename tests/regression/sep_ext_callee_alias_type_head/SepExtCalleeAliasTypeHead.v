@@ -11,16 +11,18 @@
 
     Expected: compiles; [result = 3].
 
-    Actual: anomaly "Crane: a declaration names the type head of
-    ...Inst.LX.D.Token, which resolving it did not ask for.": the names a
-    unit refers to are planned from its Core terms and types, where the
-    alias is unfolded, so [Token]'s name was never decided. *)
+    Fixed: anomaly "Crane: a declaration names the type head of
+    ...Inst.LX.D.Token, which resolving it did not ask for.".  The names a
+    unit refers to were planned from its Core terms and types, where the
+    alias is unfolded, and from a callee's signature only for a member of a
+    functor parameter; a call is written against every callee's signature,
+    which is now walked for each. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 Import ListNotations.
-From CraneTestsWIP Require Import sep_ext_callee_alias_type_head.Lib.
-From CraneTestsWIP Require Import sep_ext_callee_alias_type_head.Inst.
+From CraneTestsRegression Require Import sep_ext_callee_alias_type_head.Lib.
+From CraneTestsRegression Require Import sep_ext_callee_alias_type_head.Inst.
 
 Definition lex_rules := SL.lex_with (LX.lex [1; 2; 3]).
 Definition result : nat := lex_rules [4].

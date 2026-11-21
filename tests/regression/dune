@@ -15482,3 +15482,14 @@
   (alias runtest)
   (deps sep_ext_accessor_functor_chain.t.exe)
   (action (run ./sep_ext_accessor_functor_chain.t.exe))))
+
+(subdir sep_ext_callee_alias_type_head
+ (rule
+  (targets sep_ext_callee_alias_type_head.t.exe)
+  (deps Lib.vo Inst.vo SepExtCalleeAliasTypeHead.vo sep_ext_callee_alias_type_head.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_callee_alias_type_head.t.exe sep_ext_callee_alias_type_head.t.cpp Datatypes.cpp ListDef.cpp Lib.cpp Inst.cpp SepExtCalleeAliasTypeHead.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_callee_alias_type_head.t.exe)
+  (action (run ./sep_ext_callee_alias_type_head.t.exe))))

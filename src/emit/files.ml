@@ -2341,12 +2341,13 @@ let plan_referenced_names s =
     | Core.Expr.Global ({callee; _} as use) ->
       name Term callee;
       Core.Global_use.iter_types ty use;
-      (* A member of a functor parameter is declared nowhere in the unit,
-         yet a call of it is written against its signature
-         ({!Core_to_cpp.Calls.callee_abi}), which a cast to a parameter's
-         type names. *)
-      if under_mp_bound (modpath_of_r callee) then
-        Option.iter ty (try Some (Base.Table.find_type callee) with Not_found -> None)
+      (* A call is written against its callee's signature
+         ({!Core_to_cpp.Calls.callee_abi}): a cast to a parameter's type, an
+         eta-expansion's return type, a lambda argument's parameters.  The
+         signature may name what the use's own types do not -- an alias
+         its instantiation unfolds, a member of a functor parameter, which
+         is declared nowhere in the unit. *)
+      Option.iter ty (try Some (Base.Table.find_type callee) with Not_found -> None)
     | Core.Expr.Construct {result_type = t; constructor = r; _} ->
       name Cons r;
       ty t
