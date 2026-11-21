@@ -8,6 +8,7 @@
 #include <concepts>
 #include <crane_globals.h>
 #include <crane_itree.h>
+#include <crane_string.h>
 #include <cstdint>
 #include <memory>
 #include <optional>

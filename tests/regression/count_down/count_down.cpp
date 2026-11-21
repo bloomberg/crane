@@ -27,7 +27,9 @@ void CountDown::two_prints(uint64_t n) {
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << std::string("step ") + std::to_string(_loop_n) << '\n';
+      std::cout <<
+      crane::string_capped(std::string("step ") + std::to_string(_loop_n)) <<
+      '\n';
       std::cout << std::string("---") << '\n';
       _loop_n = n_;
     }
@@ -47,7 +49,7 @@ void CountDown::echo_loop(uint64_t n) {
       uint64_t n_ = _loop_n - 1;
       std::string line;
       std::getline(std::cin, line);
-      std::cout << std::string("echo: ") + line << '\n';
+      std::cout << crane::string_capped(std::string("echo: ") + line) << '\n';
       _loop_n = n_;
     }
   }
@@ -65,7 +67,9 @@ void CountDown::announce(uint64_t n) {
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << std::string("counting ") + std::to_string(_loop_n) << '\n';
+      std::cout << crane::string_capped(std::string("counting ") +
+                                        std::to_string(_loop_n)) <<
+      '\n';
       _loop_n = n_;
     }
   }
@@ -134,7 +138,7 @@ void CountDown::co_two_prints() {
     if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       return;
     } else {
-      std::cout << std::string("got: ") + line << '\n';
+      std::cout << crane::string_capped(std::string("got: ") + line) << '\n';
       std::cout << std::string("---") << '\n';
     }
   }
@@ -150,7 +154,7 @@ void CountDown::co_echo_loop() {
     if (string_eq(std::string_view{line}, std::string_view("quit"))) {
       return;
     } else {
-      std::cout << std::string("echo: ") + line << '\n';
+      std::cout << crane::string_capped(std::string("echo: ") + line) << '\n';
     }
   }
   return;
@@ -167,7 +171,9 @@ void CountDown::co_announce(uint64_t round) {
       std::cout << std::string("done") << '\n';
       return;
     } else {
-      std::cout << std::string("round ") + std::to_string(_loop_round) << '\n';
+      std::cout << crane::string_capped(std::string("round ") +
+                                        std::to_string(_loop_round)) <<
+      '\n';
       _loop_round = (_loop_round + 1);
     }
   }

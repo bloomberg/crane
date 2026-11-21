@@ -140,9 +140,11 @@ From Corelib Require Import PrimString.
      operation_contract :=
        PureOperation [{| argument_name := "s"; argument_use := Read |}] ReturnValue [] |}.
 
+(** Cut to [max_length] bytes, as Rocq's ([crane::string_capped] is
+    generic over the string type). *)
 #[export] Instance bde_string_cat_mapping : OperationMapping (Ref PrimString.cat) :=
-  {| operation_headers := ["bsl_string.h"];
-     operation_cpp := Expr "%arg(s1) + %arg(s2)";
+  {| operation_headers := ["bsl_string.h"; "crane_string.h"];
+     operation_cpp := Expr "crane::string_capped(%arg(s1) + %arg(s2))";
      operation_contract :=
        PureOperation
          [{| argument_name := "s1"; argument_use := ReadCanonical |};

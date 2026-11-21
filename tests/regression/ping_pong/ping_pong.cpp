@@ -21,13 +21,18 @@ void PingPong::run_game(uint64_t round) {
     std::string response;
     std::getline(std::cin, response);
     if (string_eq(std::string_view{response}, std::string_view("pong"))) {
-      std::cout << std::string("  (round ") + std::to_string(_loop_round) +
-                   std::string(" complete)") <<
+      std::cout << crane::string_capped(
+                       std::string("  (round ") +
+                       crane::string_capped(std::to_string(_loop_round) +
+                                            std::string(" complete)"))) <<
       '\n';
       _loop_round = (_loop_round + 1);
     } else {
-      std::cout << std::string("You said '") + response +
-                   std::string("' \342\200\224 game over!") <<
+      std::cout <<
+      crane::string_capped(
+          std::string("You said '") +
+          crane::string_capped(response +
+                               std::string("' \342\200\224 game over!"))) <<
       '\n';
       return;
     }

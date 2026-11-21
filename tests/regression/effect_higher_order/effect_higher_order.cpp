@@ -4,7 +4,8 @@
 void EffectHigherOrder::greet_all(const List<std::string> &names) {
   for_each_str(
       [](const std::string &name) {
-        std::cout << std::string("Hello, ") + name << '\n';
+        std::cout << crane::string_capped(std::string("Hello, ") + name) <<
+        '\n';
         return std::monostate{};
       },
       names);
@@ -21,7 +22,10 @@ std::string EffectHigherOrder::lookup_or_ask(const std::string &name) {
     const std::string &v = *mv;
     return v;
   } else {
-    std::cout << std::string("Enter ") + name + std::string(":") << '\n';
+    std::cout <<
+    crane::string_capped(std::string("Enter ") +
+                         crane::string_capped(name + std::string(":"))) <<
+    '\n';
     std::string line;
     std::getline(std::cin, line);
     setenv(name.c_str(), line.c_str(), 1);
@@ -46,7 +50,8 @@ EffectHigherOrder::lookup_all(const List<std::string> &names) {
 /// 8. Effect in let-bound function
 std::string EffectHigherOrder::process_input() {
   crane::fn<std::string(std::string)> format = [](const std::string &s) {
-    return std::string("[") + s + std::string("]");
+    return crane::string_capped(std::string("[") +
+                                crane::string_capped(s + std::string("]")));
   };
   std::string line;
   std::getline(std::cin, line);

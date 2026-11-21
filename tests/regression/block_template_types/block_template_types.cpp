@@ -41,13 +41,13 @@ std::string BlockTemplateTypes::test_mixed() {
   std::cin >> n;
   bool b;
   b = (n > 0u);
-  return name + [&]() -> std::string {
+  return crane::string_capped(name + [&]() -> std::string {
     if (b) {
       return " wins";
     } else {
       return " loses";
     }
-  }();
+  }());
 }
 
 /// Two unsigned int block templates with arithmetic on results.

@@ -296,5 +296,6 @@ struct LoopifyStringViewDangling {
   static uint64_t drop_each(const List<bool> &l, std::string_view s);
   static inline const uint64_t result = drop_each(
       List<bool>::cons(true, List<bool>::cons(true, List<bool>::nil())),
-      std::string("abcdefghijklmnopqrstuvwxyz") + std::string("0123456789"));
+      crane::string_capped(std::string("abcdefghijklmnopqrstuvwxyz") +
+                           std::string("0123456789")));
 };

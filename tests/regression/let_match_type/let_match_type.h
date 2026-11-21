@@ -1,5 +1,6 @@
 #pragma once
 
+#include <crane_string.h>
 #include <cstdint>
 #include <iostream>
 #include <memory>

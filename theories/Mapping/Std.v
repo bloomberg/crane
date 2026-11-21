@@ -55,10 +55,11 @@ Local Open Scope pstring_scope.
 (** [cat] reads both strings canonically and is spelled as [+], so that a
     chain of concatenations appends to one growing temporary, as C++
     evaluates [a + b + c]; through views each link would allocate a string
-    of its own. *)
+    of its own.  The result is cut to [max_length] bytes, as Rocq's is;
+    [crane::string_capped] moves the temporary through. *)
 #[export] Instance string_cat_mapping : OperationMapping (Ref PrimString.cat) :=
-  {| operation_headers := ["string"];
-     operation_cpp := Expr "%arg(s1) + %arg(s2)";
+  {| operation_headers := ["string"; "crane_string.h"];
+     operation_cpp := Expr "crane::string_capped(%arg(s1) + %arg(s2))";
      operation_contract :=
        PureOperation
          [{| argument_name := "s1"; argument_use := ReadCanonical |};

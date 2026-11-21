@@ -1,5 +1,6 @@
 #pragma once
 
+#include <crane_string.h>
 #include <fstream>
 #include <string>
 #include <string_view>

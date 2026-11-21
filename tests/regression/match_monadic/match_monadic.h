@@ -4,6 +4,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <crane_string.h>
 #include <cstdint>
 #include <iostream>
 #include <memory>

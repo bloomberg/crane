@@ -17,6 +17,7 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
+#include <crane_string.h>
 #include <utility>
 
 using namespace BloombergLP;
@@ -395,8 +396,12 @@ struct ToString {
   static bsl::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const bsl::pair<T1, T2> &x) {
     const auto &[a, b] = x;
-    return bsl::string("(") + p1(a) + bsl::string(", ") + p2(b) +
-           bsl::string(")");
+    return crane::string_capped(
+        bsl::string("(") +
+        crane::string_capped(
+            p1(a) + crane::string_capped(
+                        bsl::string(", ") +
+                        crane::string_capped(p2(b) + bsl::string(")")))));
   }
 
   template <typename T1, typename F0>
@@ -409,9 +414,11 @@ struct ToString {
       const auto &[d_a0, d_a1] = bsl::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *d_a1;
       if (bsl::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return sep + p(d_a0);
+        return crane::string_capped(sep + p(d_a0));
       } else {
-        return sep + p(d_a0) + intersperse<T1>(p, sep, *d_a1);
+        return crane::string_capped(
+            sep +
+            crane::string_capped(p(d_a0) + intersperse<T1>(p, sep, *d_a1)));
       }
     }
   }
@@ -425,10 +432,15 @@ struct ToString {
       const auto &[d_a0, d_a1] = bsl::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *d_a1;
       if (bsl::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return bsl::string("[") + p(d_a0) + bsl::string("]");
+        return crane::string_capped(
+            bsl::string("[") +
+            crane::string_capped(p(d_a0) + bsl::string("]")));
       } else {
-        return bsl::string("[") + p(d_a0) + intersperse<T1>(p, "; ", *d_a1) +
-               bsl::string("]");
+        return crane::string_capped(
+            bsl::string("[") +
+            crane::string_capped(
+                p(d_a0) + crane::string_capped(intersperse<T1>(p, "; ", *d_a1) +
+                                               bsl::string("]"))));
       }
     }
   }

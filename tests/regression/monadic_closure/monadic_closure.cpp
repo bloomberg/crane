@@ -29,7 +29,7 @@ crane::fn<std::string(std::string)> MonadicClosure::make_greeter() {
   std::string prefix;
   std::getline(std::cin, prefix);
   return [=, prefix = std::move(prefix)](const std::string &name) {
-    return prefix + name;
+    return crane::string_capped(prefix + name);
   };
 }
 

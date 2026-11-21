@@ -23,7 +23,7 @@ std::string BlockTemplateSemicolon::read_semicolon_stmt() {
     std::ifstream _f(std::string("path;with;semicolons"));
     std::getline(_f, s);
   };
-  return s + std::string(" done");
+  return crane::string_capped(s + std::string(" done"));
 }
 
 /// String argument with no semicolons (control case)
@@ -33,5 +33,5 @@ std::string BlockTemplateSemicolon::read_normal() {
     std::ifstream _f(std::string("normal_path.txt"));
     std::getline(_f, s);
   };
-  return s + std::string(" ok");
+  return crane::string_capped(s + std::string(" ok"));
 }

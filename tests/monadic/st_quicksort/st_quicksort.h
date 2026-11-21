@@ -9,6 +9,7 @@
 #include <concepts>
 #include <crane_itree.h>
 #include <crane_st.h>
+#include <crane_string.h>
 #include <cstdint>
 #include <memory>
 #include <optional>

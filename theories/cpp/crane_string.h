@@ -35,6 +35,19 @@ inline std::int64_t string_get(std::string_view text, std::int64_t i) {
 // PrimString.max_length, Rocq's bound on a string's length.
 inline constexpr std::int64_t string_max_length = 16777211;
 
+// PrimString.cat's result, cut to max_length bytes as Rocq's is.
+// Spelled around a [+] (theories/Mapping/Std.v), it takes the
+// concatenation by value and gives it back moved, so that a chain
+// [capped(capped(a + b) + c)] still appends to one growing buffer.  Rocq
+// cuts at each cat; cutting each link is the same as cutting the whole
+// chain once, a prefix of a prefix being a prefix.
+template <class String> String string_capped(String s) {
+  if (s.size() > static_cast<std::size_t>(string_max_length)) {
+    s.resize(static_cast<std::size_t>(string_max_length));
+  }
+  return s;
+}
+
 // PrimString.make: total, as Rocq's: the length is clamped to max_length
 // and the character to its low byte.
 inline std::string string_make(std::int64_t len, std::int64_t c) {

@@ -194,14 +194,18 @@ std::string StQuicksort::list_to_string_helper(const List<uint64_t> &l) {
           std::move(std::get<_after_list_to_string_helper_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = std::to_string(a0) + std::string(", ") + std::move(_result);
+      _result = crane::string_capped(
+          std::to_string(a0) +
+          crane::string_capped(std::string(", ") + std::move(_result)));
     }
   }
   return _result;
 }
 
 std::string StQuicksort::list_to_string(const List<uint64_t> &l) {
-  return std::string("[ ") + list_to_string_helper(l) + std::string(" ]");
+  return crane::string_capped(
+      std::string("[ ") +
+      crane::string_capped(list_to_string_helper(l) + std::string(" ]")));
 }
 
 std::string StQuicksort::test_quicksort_ST() {

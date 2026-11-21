@@ -29,7 +29,7 @@ std::string BlockTemplateEdge::two_strings() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return a + b;
+  return crane::string_capped(a + b);
 }
 
 /// 4. Block template result bound but unused
