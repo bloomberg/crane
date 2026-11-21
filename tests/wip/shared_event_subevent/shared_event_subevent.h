@@ -599,10 +599,11 @@ struct ITree {
     return bind<T1, Sum<T3, T2>, T2>(
         step(i), [=, step = step](const Sum<T3, T2> &lr) -> Itree<T1, T2> {
           if (crane::holds_alternative<typename Sum<T3, T2>::Inl>(lr.v())) {
-            const auto &[a0] = crane::get<typename Sum<T3, T2>::Inl>(lr.v());
             return Itree<T1, T2>::lazy_(
-                [=, a0 = a0, step = step]() mutable -> typename Itree<T1,
+                [=, lr = lr, step = step]() mutable -> typename Itree<T1,
                                                                       T2>::Go {
+                  const auto &[a0] =
+                      crane::get<typename Sum<T3, T2>::Inl>(lr.v());
                   return {ItreeF<T1, T2, Itree<T1, T2>>::tauf(
                       iter<T1, T2, T3>(step, a0))};
                 });
