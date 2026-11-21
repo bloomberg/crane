@@ -369,3 +369,16 @@ let call_argument_uses p =
     p.call_binders
 
 let in_place_positions p = List.filter_map (fun a -> if a.in_place then Some a.position else None) p.arguments
+
+let canonical_borrow_origin p =
+  match p.result with
+  | Return_borrowed (Canonical_borrow, origin) -> (
+    match List.find_opt (fun a -> a.name = origin.path_argument) p.arguments with
+    | Some a ->
+      let rec index i = function
+        | [] -> None
+        | k :: rest -> if k = a.binder then Some i else index (i + 1) rest
+      in
+      index 0 p.call_binders
+    | None -> None )
+  | _ -> None

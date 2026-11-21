@@ -1185,6 +1185,96 @@ let narrow_captures (d : settled) : settled =
   and rw () = rewriter ~stmts ~expr:fe ~stmt:fs ~type_:same_type () in
   Map.decl (rw ()) d
 
+(** {2 Captured scrutinees} *)
+
+(* A stored lambda written in a branch of a borrowing match, which reads
+   every field the branch binds, captures the matched value instead and
+   binds the fields again inside: the value is a shared variant, one word
+   whose copy is one count, where a copy of the fields is one count for each
+   field held by pointer and as many as a field's own fields for one held
+   in place -- a pair, a record, a type parameter.  An [ITree.iter] thunk
+   captured the [(state, value)] pair its [inl] holds, every component a
+   count bump, where the [inl] itself is one.  Only where the lambda reads
+   every field, so that it keeps alive nothing the copies would not; where
+   it moves none of them out of what it holds, as a thunk does from its own
+   copy; and where the branch neither assigns nor moves the scrutinee, so
+   that the lambda holds the value the branch took apart. *)
+let capture_scrutinees (d : settled) : settled =
+  let rec inductive_of : ty -> GlobRef.t option = function
+    | Member (t, _) | In_namespace (_, t) | Const t -> inductive_of t
+    | Entity_application (r, _, _) -> Some r
+    | _ -> None
+  in
+  let rec copy_cost (t : ty) =
+    match t with
+    | Const t | Reference (_, t) | In_namespace (_, t) -> copy_cost t
+    | Entity_application (r, _, _) when Base.Table.is_coinductive r -> 1
+    | _ when not (Ownership_ir.Region.worth_moving_cpp t) -> 0
+    | Shared_pointer _ | Function _ | Erased _ | Any | External ("crane::shared_box", _) -> 1
+    | Entity_application (r, _, _) when Base.Table.is_shared_variant r -> 1
+    | _ -> 2
+  in
+  let scrutinee_local (e : expr) =
+    match e with
+    | Call (_, Access (Dot, Local s, v), []) | Access_call (Arrow, Local s, v, []) when Id.to_string v = "v" -> Some s
+    | _ -> None
+  in
+  let moves_any xs (body : stmt list) =
+    let found = ref false in
+    let rec expr (e : expr) =
+      (match e with Move (Local x) when Cpp_ir.Variables.mem x xs -> found := true | _ -> ());
+      Cpp_ir.Subterms.expr ~expr ~stmts:(List.iter stmt) e
+    and stmt s = Cpp_ir.Subterms.stmt ~expr ~stmts:(List.iter stmt) s in
+    List.iter stmt body;
+    !found
+  in
+  let branch (scrut : phase Match.scrutinee) (b : phase Match.branch) : phase Match.branch =
+    let names = List.map (fun (f : phase Match.field_binding) -> f.name) b.field_bindings in
+    match (scrutinee_local scrut.expr, inductive_of b.ctor_type) with
+    | Some s, Some r
+      when (not scrut.owned) && (not scrut.flat) && names <> [] && b.extra_conditions = []
+           && Base.Table.is_shared_variant r
+           && List.fold_left (fun n (f : phase Match.field_binding) -> n + copy_cost f.type_) 0 b.field_bindings >= 2
+           && (not (Id.Set.mem s (Cpp_ir.Variables.assigned b.body)))
+           && not (moves_any [s] b.body) ->
+      let rebind (l : phase Lambda.t) : expr =
+        Lambda {l with body = [Match (scrut, [{b with body = l.body}], None)]}
+      in
+      let changed = ref false in
+      let rec fe (e : expr) : expr =
+        match e with
+        | Lambda ({capture = Stored; fixpoint = None; _} as l) ->
+          let free = Cpp_ir.Variables.free_in_expr e in
+          if
+            List.for_all (fun x -> Cpp_ir.Variables.mem x free) names
+            && (not (List.exists (fun x -> Cpp_ir.Variables.mem x names) l.moved))
+            && not (moves_any names l.body)
+          then (
+            changed := true;
+            rebind l )
+          else Map.expr (rw ()) e
+        | _ -> Map.expr (rw ()) e
+      and fs s = Map.stmt (rw ()) s
+      and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
+      let body = List.map fs b.body in
+      if not !changed then b
+      else
+        let read = Cpp_ir.Variables.free_in_body body in
+        let fields =
+          List.map (fun (f : phase Match.field_binding) -> {f with used = Cpp_ir.Variables.mem f.name read}) b.field_bindings
+        in
+        if List.exists (fun (f : phase Match.field_binding) -> f.used) fields then {b with field_bindings = fields; body}
+        else {b with field_bindings = []; var = None; body}
+    | _ -> b
+  in
+  let rec fs (s : stmt) : stmt =
+    match Map.stmt (rw ()) s with
+    | Match (scrut, branches, default) -> Match (scrut, List.map (branch scrut) branches, default)
+    | s -> s
+  and fe e = Map.expr (rw ()) e
+  and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
+  Map.decl (rw ()) d
+
 (** {2 Captures} *)
 
 (* Inner lambdas first: what an outer body names is read off the inner

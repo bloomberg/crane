@@ -878,13 +878,25 @@ module Binding = struct
 
   (* A let binds by reference the field it projects out of a record that is
      not moved there. *)
+  (* Or the component a mapped operation returns as a canonical borrow of
+     its argument ([fst p] is [p.first]), worth a copy, out of a variable
+     the region does not own: a component stored in place moves with its
+     owner, so the owner must be one nothing here moves from. *)
   let projects_in_place ~owned ~fate ty a =
-    Core_plan.Escape.is_shared_ptr_type ty
-    &&
     match a with
     | Core.Expr.Match {scrutinee = Core.Expr.Bound_variable {index = k; occurrence = o};
                        branches = [|{Core.Match.Branch.body = Core.Expr.Bound_variable _; _}|]; _} ->
-      not (owned k o && fate o = Last_use)
+      Core_plan.Escape.is_shared_ptr_type ty && not (owned k o && fate o = Last_use)
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _}; arguments = args}
+      when Base.Table.is_mapped_operation g -> (
+      worth_moving ty
+      &&
+      match Base.Mapping_operation.canonical_borrow_origin (Base.Mapping_operation.find g) with
+      | Some i -> (
+        match List.nth_opt args i with
+        | Some (Core.Expr.Bound_variable {index = k; occurrence = o}) -> not (owned k o)
+        | _ -> false )
+      | None -> false )
     | _ -> false
 
   (* A variant match takes apart a scrutinee the region owns, binding its

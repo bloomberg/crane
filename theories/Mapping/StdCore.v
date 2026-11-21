@@ -83,17 +83,22 @@ Local Open Scope pstring_scope.
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
+(** [fst] and [snd] name a component in place, a borrow of the pair: a let
+    that binds one out of a pair nothing moves from binds it by [const]
+    reference instead of copying it. *)
 #[export] Instance std_fst_mapping : OperationMapping (Ref (@fst)) :=
   {| operation_headers := ["utility"];
      operation_cpp := Expr "%arg(p).first";
      operation_contract :=
-       PureOperation [{| argument_name := "p"; argument_use := Read |}] ReturnValue [] |}.
+       PureOperation [{| argument_name := "p"; argument_use := Read |}]
+         (ReturnBorrowed CanonicalBorrow {| path_argument := "p"; path_components := ["first"] |}) [] |}.
 
 #[export] Instance std_snd_mapping : OperationMapping (Ref (@snd)) :=
   {| operation_headers := ["utility"];
      operation_cpp := Expr "%arg(p).second";
      operation_contract :=
-       PureOperation [{| argument_name := "p"; argument_use := Read |}] ReturnValue [] |}.
+       PureOperation [{| argument_name := "p"; argument_use := Read |}]
+         (ReturnBorrowed CanonicalBorrow {| path_argument := "p"; path_components := ["second"] |}) [] |}.
 
 From Corelib Require Import PrimString.
 #[export] Instance std_char63_mapping : TypeMapping PrimString.char63 :=
