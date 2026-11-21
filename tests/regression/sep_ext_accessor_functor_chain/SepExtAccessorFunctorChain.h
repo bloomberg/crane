@@ -10,7 +10,7 @@ template <Pred::T D> struct ParserFn {
   using SLLS = Sound::template SoundFn<D>;
 
   constexpr static uint64_t run(uint64_t n) {
-    return (n + SLLS::SLLP::size(SLLS::SLLP::empty_cache));
+    return (n + SLLS::SLLP::size(SLLS::SLLP::empty_cache()));
   }
 };
 

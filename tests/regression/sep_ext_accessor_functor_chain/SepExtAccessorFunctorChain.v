@@ -10,13 +10,16 @@
 
     Expected: compiles; [result = 3].
 
-    Actual: the use is written [SLLS::SLLP::empty_cache], without the call:
-    "reference to type 'const cache' could not bind to an lvalue of type
-    'const cache &()'". *)
+    Fixed: the use was written [SLLS::SLLP::empty_cache], without the
+    call ("reference to type 'const cache' could not bind to an lvalue of
+    type 'const cache &()'").  Whether a reference is an accessor is asked
+    of the module that defines it, found by resolving applications along
+    its path; [SLLS] resolved to [SoundFn], and [SoundFn.SLLP], itself an
+    application of [PredFn], was not resolved again. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
-From CraneTestsWIP Require Import sep_ext_accessor_functor_chain.Pred.
-From CraneTestsWIP Require Import sep_ext_accessor_functor_chain.Sound.
+From CraneTestsRegression Require Import sep_ext_accessor_functor_chain.Pred.
+From CraneTestsRegression Require Import sep_ext_accessor_functor_chain.Sound.
 
 Module ParserFn (D : T).
   Module Export SLLS := SoundFn D.
