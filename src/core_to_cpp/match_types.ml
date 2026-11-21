@@ -162,6 +162,25 @@ let iife_void_return cx env typ pv : Cpp_ir.Lowered.Type.t option =
     Some Void
   else None
 
+(** The function type a lambda whose returns are written under the return
+    type in force, [ret], and which computes a value annotated [r], is
+    declared at: [ret], where it is [r] with its arrows grouped otherwise --
+    curried, as a type variable instantiated at [r] takes it -- and [r]
+    where [ret] is no such regrouping, the enclosing declaration's own
+    return type, say, reaching a position that does not install one. *)
+let joined_at ~(ret : Cpp_ir.Lowered.Type.t option) (r : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t option =
+  let rec uncurried (t : Cpp_ir.Lowered.Type.t) =
+    match t with
+    | Function (doms, cod) ->
+      let ds, c = uncurried cod in
+      (doms @ ds, c)
+    | t -> ([], t)
+  in
+  match (ret, r) with
+  | Some (Function _ as f), Function _ when f <> r && uncurried f = uncurried r -> Some f
+  | _, Function _ -> Some r
+  | _ -> None
+
 (** [iife_closure_return env typ pv stmts] is the return type to annotate the
     IIFE wrapping a match with, given the branches already generated.
 
@@ -181,19 +200,25 @@ let iife_void_return cx env typ pv : Cpp_ir.Lowered.Type.t option =
     each deduce nothing.  A global counts because, at a function type, it is
     a function's name, whose type is no closure's; so does a member named
     through a scope, a class method [I::m] among them.  The [return]s of a nested
-    lambda are its own. *)
-let rec iife_closure_return cx env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
+    lambda are its own.
+
+    The type joined at is the one the branches were written under, [ret],
+    where that is a function type ({!Match.branch_return}): a lambda in a
+    branch tail takes its arguments grouped as [ret] groups them -- curried
+    where the match is handed to a parameter that is a type variable at a
+    function type -- and the annotation, read off Core, groups them flat. *)
+let rec iife_closure_return ?ret cx env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
   let branch_rty =
     match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ
   in
-  iife_closure_return_at cx env branch_rty stmts
+  iife_closure_return_at ?ret cx env branch_rty stmts
 
 (** The same question of any lambda whose return type C++ would deduce --
     an IIFE, or a function value ({!Lambda.gen_lambda}) -- computing a value
     of the Core type [rty], [~several] where only one returning from more
     than one place is asked it: a single closure returned deduces its own
     type, which converts wherever it goes. *)
-and iife_closure_return_at ?(several = false) cx env rty (stmts : Cpp_ir.Lowered.Stmt.t list) :
+and iife_closure_return_at ?(several = false) ?ret cx env rty (stmts : Cpp_ir.Lowered.Stmt.t list) :
     Cpp_ir.Lowered.Type.t option =
   let found = ref false and returns = ref 0 in
   let rec is_arrow = function
@@ -224,7 +249,7 @@ and iife_closure_return_at ?(several = false) cx env rty (stmts : Cpp_ir.Lowered
   in
   List.iter scan_stmt stmts;
   if not !found || (several && !returns < 2) then None
-  else match Types.cpp_of_core cx env rty with Function _ as r -> Some r | _ -> None
+  else match Types.cpp_of_core cx env rty with Function _ as r -> joined_at ~ret r | _ -> None
 
 (** [pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     ~non_erased_def_site_field_tys] -- what a pattern-match branch pins down

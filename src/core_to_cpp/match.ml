@@ -655,7 +655,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
       match void_ret with
       | Some _ -> Some Cpp_ir.Type.Void
       | None ->
-        Match_types.iife_closure_return cx env typ pv body
+        Match_types.iife_closure_return ?ret:(current_cpp_return_type cx ()) cx env typ pv body
     in
     Cpp_ir.Build.iife iife_ret_opt body
   else
@@ -758,7 +758,14 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
       match Match_types.iife_void_return cx env typ pv with
       | Some _ -> Some Cpp_ir.Type.Void
       | None ->
-        Match_types.iife_closure_return cx env typ pv [Match (scrut, branches, wildcard)]
+        (* The branches were written under [branch_return] of the return
+           type in force (see {!gen_match_branch}). *)
+        let ret =
+          match (current_cpp_return_type cx (), Array.to_list pv) with
+          | Some Void, _ | _, [] -> None
+          | rt, {Core.Match.Branch.result_type = rty; _} :: _ -> branch_return cx env rt rty
+        in
+        Match_types.iife_closure_return ?ret cx env typ pv [Match (scrut, branches, wildcard)]
     in
     (* Perceus reuse (Crane Reuse): rebuild a same-inductive constructor in
        a cell the match frees instead of allocating, via the [<ctor>__reuse]
@@ -1554,7 +1561,12 @@ let gen_custom_match_expr cx ?slot env ~typ ~t ~pv ~case_occ : Cpp_ir.Lowered.Ex
     let r = Types.cpp_of_core cx env branch_rty in
     if is_cpp_unit_type r
        || Monadic.core_type_is_void_call branch_rty
-    then Cpp_ir.Type.Void else r
+    then Cpp_ir.Type.Void
+    else
+      (* The branches are written under the return type in force: where
+         that is the annotation's function type grouped otherwise, the
+         lambdas they return take their arguments as it groups them. *)
+      match Match_types.joined_at ~ret:(current_cpp_return_type cx ()) r with Some t -> t | None -> r
   in
   let stmts =
     let ret =
