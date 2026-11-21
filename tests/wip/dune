@@ -264,17 +264,6 @@
   (deps bake_string_literal.t.exe)
   (action (run ./bake_string_literal.t.exe))))
 
-(subdir deque_fold_function_acc
- (rule
-  (targets deque_fold_function_acc.t.exe)
-  (deps DequeFoldFunctionAcc.vo deque_fold_function_acc.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_function_acc.t.exe deque_fold_function_acc.t.cpp deque_fold_function_acc.cpp)))
- (rule
-  (alias runtest)
-  (deps deque_fold_function_acc.t.exe)
-  (action (run ./deque_fold_function_acc.t.exe))))
-
 (subdir string_cat_max_length
  (rule
   (targets string_cat_max_length.t.exe)

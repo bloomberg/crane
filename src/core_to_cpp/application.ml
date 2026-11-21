@@ -330,6 +330,24 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
         Coerce.erase_fn_arg_for_param cx env param_ty core_arg expr
       | _ -> expr
     in
+    (* A mapping's text takes each argument as it comes, deducing [auto]
+       from it: a closure handed for a parameter declared at a type variable
+       is the type of whatever the text keeps it in -- a fold's
+       accumulator, assigned each step's result, a different closure.  So
+       is a function's name, decaying to a pointer no closure that captures
+       converts to.  Either arrives named, at the [crane::fn] every callable
+       of its type converts to ({!Cpp_ir.Expr.Function_value}). *)
+    let expr : Cpp_ir.Lowered.Expr.t =
+      if not (Base.Table.is_inline_custom id) then expr
+      else
+        match (Option.map resolve_meta (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index), expr) with
+        | Some (Core.Type.Variable _), (Lambda _ | Entity _)
+          when (match param_core_ty with
+                | Some t -> (match resolve_meta t with Core.Type.Arrow _ -> true | _ -> false)
+                | None -> false) ->
+          Function_value expr
+        | _ -> expr
+    in
     (* A methodified callee is spelled [recv.f(rest)], and [std::any] has no
        members: unlike every other argument, the receiver cannot arrive as a
        box at all.  What says that it does is the declaration the receiver
