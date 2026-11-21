@@ -203,7 +203,7 @@ struct LoopifyNumbers {
         _stack.pop_back();
         uint64_t n = _f.n;
         if (n <= 0) {
-          _result = x;
+          _result = std::move(x);
         } else {
           uint64_t n_ = n - 1;
           if (n_ <= 0) {

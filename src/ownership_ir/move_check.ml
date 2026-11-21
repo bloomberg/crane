@@ -341,6 +341,10 @@ let pointers ss =
 (* Walk the body [ss] from an empty set of references, collecting what it
    reads after a move and the references it reads stale. *)
 let walk_body ss =
+  (* A frame machine's final path moves loop invariants this walk would see
+     read again round the loop; {!Final_path} decides from the machine's
+     handlers that none is. *)
+  let ss = Final_path.erase_final_moves ss in
   let report = {found = []; stale = []; pointers = pointers ss} in
   body report Id.Map.empty ss;
   report

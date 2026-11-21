@@ -2422,6 +2422,23 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
     in
     make_frame_branch (ee_name ee) handler
   in
+  (* The invariant parameters a final path of the entry handler may move
+     ({!Ownership_ir.Final_path}): the function's own parameters, not a
+     local fixpoint's captures (the fixpoint may be called again), when the
+     machine has one entry and no frame keeps a pointer (it may point into
+     one). *)
+  let final_movable =
+    match emissions with
+    | [ee] when not (Ownership_ir.Final_path.frames_point struct_defs) ->
+      Ownership_ir.Final_path.movable ~entry:ee.id ~entry_body:ee.body
+        ~others:(List.map (fun cf -> cf.Call_frame_info.handler) frames)
+        (Id.Set.filter (fun id -> List.mem_assoc id params) invariant_params)
+    | _ -> Id.Set.empty
+  in
+  let entry_branch ee =
+    let b = entry_branch ee in
+    {b with body = Ownership_ir.Final_path.keep_final_moves ~entry:ee.Entry_emission.id final_movable b.body}
+  in
   let enter_branches = List.map entry_branch emissions in
   (* Call handlers — fix pointer-safe field bindings, then adjust push args *)
   let call_branches =
@@ -2453,5 +2470,5 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
   in
   make_loop_and_return ?fn_name struct_defs ret_ty init_push
     (enter_branches @ call_branches)
-  |> unmove_invariant_params invariant_params
+  |> unmove_invariant_params (Id.Set.diff invariant_params final_movable)
   )
