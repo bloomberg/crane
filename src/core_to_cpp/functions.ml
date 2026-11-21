@@ -1754,6 +1754,17 @@ let thunk n ret body : Cpp_ir.Lowered.Decl.t =
       modes = [];
       loop = None }
 
+(** The initialiser of a baked constant ([Crane Bake]): the extraction
+    driving its bake hands its value to the bake driver, and every other one
+    reads it back from the image the driver wrote.  Its body is generated all
+    the same, so that the unit plans and includes what it would. *)
+let baked_initialiser n (init : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  if Base.Table.is_bake_root n then Cpp_ir.Build.call (Foreign_text "crane::bake::root") [init]
+  else
+    match Base.Table.baked_image n with
+    | Some b -> Foreign_text ("crane::bake::value{" ^ b.symbol ^ "}")
+    | None -> init
+
 (** The constant [n] of C++ type [ty], initialised with [init], the value
     translation generated. *)
 let variable n ty init : Cpp_ir.Lowered.Decl.t =
@@ -1803,6 +1814,7 @@ let gen_decl__inner cx n b ty =
         | Boxed kind -> Coerce.box_for_any_slot cx kind b body_expr
         | Native -> body_expr
       in
+      let body_expr = baked_initialiser n body_expr in
       (templated (deapply_plain_tvars temps (variable n cty_ir body_expr)), empty_env (), tvars)
 
 (** {!gen_decl__inner} with [n] as the declaration being generated. *)
@@ -2049,6 +2061,7 @@ let gen_spec__inner cx n b ty =
         if Types.mentions_unresolved_promoted cx ty_ir then Auto else ty_ir in
       (* A polymorphic constant's family parameter is plain, as a
          function's is, and written applied until deapplied. *)
+      let b_expr = baked_initialiser n b_expr in
       (templated (deapply_plain_tvars temps (variable n (Const ty_ir) b_expr)), empty_env ())
   in
   result

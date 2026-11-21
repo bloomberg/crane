@@ -370,6 +370,12 @@ VERNAC COMMAND EXTEND ExtractionNumeral CLASSIFIED AS SIDEFF
   -> { Base.Table.extract_numeral x fmt }
 END
 
+(* Compute a closed constant at extraction time and extract it as data *)
+VERNAC COMMAND EXTEND CraneBake CLASSIFIED AS SIDEFF STATE opaque_access
+| [ "Crane" "Bake" ne_global_list(l) ]
+  -> { Driver.Bake.bake l }
+END
+
 VERNAC COMMAND EXTEND ExtractionGuardCompare CLASSIFIED AS SIDEFF
 | [ "Crane" "Guard" "Compare" global(f) "=>" global(ret) ]
   -> { Base.Table.extract_guard_compare f ret }
