@@ -73,6 +73,12 @@ class list {
 
     explicit list(cell* c) noexcept : p_(c) {}  // adopt an existing ref (no bump)
 
+    // An immortal cell's count starts this high, so the plain increments and
+    // decrements every copy still does never bring it to zero: a constant's
+    // cells cost no test on the count, only the unchecked update.
+    static constexpr std::size_t immortal_rc = ~std::size_t{0} / 2;
+    static bool is_immortal(const cell* c) noexcept { return c->rc >= immortal_rc / 2; }
+
 public:
     using value_type = T;
 
@@ -129,6 +135,15 @@ public:
     }
 
     // -- observers ------------------------------------------------------
+    // [crane::make_immortal]: each cell of the spine, and what its head
+    // holds, up to the first cell already immortal.
+    void make_immortal() const noexcept {
+        for (cell* c = p_; c && !is_immortal(c); c = c->next) {
+            c->rc = immortal_rc;
+            crane::make_immortal(c->head);
+        }
+    }
+
     bool     empty() const noexcept { return !p_; }
     const T& front() const noexcept { return p_->head; }           // head, O(1)
     list     tail()  const noexcept { incref(p_->next); return list(p_->next); } // drop 1, O(1)

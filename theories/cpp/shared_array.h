@@ -100,6 +100,13 @@ public:
     return make(n, [&](T *slot, std::size_t i) { ::new (slot) T((*this)[i + k]); });
   }
 
+  // [crane::make_immortal]: the block and what its elements hold.
+  void make_immortal() const noexcept {
+    if (!p_ || p_->rc.is_immortal()) return;
+    p_->rc.make_immortal();
+    for (const T &x : *this) crane::make_immortal(x);
+  }
+
   // [crane::release_into]: the block released into [h], this array empty.
   void release_into(pool_detail::thread_heap &h) noexcept {
     if (p_) p_->release_into(h);

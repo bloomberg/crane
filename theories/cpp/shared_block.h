@@ -21,8 +21,11 @@
 // non-atomic header included ahead of it is a compile error rather than a
 // race.
 #pragma once
+#include <concepts>
 #include <cstddef>
 #include <new>
+#include <type_traits>
+#include <utility>
 #include "pool.h"
 #include "stats.h"
 #ifndef CRANE_NON_ATOMIC_RC
@@ -148,18 +151,122 @@ template <class T> void release_into(T &x, pool_detail::thread_heap &h) noexcept
     x.v_mut().release_into(h);
 }
 
+namespace immortal_detail {
+
+// The walk [crane::make_immortal] does, past a bounded depth: what is left
+// to mark, each object with the function that marks it.  A constant can be
+// as long as the program's longest list -- a table built at startup -- and
+// marked recursively that is one C++ frame per node, so past [max_depth]
+// frames an object is queued and the outermost call drains the queue.  An
+// object queued is inside a block already immortal, or in the root the
+// outermost call was handed, so it is still there when its turn comes.
+struct pending {
+  const void *object;
+  void (*mark)(const void *) noexcept;
+};
+struct walk {
+  std::size_t depth = 0, size = 0, cap = 0;
+  pending *items = nullptr;
+  void push(pending p) noexcept {
+    if (size == cap) {
+      std::size_t ncap = cap ? 2 * cap : 64;
+      auto *n = static_cast<pending *>(::operator new(ncap * sizeof(pending)));
+      for (std::size_t i = 0; i < size; ++i) n[i] = items[i];
+      ::operator delete(items);
+      items = n;
+      cap = ncap;
+    }
+    items[size++] = p;
+  }
+};
+// Read only while a constant is being marked, once per constant: no path a
+// running program repeats reaches this thread_local.
+inline walk &this_thread_walk() noexcept {
+  thread_local walk w;
+  return w;
+}
+inline constexpr std::size_t max_depth = 256;
+
+template <class T>
+concept tuple_like = requires { std::tuple_size<T>::value; };
+// A record: a plain aggregate whose fields bind as a pack.  Standard layout
+// says its fields are declared in one class, with one access, as a
+// structured binding needs.  Binding them as a pack is C++26: an older
+// standard (a BDE build) leaves a record's blocks counted.
+#if __cplusplus > 202302L
+template <class T>
+concept plain_record =
+    std::is_class_v<T> && std::is_aggregate_v<T> && std::is_standard_layout_v<T> && !std::is_empty_v<T>;
+#else
+template <class T>
+concept plain_record = false;
+#endif
+template <class T>
+concept optional_like = requires(const T &x) {
+  typename T::value_type;
+  { x.has_value() } -> std::same_as<bool>;
+  *x;
+};
+
+// Whether [T] may hold a block [make_immortal] can reach.
+template <class T>
+concept may_hold_blocks =
+    !std::is_scalar_v<T>
+    && (requires(const T &x) { x.make_immortal(); } || requires(const T &x) { x.v().make_immortal(); }
+        || tuple_like<T> || plain_record<T> || optional_like<T>);
+
+template <class T> void mark(const void *p) noexcept;
+
+} // namespace immortal_detail
+
 // Makes every block [x] holds immortal: a handle by its own
-// [make_immortal], a generated inductive by its variant's.
+// [make_immortal], a generated inductive by its variant's, a pair, tuple,
+// optional or record by its components'.  What holds no block of Crane's
+// runtime -- a [std::shared_ptr], an immer container -- stays counted.
 template <class T> void make_immortal(const T &x) noexcept {
+  if constexpr (immortal_detail::may_hold_blocks<T>) {
+    immortal_detail::walk &w = immortal_detail::this_thread_walk();
+    if (w.depth >= immortal_detail::max_depth) {
+      w.push({&x, &immortal_detail::mark<T>});
+      return;
+    }
+    ++w.depth;
+    immortal_detail::mark<T>(&x);
+    if (w.depth == 1)
+      while (w.size != 0) {
+        immortal_detail::pending p = w.items[--w.size];
+        p.mark(p.object);
+      }
+    --w.depth;
+  }
+}
+
+template <class T> void immortal_detail::mark(const void *p) noexcept {
+  const T &x = *static_cast<const T *>(p);
   if constexpr (requires { x.make_immortal(); })
     x.make_immortal();
   else if constexpr (requires { x.v().make_immortal(); })
     x.v().make_immortal();
+  else if constexpr (optional_like<T>) {
+    if (x.has_value()) crane::make_immortal(*x);
+  } else if constexpr (tuple_like<T>) {
+    [&]<std::size_t... I>(std::index_sequence<I...>) {
+      using std::get;
+      (crane::make_immortal(get<I>(x)), ...);
+    }(std::make_index_sequence<std::tuple_size<T>::value>{});
+  }
+#if __cplusplus > 202302L
+  else {
+    const auto &[... fields] = x;
+    (crane::make_immortal(fields), ...);
+  }
+#endif
 }
 
-// [v], every block it holds made immortal: a constant, declared once as a
-// static local -- [static const auto pos_10 = crane::immortal(...)] -- and
-// read from every thread, which then never write its counts.
+// [v], every block it holds made immortal: a constant -- a function's,
+// declared once as a static local, [static const auto pos_10 =
+// crane::immortal(...)], or a global's initialiser -- read from every
+// thread, which then never write its counts, and never freed.
 template <class T> T immortal(T v) {
   crane::make_immortal(v);
   return v;

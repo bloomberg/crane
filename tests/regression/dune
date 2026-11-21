@@ -11964,6 +11964,17 @@
   (deps erased_let_not_result_type.t.exe)
   (action (run ./erased_let_not_result_type.t.exe))))
 
+(subdir immortal_global_constant
+ (rule
+  (targets immortal_global_constant.t.exe)
+  (deps ImmortalGlobalConstant.vo immortal_global_constant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} immortal_global_constant.t.exe immortal_global_constant.t.cpp immortal_global_constant.cpp)))
+ (rule
+  (alias runtest)
+  (deps immortal_global_constant.t.exe)
+  (action (run ./immortal_global_constant.t.exe))))
+
 (subdir shared_variant_constant
  (rule
   (targets shared_variant_constant.t.exe)

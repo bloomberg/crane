@@ -1721,6 +1721,22 @@ let decide_constexpr (d : settled) : settled =
   in
   decl d
 
+(* A global is a constant too, built once before [main] (or, in a template,
+   the first time it is read).  Under [Set Crane SharedVariant], where the
+   blocks it holds are the runtime's own, one whose type is not a literal
+   type is initialised through [crane::immortal], as a function's constants
+   are ({!Constants}): no copy or drop of anything it holds then touches a
+   count. *)
+let immortal_globals (d : settled) : settled =
+  let rec decl : decl -> decl = function
+    | Variable ({constexpr = Ineligible; _} as a) when not (is_literal_type a.type_) ->
+      Variable {a with init = call (Runtime Cpp_ir.Crane_rt.Immortal) [a.init]}
+    | Template (tps, c, d) -> Template (tps, c, decl d)
+    | Namespace (r, ds) -> Namespace (r, List.map decl ds)
+    | d -> d
+  in
+  if Base.Table.shared_variant () then decl d else d
+
 (** {2 Free type variables} *)
 
 let tvar_is = Cpp_ir.Type.is_variable_named

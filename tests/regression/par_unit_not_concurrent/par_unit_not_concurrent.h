@@ -122,7 +122,8 @@ struct ParUnitNotConcurrent {
   static tree mk(uint64_t n);
   static tree mirror(const tree &t);
   static uint64_t churn(uint64_t k, const tree &t);
-  [[gnu::used]] static inline const tree shared = mk(UINT64_C(2000));
+  [[gnu::used]] static inline const tree shared =
+      crane::immortal(mk(UINT64_C(2000)));
   static uint64_t work(uint64_t k);
   static uint64_t race(uint64_t k);
 };

@@ -13,7 +13,9 @@
     bump rather than an allocation per node.  [crane::immortal] makes its
     blocks immortal, since it is read from every thread.  An erased closure
     ([crane_erase_fn]) over a closed lambda is hoisted the same way, as
-    [erased_fn]: it too is the same value wherever it is evaluated.
+    [erased_fn]: it too is the same value wherever it is evaluated.  A
+    global's initialiser is made immortal later, once its type is final
+    ({!Erasure.immortal_globals}).
 
     One of the per-declaration passes of {!Pipeline}. *)
 
