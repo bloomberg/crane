@@ -34,8 +34,8 @@ List<uint64_t> StQuicksort::quicksort_fun(const List<uint64_t> &x) {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(x.v());
         const List<uint64_t> &a1_value = *a1;
         _stack.emplace_back(_after_quicksort_fun_in_Cons{a0, a1});
-        _stack.emplace_back(
-            _call{a1_value.filter([=](uint64_t x0) { return x0 < a0; })});
+        _stack.emplace_back(_call{a1_value.filter(
+            [=, a0 = std::move(a0)](uint64_t x0) { return x0 < a0; })});
       }
     } else if (std::holds_alternative<_after_quicksort_fun_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_quicksort_fun_in_Cons>(_popped));
@@ -45,15 +45,15 @@ List<uint64_t> StQuicksort::quicksort_fun(const List<uint64_t> &x) {
       const List<uint64_t> &a1_value = *a1;
       _stack.emplace_back(
           _after_quicksort_fun_in_Cons_2{a0, std::move(_result)});
-      _stack.emplace_back(
-          _call{a1_value.filter([=](uint64_t x0) { return a0 <= x0; })});
+      _stack.emplace_back(_call{a1_value.filter(
+          [=, a0 = std::move(a0)](uint64_t x0) { return a0 <= x0; })});
     } else {
       auto _f = std::move(std::get<_after_quicksort_fun_in_Cons_2>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result =
-          _f._tmp2.app(List<uint64_t>::cons(a0, List<uint64_t>::nil()).app(
-              std::move(_result)));
+      _result = _f._tmp2.app(List<uint64_t>::cons(std::move(a0),
+                                                  List<uint64_t>::nil())
+                                 .app(std::move(_result)));
     }
   }
   return _result;

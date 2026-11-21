@@ -6,7 +6,7 @@ TypedMappingExactNumbers::factorial(const boost::multiprecision::cpp_int &n) {
     return boost::multiprecision::cpp_int("1");
   } else {
     boost::multiprecision::cpp_int k = boost::multiprecision::cpp_int(n - 1);
-    return boost::multiprecision::cpp_int(n * factorial(k));
+    return boost::multiprecision::cpp_int(n * factorial(std::move(k)));
   }
 }
 

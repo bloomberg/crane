@@ -61,9 +61,9 @@ MemSafetyProbe13::tree_vals_and_fns(const MemSafetyProbe13::tree &t) {
   };
 
   struct _after_tree_vals_and_fns_in_pair {
-    std::shared_ptr<MemSafetyProbe13::tree> a0;
     uint64_t a1;
     const MemSafetyProbe13::tree *a2;
+    std::shared_ptr<MemSafetyProbe13::tree> a0;
     MemSafetyProbe13::mylist<uint64_t> lvals;
     MemSafetyProbe13::mylist<crane::fn<uint64_t(uint64_t)>> lfns;
   };
@@ -104,14 +104,14 @@ MemSafetyProbe13::tree_vals_and_fns(const MemSafetyProbe13::tree &t) {
       const MemSafetyProbe13::tree &a2_value = a2;
       auto [lvals, lfns] = std::move(_result);
       _stack.emplace_back(_after_tree_vals_and_fns_in_pair{
-          std::move(a0), a1, &a2, std::move(lvals), std::move(lfns)});
+          a1, &a2, std::move(a0), std::move(lvals), std::move(lfns)});
       _stack.emplace_back(_call{&a2_value});
     } else {
       auto _f = std::move(std::get<_after_tree_vals_and_fns_in_pair>(_popped));
       _stack.pop_back();
-      std::shared_ptr<MemSafetyProbe13::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe13::tree &a2 = *_f.a2;
+      std::shared_ptr<MemSafetyProbe13::tree> a0 = std::move(_f.a0);
       MemSafetyProbe13::mylist<uint64_t> lvals = std::move(_f.lvals);
       MemSafetyProbe13::mylist<crane::fn<uint64_t(uint64_t)>> lfns =
           std::move(_f.lfns);

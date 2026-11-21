@@ -264,16 +264,17 @@ uint64_t MemSafetyProbe22::split_sum(const MemSafetyProbe22::tree &t,
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      const MemSafetyProbe22::tree &t = _f.t;
+      MemSafetyProbe22::tree t = std::move(_f.t);
       if (n <= 0) {
-        _result = tree_sum(t);
+        _result = tree_sum(std::move(t));
       } else {
         uint64_t n_ = n - 1;
-        if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(t.v())) {
+        if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(
+                t.v_mut())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1, a2] =
-              std::get<typename MemSafetyProbe22::tree::Node>(t.v());
+          auto &[a0, a1, a2] =
+              std::get<typename MemSafetyProbe22::tree::Node>(t.v_mut());
           _stack.emplace_back(_after_split_sum_in_Node{n_, a1, a2});
           _stack.emplace_back(
               _call{n_, tree::node(crane::shared_child(a0), (a1 + UINT64_C(1)),

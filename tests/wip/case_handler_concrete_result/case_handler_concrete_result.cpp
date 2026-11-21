@@ -23,7 +23,7 @@ CaseHandlerConcreteResult::result(uint64_t fuel,
     } else if (std::holds_alternative<typename ITree<uint64_t>::Tau>(_cs)) {
       const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
       auto t_ = _itf.next;
-      return result(f, t_);
+      return result(f, std::move(t_));
     } else {
       const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
       auto _x = crane_event_as<crane::obj>(_itf.effect);

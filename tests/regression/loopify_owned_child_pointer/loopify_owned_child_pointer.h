@@ -320,8 +320,8 @@ struct LoopifyOwnedChildPointer {
       };
 
       struct _after_subs_in_Node_2 {
-        crane::shared_box<tree> a0;
         List<crane::fn<uint64_t(uint64_t)>> _tmp2;
+        crane::shared_box<tree> a0;
       };
 
       using _frame =
@@ -353,7 +353,7 @@ struct LoopifyOwnedChildPointer {
           const tree &a0_value = *a0;
           const tree &a2_value = a2;
           _stack.emplace_back(
-              _after_subs_in_Node_2{std::move(a0), std::move(_result)});
+              _after_subs_in_Node_2{std::move(_result), std::move(a0)});
           _stack.emplace_back(_call{&a2_value});
         } else {
           auto _f = std::move(crane::get<_after_subs_in_Node_2>(_popped));

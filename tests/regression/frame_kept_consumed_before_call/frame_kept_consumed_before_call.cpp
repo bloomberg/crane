@@ -39,8 +39,8 @@ FrameKeptConsumedBeforeCall::pairs(uint64_t fuel, List<List<uint64_t>> l) {
   };
 
   struct _after_pairs_in_Cons {
-    List<uint64_t> a0;
     List<uint64_t> y;
+    List<uint64_t> a0;
   };
 
   using _frame = std::variant<_call, _after_pairs_in_Cons>;
@@ -74,7 +74,7 @@ FrameKeptConsumedBeforeCall::pairs(uint64_t fuel, List<List<uint64_t>> l) {
                 std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
             List<uint64_t> y = snoc(a0);
             _stack.emplace_back(
-                _after_pairs_in_Cons{std::move(a0), std::move(y)});
+                _after_pairs_in_Cons{std::move(y), std::move(a0)});
             _stack.emplace_back(
                 _call{List<List<uint64_t>>::cons(a00, crane::child(a10)), k});
           }
@@ -83,8 +83,8 @@ FrameKeptConsumedBeforeCall::pairs(uint64_t fuel, List<List<uint64_t>> l) {
     } else {
       auto _f = std::move(std::get<_after_pairs_in_Cons>(_popped));
       _stack.pop_back();
-      List<uint64_t> a0 = std::move(_f.a0);
       List<uint64_t> y = std::move(_f.y);
+      List<uint64_t> a0 = std::move(_f.a0);
       List<List<uint64_t>> r = std::move(_result);
       _result = List<List<uint64_t>>::cons(
           std::move(a0),

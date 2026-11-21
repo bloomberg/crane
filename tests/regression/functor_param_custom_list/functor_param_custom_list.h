@@ -3,6 +3,7 @@
 #include <concepts>
 #include <cstdint>
 #include <deque>
+#include <utility>
 
 /// A functor's parameter type inside a custom-mapped type: R.String is
 /// list R.Sigma, and list is a custom.  Extraction carried the type
@@ -26,7 +27,7 @@ struct FunctorParamCustomList {
         const typename R::Sigma &x = s.front();
         std::deque<typename R::Sigma> xs =
             std::deque<typename R::Sigma>(s.begin() + 1, s.end());
-        return (R::ok(x) && all_ok(xs));
+        return (R::ok(x) && all_ok(std::move(xs)));
       }
     }
   };

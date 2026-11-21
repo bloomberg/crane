@@ -67,7 +67,8 @@ template <SymbolTypes Ty> struct DefsFn {
       const frame &f = frs.front();
       std::deque<frame> frs_ = std::deque<frame>(frs.begin() + 1, frs.end());
       const auto &[_, _, suf0] = f;
-      return (static_cast<uint64_t>(suf0.size()) + tail_lengths(frs_));
+      return (static_cast<uint64_t>(suf0.size()) +
+              tail_lengths(std::move(frs_)));
     }
   }
 };

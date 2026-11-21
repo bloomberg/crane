@@ -297,10 +297,10 @@ List<uint64_t> LoopifySorting::quicksort_fuel(uint64_t fuel,
         _result = std::move(l);
       } else {
         uint64_t f = fuel - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
           _result = List<uint64_t>::nil();
         } else {
-          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           auto [lo, hi] = partition(a0, *a1);
           _stack.emplace_back(
               _after_quicksort_fuel_in_pair{f, a0, std::move(hi)});
@@ -320,7 +320,8 @@ List<uint64_t> LoopifySorting::quicksort_fuel(uint64_t fuel,
       auto _f = std::move(std::get<_after_quicksort_fuel_in_pair_2>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = _f._tmp2.app(List<uint64_t>::cons(a0, std::move(_result)));
+      _result =
+          _f._tmp2.app(List<uint64_t>::cons(std::move(a0), std::move(_result)));
     }
   }
   return _result;

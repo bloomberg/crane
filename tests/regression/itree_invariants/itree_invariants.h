@@ -3,6 +3,7 @@
 #include "obj.h"
 #include <crane_itree.h>
 #include <cstdint>
+#include <utility>
 
 struct ItreeInvariants {
   /// Emitted so the generated header includes <crane_itree.h>.

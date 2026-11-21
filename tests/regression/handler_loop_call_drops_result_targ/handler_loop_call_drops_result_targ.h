@@ -259,19 +259,20 @@ struct Denot {
             auto a = _itf.value;
             return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
                                  Sum<dvalue<typename _tcI0::ptr>, T1>>::inr(
-                Sum<dvalue<typename _tcI0::ptr>, T1>::inr(a)));
+                Sum<dvalue<typename _tcI0::ptr>, T1>::inr(std::move(a))));
           } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
             const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
             auto u_ = _itf.next;
-            return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
-                                 Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(u_));
+            return itree_ret(
+                Sum<std::shared_ptr<ITree<T1>>,
+                    Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(std::move(u_)));
           } else {
             const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&_cs);
             auto e = crane_event_as<
                 Sum1<OtherE, FailE<typename _tcI0::ptr>, crane::obj>>(
                 _itf.effect);
             auto k = _itf.cont;
-            auto &&_sv = handle_bot<_tcI0, crane::obj>(e);
+            auto &&_sv = handle_bot<_tcI0, crane::obj>(std::move(e));
             if (std::holds_alternative<typename Sum<Nat, crane::obj>::Inl>(
                     _sv.v())) {
               return itree_ret(Sum<std::shared_ptr<ITree<T1>>,

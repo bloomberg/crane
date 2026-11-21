@@ -17,7 +17,7 @@ uint64_t BoxedElementRoseTree::size(const BoxedElementRoseTree::rose &r) {
           } else {
             const BoxedElementRoseTree::rose &k = l.front();
             auto t = l.tail();
-            return (size(k) + _self_go(_self_go, t));
+            return (size(k) + _self_go(_self_go, std::move(t)));
           }
         };
     auto go =
@@ -41,7 +41,7 @@ uint64_t BoxedElementRoseTree::total(const BoxedElementRoseTree::rose &r) {
           } else {
             const BoxedElementRoseTree::rose &k = l.front();
             auto t = l.tail();
-            return (total(k) + _self_go(_self_go, t));
+            return (total(k) + _self_go(_self_go, std::move(t)));
           }
         };
     auto go =

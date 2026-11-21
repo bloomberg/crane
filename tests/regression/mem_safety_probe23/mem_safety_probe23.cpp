@@ -473,8 +473,8 @@ MemSafetyProbe23::flatten_tree_of_trees(const MemSafetyProbe23::tree &t,
   };
 
   struct _after_flatten_tree_of_trees_in_Node {
-    MemSafetyProbe23::tree inner;
     const MemSafetyProbe23::tree *a2;
+    MemSafetyProbe23::tree inner;
   };
 
   struct _after_flatten_tree_of_trees_in_Node_2 {
@@ -491,16 +491,16 @@ MemSafetyProbe23::flatten_tree_of_trees(const MemSafetyProbe23::tree &t,
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
-      const MemSafetyProbe23::tree &inner = _f.inner;
+      MemSafetyProbe23::tree inner = std::move(_f.inner);
       const MemSafetyProbe23::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe23::tree::Leaf>(t.v())) {
-        _result = tree_sum(inner);
+        _result = tree_sum(std::move(inner));
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe23::tree::Node>(t.v());
         MemSafetyProbe23::tree new_inner = tree::node(inner, a1, tree::leaf());
-        _stack.emplace_back(
-            _after_flatten_tree_of_trees_in_Node{inner, crane_raw(a2)});
+        _stack.emplace_back(_after_flatten_tree_of_trees_in_Node{
+            crane_raw(a2), std::move(inner)});
         _stack.emplace_back(_call{std::move(new_inner), crane_raw(a0)});
       }
     } else if (std::holds_alternative<_after_flatten_tree_of_trees_in_Node>(
@@ -508,8 +508,8 @@ MemSafetyProbe23::flatten_tree_of_trees(const MemSafetyProbe23::tree &t,
       auto _f =
           std::move(std::get<_after_flatten_tree_of_trees_in_Node>(_popped));
       _stack.pop_back();
-      MemSafetyProbe23::tree inner = std::move(_f.inner);
       const MemSafetyProbe23::tree &a2 = *_f.a2;
+      MemSafetyProbe23::tree inner = std::move(_f.inner);
       _stack.emplace_back(
           _after_flatten_tree_of_trees_in_Node_2{std::move(_result)});
       _stack.emplace_back(_call{std::move(inner), &a2});
@@ -556,9 +556,9 @@ uint64_t MemSafetyProbe23::mixed_recurse(const MemSafetyProbe23::tree &t,
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      const MemSafetyProbe23::tree &t = _f.t;
+      MemSafetyProbe23::tree t = std::move(_f.t);
       if (n <= 0) {
-        _result = tree_sum(t);
+        _result = tree_sum(std::move(t));
       } else {
         uint64_t n_ = n - 1;
         if (std::holds_alternative<typename MemSafetyProbe23::tree::Leaf>(t.v())) {

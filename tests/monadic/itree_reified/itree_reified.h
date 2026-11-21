@@ -7,6 +7,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <variant>
 
 struct ITreeReified {
@@ -31,7 +32,7 @@ struct ITreeReified {
     if (std::holds_alternative<typename ITree<T2>::Ret>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T2>::Ret>(&ot);
       auto r = _itf.value;
-      return ITree<T2>::ret(r);
+      return ITree<T2>::ret(std::move(r));
     } else if (std::holds_alternative<typename ITree<T2>::Tau>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T2>::Tau>(&ot);
       auto t_ = _itf.next;
@@ -40,7 +41,9 @@ struct ITreeReified {
             std::cout << std::string("[tau]") << '\n';
             return std::any{};
           }),
-          [=, rec = rec](const auto &) { return itree_tau(rec(t_)); });
+          [=, rec = rec, t_ = std::move(t_)](const auto &) {
+            return itree_tau(rec(t_));
+          });
     } else {
       const auto &_itf = *std::get_if<typename ITree<T2>::Vis>(&ot);
       auto e = crane_event_as<crane::obj>(_itf.effect);
@@ -50,7 +53,7 @@ struct ITreeReified {
             std::cout << std::string("[vis]") << '\n';
             return std::any{};
           }),
-          [=, rec = rec](const auto &) {
+          [=, rec = rec, e = std::move(e), k = std::move(k)](const auto &) {
             return itree_vis(sum1_inr(e), [=, rec = rec](const auto &x) {
               return rec(k(x));
             });
