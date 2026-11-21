@@ -327,3 +327,14 @@
   (alias runtest)
   (deps bake_boxed_field.t.exe)
   (action (run ./bake_boxed_field.t.exe))))
+
+(subdir loopify_string_view_dangling
+ (rule
+  (targets loopify_string_view_dangling.t.exe)
+  (deps LoopifyStringViewDangling.vo loopify_string_view_dangling.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_string_view_dangling.t.exe loopify_string_view_dangling.t.cpp loopify_string_view_dangling.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_string_view_dangling.t.exe)
+  (action (run ./loopify_string_view_dangling.t.exe))))
