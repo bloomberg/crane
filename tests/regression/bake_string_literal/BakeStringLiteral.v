@@ -5,12 +5,12 @@
 
     Expected: baked; [word = "abc"], [word_ok = true].
 
-    Actual: the bake driver does not compile: "static assertion failed due
-    to requirement 'dependent_false<const char *>': crane::bake: no way to
-    write a value of this type". The bake unit declares
-    [static inline const std::string word = crane::bake::root("abc");], and
-    [root]'s template parameter is deduced from the bare literal as
-    [const char*] rather than the declared [std::string]. *)
+    Fixed: the bake driver did not compile ("crane::bake: no way to write a
+    value of this type"): the bake unit declared
+    [crane::bake::root("abc")], whose template parameter was deduced from
+    the literal as [const char*].  The root is now handed over at the
+    constant's declared type, [crane::bake::template root<std::string>(...)],
+    whatever the initialiser deduces to. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std.
 From Crane Require Extraction.
 From Corelib Require Import PrimString PrimInt63.

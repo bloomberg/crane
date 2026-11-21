@@ -15602,6 +15602,17 @@
   (deps sep_ext_callee_alias_type_head.t.exe)
   (action (run ./sep_ext_callee_alias_type_head.t.exe))))
 
+(subdir prim_int63_float_ops
+ (rule
+  (targets prim_int63_float_ops.t.exe)
+  (deps PrimInt63FloatOps.vo prim_int63_float_ops.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_int63_float_ops.t.exe prim_int63_float_ops.t.cpp prim_int63_float_ops.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_int63_float_ops.t.exe)
+  (action (run ./prim_int63_float_ops.t.exe))))
+
 (subdir string_cat_max_length
  (rule
   (targets string_cat_max_length.t.exe)
@@ -15624,13 +15635,13 @@
   (deps prim_array_default.t.exe)
   (action (run ./prim_array_default.t.exe))))
 
-(subdir prim_int63_float_ops
+(subdir bake_string_literal
  (rule
-  (targets prim_int63_float_ops.t.exe)
-  (deps PrimInt63FloatOps.vo prim_int63_float_ops.t.cpp (source_tree .))
+  (targets bake_string_literal.t.exe)
+  (deps BakeStringLiteral.vo bake_string_literal.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_int63_float_ops.t.exe prim_int63_float_ops.t.cpp prim_int63_float_ops.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_string_literal.t.exe bake_string_literal.t.cpp bake_string_literal.cpp)))
  (rule
   (alias runtest)
-  (deps prim_int63_float_ops.t.exe)
-  (action (run ./prim_int63_float_ops.t.exe))))
+  (deps bake_string_literal.t.exe)
+  (action (run ./bake_string_literal.t.exe))))

@@ -1761,9 +1761,17 @@ let thunk n ret body : Cpp_ir.Lowered.Decl.t =
 (** The initialiser of a baked constant ([Crane Bake]): the extraction
     driving its bake hands its value to the bake driver, and every other one
     reads it back from the image the driver wrote.  Its body is generated all
-    the same, so that the unit plans and includes what it would. *)
+    the same, so that the unit plans and includes what it would.  The root
+    is handed over at the constant's declared type: deduced from the
+    initialiser, a string literal would be a [const char*]. *)
 let baked_initialiser n (ty : Cpp_ir.Lowered.Type.t) (init : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  if Base.Table.is_bake_root n then Cpp_ir.Build.call (Foreign_text "crane::bake::root") [init]
+  if Base.Table.is_bake_root n then
+    let root : Cpp_ir.Lowered.Expr.t =
+      match ty with
+      | Auto -> Foreign_text "crane::bake::root"
+      | ty -> Scope (Foreign_text "crane::bake", Names.Id.of_string "root", [ty])
+    in
+    Cpp_ir.Build.call root [init]
   else
     match Base.Table.baked_image n, ty with
     | None, _ -> init
