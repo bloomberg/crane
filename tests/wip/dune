@@ -252,3 +252,14 @@
   (alias runtest)
   (deps prim_array_default.t.exe)
   (action (run ./prim_array_default.t.exe))))
+
+(subdir bake_string_literal
+ (rule
+  (targets bake_string_literal.t.exe)
+  (deps BakeStringLiteral.vo bake_string_literal.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_string_literal.t.exe bake_string_literal.t.cpp bake_string_literal.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_string_literal.t.exe)
+  (action (run ./bake_string_literal.t.exe))))
