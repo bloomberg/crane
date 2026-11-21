@@ -23,12 +23,20 @@ class persistent_array {
     T default_;
 
 public:
+    // PrimArray.max_length: the longest array Rocq's make builds.
+    static constexpr int64_t max_length = 4194303;
+
     // Construct an array of `len` elements, each initialized to `def`.
-    // Matches PrimArray.make.
+    // Matches PrimArray.make, which clamps `len` to max_length.
     persistent_array(int64_t len, T def)
-        : data_(bsl::make_shared<bsl::vector<T>>(len, def))
+        : data_(bsl::make_shared<bsl::vector<T>>(
+              static_cast<typename bsl::vector<T>::size_type>(
+                  len < max_length ? len : max_length), def))
         , default_(bsl::move(def))
     {}
+
+    // The element out-of-bounds reads give. Matches PrimArray.default.
+    T default_value() const { return default_; }
 
     // Read element at index `i`. Returns default_ on out-of-bounds.
     // Matches PrimArray.get (which returns the array's default on OOB).

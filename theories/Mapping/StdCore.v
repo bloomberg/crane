@@ -252,6 +252,146 @@ From Corelib Require Import PrimInt63.
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** The other int63 primitives follow Rocq's kernel in crane_int63.h:
+    signed readings ([asr], [divs], [mods], [ltsb], [lesb], [compares]),
+    the carrying arithmetic, exact products and divisions, [head0] and
+    [tail0].  A pair, carry or comparison result is built at [%ret]. *)
+#[export] Instance std_int63_asr_mapping : OperationMapping (Ref PrimInt63.asr) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_asr(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_mulc_mapping : OperationMapping (Ref PrimInt63.mulc) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_mulc<%ret>(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_divs_mapping : OperationMapping (Ref PrimInt63.divs) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_divs(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_mods_mapping : OperationMapping (Ref PrimInt63.mods) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_mods(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_ltsb_mapping : OperationMapping (Ref PrimInt63.ltsb) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_ltsb(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_lesb_mapping : OperationMapping (Ref PrimInt63.lesb) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_lesb(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_addc_mapping : OperationMapping (Ref PrimInt63.addc) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_addc<%ret>(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_addcarryc_mapping : OperationMapping (Ref PrimInt63.addcarryc) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_addcarryc<%ret>(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_subc_mapping : OperationMapping (Ref PrimInt63.subc) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_subc<%ret>(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_subcarryc_mapping : OperationMapping (Ref PrimInt63.subcarryc) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_subcarryc<%ret>(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_diveucl_mapping : OperationMapping (Ref PrimInt63.diveucl) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_diveucl<%ret>(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_diveucl_21_mapping : OperationMapping (Ref PrimInt63.diveucl_21) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_diveucl_21<%ret>(%arg(xh), %arg(xl), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "xh"; argument_use := Read |};
+          {| argument_name := "xl"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_addmuldiv_mapping : OperationMapping (Ref PrimInt63.addmuldiv) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_addmuldiv(%arg(p), %arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "p"; argument_use := Read |};
+          {| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_compare_mapping : OperationMapping (Ref PrimInt63.compare) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_compare<%ret>(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_compares_mapping : OperationMapping (Ref PrimInt63.compares) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_compares<%ret>(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_head0_mapping : OperationMapping (Ref PrimInt63.head0) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_head0(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_tail0_mapping : OperationMapping (Ref PrimInt63.tail0) :=
+  {| operation_headers := ["crane_int63.h"];
+     operation_cpp := Expr "crane::int63_tail0(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
 
 (* PrimFloat - IEEE 754 binary64 (C++ double).
    Import PrimFloat AFTER PrimInt63 so the qualified names below resolve
@@ -359,6 +499,51 @@ From Corelib Require Import PrimFloat.
 #[export] Instance std_float_classify_mapping : OperationMapping (Ref PrimFloat.classify) :=
   {| operation_headers := ["cmath"];
      operation_cpp := Expr "[](double _x) { const int _c = std::fpclassify(_x); const int _n = std::signbit(_x) ? 1 : 0; return static_cast<%ret>(_c == FP_NAN ? 8 : (_c == FP_INFINITE ? 6 : _c == FP_ZERO ? 4 : _c == FP_SUBNORMAL ? 2 : 0) + _n); }(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+(** The other float primitives follow Rocq's kernel in crane_float.h. *)
+#[export] Instance std_float_compare_mapping : OperationMapping (Ref PrimFloat.compare) :=
+  {| operation_headers := ["crane_float.h"];
+     operation_cpp := Expr "crane::float_compare<%ret>(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_normfr_mantissa_mapping : OperationMapping (Ref PrimFloat.normfr_mantissa) :=
+  {| operation_headers := ["crane_float.h"];
+     operation_cpp := Expr "crane::float_normfr_mantissa(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_frshiftexp_mapping : OperationMapping (Ref PrimFloat.frshiftexp) :=
+  {| operation_headers := ["crane_float.h"];
+     operation_cpp := Expr "crane::float_frshiftexp<%ret>(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_ldshiftexp_mapping : OperationMapping (Ref PrimFloat.ldshiftexp) :=
+  {| operation_headers := ["crane_float.h"];
+     operation_cpp := Expr "crane::float_ldshiftexp(%arg(x), %arg(e))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "e"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_next_up_mapping : OperationMapping (Ref PrimFloat.next_up) :=
+  {| operation_headers := ["crane_float.h"];
+     operation_cpp := Expr "crane::float_next_up(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_next_down_mapping : OperationMapping (Ref PrimFloat.next_down) :=
+  {| operation_headers := ["crane_float.h"];
+     operation_cpp := Expr "crane::float_next_down(%arg(x))";
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]

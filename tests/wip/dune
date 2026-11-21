@@ -242,17 +242,6 @@
 
 
 
-(subdir prim_array_default
- (rule
-  (targets prim_array_default.t.exe)
-  (deps PrimArrayDefault.vo prim_array_default.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_array_default.t.exe prim_array_default.t.cpp prim_array_default.cpp)))
- (rule
-  (alias runtest)
-  (deps prim_array_default.t.exe)
-  (action (run ./prim_array_default.t.exe))))
-
 (subdir bake_string_literal
  (rule
   (targets bake_string_literal.t.exe)

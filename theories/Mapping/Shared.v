@@ -144,6 +144,11 @@ From Corelib Require PrimArray.
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+#[export] Instance prim_array_default_mapping : OperationMapping (Ref (@PrimArray.default)) :=
+  {| operation_headers := ["persistent_array.h"];
+     operation_cpp := Expr "%arg(x).default_value()";
+     operation_contract :=
+       PureOperation [{| argument_name := "x"; argument_use := Read |}] ReturnValue [] |}.
 #[export] Instance prim_array_set_mapping : OperationMapping (Ref (@PrimArray.set)) :=
   {| operation_headers := ["persistent_array.h"];
      operation_cpp := Expr "%arg(x).set(%arg(y), %arg(z))";

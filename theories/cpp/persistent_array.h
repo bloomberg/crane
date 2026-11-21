@@ -78,6 +78,9 @@ public:
         return default_;
     }
 
+    // The element out-of-bounds reads give. Matches PrimArray.default.
+    T default_value() const { return default_; }
+
     // Lvalue overload: called on named variables (e.g. arr.set(i, v) where
     // arr is a persistent_array that the caller keeps using afterward).
     // Always deep-copies to preserve the original — this is the core

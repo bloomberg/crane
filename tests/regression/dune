@@ -15612,3 +15612,25 @@
   (alias runtest)
   (deps string_cat_max_length.t.exe)
   (action (run ./string_cat_max_length.t.exe))))
+
+(subdir prim_array_default
+ (rule
+  (targets prim_array_default.t.exe)
+  (deps PrimArrayDefault.vo prim_array_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_array_default.t.exe prim_array_default.t.cpp prim_array_default.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_array_default.t.exe)
+  (action (run ./prim_array_default.t.exe))))
+
+(subdir prim_int63_float_ops
+ (rule
+  (targets prim_int63_float_ops.t.exe)
+  (deps PrimInt63FloatOps.vo prim_int63_float_ops.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_int63_float_ops.t.exe prim_int63_float_ops.t.cpp prim_int63_float_ops.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_int63_float_ops.t.exe)
+  (action (run ./prim_int63_float_ops.t.exe))))
