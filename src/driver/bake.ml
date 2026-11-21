@@ -129,6 +129,30 @@ let rec files_under dir ext =
       else acc )
     [] (Sys.readdir dir)
 
+(* Crane's runtime headers: [theories/cpp] of the tree the loaded Crane
+   theory was built in, whichever build directory ([_build/default],
+   [_build/census/default], ...) that was. *)
+let runtime_include () =
+  let has_runtime dir = Sys.file_exists (Filename.concat dir "crane_bake.h") in
+  match Benchmark.crane_runtime_include () with
+  | Some dir when has_runtime dir -> Some dir
+  | found -> (
+    let marker = Filename.dir_sep ^ "_build" ^ Filename.dir_sep in
+    let source_tree dir =
+      let n = String.length marker in
+      let rec find i =
+        if i + n > String.length dir then None
+        else if String.sub dir i n = marker then Some (String.sub dir 0 i)
+        else find (i + 1)
+      in
+      find 0
+    in
+    match Option.bind found source_tree with
+    | Some root ->
+      let dir = Filename.concat (Filename.concat root "theories") "cpp" in
+      if has_runtime dir then Some dir else found
+    | None -> found )
+
 let driver_source header =
   "#include \"crane_bake.h\"\n#include \"" ^ header ^ "\"\n"
   ^ "int main(int argc, char **argv) { return crane::bake::main(argc, argv); }\n"
@@ -157,6 +181,9 @@ let errors_of diagnostics =
 let bake_one ~opaque_access qualid =
   let r = Smartlocate.global_with_alias qualid in
   check r;
+  (* A census that writes no files has no unit to compile: the constant is
+     left to be computed at startup. *)
+  if Base.Probe.census_dry () then () else
   let symbol = symbol_of r in
   let dir = Filename.temp_dir "crane_bake" "" in
   (* A constant at a library's top level is extracted one file per library,
@@ -199,7 +226,7 @@ let bake_one ~opaque_access qualid =
     try Subprocess.split_arguments flags
     with Subprocess.Invalid_arguments m -> fail_with dir Pp.(str ("invalid Crane Bake Flags: " ^ m))
   in
-  let runtime = match Benchmark.crane_runtime_include () with Some d -> [d] | None -> [] in
+  let runtime = match runtime_include () with Some d -> [d] | None -> [] in
   ( try
       Toolchain.compile_cpp ~shouldlink:true ~includes:(include_dirs @ runtime)
         ~flags:(["-O1"; "-w"; "-include"; "crane_bake.h"] @ user_flags @ sources)
