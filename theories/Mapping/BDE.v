@@ -88,13 +88,15 @@ Local Open Scope pstring_scope.
   {| operation_headers := ["bsl_utility.h"];
      operation_cpp := Expr "%arg(p).first";
      operation_contract :=
-       PureOperation [{| argument_name := "p"; argument_use := Read |}] ReturnValue [] |}.
+       PureOperation [{| argument_name := "p"; argument_use := Read |}]
+         (ReturnBorrowed CanonicalBorrow {| path_argument := "p"; path_components := ["first"] |}) [] |}.
 
 #[export] Instance bde_snd_mapping : OperationMapping (Ref (@snd)) :=
   {| operation_headers := ["bsl_utility.h"];
      operation_cpp := Expr "%arg(p).second";
      operation_contract :=
-       PureOperation [{| argument_name := "p"; argument_use := Read |}] ReturnValue [] |}.
+       PureOperation [{| argument_name := "p"; argument_use := Read |}]
+         (ReturnBorrowed CanonicalBorrow {| path_argument := "p"; path_components := ["second"] |}) [] |}.
 
 From Corelib Require Import PrimString.
 #[export] Instance bde_char63_mapping : TypeMapping PrimString.char63 :=

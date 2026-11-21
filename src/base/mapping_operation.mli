@@ -113,3 +113,9 @@ val call_argument_uses : t -> input_use option list
 (** The positions ([%aN]) of the arguments the template receives as
     mutable lvalues ([in_place]). *)
 val in_place_positions : t -> int list
+
+(** Where the result is a [CanonicalBorrow] of one of the arguments
+    ([ReturnBorrowed CanonicalBorrow]), the position among a call's
+    arguments in Core ([call_binders]) of the argument it borrows from: the
+    result is a place inside that argument, as [fst] is [p.first]. *)
+val canonical_borrow_origin : t -> int option
