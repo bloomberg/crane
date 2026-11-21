@@ -747,7 +747,7 @@ struct SharedEventSubevent {
 
   template <typename x> using E = Sum1<AE, Sum1<bE, cE, crane::obj>, x>;
   static inline const Itree<E<crane::obj>, Nat> prog = []() {
-    return ITree::template bind<E<crane::obj>, Nat, Nat>(
+    return crane::immortal(ITree::template bind<E<crane::obj>, Nat, Nat>(
         ITree::template trigger<E<crane::obj>, Nat>(Subevent::template subevent<
             AE, Sum1<AE, Sum1<bE, cE, crane::obj>, crane::obj>, Nat>(
             CategoryOps::template ReSum_inl<crane::obj,
@@ -890,7 +890,7 @@ struct SharedEventSubevent {
                           (c ? a.add(b) : Nat::o())));
                     });
               });
-        });
+        }));
   }();
 
   template <typename T1> static Itree<crane::obj, T1> h_a(AE) {
@@ -903,8 +903,8 @@ struct SharedEventSubevent {
   }
 
   static inline const Itree<crane::obj, Nat> run = []() {
-    return Interp::template interp<MonadIter_itree, Monad_itree, Functor_itree,
-                                   E<crane::obj>, Nat>(
+    return crane::immortal(Interp::template interp<
+        MonadIter_itree, Monad_itree, Functor_itree, E<crane::obj>, Nat>(
         CategoryOps::template case_<
             crane::obj, crane::fn<Itree<crane::obj, crane::obj>(crane::obj)>>(
             [](const auto &, const auto &) { return crane::obj(); },
@@ -965,11 +965,11 @@ struct SharedEventSubevent {
                     return _x0.template h_c<crane::obj>(nat_6);
                   };
                 }()))),
-        prog);
+        prog));
   }();
   /// run with at most n silent steps taken.
   static std::optional<Nat> burn(const Nat &n, const Itree<crane::obj, Nat> &t);
-  static inline const std::optional<Nat> result = []() {
+  static inline const std::optional<Nat> result = crane::immortal([]() {
     auto _lit0 =
         Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))));
     auto _lit1 =
@@ -979,7 +979,7 @@ struct SharedEventSubevent {
     return burn(Nat::s(Nat::s(Nat::s(Nat::s(
         Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit2))))))))))),
                 run);
-  }();
+  }());
   static inline const bool ok = []() -> bool {
     // Built on the first call and immortal: every thread reads it without
     // touching its counts.

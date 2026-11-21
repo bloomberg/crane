@@ -265,6 +265,12 @@ val lower_access_moves : settled -> settled
     [std::function] or [decltype].  Last, once every type is final. *)
 val decide_constexpr : settled -> settled
 
+(** [immortal_globals decl]: under [Set Crane SharedVariant], each global
+    [decl] defines whose type is not a literal type initialised through
+    [crane::immortal], so every block it holds is never counted or freed.
+    After {!decide_constexpr}. *)
+val immortal_globals : settled -> settled
+
 (** [materialise decl] settles every type of unknown representation in
     [decl] into [std::any].
 

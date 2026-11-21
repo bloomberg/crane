@@ -3,6 +3,7 @@
 #include "crane_fn.h"
 #include "crane_variant.h"
 #include "obj.h"
+#include "shared_block.h"
 #include "shared_variant.h"
 #include "small_vector.h"
 #include <atomic>
@@ -228,26 +229,26 @@ struct SharedVariantBasic {
   static tree insert(uint64_t k, uint64_t v, const tree &t);
   static std::optional<uint64_t> find(uint64_t k, const tree &t);
   static uint64_t size(const tree &t);
-  static inline const tree t0 =
+  static inline const tree t0 = crane::immortal(List<uint64_t>::cons(
+      UINT64_C(5),
       List<uint64_t>::cons(
-          UINT64_C(5),
+          UINT64_C(3),
           List<uint64_t>::cons(
-              UINT64_C(3),
+              UINT64_C(8),
               List<uint64_t>::cons(
-                  UINT64_C(8),
+                  UINT64_C(1),
                   List<uint64_t>::cons(
-                      UINT64_C(1),
+                      UINT64_C(4),
                       List<uint64_t>::cons(
-                          UINT64_C(4),
-                          List<uint64_t>::cons(
-                              UINT64_C(7),
-                              List<uint64_t>::cons(UINT64_C(9),
-                                                   List<uint64_t>::nil())))))))
-          .template fold_left<tree>(
-          [](const tree &t,
-             uint64_t k) { return insert(k, (k * UINT64_C(10)), t); },
-          tree::leaf());
-  static inline const tree t1 = insert(UINT64_C(4), UINT64_C(44), t0);
+                          UINT64_C(7), List<uint64_t>::cons(
+                                           UINT64_C(9),
+                                           List<uint64_t>::nil())))))))
+                                                    .template fold_left<tree>(
+      [](const tree &t,
+         uint64_t k) { return insert(k, (k * UINT64_C(10)), t); },
+      tree::leaf()));
+  static inline const tree t1 =
+      crane::immortal(insert(UINT64_C(4), UINT64_C(44), t0));
   static inline const uint64_t tree_result = []() -> uint64_t {
     auto _cs = find(UINT64_C(4), t0);
     if (_cs.has_value()) {

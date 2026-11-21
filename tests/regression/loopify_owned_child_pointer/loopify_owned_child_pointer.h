@@ -4,6 +4,7 @@
 #include "crane_variant.h"
 #include "fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include "shared_variant.h"
 #include "small_vector.h"
 #include <atomic>
@@ -493,10 +494,10 @@ struct LoopifyOwnedChildPointer {
     }
   };
 
-  static inline const tree t0 = tree::node(
+  static inline const tree t0 = crane::immortal(tree::node(
       tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
       tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                 UINT64_C(4), tree::leaf()));
+                 UINT64_C(4), tree::leaf())));
   static inline const uint64_t left_sums =
       t0.subs().template fold_left<uint64_t>(
           [](uint64_t a,
