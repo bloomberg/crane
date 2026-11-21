@@ -2,7 +2,6 @@
 From Stdlib Require Import List.
 Import ListNotations.
 
-From Stdlib Require Import FSets FSets.FMapAVL FSets.FMapFacts.
 
 From Crane.Libraries.ParseALot.Lexer Require Import State.
 From Crane.Libraries.ParseALot.Lexer.Memo Require Import Memo.
@@ -18,61 +17,42 @@ From Crane.Libraries.ParseALot.Utils Require Import NativeMap.
 From Crane Require Import Extraction.
 
 
-(** Concrete AVL-map–backed memo table satisfying the [Memo] interface.
+(** Concrete memo table satisfying the [Memo] interface.
 
-    Each pointer maps to a [NativeMap] (extracted to [immer::map]) keyed directly
-    on the position [index], replacing the former hand-rolled binary trie keyed on
-    the bit-serialized position. *)
+    One [NativeMap] (extracted to [immer::map]) keyed by the pair of the
+    pointer and the position [index]. A write is a single [NativeMap.set] on
+    a map nothing else holds, so a backend can update it in place; the former
+    two-level table (an AVL map from pointer to an [index]-keyed map) read the
+    inner map out of an AVL node and re-added it, so the inner map was always
+    shared at the write. *)
 Module FMemo (STT : State.T) <: Memo STT.
 
   Import STT.Ty.
   Import STT.Defs.
   Import STT.R.Defs.
 
-  (** Ordered type wrapper for [Pointer] used as AVL map keys. *)
-  Module Pointer_as_UOT <: UsualOrderedType := UOT_from_UCT Pointer_as_UCT.
-  (** AVL finite map keyed by [Pointer]. *)
-  Module FM := FMapAVL.Make Pointer_as_UOT.
-  (** Facts and lemmas for [FM]. *)
-  Module FMF := FMapFacts.Facts FM.
-  (* Bisecting global-arena hang: the lexer's per-pointer memo table,
-     persistent AVL map growing via path-copying over the whole lex. See
-     project_crane_arena_ambient memory. *)
-  Crane NoArena FM.Raw.tree.
-
-  (** A memo table maps each pointer to an [index]-keyed map of cached results. *)
+  (** A memo table maps each [(pointer, index)] pair to a cached result. *)
   Definition Memo : Type :=
-    FM.t (NativeMap.t index (option (String * String * index))).
+    NativeMap.t (Pointer * index) (option (String * String * index)).
   (** The empty memo table containing no cached entries. *)
   Definition emptyMemo : Memo :=
-    FM.empty (NativeMap.t index (option (String * String * index))).
+    @NativeMap.empty (Pointer * index) (option (String * String * index)).
 
   (** Look up the cached result for [(pnt, i)] in memo [M], returning [None] if absent. *)
   Definition get_Memo (M : Memo) (pnt : Pointer) (i : index)
     : option (option (String * String * index)) :=
-    match FM.find pnt M with
-    | None => None
-    | Some T => NativeMap.get T i
-    end.
+    NativeMap.get M (pnt, i).
 
   (** Store result [o] for key [(pnt, i)] into memo [M]. *)
   Definition set_Memo (M : Memo) (pnt : Pointer) (i : index)
              (o : (option (String * String * index))) : Memo :=
-    match FM.find pnt M with
-    | None => FM.add pnt (NativeMap.set NativeMap.empty i o) M
-    | Some T => FM.add pnt (NativeMap.set T i o) M
-    end.
+    NativeMap.set M (pnt, i) o.
 
   (** Reading back the just-written key always returns [Some o]; by [NativeMap.get_set]. *)
   Lemma correct_Memo : forall M ptr i o, get_Memo (set_Memo M ptr i o) ptr i = Some o.
   Proof.
-    intros. unfold get_Memo. unfold set_Memo. repeat dm.
-    - rewrite FMF.add_eq_o in E; auto. repeat inj_all. apply NativeMap.get_set.
-    - rewrite FMF.add_eq_o in E; auto. repeat inj_all. apply NativeMap.get_set.
-    - rewrite FMF.add_eq_o in E; auto. discriminate.
-    - rewrite FMF.add_eq_o in E; auto. discriminate.
+    intros. unfold get_Memo, set_Memo. apply NativeMap.get_set.
   Qed.
-
 
   (** Writing to a different key [(ptr', i')] does not affect lookup at [(ptr, i)];
       by [NativeMap.get_set_moot]. *)
@@ -83,29 +63,15 @@ Module FMemo (STT : State.T) <: Memo STT.
   Proof.
     intros M ptr ptr' i i' o H.
     unfold get_Memo, set_Memo.
-    destruct (Pointer_as_UOT.eq_dec ptr ptr') as [Ep | Ep].
-    - (* Same pointer: the disjunction forces [i <> i']. *)
-      subst ptr'.
-      assert (Hi : i' <> i).
-      { destruct H as [Hp | Hi]; [ contradiction | congruence ]. }
-      destruct (FM.find ptr M) eqn:Ef.
-      + rewrite FMF.add_eq_o by auto.
-        rewrite NativeMap.get_set_moot by auto. reflexivity.
-      + rewrite FMF.add_eq_o by auto.
-        rewrite NativeMap.get_set_moot by auto.
-        apply NativeMap.get_empty.
-    - (* Distinct pointer: the write lands under a different key. *)
-      destruct (FM.find ptr' M) eqn:Ef';
-        rewrite FMF.add_neq_o by auto; reflexivity.
+    apply NativeMap.get_set_moot.
+    intro E. inversion E. subst. destruct H; contradiction.
   Qed.
 
-  (** The empty memo has no entries; follows from [FMapFacts.empty_o]. *)
+  (** The empty memo has no entries; by [NativeMap.get_empty]. *)
   Lemma correct_emptyMemo : forall stt z, get_Memo emptyMemo stt z = None.
   Proof.
-    intros. unfold get_Memo. unfold emptyMemo. repeat dm.
-    rewrite FMF.empty_o in E. discriminate.
+    intros. unfold get_Memo, emptyMemo. apply NativeMap.get_empty.
   Qed.
-
 
 End FMemo.
 
