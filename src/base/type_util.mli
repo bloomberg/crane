@@ -529,6 +529,9 @@ end
     are themselves trivially copyable. *)
 val is_trivially_copyable_type : Cpp_ir.Lowered.Type.t -> bool
 
+(** {!is_trivially_copyable_type} read off a Core type. *)
+val core_is_trivially_copyable : Core.Type.t -> bool
+
 (** Whether a Core type is a product type. *)
 val is_prod_core_type : 'p Core.Type.at -> bool
 

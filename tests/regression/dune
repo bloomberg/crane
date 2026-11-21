@@ -15350,3 +15350,14 @@
   (alias runtest)
   (deps typed_mapping_exact_numbers.t.exe)
   (action (run ./typed_mapping_exact_numbers.t.exe))))
+
+(subdir pair_abstract_components_by_reference
+ (rule
+  (targets pair_abstract_components_by_reference.t.exe)
+  (deps PairAbstractComponentsByReference.vo pair_abstract_components_by_reference.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_abstract_components_by_reference.t.exe pair_abstract_components_by_reference.t.cpp pair_abstract_components_by_reference.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_abstract_components_by_reference.t.exe)
+  (action (run ./pair_abstract_components_by_reference.t.exe))))

@@ -127,7 +127,7 @@ and abbreviates_closure kn =
     of the call a release.  Borrowed, they too are passed by const
     reference -- a closure named through an abbreviation too
     ({!abbreviates_closure}). *)
-let rec cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
+let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
   let rec shared_block (t : Cpp_ir.Lowered.Type.t) =
     match t with
     | Function _ -> true
@@ -139,12 +139,15 @@ let rec cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
   in
   match cpp_ty with
   (* A typed-mapped type is lent as its canonical read style says
-     ({!Base.Mapping_plan.read_by_value}). *)
+     ({!Base.Mapping_plan.read_by_value}).  A component is read by value
+     only when copying it is known to be free: one whose cost is unknown --
+     a functor's abstract [A.t], which may be a list -- or one that costs a
+     clone or a retain makes a [ReadByComponents] value lent. *)
   | Entity_application (r, ts, _) | In_namespace (_, Entity_application (r, ts, _))
     when Base.Mapping_plan.is_type_head r ->
     not
       (Base.Mapping_plan.read_by_value (Base.Mapping_plan.find r) ~argument:(fun i ->
-           match List.nth_opt ts i with Some t -> not (cpp_lent_by_reference t) | None -> false))
+           match List.nth_opt ts i with Some t -> is_trivially_copyable_type t | None -> false))
   | Shared_pointer _ -> true
   | _ when shared_block cpp_ty -> true
   | _ when names_value_inductive cpp_ty -> true
@@ -163,13 +166,16 @@ let rec core_lent_by_reference cx ty =
   match resolve_meta ty with
   | ty when is_monadic_core_type ty && cx.ctx.input.itree_mode = Reified -> Some true
   (* A typed-mapped type: its canonical read style, where the Core type of
-     each argument it depends on says how that argument is read. *)
+     each argument it depends on says whether that argument is read by
+     value -- only when copying it is known to be free, as
+     {!cpp_lent_by_reference} reads it.  An argument the Core type does not
+     determine leaves the C++ type to decide. *)
   | Core.Type.Global_app {head = r; type_arguments = args; _} when Base.Mapping_plan.is_type_head r -> (
     let undetermined = ref false in
     let argument i =
-      match Option.bind (List.nth_opt args i) (core_lent_by_reference cx) with
-      | Some lent -> not lent
-      | None ->
+      match List.nth_opt args i with
+      | Some t when Option.has_some (core_lent_by_reference cx t) -> core_is_trivially_copyable t
+      | _ ->
         undetermined := true;
         false
     in
