@@ -4,17 +4,18 @@
     Expected: both definitions compile; [nested = 2] (the inner [if] picks
     ["ab"]) and [mapped = 4] (two copies of ["ab"]).
 
-    Actual: two compile errors, both because the literal is printed as a
+    Fixed: two compile errors, both because the literal was printed as a
     bare ["..."], a [const char*]:
     - [nested]: the match becomes an immediately invoked lambda without a
-      return type; one arm returns ["x"] ([const char*]) and another
-      [std::string("a") + std::string("b")]: "return type 'basic_string<...>'
-      must match previous return type 'const char *'".
-    - [mapped], under [BoxedFields]: the mapped lambda returns ["ab"], and
+      return type; one arm returned ["x"] ([const char*]) and another
+      [std::string("a") + std::string("b")]: "return type must match
+      previous return type".
+    - [mapped], under [BoxedFields]: the mapped lambda returned ["ab"], and
       [List<std::string>::Cons] needs a [crane::field<std::string>] from it,
-      two user conversions: "no viable conversion from 'const char *' to
-      'crane::field<std::string>'".
-    Also on main. *)
+      two user conversions.
+    A literal returned from a lambda without a declared return type, or
+    bound to an [auto] variable, is now constructed as the string
+    ([std::string("x")]).  Also on main. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List ZArith Uint63.

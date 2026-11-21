@@ -421,13 +421,13 @@ struct StringLiteralAsCharPointer {
   static inline const uint64_t nested = len([]() {
     auto &&_sv = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()).rev();
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-      return "x";
+      return std::string("x");
     } else {
       if (List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()).existsb(
               [](uint64_t) { return true; })) {
         return std::string("a") + std::string("b");
       } else {
-        return "cde";
+        return std::string("cde");
       }
     }
   }());
@@ -437,7 +437,7 @@ struct StringLiteralAsCharPointer {
           List<uint64_t>::cons(UINT64_C(2),
                                List<uint64_t>::nil()))
           .template map<std::string>([](uint64_t) {
-        return "ab";
+        return std::string("ab");
       })
           .template fold_left<uint64_t>(
           [](uint64_t a, const std::string &w) { return (a + len(w)); },

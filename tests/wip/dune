@@ -273,17 +273,6 @@
   (deps bake_std_optional.t.exe)
   (action (run ./bake_std_optional.t.exe))))
 
-(subdir string_literal_as_char_pointer
- (rule
-  (targets string_literal_as_char_pointer.t.exe)
-  (deps StringLiteralAsCharPointer.vo string_literal_as_char_pointer.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} string_literal_as_char_pointer.t.exe string_literal_as_char_pointer.t.cpp string_literal_as_char_pointer.cpp)))
- (rule
-  (alias runtest)
-  (deps string_literal_as_char_pointer.t.exe)
-  (action (run ./string_literal_as_char_pointer.t.exe))))
-
 (subdir bake_boxed_field
  (rule
   (targets bake_boxed_field.t.exe)

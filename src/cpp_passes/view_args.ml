@@ -480,7 +480,8 @@ let transform_body u params modes (body : stmt list) : stmt list =
   stmts body
 
 (* [e] with each string literal a call takes as a read view written as the
-   view of the literal ({!literal_view}). *)
+   view of the literal ({!literal_view}), in the body of a lambda it holds
+   too. *)
 let literal_views u (e : expr) : expr =
   let rec fe (e : expr) : expr =
     match e with
@@ -494,7 +495,8 @@ let literal_views u (e : expr) : expr =
       in
       Call (sg, fe f, args)
     | _ -> Cpp_ir.Map.expr (rw ()) e
-  and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:Fun.id ~type_:Fun.id () in
+  and fs (s : stmt) : stmt = Cpp_ir.Map.stmt (rw ()) s
+  and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id () in
   fe e
 
 let transform_decl u (d : Cpp_ir.Lowered.Decl.t) : Cpp_ir.Lowered.Decl.t =
