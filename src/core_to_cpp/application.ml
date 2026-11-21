@@ -1937,6 +1937,34 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
         | _ -> None )
       | _ -> None
     in
+    (* The Core type of the callee's parameter at an argument's position:
+       the callee's own where the term shows it, else, for a local binder,
+       the type its binding site recorded.  Only a type that states every
+       part: an erased one says less than the argument's annotation. *)
+    let declared_core_dom i =
+      let params =
+        match (callee_param_tys, f) with
+        | (_ :: _ as l), _ -> l
+        | [], (Core.Expr.Bound_variable {index = j; _}
+              | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _}
+              | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _}
+              | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _}) ->
+          let rec params = function
+            | Core.Type.Arrow {parameter = t; result = rest} -> (
+              match resolve_meta t with
+              | Core.Type.Erased _ -> params rest
+              | t when Base.Table.is_typeclass_type t -> params rest
+              | t -> t :: params rest )
+            | Core.Type.Meta {contents = Some t} -> params t
+            | _ -> []
+          in
+          (match get_env_type_opt cx j with Some t -> params t | None -> [])
+        | [], _ -> []
+      in
+      match List.nth_opt params i with
+      | Some t when not (core_type_contains_erased t) -> Some t
+      | _ -> arg_slot.Slot.expected_core_ty
+    in
     let args =
       List.mapi (fun i x ->
       let expr =
@@ -1945,6 +1973,13 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
           Monadic.wrap_void_call_as_value (gen_expr cx ~slot:arg_slot env x)
         | Core.Expr.Lambda _ ->
           gen_expr cx ?expected_ty:(declared_dom i) ~slot:arg_slot env x
+        (* A value built here is spelled here for the first time, and its
+           annotation may say less than the parameter it is passed to: a
+           [None] whose payload type extraction left open prints as
+           [std::optional<crane::obj>].  The parameter's Core type says,
+           and the slot refines the erased parts by it. *)
+        | Core.Expr.Construct _ ->
+          gen_expr cx ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} env x
         | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ ->
           let expected = Types.param_expected_cpp_ty cx env callee_param_tys i in
           gen_expr cx ?expected_ty:expected ~slot:arg_slot env x

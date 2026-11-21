@@ -274,15 +274,3 @@
   (alias runtest)
   (deps string_cat_max_length.t.exe)
   (action (run ./string_cat_max_length.t.exe))))
-
-
-(subdir fix_acc_empty_erased
- (rule
-  (targets fix_acc_empty_erased.t.exe)
-  (deps FixAccEmptyErased.vo fix_acc_empty_erased.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_acc_empty_erased.t.exe fix_acc_empty_erased.t.cpp fix_acc_empty_erased.cpp)))
- (rule
-  (alias runtest)
-  (deps fix_acc_empty_erased.t.exe)
-  (action (run ./fix_acc_empty_erased.t.exe))))
