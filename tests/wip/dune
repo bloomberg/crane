@@ -239,3 +239,146 @@
   (alias runtest)
   (deps shared_event_subevent.t.exe)
   (action (run ./shared_event_subevent.t.exe))))
+
+(subdir bake_prim_string
+ (rule
+  (targets bake_prim_string.t.exe)
+  (deps BakePrimString.vo bake_prim_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_prim_string.t.exe bake_prim_string.t.cpp bake_prim_string.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_prim_string.t.exe)
+  (action (run ./bake_prim_string.t.exe))))
+
+(subdir string_get_high_byte
+ (rule
+  (targets string_get_high_byte.t.exe)
+  (deps StringGetHighByte.vo string_get_high_byte.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_get_high_byte.t.exe string_get_high_byte.t.cpp string_get_high_byte.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_get_high_byte.t.exe)
+  (action (run ./string_get_high_byte.t.exe))))
+
+(subdir ascii_char_without_bool_mapping
+ (rule
+  (targets ascii_char_without_bool_mapping.t.exe)
+  (deps AsciiCharWithoutBoolMapping.vo ascii_char_without_bool_mapping.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ascii_char_without_bool_mapping.t.exe ascii_char_without_bool_mapping.t.cpp ascii_char_without_bool_mapping.cpp)))
+ (rule
+  (alias runtest)
+  (deps ascii_char_without_bool_mapping.t.exe)
+  (action (run ./ascii_char_without_bool_mapping.t.exe))))
+
+(subdir bake_std_optional
+ (rule
+  (targets bake_std_optional.t.exe)
+  (deps BakeStdOptional.vo bake_std_optional.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_std_optional.t.exe bake_std_optional.t.cpp bake_std_optional.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_std_optional.t.exe)
+  (action (run ./bake_std_optional.t.exe))))
+
+(subdir string_literal_trigraph
+ (rule
+  (targets string_literal_trigraph.t.exe)
+  (deps StringLiteralTrigraph.vo string_literal_trigraph.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_literal_trigraph.t.exe string_literal_trigraph.t.cpp string_literal_trigraph.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_literal_trigraph.t.exe)
+  (action (run ./string_literal_trigraph.t.exe))))
+
+(subdir prim_string_make_compare
+ (rule
+  (targets prim_string_make_compare.t.exe)
+  (deps PrimStringMakeCompare.vo prim_string_make_compare.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_string_make_compare.t.exe prim_string_make_compare.t.cpp prim_string_make_compare.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_string_make_compare.t.exe)
+  (action (run ./prim_string_make_compare.t.exe))))
+
+(subdir string_literal_as_char_pointer
+ (rule
+  (targets string_literal_as_char_pointer.t.exe)
+  (deps StringLiteralAsCharPointer.vo string_literal_as_char_pointer.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_literal_as_char_pointer.t.exe string_literal_as_char_pointer.t.cpp string_literal_as_char_pointer.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_literal_as_char_pointer.t.exe)
+  (action (run ./string_literal_as_char_pointer.t.exe))))
+
+(subdir bake_boxed_field
+ (rule
+  (targets bake_boxed_field.t.exe)
+  (deps BakeBoxedField.vo bake_boxed_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_boxed_field.t.exe bake_boxed_field.t.cpp bake_boxed_field.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_boxed_field.t.exe)
+  (action (run ./bake_boxed_field.t.exe))))
+
+(subdir loopify_string_view_dangling
+ (rule
+  (targets loopify_string_view_dangling.t.exe)
+  (deps LoopifyStringViewDangling.vo loopify_string_view_dangling.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_string_view_dangling.t.exe loopify_string_view_dangling.t.cpp loopify_string_view_dangling.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_string_view_dangling.t.exe)
+  (action (run ./loopify_string_view_dangling.t.exe))))
+
+(subdir method_hoisted_eta_self_val
+ (rule
+  (targets method_hoisted_eta_self_val.t.exe)
+  (deps MethodHoistedEtaSelfVal.vo method_hoisted_eta_self_val.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_hoisted_eta_self_val.t.exe method_hoisted_eta_self_val.t.cpp method_hoisted_eta_self_val.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_hoisted_eta_self_val.t.exe)
+  (action (run ./method_hoisted_eta_self_val.t.exe))))
+
+(subdir bake_long_list
+ (rule
+  (targets bake_long_list.t.exe)
+  (deps BakeLongList.vo bake_long_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_long_list.t.exe bake_long_list.t.cpp bake_long_list.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_long_list.t.exe)
+  (action (run ./bake_long_list.t.exe))))
+
+(subdir branch_callables_fix_accumulator
+ (rule
+  (targets branch_callables_fix_accumulator.t.exe)
+  (deps BranchCallablesFixAccumulator.vo branch_callables_fix_accumulator.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_callables_fix_accumulator.t.exe branch_callables_fix_accumulator.t.cpp branch_callables_fix_accumulator.cpp)))
+ (rule
+  (alias runtest)
+  (deps branch_callables_fix_accumulator.t.exe)
+  (action (run ./branch_callables_fix_accumulator.t.exe))))
+
+(subdir fold_init_curried_branches
+ (rule
+  (targets fold_init_curried_branches.t.exe)
+  (deps FoldInitCurriedBranches.vo fold_init_curried_branches.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_init_curried_branches.t.exe fold_init_curried_branches.t.cpp fold_init_curried_branches.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_init_curried_branches.t.exe)
+  (action (run ./fold_init_curried_branches.t.exe))))
