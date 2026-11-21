@@ -338,3 +338,14 @@
   (alias runtest)
   (deps loopify_string_view_dangling.t.exe)
   (action (run ./loopify_string_view_dangling.t.exe))))
+
+(subdir method_hoisted_eta_self_val
+ (rule
+  (targets method_hoisted_eta_self_val.t.exe)
+  (deps MethodHoistedEtaSelfVal.vo method_hoisted_eta_self_val.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_hoisted_eta_self_val.t.exe method_hoisted_eta_self_val.t.cpp method_hoisted_eta_self_val.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_hoisted_eta_self_val.t.exe)
+  (action (run ./method_hoisted_eta_self_val.t.exe))))
