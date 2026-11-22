@@ -104,9 +104,11 @@ type static_projection = {
   instance : int;
   domains : Core.Type.t list;
   missing : Core.Type.t list;
+  codomain : Core.Type.t option;
 }
 
 let same_static_projection a b =
   Int.equal a.instance b.instance
   && List.equal Base.Core_util.eq_core_type a.domains b.domains
   && List.equal Base.Core_util.eq_core_type a.missing b.missing
+  && Option.equal Base.Core_util.eq_core_type a.codomain b.codomain

@@ -82,10 +82,6 @@ let global_value_type cx env x (t : Core.Type.t option) : Cpp_ir.Lowered.Value_t
 (** The Core type the inductive or type constant [r] is, unapplied. *)
 let inductive_type r : Core.Type.t = Global_app {head = r; type_arguments = []; index_arguments = []}
 
-(** The type of a literal of the primitive type registered as [name]. *)
-let primitive_type cx env name =
-  if Rocqlib.has_ref name then core_value_type cx env (Some (inductive_type (Rocqlib.lib_ref name)))
-  else Deduced Not_yet_typed
 
 (** The type a computation of Core type [t] yields when it runs: an action
     of a monad lowered sequentially returns its result. *)
@@ -94,6 +90,19 @@ let sequential_result (t : Core.Type.t) : Core.Type.t =
   | Global_app {head; type_arguments; _} when Base.Table.is_monad head && not (Base.Table.is_monad_reified head) -> (
     match List.rev type_arguments with r :: _ -> r | [] -> t )
   | _ -> t
+
+(** The Core type of the primitive type registered as [name]. *)
+let primitive_core_type name =
+  if Rocqlib.has_ref name then Some (inductive_type (Rocqlib.lib_ref name)) else None
+
+(** The type of a literal of the primitive type registered as [name]. *)
+let primitive_type cx env name = core_value_type cx env (primitive_core_type name)
+
+(** [Corelib.Array.PrimArray.array], which registers no name. *)
+let primitive_array =
+  lazy
+    (let dp = Names.DirPath.make (List.map Names.Id.of_string ["PrimArray"; "Array"; "Corelib"]) in
+     Names.Constant.make1 (Names.KerName.make (Names.ModPath.MPfile dp) (Names.Label.make "array")))
 
 (** The Core type of [e], read off the term where it says
     ({!Core_plan.Query.infer_core_body_type}), off the binder environment
@@ -107,7 +116,63 @@ let rec core_type_of cx (e : Core.Expr.t) : Core.Type.t option =
     Option.bind (Lowering_state.get_env_type_opt cx index)
       (Base.Type_util.strip_arrows_n (Base.Type_util.count_real_core_args arguments))
   | Boxed_value {value; _} | Lambda_group_barrier {value; _} -> core_type_of cx value
+  | Apply {callee = Global use; arguments}
+    when Core_plan.Elaborate.static_projection_call ~walk:(Lowering_state.elaborations cx)
+           ~lex:(Lowering_state.current_lexenv cx ()) use arguments <> None -> (
+    match Core_plan.Elaborate.static_projection_call ~walk:(Lowering_state.elaborations cx)
+            ~lex:(Lowering_state.current_lexenv cx ()) use arguments with
+    | Some {codomain = Some cod; missing; _} ->
+      Some (List.fold_right (fun d r -> Core.Type.Arrow {parameter = d; result = r}) missing cod)
+    | _ -> None )
+  | Fixpoint g | Cofixpoint g -> Some (Core.Recursion.Group.selected_member g).type_
+  | Lambda {parameter; parameter_type; body} ->
+    Option.map
+      (fun result -> Core.Type.Arrow {parameter = parameter_type; result})
+      (under cx (parameter, parameter_type) body)
+  | Let {binder; binder_type; body; _} -> under cx (binder, binder_type) body
+  | Numeral {inductive; _} -> Some (inductive_type inductive)
+  | String _ -> primitive_core_type "strings.pstring.type"
+  | UInt63 _ -> primitive_core_type "num.int63.type"
+  | Float64 _ -> primitive_core_type "num.float.type"
+  | Persistent_array {default; _} ->
+    Option.map
+      (fun t : Core.Type.t ->
+        Global_app {head = Names.GlobRef.ConstRef (Lazy.force primitive_array); type_arguments = [t]; index_arguments = []})
+      (core_type_of cx default)
+  | Apply {callee = (Fixpoint _ | Cofixpoint _) as f; arguments} ->
+    Option.bind (core_type_of cx f) (Base.Type_util.strip_arrows_n (Base.Type_util.count_real_core_args arguments))
+  | Apply {callee; arguments} -> (
+    match Core_plan.Query.infer_core_body_type e with
+    | Some _ as t -> t
+    | None ->
+      Option.bind (core_type_of cx callee)
+        (Base.Type_util.strip_arrows_n (Base.Type_util.count_real_core_args arguments)) )
   | _ -> Core_plan.Query.infer_core_body_type e
+
+(** {!core_type_of} [body], under the binder [x] of type [t]: the binder
+    environment is put back as it was. *)
+and under cx (x, t) body =
+  Lowering_state.with_scope cx (fun () ->
+      Lowering_state.push_env_types cx [(Base.Core_util.id_of_binder_name x, t)];
+      core_type_of cx body )
+
+(** The type of a callable of type [f] given [n] arguments: what is left
+    once its groups take them, a group straddled leaving a function of the
+    rest. *)
+let applied (f : Cpp_ir.Lowered.Value_type.t) n : Cpp_ir.Lowered.Value_type.t =
+  let rec take (groups : Cpp_ir.Lowered.Type.t list list) result n : Cpp_ir.Lowered.Type.t option =
+    match groups with
+    | _ when n = 0 -> Some (Cpp_ir.Arrows.to_type {groups; result})
+    | g :: rest when List.length g <= n -> take rest result (n - List.length g)
+    | g :: rest -> Some (Cpp_ir.Arrows.to_type {groups = List.filteri (fun i _ -> i >= n) g :: rest; result})
+    | [] -> (
+      match Cpp_ir.Arrows.of_type result with
+      | Some a -> take a.groups a.result n
+      | None -> None )
+  in
+  match Cpp_ir.Value_type.arrows f with
+  | Some a -> ( match take a.groups a.result n with Some t -> Typed t | None -> Deduced Not_yet_typed )
+  | None -> Deduced Not_yet_typed
 
 (** [of_built e x]: [x], lowered from [e] by a form module that does not
     type its result yet, at the type its outermost node carries, and failing
@@ -127,7 +192,17 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
   match (Typed.of_node x, action) with
   | _, Some result -> Typed.v ~ty:(core_value_type cx env (Some result)) x
   | {ty = Deduced Not_yet_typed; _}, None -> (
-    let derived = core_value_type cx env (core_type_of cx e) in
+    let derived =
+      match (core_value_type cx env (core_type_of cx e), e) with
+      | Deduced Not_yet_typed, Apply {callee = Bound_variable {index; _}; arguments} ->
+        let callee : Cpp_ir.Lowered.Value_type.t =
+          match Binders.read_value_type cx env index with
+          | Typed t -> Typed (Types.unfold_cpp_typedef cx env t)
+          | v -> v
+        in
+        applied callee (Base.Type_util.count_real_core_args arguments)
+      | v, _ -> v
+    in
     Base.Probe.hit "typed-derived" (fun () -> form_name e ^ " " ^ kind_name derived);
     match (x, derived) with
     | Lambda l, Typed t -> (
@@ -144,22 +219,63 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
     | _ -> Typed.v ~ty:derived x )
   | typed, None -> typed
 
+(** Where lowering is, for a census line: the library and the declaration
+    whose body is lowered. *)
+let site cx =
+  Base.Probe.library () ^ " "
+  ^ match cx.Lowering_state.ctx.input.body_owner with
+    | Some r -> Names.Id.to_string (Names.Label.to_id (Base.Common.label_of_r r))
+    | None -> "-"
+
+(** A short description of [e]'s head, for a census line. *)
+let rec describe : Core.Expr.t -> string = function
+  | Global {callee; _} -> "global:" ^ Names.Id.to_string (Names.Label.to_id (Base.Common.label_of_r callee))
+  | Apply {callee; arguments} -> "apply/" ^ string_of_int (List.length arguments) ^ ":" ^ describe callee
+  | Bound_variable {index; _} -> "var:" ^ string_of_int index
+  | Lambda {body; _} -> "fun." ^ describe body
+  | Let {body; _} -> "let." ^ describe body
+  | e -> form_name e
+
+(** The outermost constructor of a lowered expression, for a census line. *)
+let rec node_name : Cpp_ir.Lowered.Expr.t -> string = function
+  | Call (_, f, args) -> "call/" ^ string_of_int (List.length args) ^ "(" ^ node_name f ^ ")"
+  | Entity _ -> "entity"
+  | Local _ -> "local"
+  | Scope _ -> "scope"
+  | Lambda _ -> "lambda"
+  | Literal _ -> "literal"
+  | Member _ -> "member"
+  | Move e -> "move(" ^ node_name e ^ ")"
+  | Runtime _ -> "runtime"
+  | Foreign_text _ -> "foreign"
+  | Unbox _ -> "unbox"
+  | Any_cast _ -> "any_cast"
+  | Convert _ -> "convert"
+  | Function_value _ -> "function_value"
+  | Erase_callable _ -> "erase"
+  | Abort _ -> "abort"
+  | Aggregate _ -> "aggregate"
+  | Converting_construct _ -> "converting_construct"
+  | _ -> "other"
+
 (** [census ?expected_ty e x] is [x], the typed lowering of [e], counted by
     [e]'s form and the kind of type [x] has, and where the position stated
     a type, by whether {!Coerce.decide} finds [x] fits it. *)
 let census cx ?expected_ty e (x : Typed.t) =
   if Base.Probe.enabled () then begin
     Base.Probe.hit "typed" (fun () -> form_name e ^ " " ^ kind_name x.ty);
+    if Cpp_ir.Value_type.not_yet_typed x.ty then
+      Base.Probe.hit "typed-untyped" (fun () -> form_name e ^ " " ^ site cx ^ " " ^ describe e ^ " " ^ node_name x.expr);
     Option.iter
       (fun t ->
         let verdict =
           match Coerce.decide cx x.ty (Exactly t) with
           | _ when Base.Type_util.contains_tvar t -> "unchecked (slot at type variables)"
           | None when Coerce.unrelated cx x.ty (Exactly t) ->
-            "unrelated from " ^ Binders.show_value_type x.ty ^ " into " ^ Binders.type_shape t
+            "unrelated in " ^ site cx ^ " " ^ describe e ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ Binders.type_shape t
           | None -> "fits"
           | Some p when Coerce.implicit x.ty p -> "fits-implicitly"
-          | Some p -> Cpp_ir.Coercion.plan_name p ^ " in " ^ Base.Probe.library () ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ Binders.type_shape t
+          | Some p -> Cpp_ir.Coercion.plan_name p ^ " in " ^ site cx ^ " " ^ describe e ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ Binders.type_shape t
         in
         Base.Probe.hit "typed-fit" (fun () -> form_name e ^ " " ^ verdict) )
       expected_ty

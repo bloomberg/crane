@@ -120,6 +120,8 @@ and gen_expr cx ?expected_ty ?slot env core_e = (gen_expr_typed cx ?expected_ty 
 (** The typed lowering of [core_e], by its form. *)
 and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e : Core.Expr.t) : Typed.t =
   let form = Typed_checks.of_built cx env core_e in
+  (* A form module that types its result; where it could not, as [form]. *)
+  let typed_form (x : Typed.t) = if Cpp_ir.Value_type.not_yet_typed x.ty then form x.expr else x in
   match core_e with
   (* [unit] has one value, so a read of a [unit] binder is that value: the
      binder may have no C++ parameter at all ({!Base.Type_util.declaration_drops_binder}). *)
@@ -268,7 +270,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
      the projection's, numbered past the class's parameters. *)
   | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = i; occurrence = occ};
                      arguments = args} when singleton_call cx env i occ <> None ->
-    form @@ Application.gen_singleton_dictionary_call cx env ~i ~occ ~args
+    typed_form @@ Application.gen_singleton_dictionary_call cx env ~i ~occ ~args
   (* Every application translation is handed is canonical
      ({!Core_passes.Spines}): no head here is a global already applied, a
      coercion, or a one-branch match, and no numeral literal is spelled
@@ -297,7 +299,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
      ({!Core_plan.Elaborate.static_projection_call}). *)
   | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args}
     when Core_plan.Elaborate.static_projection_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args <> None ->
-    form @@ Application.gen_instance_projection cx ~expected_ty ~slot env ~use ~args
+    typed_form @@ Application.gen_instance_projection cx ~expected_ty ~slot env ~use ~args
   (* A closed call building a typeclass instance -- an event injection
      [ReSum_inr] composed from instances and closed lambdas, say -- is the
      same value every time it is evaluated, and evaluating it composes fresh
@@ -317,7 +319,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
   | Core.Expr.Apply {callee = f; arguments = args} ->
     form @@ Application.gen_application cx ~expected_ty ~slot env f args
   | Core.Expr.Lambda _ as a ->
-    form @@ Lambda.gen_lambda cx ~expected_ty ~slot env a
+    typed_form @@ Lambda.gen_lambda cx ~expected_ty ~slot env a
   | Core.Expr.Global ({callee = x; _} as use) when is_inline_custom x ->
     let tys = Base.Core_util.written_type_args use in
     let core_ty = callee_core_type_exn cx x in
@@ -326,9 +328,9 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
     | Function (dom, cod) ->
       Typed_checks.adapted_or_node expected_ty (eta_fun cx ?expected_ty env (Core.Expr.Global use) [])
     | _ ->
-      Typed.of_node @@ mk_cppglob
-        ?yields:
-          (Calls.glob_yields cx env x (Base.Core_util.instantiate_written ~reader:"glob_yields" use))
+      let yields = Calls.glob_yields cx env x (Base.Core_util.instantiate_written ~reader:"glob_yields" use) in
+      Typed.v ~ty:(match yields with Some t -> Typed t | None -> Deduced Foreign_text) @@ mk_cppglob
+        ?yields
         x
         (Types.template_params_of_core cx ~site:Cpp_ir.Types.Through_tvar env
            (List.map snd (Base.Core_util.Var_types.bindings tys)) ) )
@@ -405,13 +407,18 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
       mk_cppglob ?yields x (Calls.written_at_variables cx x (filter_erased_keyed by_var))
     in
     let instantiated = Calls.instantiated_type cx use in
+    (* A custom constant with no Core type is the text it maps to: C++
+       alone knows its type. *)
+    let or_foreign (v : Cpp_ir.Lowered.Value_type.t) : Cpp_ir.Lowered.Value_type.t =
+      if Cpp_ir.Value_type.not_yet_typed v && is_custom x then Deduced Foreign_text else v
+    in
     if Suspension.naming_calls cx ~cpp_of:(Types.cpp_of_core cx env) x then
       (* A function of no parameters named is called, a call made of this
          use. *)
-      Typed.v ~ty:(Typed_checks.core_value_type cx env instantiated)
+      Typed.v ~ty:(or_foreign (Typed_checks.core_value_type cx env instantiated))
         (made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob []))
     else
-      let named = Typed.v ~ty:(Typed_checks.global_value_type cx env x instantiated) cglob in
+      let named = Typed.v ~ty:(or_foreign (Typed_checks.global_value_type cx env x instantiated)) cglob in
       ( match
           Option.map
             (fun ty ->

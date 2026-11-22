@@ -62,6 +62,8 @@ and node_type : Lowered.Expr.t -> Lowered.Value_type.t = function
   | Call ({yields = Yields t; _}, _, _)
   | Call (_, Lambda {params = []; return_type = Some t; _}, []) ->
     Typed t
+  | Call (_, Lambda ({params = []; _} as l), []) when not (generic l) -> (
+    match closure_arrows l with Some {groups = [[]]; result} -> Typed result | _ -> not_yet )
   | Abort _ -> Never
   | Foreign_text _ -> Deduced Foreign_text
   | Runtime h -> Deduced (Runtime_helper h)
@@ -72,7 +74,7 @@ and node_type : Lowered.Expr.t -> Lowered.Value_type.t = function
     | Closure a | Function_name (_, a) -> Typed (Arrows_.to_type a)
     | Typed (Function _) as t -> t
     | _ -> not_yet )
-  | Erase_callable (Boxed_whole, _) -> Typed Any
+  | Erase_callable (Boxed_whole, _) | Erased_call _ -> Typed Any
   | Erase_callable (At_signature cod, e) -> (
     match Value_type_.arrows (node_type e) with
     | Some a -> Typed (Function (List.map (fun _ -> Type.Any) (List.concat a.groups), cod))

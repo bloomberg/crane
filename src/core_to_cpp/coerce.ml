@@ -99,15 +99,20 @@ let has_obligation = Cpp_ir.Types.exists (fun (t : Cpp_ir.Lowered.Type.t) -> mat
     variable by the name C++ knows it under, an inductive without the
     namespace it is qualified by. *)
 let normal al t =
-  Cpp_ir.Types.map
-    (fun (t : Cpp_ir.Lowered.Type.t) ->
-      match t with
-      | Variable (Index (_, Some n)) -> Variable (Named n)
-      | Variable (Index (i, None)) -> Variable (Named (Cpp_ir.Type.positional_id i))
-      | Const t -> t
-      | In_namespace (g, (Entity_application (g', _, _) as t')) when GlobRef.CanOrd.equal g g' -> t'
-      | t -> t )
-    (al.unfold t)
+  let rec spelled (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+    match t with
+    | Variable (Index (_, Some n)) -> Variable (Named n)
+    | Variable (Index (i, None)) -> Variable (Named (Cpp_ir.Type.positional_id i))
+    | Const t | Reference (_, t) -> spelled t
+    | In_namespace (g, (Entity_application (g', _, _) as t')) when GlobRef.CanOrd.equal g g' -> spelled t'
+    | t -> t
+  in
+  Cpp_ir.Types.map (fun t -> spelled (al.unfold t)) t
+
+(** [a] with every leaf {!normal}: a closure's parameters as the values
+    they take, whatever reference they are declared through. *)
+let normal_arrows al (a : Cpp_ir.Lowered.Arrows.t) : Cpp_ir.Lowered.Arrows.t =
+  {groups = List.map (List.map (normal al)) a.groups; result = normal al a.result}
 
 (** [decide_with aliases from into]: how a value of type [from] is adapted
     to a slot of type [into], or [None] where it fits as it is (typed CppIR
@@ -117,7 +122,7 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
     Cpp_ir.Lowered.Coercion.plan option =
   let callable : Cpp_ir.Lowered.Value_type.t -> Cpp_ir.Lowered.Arrows.t option = function
     | Typed t -> Cpp_ir.Arrows.of_type (normal al t)
-    | Closure a | Function_name (_, a) -> Some a
+    | Closure a | Function_name (_, a) -> Some (normal_arrows al a)
     | Never | Deduced _ -> None
   in
   (* A generic lambda is a callable with no signature to read. *)
@@ -209,17 +214,36 @@ let decide cx from into = decide_with (aliases_in cx) from into
     one callable grouped otherwise.  For diagnostics: such a pair is a type
     synthesised wrong, or a value C++ converts by itself. *)
 let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) =
-  let cpp_ty_eq a b = cpp_ty_eq a b || a = b in
   let al = aliases_in cx in
-  let plain t = not (has_obligation t || Cpp_ir.Types.prints_as_any t || al.boxed_source t) in
+  let undecided t = has_obligation t || Cpp_ir.Types.prints_as_any t || al.boxed_source t in
+  (* Equal where both decide: an erased or undecided part on either side
+     says nothing the other could contradict. *)
+  let rec agree (a : Cpp_ir.Lowered.Type.t) (b : Cpp_ir.Lowered.Type.t) =
+    undecided a || undecided b || cpp_ty_eq a b || a = b
+    ||
+    match (a, b) with
+    | Entity_application (g, xs, _), Entity_application (g', ys, _) -> GlobRef.CanOrd.equal g g' && all xs ys
+    | Named (x, xs), Named (y, ys) -> Id.equal x y && all xs ys
+    | External (x, xs), External (y, ys) -> String.equal x y && all xs ys
+    | Function (d, c), Function (d', c') -> all d d' && agree c c'
+    | Shared_pointer a, Shared_pointer b | Pointer a, Pointer b -> agree a b
+    | Variant (k, xs), Variant (k', ys) -> k = k' && all xs ys
+    | Foreign f, Foreign f' -> GlobRef.CanOrd.equal f.custom f'.custom && all f.types f'.types
+    | Apply (f, xs), Apply (g, ys) -> agree f g && all xs ys
+    | _ -> false
+  and all xs ys = List.compare_lengths xs ys = 0 && List.for_all2 agree xs ys in
+  let curried_agree a b =
+    let (d, r) = Cpp_ir.Arrows.curried a and (d', r') = Cpp_ir.Arrows.curried b in
+    all d d' && agree r r'
+  in
   match (from, into) with
   | Typed t, Exactly t' ->
     let t = normal al t and t' = normal al t' in
-    plain t && plain t' && t' <> Void && not (cpp_ty_eq t t')
+    t' <> Void && not (agree t t')
   | (Closure a | Function_name (_, a)), Exactly t' -> (
     match Cpp_ir.Arrows.of_type (normal al t') with
-    | Some b -> not (Cpp_ir.Arrows.same_function a b)
-    | None -> plain (normal al t') )
+    | Some b -> not (curried_agree (normal_arrows al a) b)
+    | None -> not (undecided (normal al t')) )
   | _ -> false
 
 (** Under [CRANE_PROBE], the boundary shadow check: [after], what the

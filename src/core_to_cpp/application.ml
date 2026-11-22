@@ -2205,8 +2205,18 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
     applied to [args]: the body of the class's projection, which calls the
     method on the instance -- a template parameter, so a static member -- at
     the method's own type variables. *)
-let gen_singleton_dictionary_call cx env ~i ~occ ~args : Cpp_ir.Lowered.Expr.t =
+let gen_singleton_dictionary_call cx env ~i ~occ ~args : Cpp_ir.Typed.t =
   let inst, class_ref, method_ref = Option.get (singleton_call cx env i occ) in
+  (* What the method returns: its declared type at the dictionary's
+     carrier, its own variables the projection's. *)
+  let codomain =
+    match (Base.Table.find_type method_ref, Option.map resolve_meta (get_env_type_opt cx i)) with
+    | exception Not_found -> None
+    | ty, Some (Core.Type.Global_app {type_arguments = [carrier]; _}) ->
+      Some (core_codomain (Core_plan.Query.subst_dict_carrier carrier ty))
+    | ty, _ -> Some (core_codomain ty)
+  in
+  Cpp_ir.Typed.v ~ty:(Typed_checks.core_value_type cx env codomain) @@
   let ipv = List.length (Base.Table.get_ind_ip_vars class_ref) in
   let n_own = Base.Type_util.method_tvar_count class_ref (Base.Table.find_type method_ref) in
   let tvars = get_current_type_vars cx in
@@ -2223,11 +2233,14 @@ let gen_singleton_dictionary_call cx env ~i ~occ ~args : Cpp_ir.Lowered.Expr.t =
 (** A class field projected through the instance [use] applied to [args]
     names, as Core decided it ({!Core_plan.Elaborate.static_projection_call}); a
     projection missing arguments is eta-expanded over them first. *)
-let gen_instance_projection cx ~expected_ty ~slot env ~use ~args : Cpp_ir.Lowered.Expr.t =
+let gen_instance_projection cx ~expected_ty ~slot env ~use ~args : Cpp_ir.Typed.t =
   let projection =
     Option.get (Core_plan.Elaborate.static_projection_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args) in
   match projection.missing with
-  | [] -> project_through_instance cx env use args projection
+  | [] ->
+    Cpp_ir.Typed.v
+      ~ty:(Typed_checks.core_value_type cx env projection.codomain)
+      (project_through_instance cx env use args projection)
   | missing ->
     let k = List.length missing in
     let call =
@@ -2235,7 +2248,7 @@ let gen_instance_projection cx ~expected_ty ~slot env ~use ~args : Cpp_ir.Lowere
                        arguments = List.map (Base.Core_util.ast_lift k) args
                          @ List.init k (fun i -> Core.Expr.fresh_rel (k - i))}
     in
-    gen_expr cx ?expected_ty ~slot env
+    Knot.gen_expr_typed cx ?expected_ty ~slot env
       (Base.Core_util.named_lams
          (List.rev (List.mapi (fun i t -> (Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i)), t)) missing))
          call )

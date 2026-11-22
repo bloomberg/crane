@@ -43,7 +43,7 @@ let owned_flags passing = List.rev_map (fun p -> p = Cpp_ir.Param_mode.Owned) (L
     position states a function type: its binders split where the expected
     type returns a function, the parameters it takes and how, its captures,
     and its body as statements returning its result. *)
-let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
+let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
   (* What the lambda takes by move as it is made. *)
   let moved_captures = moved_names env (Ownership_ir.Region.captures cx.ctx.lexical.move_plan a) in
   (* Whether a binder becomes a C++ parameter: see
@@ -700,8 +700,39 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
       | Lambda l -> Cpp_ir.Expr.Lambda {l with moved = moved_captures}
       | f -> f )
   in
+  (* What the body returns, read with its binders in scope: a variable at
+     its binder's type, anything else at its Core type.  Parameters folded
+     in from a fixpoint the body is take their arrows off it. *)
+  let body_result : Cpp_ir.Lowered.Value_type.t Lazy.t =
+    lazy
+      ( match (a, f) with
+      | Core.Expr.Bound_variable {index; _}, Lambda l when List.length l.params = List.length filtered_args ->
+        Binders.read_value_type cx env index
+      | _, Lambda l ->
+        let folded = List.length l.params - List.length filtered_args in
+        Typed_checks.core_value_type cx env
+          (Option.bind (Typed_checks.core_type_of cx a) (Base.Type_util.strip_arrows_n folded))
+      | _ -> Deduced Not_yet_typed )
+  in
+  let body_result = Lazy.force body_result in
   restore_env_types cx saved_env_types;
-  ( match filtered_args with
+  (* The lambda built is a closure over its parameters, returning what C++
+     deduces from its [return]s, or failing that, the body's own type. *)
+  let typed (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Typed.t =
+    match (Cpp_ir.Typed.node_type e, e, f) with
+    | Deduced Not_yet_typed, Lambda l, Lambda l' when l.params == l'.params -> (
+      match body_result with
+      | Typed result -> Cpp_ir.Typed.v ~ty:(Closure {groups = [List.map fst l.params]; result}) e
+      | Closure a | Function_name (_, a) ->
+        Cpp_ir.Typed.v ~ty:(Closure {groups = [List.map fst l.params]; result = Cpp_ir.Arrows.to_type a}) e
+      | _ -> Cpp_ir.Typed.of_node e )
+    | Deduced Not_yet_typed, Call (_, Lambda l, []), Lambda l' when l.params == l'.params -> (
+      match Cpp_ir.Value_type.as_function_type body_result with
+      | Some t -> Cpp_ir.Typed.typed t e
+      | None -> Cpp_ir.Typed.v ~ty:body_result e )
+    | _ -> Cpp_ir.Typed.of_node e
+  in
+  typed @@ ( match filtered_args with
   | [] ->
     (* All lambda params are dummy (type abstractions). Skip the lambda
        wrapper and generate the body expression directly. However, when the
