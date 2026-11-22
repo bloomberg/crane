@@ -41,6 +41,7 @@ uint64_t DequeFoldFixInit::compose_all(const std::deque<uint64_t> &l,
       }())(x0_);
 }
 
+/// The same with a let-bound lambda as the initial value.
 std::deque<uint64_t>
 DequeFoldFixInit::with_let(bool b, const std::deque<uint64_t> &x0_) {
   return [](auto _f, const auto &_l, auto _a) {
