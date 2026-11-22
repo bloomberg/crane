@@ -242,3 +242,102 @@
 
 
 
+
+(subdir coinductive_bde
+ (rule
+  (targets coinductive_bde.t.exe)
+  (deps CoinductiveBde.vo coinductive_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} coinductive_bde.t.exe coinductive_bde.t.cpp coinductive_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps coinductive_bde.t.exe)
+  (action (run ./coinductive_bde.t.exe))))
+
+(subdir bake_bde
+ (rule
+  (targets bake_bde.t.exe)
+  (deps BakeBde.vo bake_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} bake_bde.t.exe bake_bde.t.cpp bake_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_bde.t.exe)
+  (action (run ./bake_bde.t.exe))))
+
+(subdir placeholder_binding_bde
+ (rule
+  (targets placeholder_binding_bde.t.exe)
+  (deps PlaceholderBindingBde.vo placeholder_binding_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} placeholder_binding_bde.t.exe placeholder_binding_bde.t.cpp placeholder_binding_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps placeholder_binding_bde.t.exe)
+  (action (run ./placeholder_binding_bde.t.exe))))
+
+(subdir tmc_optional_bde
+ (rule
+  (targets tmc_optional_bde.t.exe)
+  (deps TmcOptionalBde.vo tmc_optional_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} tmc_optional_bde.t.exe tmc_optional_bde.t.cpp tmc_optional_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps tmc_optional_bde.t.exe)
+  (action (run ./tmc_optional_bde.t.exe))))
+
+(subdir array_default_decl_bde
+ (rule
+  (targets array_default_decl_bde.t.exe)
+  (deps ArrayDefaultDeclBde.vo array_default_decl_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} array_default_decl_bde.t.exe array_default_decl_bde.t.cpp array_default_decl_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps array_default_decl_bde.t.exe)
+  (action (run ./array_default_decl_bde.t.exe))))
+
+(subdir fix_acc_match_none_erased
+ (rule
+  (targets fix_acc_match_none_erased.t.exe)
+  (deps FixAccMatchNoneErased.vo fix_acc_match_none_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_acc_match_none_erased.t.exe fix_acc_match_none_erased.t.cpp fix_acc_match_none_erased.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_acc_match_none_erased.t.exe)
+  (action (run ./fix_acc_match_none_erased.t.exe))))
+
+(subdir pair_mix_bde
+ (rule
+  (targets pair_mix_bde.t.exe)
+  (deps PairMixBde.vo pair_mix_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} pair_mix_bde.t.exe pair_mix_bde.t.cpp pair_mix_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_mix_bde.t.exe)
+  (action (run ./pair_mix_bde.t.exe))))
+
+(subdir self_comparison_global_werror
+ (rule
+  (targets self_comparison_global_werror.t.exe)
+  (deps SelfComparisonGlobalWerror.vo self_comparison_global_werror.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} self_comparison_global_werror.t.exe self_comparison_global_werror.t.cpp self_comparison_global_werror.cpp)))
+ (rule
+  (alias runtest)
+  (deps self_comparison_global_werror.t.exe)
+  (action (run ./self_comparison_global_werror.t.exe))))
+
+(subdir unread_param_captured
+ (rule
+  (targets unread_param_captured.t.exe)
+  (deps UnreadParamCaptured.vo unread_param_captured.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unread_param_captured.t.exe unread_param_captured.t.cpp unread_param_captured.cpp)))
+ (rule
+  (alias runtest)
+  (deps unread_param_captured.t.exe)
+  (action (run ./unread_param_captured.t.exe))))
