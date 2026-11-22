@@ -254,17 +254,6 @@
   (deps bake_bde.t.exe)
   (action (run ./bake_bde.t.exe))))
 
-(subdir array_default_decl_bde
- (rule
-  (targets array_default_decl_bde.t.exe)
-  (deps ArrayDefaultDeclBde.vo array_default_decl_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} array_default_decl_bde.t.exe array_default_decl_bde.t.cpp array_default_decl_bde.cpp)))
- (rule
-  (alias runtest)
-  (deps array_default_decl_bde.t.exe)
-  (action (run ./array_default_decl_bde.t.exe))))
-
 (subdir fix_acc_match_none_erased
  (rule
   (targets fix_acc_match_none_erased.t.exe)

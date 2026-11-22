@@ -22,6 +22,10 @@ class persistent_array {
     bsl::shared_ptr<bsl::vector<T>> data_;
     T default_;
 
+    // An array holding `data`, with `def` for its out-of-bounds reads.
+    persistent_array(bsl::shared_ptr<bsl::vector<T>> data, T def)
+        : data_(bsl::move(data)), default_(bsl::move(def)) {}
+
 public:
     // PrimArray.max_length: the longest array Rocq's make builds.
     static constexpr int64_t max_length = 4194303;
@@ -34,6 +38,13 @@ public:
                   len < max_length ? len : max_length), def))
         , default_(bsl::move(def))
     {}
+
+    // The empty array, its default element value-initialised.  Rocq never
+    // builds one; a holder does where it default-constructs its members --
+    // an array of arrays keeping its default element, a variant whose first
+    // alternative holds an array, a local declared ahead of the branches
+    // that assign it.
+    persistent_array() : persistent_array(bsl::make_shared<bsl::vector<T>>(), T{}) {}
 
     // The element out-of-bounds reads give. Matches PrimArray.default.
     T default_value() const { return default_; }
@@ -54,10 +65,7 @@ public:
 
         auto new_data = bsl::make_shared<bsl::vector<T>>(*data_);
         (*new_data)[i] = bsl::move(val);
-        persistent_array result;
-        result.data_ = bsl::move(new_data);
-        result.default_ = default_;
-        return result;
+        return persistent_array(bsl::move(new_data), default_);
     }
 
     // Rvalue overload: called on temporaries (chained sets). When we are
@@ -73,10 +81,7 @@ public:
 
         auto new_data = bsl::make_shared<bsl::vector<T>>(*data_);
         (*new_data)[i] = bsl::move(val);
-        persistent_array result;
-        result.data_ = bsl::move(new_data);
-        result.default_ = default_;
-        return result;
+        return persistent_array(bsl::move(new_data), default_);
     }
 
     // Number of elements. Matches PrimArray.length.
@@ -86,12 +91,6 @@ public:
 
     // Independent deep copy. Matches PrimArray.copy.
     persistent_array copy() const {
-        persistent_array result;
-        result.data_ = bsl::make_shared<bsl::vector<T>>(*data_);
-        result.default_ = default_;
-        return result;
+        return persistent_array(bsl::make_shared<bsl::vector<T>>(*data_), default_);
     }
-
-private:
-    persistent_array() : default_{} {}
 };
