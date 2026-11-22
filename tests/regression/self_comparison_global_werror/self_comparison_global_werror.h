@@ -170,7 +170,7 @@ struct SelfComparisonGlobalWerror {
   static constexpr unsigned int f1 = 0u;
   static constexpr uint64_t k = UINT64_C(3);
   static inline const uint64_t result =
-      List<bool>::cons(f1 == f1,
-                       List<bool>::cons(k <= k, List<bool>::nil()))
-          .filter([](bool b) { return b; }).length();
+      List<bool>::cons(true, List<bool>::cons(true, List<bool>::nil())).filter(
+          [](bool b) { return b; })
+          .length();
 };

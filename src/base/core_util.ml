@@ -2579,26 +2579,37 @@ let self_comparisons =
       (con_in_file "Stdlib.Bool.Bool" "eqb", true);
     ]
 
-(** Whether [a] and [b] are one read of storage: the same variable, or the
-    same projection of the same such read -- a projection called, or a
-    record match of one branch returning one of its fields.  Evaluating
-    either is total and pure, so both evaluate to one value. *)
-let rec same_storage a b =
+(** Whether [a] and [b] are one expression whose evaluation is total and
+    pure, so both evaluate to one value: the same variable, global or
+    literal, or the same constructor or call over such operands (a record
+    match of one branch returning one of its fields counts as its
+    projection).  A global another mapping spells is not taken to be pure,
+    except a projection: its text may read state ([rand ()]); one written in
+    Rocq is, as every pass that inlines or shares a call already takes it. *)
+let rec same_value a b =
+  let same_arg x y =
+    match (x, y) with
+    | Core.Expr.Erased_value _, Core.Expr.Erased_value _ -> true
+    | _ -> same_value x y
+  in
   match (a, b) with
   | Core.Expr.Bound_variable {index = i; _}, Core.Expr.Bound_variable {index = j; _} -> Int.equal i j
-  | ( Core.Expr.Apply {callee = Core.Expr.Global {callee = p; _}; arguments = xs},
-      Core.Expr.Apply {callee = Core.Expr.Global {callee = q; _}; arguments = ys} ) ->
-    (* At most the record's parameters and the record: a projection
-       applied further is a call of the field. *)
-    GlobRef.CanOrd.equal p q && Table.is_projection p
-    && List.length xs <= Table.projection_arity p + 1
-    && List.equal (fun x y -> match (x, y) with
-        | Core.Expr.Erased_value _, Core.Expr.Erased_value _ -> true
-        | _ -> same_storage x y) xs ys
+  | Core.Expr.Global {callee = p; _}, Core.Expr.Global {callee = q; _} ->
+    GlobRef.CanOrd.equal p q && (Table.is_projection p || not (Table.is_custom p))
+  | Core.Expr.Apply {callee = f; arguments = xs}, Core.Expr.Apply {callee = g; arguments = ys} ->
+    same_value f g && List.equal same_arg xs ys
+  | ( Core.Expr.Construct {constructor = p; arguments = xs; _},
+      Core.Expr.Construct {constructor = q; arguments = ys; _} ) ->
+    GlobRef.CanOrd.equal p q && List.equal same_arg xs ys
+  | Core.Expr.Tuple xs, Core.Expr.Tuple ys -> List.equal same_arg xs ys
+  | Core.Expr.Numeral {inductive = r1; value = n1}, Core.Expr.Numeral {inductive = r2; value = n2} ->
+    GlobRef.CanOrd.equal r1 r2 && Z.equal n1 n2
+  | Core.Expr.UInt63 i, Core.Expr.UInt63 j -> Uint63.equal i j
+  | Core.Expr.String s, Core.Expr.String s' -> Pstring.equal s s'
   | ( Core.Expr.Match {scrutinee = s; branches = [|{binders = l; pattern = pat; body = Core.Expr.Bound_variable {index = i; _}; _}|]; _},
       Core.Expr.Match {scrutinee = s'; branches = [|{binders = l'; pattern = pat'; body = Core.Expr.Bound_variable {index = j; _}; _}|]; _} ) ->
     Int.equal i j && Int.equal (List.length l) (List.length l') && i <= List.length l
-    && eq_core_pattern pat pat' && same_storage s s'
+    && eq_core_pattern pat pat' && same_value s s'
   | _ -> false
 
 (** [v] as a [bool] constructor. *)
@@ -2610,23 +2621,23 @@ let bool_value v =
                        arguments = [];
                        occurrence = Core.Occurrence.fresh ()}
 
-(** Whether [x] and [y] are one read of storage and the other's [negb]. *)
+(** Whether [x] and [y] are one value ({!same_value}) and its [negb]. *)
 let negation_of_itself x y =
   let negb = Rocqlib.lib_ref "core.bool.negb" in
   let negates a b =
     match a with
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = n; _}; arguments = [a']} ->
-      GlobRef.CanOrd.equal n negb && same_storage a' b
+      GlobRef.CanOrd.equal n negb && same_value a' b
     | _ -> false
   in
   negates x y || negates y x
 
-(** [Some v] when [f a] is a comparison of one read of storage with itself
-    ({!same_storage}), or an [orb] or [andb] of one read and its [negb], [v]
+(** [Some v] when [f a] is a comparison of one value with itself
+    ({!same_value}), or an [orb] or [andb] of one value and its [negb], [v]
     its value as a [bool] constructor. *)
 let fold_self_comparison f a =
   match (f, a) with
-  | Core.Expr.Global {callee = GlobRef.ConstRef c; _}, [x; y] when same_storage x y ->
+  | Core.Expr.Global {callee = GlobRef.ConstRef c; _}, [x; y] when same_value x y ->
     Option.map bool_value (Cmap.find_opt c self_comparisons)
   | Core.Expr.Global {callee = c; _}, [x; y] when negation_of_itself x y ->
     if GlobRef.CanOrd.equal c (Rocqlib.lib_ref "core.bool.orb") then Some (bool_value true)

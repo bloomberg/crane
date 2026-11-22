@@ -320,17 +320,6 @@
   (deps pair_mix_bde.t.exe)
   (action (run ./pair_mix_bde.t.exe))))
 
-(subdir self_comparison_global_werror
- (rule
-  (targets self_comparison_global_werror.t.exe)
-  (deps SelfComparisonGlobalWerror.vo self_comparison_global_werror.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} self_comparison_global_werror.t.exe self_comparison_global_werror.t.cpp self_comparison_global_werror.cpp)))
- (rule
-  (alias runtest)
-  (deps self_comparison_global_werror.t.exe)
-  (action (run ./self_comparison_global_werror.t.exe))))
-
 (subdir unread_param_captured
  (rule
   (targets unread_param_captured.t.exe)
