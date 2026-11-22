@@ -15820,3 +15820,46 @@
   (alias runtest)
   (deps case_of_case_coercion.t.exe)
   (action (run ./case_of_case_coercion.t.exe))))
+(subdir scrutinee_list_return_type
+ (rule
+  (targets scrutinee_list_return_type.t.exe)
+  (deps ScrutineeListReturnType.vo scrutinee_list_return_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} scrutinee_list_return_type.t.exe scrutinee_list_return_type.t.cpp scrutinee_list_return_type.cpp)))
+ (rule
+  (alias runtest)
+  (deps scrutinee_list_return_type.t.exe)
+  (action (run ./scrutinee_list_return_type.t.exe))))
+
+(subdir deque_fold_fix_init
+ (rule
+  (targets deque_fold_fix_init.t.exe)
+  (deps DequeFoldFixInit.vo deque_fold_fix_init.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_fix_init.t.exe deque_fold_fix_init.t.cpp deque_fold_fix_init.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_fold_fix_init.t.exe)
+  (action (run ./deque_fold_fix_init.t.exe))))
+
+(subdir nested_fix_alias_result
+ (rule
+  (targets nested_fix_alias_result.t.exe)
+  (deps NestedFixAliasResult.vo nested_fix_alias_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_fix_alias_result.t.exe nested_fix_alias_result.t.cpp nested_fix_alias_result.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_fix_alias_result.t.exe)
+  (action (run ./nested_fix_alias_result.t.exe))))
+
+(subdir fold_curried_fix_step
+ (rule
+  (targets fold_curried_fix_step.t.exe)
+  (deps FoldCurriedFixStep.vo fold_curried_fix_step.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_curried_fix_step.t.exe fold_curried_fix_step.t.cpp fold_curried_fix_step.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_curried_fix_step.t.exe)
+  (action (run ./fold_curried_fix_step.t.exe))))

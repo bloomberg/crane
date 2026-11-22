@@ -4,14 +4,16 @@
 
     Expected: compiles; [result = 0] (the scrutinee has two elements).
 
-    Actual: compile error "no viable conversion from 'Sum<std::string,
-    crane::obj>' to 'std::pair<std::string, unsigned long long>'". The
-    match is simplified to bind the scrutinee's tail
-    ([auto l = List<...>::cons(Sum<...>::inl("b"), ...)]), but that list is
-    spelled at the function's return type [List<std::pair<...>>] instead of
-    [List<Sum<std::string, nat>>]; the [Sum]'s second parameter is also
-    erased to [crane::obj] (and under BDE its string is [std::string], not
-    [bsl::string]). Also on main. *)
+    Fixed: compile error "no viable conversion from 'Sum<std::string,
+    crane::obj>' to 'std::pair<std::string, unsigned long long>'".  The
+    match was simplified to bind the scrutinee's tail
+    ([auto l = List<...>::cons(Sum<...>::inl("b"), ...)]), and that list
+    was spelled at the function's return type [List<std::pair<...>>]: a
+    let's right-hand side fell back to the enclosing function's result
+    wherever the binder's type had lost a component (here [inl]'s [nat],
+    which nothing constrains, so it stays [crane::obj]).  It now falls back
+    to the binder's own type, its erased parts spelled erased, and never to
+    the enclosing result. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.

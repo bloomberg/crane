@@ -239,6 +239,15 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
           var_expr) with
         | Lambda l, Local x when move_candidate -> Lambda {l with moved = [x]}
         | e, _ -> e )
+      (* And the converse: a function the variable holds curried -- a
+         parameter a type variable stands at, a fold's accumulator -- read
+         where the slot takes its arguments at once, a local fixpoint's
+         parameter of type [nat -> nat -> nat]. *)
+      | Some (Function _ as into), Some (Function _ as from) -> (
+        match (Coerce.regroup_value ~from ~into var_expr, var_expr) with
+        | Lambda l, Local x when move_candidate -> Lambda {l with moved = [x]}
+        | Lambda _ as e, _ -> e
+        | _ -> result )
       | _ -> result )
   (* A singleton class's dictionary applied, which is the body of the class's
      projection: the method, called on the instance -- a template parameter,

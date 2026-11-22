@@ -11,7 +11,7 @@ uint64_t DequeFoldFixInit::compose_all(const std::deque<uint64_t> &l,
         return [=, acc = std::move(acc)](uint64_t x) { return (acc(x) + k); };
       },
       l,
-      [&]() {
+      crane::fn([&]() {
         auto go =
             [](std::deque<uint64_t> m, crane::fn<uint64_t(uint64_t)> acc,
                uint64_t x0_0)
@@ -38,7 +38,7 @@ uint64_t DequeFoldFixInit::compose_all(const std::deque<uint64_t> &l,
         return [=](uint64_t _pa0) {
           return go(base, [](uint64_t x) { return x; }, _pa0);
         };
-      }())(x0_);
+      }()))(x0_);
 }
 
 /// The same with a let-bound lambda as the initial value.
@@ -54,7 +54,7 @@ DequeFoldFixInit::with_let(bool b, const std::deque<uint64_t> &x0_) {
         _a1.push_front(_a0);
         return _a1;
       }(UINT64_C(0), std::deque<uint64_t>{}),
-      [&]() {
+      crane::fn([&]() {
         bool c = !(b);
         return [=](std::deque<uint64_t> l) -> std::deque<uint64_t> {
           if (c) {
@@ -66,5 +66,5 @@ DequeFoldFixInit::with_let(bool b, const std::deque<uint64_t> &x0_) {
             return l;
           }
         };
-      }())(x0_);
+      }()))(x0_);
 }

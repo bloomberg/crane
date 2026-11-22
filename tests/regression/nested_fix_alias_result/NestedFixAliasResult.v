@@ -5,11 +5,15 @@
 
     Expected: compiles; [result = 4].
 
-    Actual: compile error "no matching function for call to object of type
-    '(lambda ...)'": the outer fixpoint is eta-expanded with the state
-    argument [eta0_] and passes it on as [inner(nil, std::move(acc), eta0_)],
-    but [inner] is generated with two parameters returning [st<uint64_t>],
-    not eta-expanded. Also on main. *)
+    Fixed: compile error "no matching function for call to object of type
+    '(lambda ...)'": the outer fixpoint, inlined and eta-expanded with the
+    state argument [eta0_], passed it on as
+    [inner(nil, std::move(acc), eta0_)], but [inner] is generated with two
+    parameters returning [st<uint64_t>].  An applied local fixpoint was
+    called with every argument at once; arguments past its lambda's
+    parameters now apply to what it returns
+    ([inner(nil, std::move(acc))(eta0_)]), as at any call of a known
+    arity. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.
