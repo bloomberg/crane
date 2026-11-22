@@ -843,7 +843,7 @@ type std_names = Context.std_names = {
   ns : string; (* "std" or "bsl": general prefix *)
   string : string; (* "std::string" or "bsl::string" *)
   same_as : string; (* "std::same_as" or "same_as" *)
-  declval : string; (* "std::declval" or "bsl::declval" *)
+  declval : string; (* "std::declval", in either flavour *)
   convertible_to : string; (* "std::convertible_to" or "convertible_to" *)
   holds_alternative : string; (* "std::holds_alternative" or "bsl::holds_alternative" *)
   get_if : string; (* "std::get_if" or "bsl::get_if" *)
@@ -867,7 +867,9 @@ let mk_std_names prefix =
       move = p ^ "move"; forward = "std::forward";
       logic_error = p ^ "logic_error";
       ns = "bsl"; string = p ^ "string";
-      same_as = "same_as"; declval = p ^ "declval";
+      (* Nor does Crane include [bsl_utility.h] for [bsl::declval]: it is
+         [std::declval], from <utility>, as [std::forward] is. *)
+      same_as = "same_as"; declval = "std::declval";
       convertible_to = "convertible_to";
       holds_alternative = p ^ "holds_alternative";
       get_if = p ^ "get_if"; get = p ^ "get";

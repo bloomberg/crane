@@ -330,6 +330,8 @@ let of_modtype_concept unit (c : Cpp_ast.Modtype_concept.t) =
       cty result
     | Function_member {parameters; result; _} ->
       concepts ();
+      (* Each parameter is written as a [declval]. *)
+      if parameters <> [] then need [Base.Table.Standard "utility"];
       List.iter cty parameters;
       cty result
   in

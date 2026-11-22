@@ -1,12 +1,15 @@
-(** Found by Ephyra round 23 (BDE flavour; there inside a [Crane Bake]
+(** Found by Ephyra (round 23, BDE flavour; there inside a [Crane Bake]
     unit). A module type with a function parameter [op : t -> t -> t]
-    becomes a concept whose requires-clause calls
-    [M::op(bsl::declval<typename M::t>(), ...)], but the header does not
-    include <bsl_utility.h>, the header that declares [bsl::declval] (it
-    includes bsl_concepts, bsl_functional, bsl_memory, bsl_string, ...).
+    becomes a concept whose requires-clause calls [M::op] on [declval]s.
+
     Expected: compiles, [result = 8].
-    Actual: "no template named 'declval' in namespace 'bsl'; did you mean
-    'std::declval'?". Also on main. *)
+
+    Fixed: "no template named 'declval' in namespace 'bsl'".  The concept
+    wrote [bsl::declval], declared in <bsl_utility.h>, which nothing
+    included, and the concept's include demands did not name the header
+    [declval] is declared in.  A concept now demands <utility> for its
+    [declval]s, which BDE writes [std::declval], as it writes
+    [std::forward]. *)
 From Crane Require Import Mapping.NatIntBDE Mapping.BDE.
 From Crane Require Import Extraction.
 

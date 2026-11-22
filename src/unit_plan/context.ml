@@ -12,7 +12,7 @@ type std_names = {
   ns : string; (* "std" or "bsl": general prefix *)
   string : string; (* "std::string" or "bsl::string" *)
   same_as : string; (* "std::same_as" or "same_as" *)
-  declval : string; (* "std::declval" or "bsl::declval" *)
+  declval : string; (* "std::declval", in either flavour *)
   convertible_to : string; (* "std::convertible_to" or "convertible_to" *)
   holds_alternative : string; (* "std::holds_alternative" or "bsl::holds_alternative" *)
   get_if : string; (* "std::get_if" or "bsl::get_if" *)

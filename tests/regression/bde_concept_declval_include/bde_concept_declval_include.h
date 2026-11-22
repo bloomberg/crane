@@ -9,6 +9,7 @@
 #include <bsl_type_traits.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
+#include <utility>
 
 using namespace BloombergLP;
 template <class From, class To>
@@ -21,7 +22,7 @@ template <typename M>
 concept SIG = requires {
   typename M::t;
   {
-    M::op(bsl::declval<typename M::t>(), bsl::declval<typename M::t>())
+    M::op(std::declval<typename M::t>(), std::declval<typename M::t>())
   } -> same_as<typename M::t>;
 };
 

@@ -15896,3 +15896,14 @@
   (alias runtest)
   (deps alias_param_convention_check.t.exe)
   (action (run ./alias_param_convention_check.t.exe))))
+
+(subdir bde_concept_declval_include
+ (rule
+  (targets bde_concept_declval_include.t.exe)
+  (deps BdeConceptDeclvalInclude.vo bde_concept_declval_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} bde_concept_declval_include.t.exe bde_concept_declval_include.t.cpp bde_concept_declval_include.cpp)))
+ (rule
+  (alias runtest)
+  (deps bde_concept_declval_include.t.exe)
+  (action (run ./bde_concept_declval_include.t.exe))))
