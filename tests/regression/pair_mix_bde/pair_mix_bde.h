@@ -111,9 +111,11 @@ struct PairMixBde {
   static inline const unsigned int result = []() {
     List<bool> l = List<bool>::nil();
     bsl::pair<unsigned int, List<unsigned int>> acc =
-        bsl::make_pair(1u, List<unsigned int>::nil());
+        bsl::pair<unsigned int, List<unsigned int>>(1u,
+                                                    List<unsigned int>::nil());
     if (bsl::holds_alternative<typename List<bool>::Nil>(l.v_mut())) {
-      return bsl::make_pair(4u, List<unsigned int>::nil());
+      return bsl::pair<unsigned int, List<unsigned int>>(
+          4u, List<unsigned int>::nil());
     } else {
       return acc;
     }

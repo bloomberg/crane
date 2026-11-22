@@ -3,15 +3,15 @@
 
     Expected: compiles; [result = 4].
 
-    Actual: compile error "return type 'bsl::pair<unsigned int,
-    List<unsigned int>>' must match previous return type
-    'pair<__unwrap_ref_decay_t<unsigned int>, ...>'". Pairs are spelled
+    Fixed: "return type 'bsl::pair<unsigned int, List<unsigned int>>' must
+    match previous return type 'pair<...>'".  Pairs were spelled
     [bsl::pair] in declarations but built with [bsl::make_pair], which under
     this BDE build (C++17 ABI) is [std::make_pair] and returns a
     [std::pair]: an immediately invoked lambda returning both a built pair
-    and a declared one has two return types. The same mix shows under
-    [BoxedFields] as "no viable conversion from 'pair<...>' to
-    'crane::field<bsl::pair<...>>'". Also on main. *)
+    and a declared one had two return types (and under [BoxedFields] a
+    [crane::field<bsl::pair<...>>] could not take the built one).
+    [Mapping.BDE] now builds a pair at its declared type,
+    [bsl::pair<A, B>(a, b)]. *)
 From Crane Require Import Mapping.NatIntBDE Mapping.BDE.
 From Crane Require Extraction.
 From Stdlib Require Import List.

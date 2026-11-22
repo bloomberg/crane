@@ -54,7 +54,9 @@ Local Open Scope pstring_scope.
      type_numerals := None |}.
 
 (** The projections are [first] and [second], so a match binds the pair as a
-    structured binding. *)
+    structured binding.  A pair is built at its declared type: under the
+    C++17 ABI a BDE build uses, [bsl::make_pair] is [std::make_pair] and
+    returns a [std::pair], a different type from the [bsl::pair] declared. *)
 #[export] Instance bde_pair_mapping (A B : Type) : TypeMapping (prod A B) :=
   {| type_headers := ["bsl_utility.h"];
      type_cpp :=
@@ -72,7 +74,7 @@ Local Open Scope pstring_scope.
      type_interface :=
        AlgebraicInterface
          [{| ctor_source := Ref (@pair A B);
-             ctor_build := Expr "bsl::make_pair(%a0, %a1)";
+             ctor_build := Expr "bsl::pair<%stored(first), %stored(second)>(%a0, %a1)";
              ctor_view :=
                Some {| view_requirement := CanonicalObservation;
                        case_test := "true";

@@ -143,7 +143,7 @@ public:
           const auto &[d_a00, d_a10] =
               bsl::get<typename List<T1>::Cons>(_loop_l_->v());
           auto _cell = typename List<bsl::pair<t_A, T1>>::Cons(
-              bsl::make_pair(d_a0, d_a00), nullptr);
+              bsl::pair<t_A, T1>(d_a0, d_a00), nullptr);
           List<bsl::pair<t_A, T1>> &_node =
               (_write ? *(*_write = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
                               bsl::move(_cell)))
@@ -511,7 +511,7 @@ struct TopologicalSort {
   static entry<T1>
   make_entry(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
              const List<bsl::pair<T1, T1>> &l, T1 e) {
-    return bsl::make_pair(
+    return bsl::pair<T1, List<T1>>(
         e, l.template fold_right<List<T1>>(
                [=, eqb_node = std::move(eqb_node)](const bsl::pair<T1, T1> &x,
                                                    List<T1> ret)
@@ -687,7 +687,7 @@ struct TopologicalSort {
         List<bsl::pair<T1, List<T1>>> rest_ =
             rest.template map<bsl::pair<T1, List<T1>>>([=, eqb_node = eqb_node](
                 const bsl::pair<T1, List<T1>> &entry0) {
-              return bsl::make_pair(
+              return bsl::pair<T1, List<T1>>(
                   entry0.first,
                   entry0.second.filter(
                       [=, eqb_node = eqb_node, mins_ = mins_](const T1 &e) {
@@ -726,7 +726,7 @@ struct TopologicalSort {
         [](bsl::pair<List<T1>, unsigned int> x) {
           auto [fs, rk] = bsl::move(x);
           return fs.template map<bsl::pair<T1, unsigned int>>(
-              [=](const T1 &f) { return bsl::make_pair(f, rk); });
+              [=](const T1 &f) { return bsl::pair<T1, unsigned int>(f, rk); });
         })
                .template concat<bsl::pair<T1, unsigned int>>();
   }

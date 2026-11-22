@@ -230,17 +230,17 @@ template <typename K, typename V> struct CHT {
   assoc_insert_or_replace(F0 &&eqb, const T1 &k, const T2 &v,
                           const List<bsl::pair<T1, T2>> &xs) {
     if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(xs.v())) {
-      return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v),
+      return List<bsl::pair<T1, T2>>::cons(bsl::pair<T1, T2>(k, v),
                                            List<bsl::pair<T1, T2>>::nil());
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v());
       const auto &[k_, v_] = d_a0;
       if (eqb(k, k_)) {
-        return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v), *d_a1);
+        return List<bsl::pair<T1, T2>>::cons(bsl::pair<T1, T2>(k, v), *d_a1);
       } else {
         return List<bsl::pair<T1, T2>>::cons(
-            bsl::make_pair(k_, v_),
+            bsl::pair<T1, T2>(k_, v_),
             CHT<int, int>::template assoc_insert_or_replace<T1, T2>(eqb, k, v,
                                                                     *d_a1));
       }
@@ -251,19 +251,22 @@ template <typename K, typename V> struct CHT {
   static bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>>
   assoc_remove(F0 &&eqb, const T1 &k, const List<bsl::pair<T1, T2>> &xs) {
     if (bsl::holds_alternative<typename List<bsl::pair<T1, T2>>::Nil>(xs.v())) {
-      return bsl::make_pair(bsl::optional<T2>(), xs);
+      return bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>>(
+          bsl::optional<T2>(), xs);
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v());
       const auto &[k_, v_] = d_a0;
       if (eqb(k, k_)) {
-        return bsl::make_pair(bsl::make_optional<T2>(v_), *d_a1);
+        return bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>>(
+            bsl::make_optional<T2>(v_), *d_a1);
       } else {
         bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>> q =
             CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, *d_a1);
-        return bsl::make_pair(bsl::move(q).first,
-                              List<bsl::pair<T1, T2>>::cons(
-                                  bsl::make_pair(k_, v_), bsl::move(q).second));
+        return bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>>(
+            bsl::move(q).first,
+            List<bsl::pair<T1, T2>>::cons(bsl::pair<T1, T2>(k_, v_),
+                                          bsl::move(q).second));
       }
     }
   }
