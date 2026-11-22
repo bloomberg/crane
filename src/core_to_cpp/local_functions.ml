@@ -1444,10 +1444,18 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
            A match generated as an inlined IIFE hands the call to its own
            [return], which the suspending continuation takes in only once
            the IIFE is inlined ({!Lifting.fixpoint_named_in_returns}). *)
+        (* Arguments past the lambda's parameters apply to what it returns
+           ({!Coerce.mk_arity_call}): a fixpoint whose codomain is a function
+           type behind a definition -- [st nat], [nat -> nat * nat] -- takes
+           its own parameters only, while the term around it, eta-expanded
+           at the unfolded type, hands it the state as well. *)
         let call =
           k
             (made_of occ
-               (Call (Cpp_ir.Build.signature ~nargs:0 (), Local (fst (List.nth renamed_ids x)), List.rev args)) )
+               (Coerce.mk_arity_call
+                  ~params:(List.rev_map (fun (_, t) -> Types.cpp_of_core cx env t) fix_params)
+                  ~saturated:(fun a -> Call (Cpp_ir.Build.signature ~nargs:0 (), Local (fst (List.nth renamed_ids x)), a))
+                  (List.rev args) ) )
         in
         let suspended = in_suspended_tail cx occ in
         check_fixpoint_escape (fst (List.nth renamed_ids x)) ~closures (fun () ->

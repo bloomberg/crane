@@ -125,7 +125,7 @@ struct NestedFixAliasResult {
                   }
                 }
               };
-          return inner(List<uint64_t>::nil(), std::move(acc), eta0_);
+          return inner(List<uint64_t>::nil(), std::move(acc))(eta0_);
         } else {
           return sret_1(eta0_);
         }
