@@ -242,25 +242,3 @@
 
 
 
-(subdir deque_fold_function_acc
- (rule
-  (targets deque_fold_function_acc.t.exe)
-  (deps DequeFoldFunctionAcc.vo deque_fold_function_acc.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_function_acc.t.exe deque_fold_function_acc.t.cpp deque_fold_function_acc.cpp)))
- (rule
-  (alias runtest)
-  (deps deque_fold_function_acc.t.exe)
-  (action (run ./deque_fold_function_acc.t.exe))))
-
-
-(subdir fix_acc_empty_erased
- (rule
-  (targets fix_acc_empty_erased.t.exe)
-  (deps FixAccEmptyErased.vo fix_acc_empty_erased.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_acc_empty_erased.t.exe fix_acc_empty_erased.t.cpp fix_acc_empty_erased.cpp)))
- (rule
-  (alias runtest)
-  (deps fix_acc_empty_erased.t.exe)
-  (action (run ./fix_acc_empty_erased.t.exe))))

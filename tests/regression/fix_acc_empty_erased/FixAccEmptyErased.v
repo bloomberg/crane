@@ -5,14 +5,14 @@
 
     Expected: compiles; [t_opt = 0] and [t_deque = 0].
 
-    Actual: compile error "no matching function for call to object of type
-    'crane::fn<std::pair<std::optional<uint64_t>, uint64_t>
-    (List<std::string>, std::pair<std::optional<uint64_t>, uint64_t>)>'":
-    the initial accumulator's [None] is printed [std::optional<crane::obj>]
-    (under [Mapping.DequeList] the empty list likewise as
-    [std::deque<crane::obj>{}]), its payload type erased, so the pair does not
-    convert to the fixpoint's parameter. Over a list of [nat] or [bool] it
-    compiles. Also on main. *)
+    Fixed: compile error "no matching function for call to object of type
+    'crane::fn<...>'": the initial accumulator's [None] was printed
+    [std::optional<crane::obj>] (under [Mapping.DequeList] the empty list
+    likewise as [std::deque<crane::obj>{}]): extraction leaves its type
+    argument erased, and an argument of a local function's call was
+    generated with no slot, so nothing refined it. A constructed argument is
+    now generated against the callee's parameter, its Core type read from
+    the binder's recorded type for a local function. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
 From Crane Require Extraction.
 From Stdlib Require Import List.

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "fn.h"
-#include "obj.h"
 #include <cstdint>
 #include <deque>
 #include <memory>
@@ -33,7 +32,7 @@ struct FixAccEmptyErased {
                 _a1.push_front(_a0);
                 return _a1;
               }(std::string(""), std::deque<std::string>{}),
-              std::make_pair(std::optional<crane::obj>(), UINT64_C(0)));
+              std::make_pair(std::optional<uint64_t>(), UINT64_C(0)));
         }();
         return std::deque<bool>{};
       }().size());
@@ -59,7 +58,7 @@ struct FixAccEmptyErased {
                 _a1.push_front(_a0);
                 return _a1;
               }(std::string(""), std::deque<std::string>{}),
-              std::make_pair(UINT64_C(0), std::deque<crane::obj>{}));
+              std::make_pair(UINT64_C(0), std::deque<uint64_t>{}));
         }();
         return std::deque<bool>{};
       }().size());
