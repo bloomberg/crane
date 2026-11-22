@@ -264,3 +264,14 @@
   (alias runtest)
   (deps bake_bde.t.exe)
   (action (run ./bake_bde.t.exe))))
+
+(subdir placeholder_binding_bde
+ (rule
+  (targets placeholder_binding_bde.t.exe)
+  (deps PlaceholderBindingBde.vo placeholder_binding_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} placeholder_binding_bde.t.exe placeholder_binding_bde.t.cpp placeholder_binding_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps placeholder_binding_bde.t.exe)
+  (action (run ./placeholder_binding_bde.t.exe))))
