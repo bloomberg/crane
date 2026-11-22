@@ -670,26 +670,6 @@ let coerced_kind : Cpp_ir.Lowered.Expr.t -> string = function
   | Container_cast _ -> "container cast"
   | _ -> "other"
 
-(** {!coerce_built}, held to {!decide} under [CRANE_PROBE] ({!shadow}). *)
-let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t) expr =
-  let after = coerce_built cx ?term ?from ~into expr in
-  (* A lambda is a closure, whatever box the caller says it comes from. *)
-  let from_ty : Cpp_ir.Lowered.Value_type.t =
-    match (from, expr) with
-    | _, Lambda _ | None, _ -> Cpp_ir.Typed.node_type expr
-    | Some t, _ -> Typed t
-  in
-  (* [std::any] built from what is a [std::any] already, once aliases are
-     followed, is the box itself: C++'s converting constructor excludes the
-     box's own type. *)
-  let al = aliases_in cx in
-  let kind =
-    match (coerced_kind after, from_ty) with
-    | "box", Typed t when al.spells_as_any (normal al t) || Cpp_ir.Types.prints_as_any (normal al t) -> ["box"; "none"]
-    | k, _ -> [k]
-  in
-  shadow ~al ~adapter:"coerce" ~kind from_ty (Exactly into) ~before:expr after
-
 (** [regroup_crossing ~from ~into expr]: [expr], whose C++ type is [from],
     read at [into] where the two differ only in how their arrows are grouped
     ({!Cpp_ir.Types.arrow_site}) -- a value spelled where it was declared reaching
@@ -773,41 +753,6 @@ let box_for_any_slot cx kind e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.E
   | _ when Erasure.core_expr_is_function_value cx e -> wrap_crane_erase_fn Boxed_whole expr
   | _ -> ( match kind with Family_box -> deep_box_list cx e expr | Var_box -> expr )
 
-(** [recover_boxed_component into e] opens the box when [e] is evidently a
-    component read out of a pair that was recovered from one.  The context's
-    type [into] is what the value is declared to be; the emitted expression is
-    the evidence that it is physically a [std::any]. *)
-let recover_boxed_component cx into (e : Cpp_ir.Lowered.Expr.t) =
-  if Erasure.yields_boxed_component e then coerce cx ~from:Any ~into e else e
-
-(** [unbox_value into e] recovers [e], a value known to come out of a box, at
-    [into]: {!coerce} from [std::any]. *)
-let unbox_value cx into (e : Cpp_ir.Lowered.Expr.t) = coerce cx ~from:Any ~into e
-
-(** [recover_boxed_result ~boxed ~expected expr] casts the result of a call
-    back into the type the position expects -- see {!position_cpp_ty} -- when
-    [boxed]
-    says the callee hands back a [std::any] whatever its Core type claims,
-    because its codomain erases or because it was itself recovered from a box
-    and so goes through the canonical [std::function<std::any(std::any...)>]
-    adapter.
-
-    [boxed] is a statement about the callee, not a guess, so the recovery is
-    unconditional: unlike {!unbox_into} it casts at a template parameter too,
-    which inside a template is the one name the result has. *)
-let recover_boxed_result cx ~boxed ~expected expr =
-  match position_cpp_ty cx expected with
-  | Some into when boxed -> coerce cx ~from:Any ~into expr
-  | _ -> expr
-
-(** [unbox_into into e] recovers [e] from its box at [into], where the
-    position stated a type to recover it at, and leaves it boxed otherwise. *)
-let unbox_into cx into e =
-  match into with
-  | Some into when states_unboxed_target into -> coerce cx ~from:Any ~into e
-  | _ -> e
-
-(** An {!adapter_params} parameter read back as the argument to pass along. *)
 
 (** [apply_at_site site f args]: [f] applied to [args] as a callee spelled
     at the arrow site [site] takes them -- all at once where it was declared
@@ -1005,6 +950,11 @@ type origin =
     }  (** {!curry_value_to_expected}: [_ec] *)
   | Crossing  (** {!regroup_crossing}: [crane_convert] *)
   | Tvar_name of Core.Type.t  (** {!name_fn_arg_for_tvar_param}: [crane::fn] *)
+  | Ue of {
+      cx : Lowering_state.t;
+      term : Core.Expr.t option;
+      from : Cpp_ir.Lowered.Type.t option;
+    }  (** {!coerce}: box, unbox, erase, recover ([_ue]), convert *)
 
 (** The adapter an origin names, for the census. *)
 let origin_name = function
@@ -1013,6 +963,7 @@ let origin_name = function
   | Ec _ -> "curry_value_to_expected"
   | Crossing -> "regroup_crossing"
   | Tvar_name _ -> "name_fn_arg_for_tvar_param"
+  | Ue _ -> "coerce"
 
 (** The plans an origin's expansion builds, by {!Cpp_ir.Coercion.plan_name}. *)
 let builds = function
@@ -1020,6 +971,7 @@ let builds = function
   | Ec _ -> ["eta"; "regroup"]
   | Crossing -> ["convert"]
   | Tvar_name _ -> ["name"]
+  | Ue _ -> ["box"; "deep box"; "unbox"; "erase"; "recover"; "convert"; "container cast"]
 
 (** Whether {!decide} answers for a value of type [from] at [into]: a typed
     value and a slot that states a type, neither mentioning a type variable
@@ -1056,6 +1008,8 @@ let expand origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   | Ec {cx; env; core_ty; callee_site; exact}, _, expected_ty ->
     curry_value_to_expected_built cx env ?expected_ty ?callee_site ?exact core_ty x.expr
   | Tvar_name t, _, _ -> name_fn_arg_built t x.expr
+  | Ue {cx; term; from}, _, Some into -> coerce_built cx ?term ?from ~into x.expr
+  | Ue _, _, None -> x.expr
   | (Rg | Crossing), _, _ -> x.expr
 
 (** [into_slot ~origin x into]: [x] put in the slot [into] through the
@@ -1063,14 +1017,29 @@ let expand origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
     decides whether the adapter is built at all; elsewhere the adapter's own
     test does.  Held to {!decide} under [CRANE_PROBE] ({!shadow}). *)
 let into_slot ?(al = as_written) ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  (* [std::any] built from what is a [std::any] already, once aliases are
+     followed, is the box itself (C++'s converting constructor excludes the
+     box's own type): an identity {!coerce} still spells, kept until phase
+     C so that output does not change. *)
+  let box_of_box =
+    match (origin, x.ty) with
+    | Ue _, Typed t -> al.spells_as_any (normal al t) || Cpp_ir.Types.prints_as_any (normal al t)
+    | _ -> false
+  in
   let built =
-    if decides al x.ty into then
+    if decides al x.ty into && not box_of_box then
       match decide_with al x.ty into with
       | Some p when List.mem (Cpp_ir.Coercion.plan_name p) (builds origin) -> expand origin x into
       | _ -> x.expr
     else expand origin x into
   in
-  shadow ~al ~adapter:(origin_name origin) ~kind:(builds origin) x.ty into ~before:x.expr built
+  (* What was built, named as the plan {!decide} would name it. *)
+  let kind =
+    match origin with
+    | Ue _ -> ( match coerced_kind built with "box" when box_of_box -> ["box"; "none"] | k -> [k] )
+    | _ -> builds origin
+  in
+  shadow ~al ~adapter:(origin_name origin) ~kind x.ty into ~before:x.expr built
 
 let slot_of_expected (t : Cpp_ir.Lowered.Type.t option) : Cpp_ir.Lowered.Slot_type.t =
   match t with Some t -> Exactly t | None -> Free
@@ -1108,6 +1077,51 @@ let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option)
   in
   into_slot ~al:(aliases_in cx) ~origin:(Ec {cx; env; core_ty; callee_site; exact}) (Cpp_ir.Typed.v ~ty:from cglob)
     (slot_of_expected expected_ty)
+
+(** {!coerce_built} through {!into_slot}. *)
+let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t)
+    (expr : Cpp_ir.Lowered.Expr.t) =
+  (* A lambda is a closure, whatever box the caller says it comes from. *)
+  let from_ty : Cpp_ir.Lowered.Value_type.t =
+    match (from, expr) with
+    | _, Lambda _ | None, _ -> Cpp_ir.Typed.node_type expr
+    | Some t, _ -> Typed t
+  in
+  into_slot ~al:(aliases_in cx) ~origin:(Ue {cx; term; from}) (Cpp_ir.Typed.v ~ty:from_ty expr) (Exactly into)
+
+(** [recover_boxed_component into e] opens the box when [e] is evidently a
+    component read out of a pair that was recovered from one.  The context's
+    type [into] is what the value is declared to be; the emitted expression is
+    the evidence that it is physically a [std::any]. *)
+let recover_boxed_component cx into (e : Cpp_ir.Lowered.Expr.t) =
+  if Erasure.yields_boxed_component e then coerce cx ~from:Any ~into e else e
+
+(** [unbox_value into e] recovers [e], a value known to come out of a box, at
+    [into]: {!coerce} from [std::any]. *)
+let unbox_value cx into (e : Cpp_ir.Lowered.Expr.t) = coerce cx ~from:Any ~into e
+
+(** [recover_boxed_result ~boxed ~expected expr] casts the result of a call
+    back into the type the position expects -- see {!position_cpp_ty} -- when
+    [boxed]
+    says the callee hands back a [std::any] whatever its Core type claims,
+    because its codomain erases or because it was itself recovered from a box
+    and so goes through the canonical [std::function<std::any(std::any...)>]
+    adapter.
+
+    [boxed] is a statement about the callee, not a guess, so the recovery is
+    unconditional: unlike {!unbox_into} it casts at a template parameter too,
+    which inside a template is the one name the result has. *)
+let recover_boxed_result cx ~boxed ~expected expr =
+  match position_cpp_ty cx expected with
+  | Some into when boxed -> coerce cx ~from:Any ~into expr
+  | _ -> expr
+
+(** [unbox_into into e] recovers [e] from its box at [into], where the
+    position stated a type to recover it at, and leaves it boxed otherwise. *)
+let unbox_into cx into e =
+  match into with
+  | Some into when states_unboxed_target into -> coerce cx ~from:Any ~into e
+  | _ -> e
 
 (** The mirror of {!recover_carrier_result}: a value reaching a parameter the
     callee declared as a carrier applied to a type variable -- [M A], a
