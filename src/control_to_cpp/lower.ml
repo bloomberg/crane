@@ -83,7 +83,8 @@ let in_place = Core_plan.Recursion.in_place
 (* What each parameter of the loop [l] is passed by its Continues
    ({!Control_ir.Term.parts_passed}), read with the planned representation. *)
 let parts_passed ~unit l =
-  Control_ir.Term.parts_passed ~pointer_fields:(Analysis.constructor_pointer_fields unit) ~in_place l
+  Control_ir.Term.parts_passed ~pointer_fields:(Analysis.constructor_pointer_fields unit)
+    ~cell_fields:(Analysis.constructor_cell_fields unit) ~in_place l
 
 (* Whether every Continue of the loop [l] passes each of its parameters a
    value derived from one of them ({!Control_ir.Term.derived_passed}). *)
@@ -370,8 +371,7 @@ let storage_at ~unit ?entering (l : Control_ir.Term.loop) positions params ~mode
             (Lazy.force lambda_params) );
       planned
   in
-  let pointer_fields = Analysis.constructor_pointer_fields unit in
-  let storage = Frame_storage.plan ~pointer_fields ~in_place ~holdable l in
+  let storage = Frame_storage.plan ~cell_fields:(Analysis.constructor_cell_fields unit) ~in_place ~holdable l in
   let own_pointers =
     List.map (function Some i -> List.nth storage.own i = Ownership_ir.Region.Storage.Local | None -> false) positions
   in

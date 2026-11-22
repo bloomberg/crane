@@ -15786,3 +15786,15 @@
   (alias runtest)
   (deps unread_param_captured.t.exe)
   (action (run ./unread_param_captured.t.exe))))
+
+(subdir frame_box_pointer_scope
+ (rule
+  (targets frame_box_pointer_scope.t.exe)
+  (deps FrameBoxPointerScope.vo frame_box_pointer_scope.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address,undefined
+    (run %{project_root}/scripts/compile-std.sh %{project_root} frame_box_pointer_scope.t.exe frame_box_pointer_scope.t.cpp frame_box_pointer_scope.cpp))))
+ (rule
+  (alias runtest)
+  (deps frame_box_pointer_scope.t.exe)
+  (action (run ./frame_box_pointer_scope.t.exe))))

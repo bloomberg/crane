@@ -194,7 +194,7 @@ val plan_concept_prerequisites : Core_to_cpp.Lowering_state.t -> Core_plan.Modul
 (** The fields each constructor struct of an inductive the unit generates
     stores behind the smart pointer
     ({!Core_to_cpp.Lower_decl.constructor_pointer_fields}): the inductive, the
-    constructor's struct name, and each field's index with whether it holds
-    the inductive itself.  A flat inductive has no constructor struct. *)
+    constructor's struct name, and each field as planned.  A flat inductive
+    has no constructor struct. *)
 val plan_pointer_fields :
-  Core_to_cpp.Lowering_state.t -> Core.Program.t -> (Names.GlobRef.t * string * (int * bool) list) list
+  Core_to_cpp.Lowering_state.t -> Core.Program.t -> (Names.GlobRef.t * string * Core_plan.Pointer_fields.planned list) list

@@ -1648,11 +1648,19 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
   else
     let lookup name_s = List.assoc_opt name_s frame_pointer_safe in
     let lookup_uptr name_s = List.assoc_opt name_s frame_sptr in
-    let adjust_arg binding_env safe is_uptr arg =
+    let adjust_arg (binding_env, inline_slots) safe is_uptr arg =
       if not safe then arg
       else
       let arg = match arg with Move a -> a | a -> a in
+      (* A local holding by value a slot its value lives in -- a shared
+         variant's [shared_box] -- holds the pointee itself, not a handle on
+         a cell elsewhere: the pointer would be into the local, which dies
+         with the handler before the frame pushed is read. *)
       let raw_of e =
+        ( match e with
+        | Local x when Id.Set.mem x inline_slots ->
+          raise (Not_linearisable "a frame would point into a local holding the value it points at")
+        | _ -> () );
         Call (call_opaque, Runtime Cpp_ir.Crane_rt.Raw, [e])
       in
       if is_uptr then
@@ -1706,15 +1714,28 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
         | _ -> arg )
       | _ -> arg
     in
-    let[@tail_mod_cons] rec on_stmts env = function
+    let holds_inline_slot ty =
+      match strip_ref_and_const_type ty with
+      | Shared_pointer p -> Core_plan.Pointer_slot.of_pointee p <> Core_plan.Pointer_slot.Pointer
+      | _ -> false
+    in
+    let[@tail_mod_cons] rec on_stmts ((bindings, inline_slots) as env) = function
       | [] -> []
       | s :: rest ->
         let s' = on_stmt env s in
-        let env = match s with Bind_variable (id, _, e) -> (id, e) :: env | _ -> env in
+        let env =
+          match s with
+          | Bind_variable (id, Declare (ty, _), e) ->
+            ( (id, e) :: bindings,
+              if (not (is_reference_type ty)) && holds_inline_slot ty then Id.Set.add id inline_slots
+              else Id.Set.remove id inline_slots )
+          | Bind_variable (id, _, e) -> ((id, e) :: bindings, Id.Set.remove id inline_slots)
+          | _ -> env
+        in
         s' :: on_stmts env rest
     and on_stmt env = function
       | Expression (Call (_, callee, [Local_aggregate {struct_ = name; type_args = targs; values = args}])) -> (
-        let args = List.map (saved_pointer env) args in
+        let args = List.map (saved_pointer (fst env)) args in
         let push args = Expression (Call (call_opaque, callee, [Local_aggregate {struct_ = name;
                                                                                  type_args = targs;
                                                                                  values = args}])) in
@@ -1730,7 +1751,7 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
         | _ -> push args )
       | s -> map_stmt ~fl:(on_stmts env) Fun.id (on_stmt env) Fun.id s
     in
-    on_stmts [] stmts
+    on_stmts ([], Id.Set.empty) stmts
 
 (** Rewrite [Match] nodes in [stmts] whose scrutinee is a value-type accessor
     [param.v()] for any [param] in [owned_names], marking the scrutinee owned

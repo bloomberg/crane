@@ -21,7 +21,7 @@ type representation = {
   names : (GlobRef.t * string) list;
   referenced_names : (GlobRef.t * string) list;
   field_names : (GlobRef.t * Id.t list) list;
-  pointer_fields : (GlobRef.t * string * (int * bool) list) list;
+  pointer_fields : (GlobRef.t * string * Core_plan.Pointer_fields.planned list) list;
   unmerged_wrappers : (string * Names.ModPath.t) list;
   promoted_inductives : GlobRef.t list;
   accessors : GlobRef.t list;

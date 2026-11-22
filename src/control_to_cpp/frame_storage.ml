@@ -97,17 +97,18 @@ let declared_arguments (b : Term.branch) =
 
 (* The binders of the branch [b] of a match on a value of kind [k] and type
    [ty], [Core.Pattern.Bound_variable 1] first.  A variant's fields are bound by reference into the
-   value: one stored behind the pointer is a cell wherever the value holds
-   the storage's cells, any other lies where the value does.  A record's
+   value: one stored in a cell behind the pointer is a cell wherever the
+   value holds the storage's cells, any other -- one a shared variant holds
+   in its slot included -- lies where the value does.  A record's
    fields may be bound as copies, and a custom match binds what its
    template computes. *)
-let branch_binders ~pointer_fields ty k (b : Term.branch) =
+let branch_binders ~cell_fields ty k (b : Term.branch) =
   let record = Base.Table.record_fields_of_type ty <> [] in
   let custom = function GlobRef.ConstructRef (ind, _) -> Base.Table.is_custom (GlobRef.IndRef ind) | _ -> false in
   List.map
     (function
       | Some (r, j) when not (custom r) ->
-        if List.mem j (Option.default [] (pointer_fields r)) then (match k with Fresh -> Fresh | _ -> Cell)
+        if List.mem j (Option.default [] (cell_fields r)) then (match k with Fresh -> Fresh | _ -> Cell)
         else if record then copied k
         else (match k with Cell -> Stable | k -> k)
       | Some _ | None -> Fresh )
@@ -125,7 +126,7 @@ let named (l : Term.loop) = match l.loop with Loop.Member _ -> 1 | Loop.Function
 (* The parameters of the loops [l] and its entries pass a value [pointed]
    does not hold pointable to, each with the Core level it is bound at:
    [pointed] says which are held by pointer, the others by value, fresh. *)
-let unpointable ~pointer_fields ~in_place ~pointed (l : Term.loop) =
+let unpointable ~cell_fields ~in_place ~pointed (l : Term.loop) =
   let bad = ref [] in
   let params (lp : Term.loop) = List.mapi (fun i _ -> if pointed (lp.loop, i) then Stable else Fresh) lp.parameters in
   let rec walk env = function
@@ -134,7 +135,7 @@ let unpointable ~pointer_fields ~in_place ~pointed (l : Term.loop) =
     | Match m ->
       let k = kind ~in_place env m.scrutinee in
       List.iter
-        (fun (b : Term.branch) -> walk (branch_binders ~pointer_fields m.scrutinee_type k b @ env) b.body) m.branches
+        (fun (b : Term.branch) -> walk (branch_binders ~cell_fields m.scrutinee_type k b @ env) b.body) m.branches
     | Return _ -> ()
     | Continue c | Continue_into {next = c; _} ->
       List.iteri
@@ -172,7 +173,7 @@ let entered_levels (l : Term.loop) =
   in
   go (List.length l.parameters) [] l.body
 
-let plan ~pointer_fields ~in_place ~holdable (l : Term.loop) =
+let plan ~cell_fields ~in_place ~holdable (l : Term.loop) =
   let levels = entered_levels l in
   (* What a frame cannot hold by pointer is held by value from the start. *)
   let unholdable =
@@ -187,7 +188,7 @@ let plan ~pointer_fields ~in_place ~holdable (l : Term.loop) =
      is pointable when those are. *)
   let rec settle excluded =
     let pointed p = not (mem p excluded) in
-    match List.filter (fun p -> not (mem p excluded)) (unpointable ~pointer_fields ~in_place ~pointed l) with
+    match List.filter (fun p -> not (mem p excluded)) (unpointable ~cell_fields ~in_place ~pointed l) with
     | [] -> excluded
     | more -> settle (more @ excluded)
   in

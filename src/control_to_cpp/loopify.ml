@@ -294,7 +294,10 @@ let member_plan ~unit ~frames ~modes member params =
     else
       let invariant = Control_ir.Term.invariant_parameters l in
       let in_place = Core_plan.Recursion.in_place in
-      let parts = Control_ir.Term.parts_passed ~pointer_fields:(constructor_pointer_fields unit) ~in_place l in
+      let parts =
+        Control_ir.Term.parts_passed ~pointer_fields:(constructor_pointer_fields unit)
+          ~cell_fields:(constructor_cell_fields unit) ~in_place l
+      in
       let parts =
         if not frames then parts
         else
@@ -312,7 +315,7 @@ let member_plan ~unit ~frames ~modes member params =
           List.map2
             (fun part (storage : Ownership_ir.Region.Storage.t) -> part || storage = Local)
             parts
-            (Frame_storage.plan ~pointer_fields:(constructor_pointer_fields unit) ~in_place ~holdable l).own
+            (Frame_storage.plan ~cell_fields:(constructor_cell_fields unit) ~in_place ~holdable l).own
       in
       Some
         { member_varying = List.map (fun i -> not (List.nth invariant i)) kept;

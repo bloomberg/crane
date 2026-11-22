@@ -77,15 +77,17 @@ val local_holdable : Unit_plan.Context.t -> Control_ir.Term.loop -> int -> bool 
     {!Lower}'s machines of functions). *)
 val check_local : int -> planned:bool -> declared:(unit -> bool) -> unit
 
-(** [plan ~pointer_fields ~in_place ~holdable l]: how the frames of the
-    machine of [l] hold its parameters; [pointer_fields c] are the declared
-    arguments of the constructor [c] stored behind the pointer, and an
+(** [plan ~cell_fields ~in_place ~holdable l]: how the frames of the
+    machine of [l] hold its parameters; [cell_fields c] are the declared
+    arguments of the constructor [c] stored in a cell behind the pointer (a
+    field holding its value in the slot, a shared variant's, lies in the
+    value as any other does), and an
     in-place coercion ([in_place from into]) changes nothing about where a
     value lies.  A parameter [holdable] rejects is represented so that no
     frame can hold it by pointer: it is held by value, and what derives from
     it lies in the frame. *)
 val plan :
-  pointer_fields:(Names.GlobRef.t -> int list option) ->
+  cell_fields:(Names.GlobRef.t -> int list option) ->
   in_place:(Core.Type.t -> Core.Type.t -> bool) ->
   holdable:(parameter -> bool) ->
   Control_ir.Term.loop ->

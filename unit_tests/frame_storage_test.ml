@@ -26,12 +26,16 @@ let nil = r "nil"
 let f = Loop.Function (r "f")
 let sizes = Loop.Member (Core.Occurrence.fresh (), 0)
 
-(* [node] keeps its two subtrees and [cons] its tail behind the pointer;
-   [cons]'s head is held in the cell. *)
+(* [node] keeps its two subtrees and [cons] its tail in a cell behind the
+   pointer; [cons]'s head is held in the cell. *)
 let pointer_fields c =
   if GlobRef.UserOrd.equal c node then Some [0; 1] else if GlobRef.UserOrd.equal c cons then Some [1] else None
 
-let plan ?(holdable = fun _ -> true) l = Control_to_cpp.Frame_storage.plan ~pointer_fields ~in_place:(fun _ _ -> false) ~holdable l
+(* As a shared variant holds them: [node]'s subtrees in the slot itself. *)
+let in_slot c = if GlobRef.UserOrd.equal c node then Some [] else pointer_fields c
+
+let plan ?(cell_fields = pointer_fields) ?(holdable = fun _ -> true) l =
+  Control_to_cpp.Frame_storage.plan ~cell_fields ~in_place:(fun _ _ -> false) ~holdable l
 let app g args = Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomorphic (r g)); arguments = args}
 let continue_ target arguments = Term.Continue {target; occurrence = Core.Occurrence.fresh (); arguments}
 
@@ -61,7 +65,7 @@ let () =
   (* tree_size t := match t with node n kids => n + sizes kids, sizes the
      entered fixpoint over a list of trees: sizes (cons a rest) :=
      tree_size a + sizes rest.  [kids] is the second subtree here. *)
-  let entered pass_rest =
+  let entered ?(pass_head = Core.Expr.fresh_rel 2) pass_rest =
     { Term.loop = sizes;
       parameters = [(id "ts", lst)];
       body =
@@ -71,10 +75,10 @@ let () =
               ~binders:[(id "a", tree); (id "rest", lst)]
               (Core.Pattern.Constructor {constructor = cons;
                                          fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]})
-              (resume (continue_ f [Core.Expr.fresh_rel 2])
+              (resume (continue_ f [pass_head])
                 (resume (continue_ sizes [pass_rest]) (Term.Return (Core.Expr.fresh_rel 1)))) ] }
   in
-  let machine ?(pass_rest = Core.Expr.fresh_rel 2) pass_kids =
+  let machine ?pass_head ?(pass_rest = Core.Expr.fresh_rel 2) pass_kids =
     { Term.loop = f;
       parameters = [(id "t", tree)];
       body =
@@ -83,12 +87,21 @@ let () =
               ~binders:[(id "n", tree); (id "kids", tree)]
               (Core.Pattern.Constructor {constructor = node;
                                          fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]})
-              (Term.Entry {entered = entered pass_rest; name = None; scope = continue_ sizes [pass_kids]}) ] }
+              (Term.Entry {entered = entered ?pass_head pass_rest; name = None; scope = continue_ sizes [pass_kids]}) ] }
   in
   let p = plan (machine (Core.Expr.fresh_rel 1)) in
   check "the machine's parameter, passed a cell's head, is held by pointer" (p.own = [Storage.Local]);
   (* The entered body stands under [t], [n], [kids] and the fixpoint's name. *)
   check "the entered parameter is held by pointer, at its level" (p.entered = [(4, Storage.Local)]);
+  (* The entered body passing [n] of the scope, which a frame kept for it:
+     under the cons branch's [a], [rest], the parameter [ts], the
+     fixpoint's name and [kids]. *)
+  let reads_n = machine ~pass_head:(Core.Expr.fresh_rel 6) (Core.Expr.fresh_rel 1) in
+  check "a field in a cell, kept for an entered body, is held by pointer" ((plan reads_n).own = [Storage.Local]);
+  check "a field holding its value in its slot, kept so, is held by value"
+    ((plan ~cell_fields:in_slot reads_n).own = [Storage.Frame]);
+  check "passed in the scope itself, it is held by pointer"
+    ((plan ~cell_fields:in_slot (machine (Core.Expr.fresh_rel 1))).entered = [(4, Storage.Local)]);
   let p = plan (machine (app "rebuild" [Core.Expr.fresh_rel 1])) in
   check "an entered parameter passed a value a call made is held by value" (p.entered = [(4, Storage.Frame)]);
   check "and what is passed on of it is no pointer either" (p.own = [Storage.Frame]);

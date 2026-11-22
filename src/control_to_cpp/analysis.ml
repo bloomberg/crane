@@ -365,6 +365,13 @@ let constructor_pointer_fields u c =
   Option.map (List.map ptr_field_index)
     (pointer_fields_of u (Base.Common.ctor_owner_key c, Base.Type_util.ctor_struct_name_of_ref c))
 
+(** Of those, the arguments whose value lies in a cell the field points at,
+    which a copy of the field shares ({!Core_plan.Pointer_fields.cells}): not
+    one a shared variant holds in the field itself. *)
+let constructor_cell_fields u c =
+  Core_plan.Pointer_fields.cells u.Unit_plan.Context.pointer_fields
+    (Base.Common.ctor_owner_key c, Base.Type_util.ctor_struct_name_of_ref c)
+
 (** Check the pointer fields read off a generated constructor struct against
     the ones planned before rendering, under [CRANE_CHECK_IR]. *)
 let agree_ptr_fields u owner ctor_name fields =

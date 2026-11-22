@@ -49,7 +49,7 @@ type representation = {
           a walk of the structure meets them. *)
   field_names : (Names.GlobRef.t * Names.Id.t list) list;
       (** The names of each generated constructor struct's fields. *)
-  pointer_fields : (Names.GlobRef.t * string * (int * bool) list) list;
+  pointer_fields : (Names.GlobRef.t * string * Core_plan.Pointer_fields.planned list) list;
       (** The fields each generated constructor struct stores behind the
           smart pointer, by inductive and constructor struct name, each with
           whether it holds the inductive itself. *)

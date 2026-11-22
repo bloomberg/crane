@@ -1154,7 +1154,7 @@ let constructor_field_at_own_vars vars (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir
 
 (** The fields of a constructor of [name], of types [tys], that its struct
     stores behind the smart pointer, each with whether it holds [name]
-    itself: what loop lowering reads off the struct, decided before it is
+    itself and whether its value lies in the slot ({!Core_plan.Pointer_slot}): what loop lowering reads off the struct, decided before it is
     generated ({!Core_plan.Pointer_fields.add}). *)
 let constructor_pointer_fields cx ~name ~is_coinductive vars tys =
   List.concat
@@ -1164,8 +1164,10 @@ let constructor_pointer_fields cx ~name ~is_coinductive vars tys =
            constructor_field_at_own_vars vars
              (constructor_field_storage cx ~name ~is_coinductive vars ty)
          with
-         | Shared_pointer (Entity_application (r, _, _)) when globref_equal r name -> [(i, true)]
-         | Shared_pointer _ -> [(i, false)]
+         | Shared_pointer p ->
+           let recursive = match p with Entity_application (r, _, _) -> globref_equal r name | _ -> false in
+           let in_slot = Core_plan.Pointer_slot.of_pointee p <> Core_plan.Pointer_slot.Pointer in
+           [{Core_plan.Pointer_fields.index = i; recursive; in_slot}]
          | _ -> [] )
        tys )
 

@@ -1,17 +1,17 @@
 (** Found by Ephyra (round 22, ASan). Memory safety: a recursion over two
     lists whose last case runs a local fixpoint that calls the function
     again, under [Set Crane Loopify] and [Set Crane SharedVariant].
-
-    Expected: [result = 6], with no memory error (the test is built with
+    Expected [result = 6], with no memory error (the test is built with
     ASan, as the dune rule says).
 
-    Actual: ASan "stack-use-after-scope". Loopify replaces the recursion by
-    an explicit stack of frames. The [_call_go] branch moves the frame's
-    [crane::shared_box] fields into locals [a1]/[a10] and pushes
-    [_call{crane_raw(a10), crane_raw(a1)}]: raw pointers into those locals'
-    storage (under SharedVariant a nullary constructor lives inside the box),
-    which are destroyed when the branch ends, before the [_call] frame is
-    popped and read. Without ASan it happens to print 6. Also on main. *)
+    Fixed: Loopify's [_call] frame held [l] and [m] by pointer, and the
+    adopted [go] entry pushed [_call{crane_raw(a10), crane_raw(a1)}] from
+    the [crane::shared_box] copies its own frame kept, which died with the
+    handler. The plan took every pointer field for a cell a copy of the
+    field shares, but a shared variant holds the value in the slot itself,
+    so a frame's copy of it is a value of its own. Now only fields whose
+    value lies in a cell count as such (in the frame storage plan and in
+    the parts a turn passes), and the frame holds [l] and [m] by value. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
 From Stdlib Require Import List.
