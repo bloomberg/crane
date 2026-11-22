@@ -177,7 +177,6 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
     expected_result = expected_result;
     instance_families = instance_families;
     tvars = tvars;
-    concrete_tvar_type = concrete_tvar_type;
     result_tvar_map = result_tvar_map;
     _
   } = plan in
@@ -225,17 +224,16 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
        variable substitution would inflate the count (e.g. [Core.Type.Variable A]
        becoming [Core.Type.Arrow(nat, nat)] adds a spurious arrow).
 
-       Additionally, annotate the outer lambda with an explicit return
-       type derived from the {i substituted} parameter type's codomain.
-       Without this, the deduced return type is the inner lambda's
-       unique closure type, and [is_invocable_r_v<std::function<...>,
-       closure_type>] may evaluate to [false] in concept checking
-       (C++ lambda-to-[std::function] conversion is not recognized
-       during SFINAE in some implementations). *)
-    let core_arg, split_ret_ty =
+       The lambda is lowered against its slot, the parameter at the call's
+       instantiation ([arg_expected_ty]): its body returns into the slot's
+       codomain ({!Lambda.gen_lambda}'s destination), so nothing adapts it
+       afterwards.  (A return annotation the split used to add here was
+       dropped again by {!Cpp_passes.Simplify}: a lambda that only returns a
+       lambda hands it back unannotated.) *)
+    let core_arg =
       match core_arg with
-      | Core.Expr.Lambda _ ->
-        ( match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
+      | Core.Expr.Lambda _ -> (
+        match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
         | Some param_ty ->
           let rec count_arrows = function
             | Core.Type.Arrow {result = rest; _} -> 1 + count_arrows rest
@@ -244,43 +242,12 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
           let expected = count_arrows param_ty in
           let actual = Base.Core_util.nb_lams core_arg in
           if expected > 0 && actual > expected then
-            let outer_ids, inner_body =
-              Base.Core_util.collect_n_lams expected core_arg
-            in
-            let barrier =
-              Base.Core_util.named_lams outer_ids (Core.Expr.Lambda_group_barrier {value = inner_body;
-                                                                           occurrence = Core.Occurrence.fresh ()})
-            in
-            (* Compute the return type from the substituted param type by
-               stripping [expected] top-level arrows.  The remaining type
-               is the function-typed codomain that the inner lambda
-               implements.
-
-               When the substituted codomain is still a [Core.Type.Variable] (happens
-               when [tys = []] so substitution is a no-op), use the
-               [concrete_tvar_type] computed above — it holds the
-               concrete [T1] type derived from the excess args and the
-               enclosing function's return type. *)
-            let ret_ty =
-              match param_core_ty with
-              | Some subst_pt ->
-                let rec codomain_after n = function
-                  | Core.Type.Arrow {result = rest; _} when n > 0 ->
-                    codomain_after (n - 1) rest
-                  | ty -> ty
-                in
-                let ret_core = codomain_after expected subst_pt in
-                ( match resolve_meta ret_core with
-                | Core.Type.Variable _ -> concrete_tvar_type
-                | _ ->
-                  Some (Types.cpp_of_core cx env ret_core) )
-              | None -> None
-            in
-            (barrier, ret_ty)
-          else
-            (core_arg, None)
-        | None -> (core_arg, None) )
-      | _ -> (core_arg, None)
+            let outer_ids, inner_body = Base.Core_util.collect_n_lams expected core_arg in
+            Base.Core_util.named_lams outer_ids
+              (Core.Expr.Lambda_group_barrier {value = inner_body; occurrence = Core.Occurrence.fresh ()})
+          else core_arg
+        | None -> core_arg )
+      | _ -> core_arg
     in
     let arg_expected_core_ty =
       match param_core_ty with
@@ -305,35 +272,6 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
     let arg_slot : Cpp_ir.Lowered.Slot_type.t =
       Calls.argument_slot cx env id ~deduced_callable ~written_by_var ~expected:arg_expected_ty
         (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
-    in
-    (* Annotate the outer lambda with the explicit return type computed
-       during the split, so that C++ concept checking sees the concrete
-       [std::function<...>] return type instead of the raw closure type. *)
-    let expr : Cpp_ir.Lowered.Expr.t =
-      match split_ret_ty, expr with
-      | Some ret_ty, Lambda ({ return_type = None; _ } as l) ->
-        Lambda { l with return_type = Some ret_ty }
-      | _ -> expr
-    in
-    let expr : Cpp_ir.Lowered.Expr.t =
-      match (param_core_ty, expr) with
-      | Some param_ty, Lambda ({ body = lam_body; _ } as l) ->
-        let param_cpp_ty =
-          Types.cpp_of_core cx env param_ty
-        in
-        ( match param_cpp_ty with
-        | Function (_, Shared_pointer inner) ->
-          let rec wrap_stmt : Cpp_ir.Lowered.Stmt.t -> Cpp_ir.Lowered.Stmt.t = function
-            | Return (Some e) ->
-              Return (Some (Cpp_ir.Build.call (Allocate (Heap, inner)) [e]))
-            | s -> Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:Fun.id ~stmt:wrap_stmt ~type_:Fun.id ()) s
-          in
-          Lambda
-            { l with
-              return_type = Some (Shared_pointer inner);
-              body = List.map wrap_stmt lam_body }
-        | _ -> expr )
-      | _ -> expr
     in
     let expr : Cpp_ir.Lowered.Expr.t =
       match param_core_ty with
