@@ -16,6 +16,7 @@ open Base.Type_util
 open Core_plan.Query
 open Knot
 open Lambda
+module Typed = Cpp_ir.Typed
 
 (** The types of the members of the local fixpoint groups being generated
    that recurse at a ground instance ({!Base.Table.is_erased_fix_group}), as the
@@ -160,7 +161,8 @@ let project_through_instance cx env (use : Core.Global_use.t) args (projection :
 (** [gen_call_args ~slot ?expected_ty env id plan] -- the C++ arguments of
     the call of the global [id] that [plan] describes, each generated against
     the parameter it is passed at.  The dictionaries' promoted variables are in scope for them. *)
-let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan : Cpp_ir.Lowered.Expr.t list =
+let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~written_by_var env id plan :
+    Cpp_ir.Lowered.Expr.t list =
   let {
     Calls.instantiated =
       {
@@ -301,14 +303,8 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
        template parameter for an inline mapping's parameter at a type
        variable. *)
     let arg_slot : Cpp_ir.Lowered.Slot_type.t =
-      if deduced_callable then Forwarded
-      else if
-        Base.Table.is_inline_custom id
-        && match Option.map resolve_meta (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index) with
-           | Some (Core.Type.Variable _) -> true
-           | _ -> false
-      then Template_parameter arg_expected_ty
-      else Destination.slot_of arg_expected_ty
+      Calls.argument_slot cx env id ~deduced_callable ~written_by_var ~expected:arg_expected_ty
+        (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
     in
     (* Annotate the outer lambda with the explicit return type computed
        during the split, so that C++ concept checking sees the concrete
@@ -681,7 +677,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
     erases to [std::any], and its result recovered from a box where the
     callee's codomain is erased. *)
 let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) env f args :
-    Cpp_ir.Lowered.Expr.t =
+    Typed.t =
   let core_args = args in
 
   let rec get_eta_args dom args =
@@ -748,7 +744,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
     let args =
       let slot = if closed_head then {slot with Slot.building_constant = true} else slot in
       with_promoted_var_map cx (instance_promoted_map @ cx.ctx.lexical.promoted_var_map)
-        (fun () -> gen_call_args cx ~slot ?expected_ty env id plan)
+        (fun () -> gen_call_args cx ~slot ?expected_ty ~written_by_var:lowered.Calls.written_by_var env id plan)
     in
     let ty = lowered.Calls.callee_type
     and tys = lowered.Calls.written
@@ -1742,18 +1738,30 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
       | _ -> primary_result
     in
     let result = wrap_excess primary_result in
-    (* A saturated call's result read at the type expected of it, where the
-       two differ only in how their arrows are grouped
+    (* A saturated call yields its callee's declared codomain at the type
+       arguments it writes: what C++ instantiates, which the Core
+       instantiation may have erased ([ReSum_inl] at [ReSum<erased, erased>]
+       where the call names the concrete events).  Read at the type expected
+       of it where the two differ only in how their arrows are grouped
        ({!Coerce.regroup_crossing}): [wrap<fn<fn<R(B)>(A)>>(f)] stored as a
        [list (A -> B -> R)]. *)
-    ( match (written_fn_ty, expected_ty) with
-    | Some (Cpp_ir.Type.Function (doms, written_cod)), Some into
-      when excess_args = [] && List.length doms = List.length args ->
-      ( match Coerce.regroup_crossing ~from:written_cod ~into result with
-      | Cpp_ir.Expr.Convert (t, _) -> Convert (t, result)
-      | _ -> result )
-    | _ -> result )
-  | _ ->
+    ( match written_fn_ty with
+    | Some (Cpp_ir.Type.Function (doms, written_cod))
+      when excess_args = [] && List.length doms = List.length args -> (
+      let crossed =
+        match expected_ty with
+        | Some into -> (
+          match Coerce.regroup_crossing ~from:written_cod ~into result with
+          | Cpp_ir.Expr.Convert (t, _) -> Some (Cpp_ir.Expr.Convert (t, result) : Cpp_ir.Lowered.Expr.t)
+          | _ -> None )
+        | None -> None
+      in
+      match (crossed, result) with
+      | Some c, _ -> Typed.of_node c
+      | None, Call _ -> Typed.typed written_cod result
+      | None, _ -> Typed.untyped result )
+    | _ -> Typed.untyped result )
+  | _ -> Typed.untyped @@
     (* Non-global callee (e.g., a local variable from Core.Expr.Bound_variable). Filter out Core.Expr.Erased_value
        args — these are erased type/prop parameters that have no runtime
        representation. Unlike the Core.Expr.Global case above, there is no use to
@@ -2276,11 +2284,12 @@ let gen_instance_projection cx ~expected_ty ~slot env ~use ~args : Cpp_ir.Typed.
     call, partial or saturated ({!eta_fun}), its result recovered from a box
     where only a type index pins it down, and the call node recording its
     signature. *)
-let gen_application cx ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t list) : Cpp_ir.Lowered.Expr.t =
+let gen_application cx ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t list) : Typed.t =
   (* A partial application is a callable this position may expect at a
      different currying than the callee's own arrows give it, so the slot's
      type travels with it. *)
-  let result = eta_fun cx ?expected_ty ~slot env f args in
+  let call = eta_fun cx ?expected_ty ~slot env f args in
+  let result = call.expr in
   (* A callee whose result is only pinned down by a type index hands back a
      [std::any] (see {!result_is_index_only_tvar}); recover it at the type
      this position expects. *)
@@ -2342,7 +2351,7 @@ let gen_application cx ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Exp
   let declared_result_is_boxed =
     match f with Core.Expr.Global {callee = r; _} -> Erasure.glob_declared_cod_erases cx r | _ -> false
   in
-  let result =
+  let recovered =
     if
       binder_result_is_boxed || declared_result_is_boxed
       || ( match callee_ty with
@@ -2362,6 +2371,14 @@ let gen_application cx ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Exp
     | Core.Expr.Bound_variable {occurrence = occ; _}, Call (_, Local _, _) -> made_of occ call
     | _ -> call
   in
-  ( match Calls.record_call_sig cx env callee_ty_inst result with
-  | Any_cast (ty, call) -> Any_cast (ty, made_of_application call)
-  | result -> made_of_application result )
+  let built : Cpp_ir.Lowered.Expr.t =
+    match Calls.record_call_sig cx env callee_ty_inst recovered with
+    | Any_cast (ty, call) -> Any_cast (ty, made_of_application call)
+    | result -> made_of_application result
+  in
+  (* The call's own type, where {!eta_fun} typed it and nothing recovered
+     it from a box since; an action of a sequential monad yields its
+     result whatever the call's type ({!Typed_checks.of_built}). *)
+  let e : Core.Expr.t = Apply {callee = f; arguments = args} in
+  if recovered == result && Typed_checks.sequential_action e = None then Typed.rewrap (fun _ -> built) call
+  else Typed_checks.of_built cx env e built

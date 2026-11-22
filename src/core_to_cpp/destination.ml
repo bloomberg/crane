@@ -105,7 +105,9 @@ let finish_inlined cx d (x : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Stmt.t list =
     let rebuilt () = [finish cx d (Cpp_ir.Typed.rewrap (fun _ -> Cpp_ir.Build.iife return_type body) x)] in
     if not (returns d) then rebuilt ()
     else
-      match Cpp_build.inline_returns (fun v -> finish cx d (Cpp_ir.Typed.of_node v)) body with
+      (* Each return is the lambda's value, at the type C++ gives it where
+         its node does not say. *)
+      match Cpp_build.inline_returns (fun v -> finish cx d (Cpp_ir.Typed.or_type x.ty (Cpp_ir.Typed.of_node v))) body with
       | Some stmts -> stmts
       | None -> rebuilt () )
   | _ -> [finish cx d x]

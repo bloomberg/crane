@@ -309,15 +309,19 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
      decides which calls those are ({!Core_plan.Elaborate.closed_instance_call}). *)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use); arguments = args} as e
     when (not slot.Slot.building_constant)
-         && Core_plan.Elaborate.closed_instance_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args -> form @@ (
-    let built = gen_expr cx ?expected_ty ~slot:{slot with Slot.building_constant = true} env e in
-    match built with
+         && Core_plan.Elaborate.closed_instance_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args -> (
+    let built = gen_expr_typed cx ?expected_ty ~slot:{slot with Slot.building_constant = true} env e in
+    (* Kept, it is the value it builds. *)
+    match built.expr with
     | Call _ ->
-      Cpp_ir.Build.call
-        (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Base.Common.label_of_r f))))) [built]
+      Typed.rewrap
+        (fun b ->
+          Cpp_ir.Build.call
+            (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Base.Common.label_of_r f))))) [b] )
+        built
     | _ -> built )
   | Core.Expr.Apply {callee = f; arguments = args} ->
-    form @@ Application.gen_application cx ~expected_ty ~slot env f args
+    typed_form @@ Application.gen_application cx ~expected_ty ~slot env f args
   | Core.Expr.Lambda _ as a ->
     typed_form @@ Lambda.gen_lambda cx ~expected_ty ~slot env a
   | Core.Expr.Global ({callee = x; _} as use) when is_inline_custom x ->
@@ -326,7 +330,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
     let ty = Types.cpp_of_core cx env core_ty in
     ( match ty with
     | Function (dom, cod) ->
-      Typed_checks.adapted_or_node expected_ty (eta_fun cx ?expected_ty env (Core.Expr.Global use) [])
+      Typed_checks.adapted_or_node expected_ty (eta_fun cx ?expected_ty env (Core.Expr.Global use) []).expr
     | _ ->
       let yields = Calls.glob_yields cx env x (Base.Core_util.instantiate_written ~reader:"glob_yields" use) in
       Typed.v ~ty:(match yields with Some t -> Typed t | None -> Deduced Foreign_text) @@ mk_cppglob

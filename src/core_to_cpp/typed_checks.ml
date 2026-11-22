@@ -174,22 +174,23 @@ let applied (f : Cpp_ir.Lowered.Value_type.t) n : Cpp_ir.Lowered.Value_type.t =
   | Some a -> ( match take a.groups a.result n with Some t -> Typed t | None -> Deduced Not_yet_typed )
   | None -> Deduced Not_yet_typed
 
+(** The Core type [e] yields, where it is an action of a sequential monad:
+    a call that runs it, so what it yields is its result, whatever the call
+    node recorded of the action's type. *)
+let sequential_action (e : Core.Expr.t) =
+  match e with
+  | Apply _ | Global _ -> (
+    match Core_plan.Query.infer_core_body_type e with
+    | Some t when sequential_result t != t -> Some (sequential_result t)
+    | _ -> None )
+  | _ -> None
+
 (** [of_built e x]: [x], lowered from [e] by a form module that does not
     type its result yet, at the type its outermost node carries, and failing
     that at the conversion of [e]'s Core type -- a closure grouped as the
     lambda it is, where [x] is one.  The census counts the second kind. *)
 let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
-  (* An action of a sequential monad is a call that runs it: what it yields
-     is its result, whatever the call node recorded of the action's type. *)
-  let action =
-    match e with
-    | Apply _ | Global _ -> (
-      match Core_plan.Query.infer_core_body_type e with
-      | Some t when sequential_result t != t -> Some (sequential_result t)
-      | _ -> None )
-    | _ -> None
-  in
-  match (Typed.of_node x, action) with
+  match (Typed.of_node x, sequential_action e) with
   | _, Some result -> Typed.v ~ty:(core_value_type cx env (Some result)) x
   | {ty = Deduced Not_yet_typed; _}, None -> (
     let derived =
@@ -267,16 +268,27 @@ let rec node_name : Cpp_ir.Lowered.Expr.t -> string = function
 (** What {!Coerce.decide} says of [x] put in [into], for the census and
     the checks: [`Unchecked why] where the slot states no type both sides
     can be compared at, or [x] has none. *)
+let exact_verdict cx (x : Typed.t) into =
+  match Coerce.decide cx x.ty into with
+  | None when Coerce.unrelated cx x.ty into -> `Unrelated
+  | None -> `Fits
+  | Some p when Coerce.implicit x.ty p -> `Fits_implicitly
+  | Some p -> `Plan p
+
+let verdict_name = function
+  | `Unrelated -> "unrelated"
+  | `Fits -> "fits"
+  | `Fits_implicitly -> "fits-implicitly"
+  | `Plan p -> Cpp_ir.Coercion.plan_name p
+
 let verdict cx (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   match into with
   | _ when Cpp_ir.Value_type.not_yet_typed x.ty -> `Unchecked "untyped value"
-  | Exactly t when Base.Type_util.contains_tvar t -> `Unchecked "slot at type variables"
-  | Exactly _ -> (
-    match Coerce.decide cx x.ty into with
-    | None when Coerce.unrelated cx x.ty into -> `Unrelated
-    | None -> `Fits
-    | Some p when Coerce.implicit x.ty p -> `Fits_implicitly
-    | Some p -> `Plan p )
+  | Exactly t when Base.Type_util.contains_tvar t ->
+    `Unchecked ("slot at type variables: " ^ verdict_name (exact_verdict cx x into))
+  | Exactly _ -> exact_verdict cx x into
+  | Template_parameter _ -> `Unchecked "deduced"
+  | Forwarded -> `Unchecked "forwarded"
   | _ -> `Unchecked "slot states no type"
 
 (** [verdict]'s census line for [x] in [into], [what] describing [x]. *)

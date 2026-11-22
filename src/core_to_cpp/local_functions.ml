@@ -1246,6 +1246,11 @@ let gen_applied_fix cx ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
   let outer_tvars = get_current_type_vars cx in
   let n_outer = List.length outer_tvars in
   let has_extra_tvars = Base.Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
+  (* What the member called yields given [n] arguments, from its Core type. *)
+  let applied_type n =
+    Typed_checks.core_value_type cx env (Base.Type_util.strip_arrows_n n (snd ids.(x)))
+  in
+  let fix_value n (e : Cpp_ir.Lowered.Expr.t) = Cpp_ir.Typed.or_type (applied_type n) (Cpp_ir.Typed.of_node e) in
   (* The arguments the plan reads before the call, its parameters being
      bound to them in order ({!Ownership_ir.Region.evaluated_first}), each
      evaluated into a local of its own ahead of everything the call
@@ -1355,7 +1360,7 @@ let gen_applied_fix cx ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
       in
       let cpp_args = gen_args args in
       [ Destination.finish cx k
-          (Cpp_ir.Typed.of_node
+          (fix_value (List.length cpp_args)
              (made_of occ
                 (Call (Cpp_ir.Build.signature ~nargs:0 (), mk_cppglob lifted_ref call_type_args, List.rev cpp_args)) ) ) ] )
     else (* No extra Tvars - proceed with by-ref local fixpoint (immediately applied) *)
@@ -1430,7 +1435,9 @@ let gen_applied_fix cx ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
            fold's accumulator. *)
         @ deref_subst
             [ Destination.finish cx k
-                (Cpp_ir.Typed.of_node (Coerce.grouped_lambda ?into:(Coerce.position_cpp_ty cx None) pa_params full_call)) ]
+                (let into = Coerce.position_cpp_ty cx None in
+                 Cpp_ir.Typed.or_type (applied_type n_provided)
+                   (Typed_checks.adapted_or_node into (Coerce.grouped_lambda ?into pa_params full_call)) ) ]
       end
       else
         let closures = escapes in
@@ -1462,7 +1469,7 @@ let gen_applied_fix cx ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
            its own parameters only, while the term around it, eta-expanded
            at the unfolded type, hands it the state as well. *)
         let call =
-          Destination.finish cx k @@ Cpp_ir.Typed.of_node
+          Destination.finish cx k @@ fix_value n_provided
             (made_of occ
                (Coerce.mk_arity_call
                   ~params:(List.rev_map (fun (_, t) -> Types.cpp_of_core cx env t) fix_params)
@@ -1512,4 +1519,11 @@ let gen_standalone_fix cx env (k : Destination.t) ~x ~ids ~funs ~occ ~fix_term :
           renamed_ids funs_with_params
   in
   let fix_id = fst (List.nth renamed_ids x) in
-  decls @ defs @ [Destination.finish cx k (Cpp_ir.Typed.of_node (Local fix_id))]
+  (* The group's wrapper is a closure taking the member's parameters at
+     once. *)
+  let closure : Cpp_ir.Lowered.Value_type.t =
+    match Typed_checks.core_value_type cx env (Some (snd ids.(x))) with
+    | Typed t -> ( match Cpp_ir.Arrows.of_type t with Some a -> Closure a | None -> Typed t )
+    | v -> v
+  in
+  decls @ defs @ [Destination.finish cx k (Cpp_ir.Typed.or_type closure (Cpp_ir.Typed.of_node (Local fix_id)))]

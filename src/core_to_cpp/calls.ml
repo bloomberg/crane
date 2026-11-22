@@ -2061,6 +2061,33 @@ let spell_as_declared ~(declared : Core.Type.t list) (orig : Core.Type.t) (t : C
   in
   spell ~in_domain:false orig t
 
+(** The slot an argument of the call to [id] fills at the parameter
+    declared at the Core type [orig]: what C++ checks it against.  A
+    forwarding reference for a deduced callable; for an inline mapping, a
+    template parameter where [orig] is a type variable and otherwise the
+    type the argument is generated against ([expected]); for any other
+    callee, its declared parameter at the type arguments the call writes
+    ([written_by_var]), a template parameter where a variable the call
+    leaves to C++ to deduce remains in it. *)
+let argument_slot cx env id ~deduced_callable ~written_by_var ~(expected : Cpp_ir.Lowered.Type.t option)
+    (orig : Core.Type.t option) : Cpp_ir.Lowered.Slot_type.t =
+  let slot_of = function Some t -> Cpp_ir.Grammar.Slot_type.Exactly t | None -> Free in
+  if deduced_callable then Forwarded
+  else
+    match Option.map resolve_meta orig with
+    | None -> slot_of expected
+    | Some (Core.Type.Variable _) when Base.Table.is_inline_custom id -> Template_parameter expected
+    | Some _ when Base.Table.is_inline_custom id -> slot_of expected
+    | Some orig -> (
+      match Types.cpp_of_core cx env orig with
+      | exception e when CErrors.noncritical e -> slot_of expected
+      | declared ->
+        let t = Cpp_ir.Types.substitute (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var) declared in
+        let deduced =
+          IntSet.exists (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var = None) (collect_tvars_set IntSet.empty orig)
+        in
+        if deduced || Base.Table.is_custom id then Template_parameter (Some t) else Exactly t )
+
 let argument_position cx ~local_callable env id plan i core_arg =
   let {
     instantiated =
