@@ -425,7 +425,7 @@ callable_crossing_matrix.
 ## 7. Progress
 
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
-- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints done; typed-fit not yet fatal, goal 4 not started; see 8)
+- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 11, 12 done; typed-fit not yet fatal; see 8, third session)
 - [ ] Phase B2
 - [ ] Phase C
 - [ ] Phase D
@@ -845,3 +845,123 @@ indexed events, constructor values, function-alias closure results,
 effect-primitive slots), and destinations built from the ambient taking
 their slot from the caller; (3) `typed-fit` fatal, filing any genuine
 miss in `tests/wip`; (4) goal 4.
+
+### Phase B1, third session (2026-11-22)
+
+Done:
+- **Type variables in the scope's numbering, partly.**  The largest
+  group of "slot at type variables, unrelated" (2412 at destinations) was
+  not a renaming in lifted fixpoints: it was (a) a call whose type
+  arguments C++ deduces (no `written_by_var`), typed at the callee's own
+  variables -- a methodified `fold_left`'s recursive call yielded the
+  callee's `T1` (its accumulator) inside a method whose scope numbers the
+  accumulator 2 -- and (b) HKT carriers, a function's own variable that
+  `Decl_state.apply_hkt_resolutions_stmts` rewrites to `typename
+  _tcI0::m` only after the body is lowered.  Fixes:
+  `Cpp_ir.Types.deduce` is C++'s template argument deduction (a callee's
+  declared parameters matched against the typed arguments, arrows
+  compared curried); `Application.gen_call_args` returns `Typed.t`, and a
+  global call whose codomain's variables are all written or deduced is
+  typed at it (`deduced_fn_ty`; only typing reads it, the `Convert` of a
+  crossing still reads `written_fn_ty`).  The HKT resolutions are
+  lexical state (`Lowering_state.with_hkt_resolutions`, set where
+  `Functions` lowers a body) and `Coerce.aliases_in` reads a resolved
+  variable as its member.  2412 -> 159.
+- **One alias unfolding in `decide`.**  `Coerce.normal` strips every
+  `const`/reference before unfolding (a closure's `const priqueue&`
+  parameter was compared unfolded on one side only) and unfolds to a
+  fixpoint (`uf<>` over `NatMap.t` over `bst<>`, a functor argument's
+  `key<>`/`value<>`).  A closure's result an alias spells as a function
+  continues the chain (`Arrows.curried`, `Coerce.normal_arrows`: `st<Z>`,
+  `State<nat,nat>`).  `Coerce.implicit` reads the value through aliases
+  (`ReSum<any, fn(opaque)->opaque>` is a callable with an erased domain).
+  `Calls.record_call_sig` reads a callee typed by a function alias
+  (`Id_ obj c`) through the alias, so the call yields the alias's
+  codomain, not the alias.  Deviation from the brief: the printer's type
+  spelling does not unfold aliases (it prints the alias name, which C++
+  resolves), so there was no second unfolding to share; `Coerce.normal`
+  over `Types.unfold_cpp_typedef` is the one place.
+- **Goal 4, the adapters through `Coerce.into_slot`.**  `into_slot ?al
+  ~origin x into` is the one entry for rows 1 (`regroup_value`, origin
+  `Rg`), 2 (`curry_value_to_expected`, `Ec`), 4
+  (`eta_expand_to_expected`, `Ee`), 7 (`regroup_crossing`, `Crossing`), 8
+  (`name_fn_arg_for_tvar_param`, `Tvar_name`), 11
+  (`erase_fn_arg_for_param` with `convert_carrier_arg`, `Param`) and 12
+  (`coerce`, `Ue`, and through it `unbox_into`, `unbox_value`,
+  `recover_boxed_result`, `recover_boxed_component`).  The origin names
+  the adapter body (`*_built`) that expands and carries what it reads
+  beyond the two types, so parameter prefixes are unchanged.  Where
+  `decide` answers (`Coerce.decides`: a typed value at a stated slot,
+  neither side mentioning a type variable, no `auto` in the slot, not a
+  callable at a slot no callable fills) its plan decides whether the body
+  runs; elsewhere the body's own test still decides.  Byte identity
+  follows from the shadow check: an adapter that built something always
+  agreed with `decide`'s plan kind, and a body run where it would build
+  nothing still builds nothing.  One exception kept explicitly: `coerce`
+  boxing a value that is a `std::any` already (an identity in C++) where
+  `decide` plans nothing; dropping it is a deliberate output change for
+  phase C.  Deviation: expansion is not yet a pure function of the plan
+  (`cpp_passes/coercions.ml`, 3.3): the bodies still re-test their own
+  conditions and read the slot as written, which is what keeps output
+  identical; making the plan carry everything they read is B2/C work.
+- **Row 11's slot is the parameter as the callee declares it.**  Routing
+  `erase_fn_arg_for_param` first changed four outputs
+  (`arrow_behind_type_function`, `sigt_fn_any`, `sigt_prod_fn_any`,
+  `sigt_leaf_forward_string`: `crane_erase_fn` dropped), because this
+  adapter had never been shadow-checked and `decide` disagreed with it
+  twice.  (a) A slot an alias spells as a box (`nfun = crane::obj`) is a
+  box: `decide`'s box row now reads `al.spells_as_any` on the slot as
+  written, not only `is_boxed_type`.  (b) A parameter erased by a
+  value-indexed family that the C++ type in this scope does not show
+  (`fn(Inst::sem)->bool`, `sem` erased in the functor's body) is erased
+  only by the Core type: `Coerce.erased_param` (split out of the
+  adapter) gives the shape, and the slot `into_slot` receives is the
+  erased signature the callee declares (`fn(any)->bool`, or `any` for
+  `Boxed_whole`).  With both, `decide` agrees and output is identical.
+- **`typed-declined`**, a new census: an adapter that built nothing where
+  `decide` plans a coercion C++ does not do by itself, at a comparable
+  slot.  It never changes output (the body is what declines), but it
+  lists where `decide` is ahead of the adapters: `regroup_crossing`
+  unbox 92 / regroup 48 and `curry_value_to_expected` erase 44 (other
+  adapters' plans, built elsewhere), `coerce` unbox 90 (the expression is
+  already an `Any_cast` the caller still calls `from:Any`), `eta`
+  16 (a template's name whose signature keeps the callee's own `T1`).
+
+`typed-fit` census after `69d1d59d6` (whole-suite extraction):
+
+| site | fits | implicit | deduced/forwarded | tvar slot (fits / other) | no type | untyped | unrelated | planned |
+|---|---|---|---|---|---|---|---|---|
+| destination | 143255 | 624 | - | 50766 / 183 | 2304 | 112 | 492 | 128: erase 84, unbox 16, eta 16, box 8, regroup 4 |
+| argument | 84286 | 850 | 71910 / 19772 | 15092 / 230 | 0 | 221 | 427 | 60: unbox 32, convert 12, erase 12, eta 4 |
+
+What is left before `typed-fit` can be fatal (none of it missing output;
+the suite compiles under `CRANE_STRICT_ARITY`): a long tail of about 300
+distinct (value, slot) pairs, the largest groups being applied indexed
+events (`app(getE)<nat>` against `getE`), an instance used as a carrier
+(`app(Monad_option<>)<nat>`), constructor values at their Core result
+(`itreeF<..>` for an itree, `prod<>` against `prod<any,any>`, `nat` into
+a record from a projected field), effect primitives' parameter slots at
+the wrong instantiation, a callee's own variable still leaking where
+deduction cannot see it (a result-only variable; `Raw.t<T3>` against
+`list<prod<key,T1>>` in `FMapList.map2`), and the 2304 destinations that
+state no type (`Destination.return_ cx` with no ambient type).
+
+Commits: `e1476dcd7` (decide: HKT carriers, nested aliases, declined
+census), `d16ec300d` (deduced call types; `crane_move_hunt.h` drops an
+unused `#include <variant>`, the only output change), `4229362c4`
+(rows 1, 2, 4, 7, 8 through `into_slot`), `69d1d59d6` (row 12),
+`6238d97fd` (row 11; decide reads a box an alias spells, a carrier at an erased element).  Full `make test` from clean after `d16ec300d` and again after
+`6238d97fd`: 1526 passed, 16 failed (all `tests/wip`, as at the base),
+`git status --short tests` empty; extraction byte-identical after each
+commit in between; `dune build @unit_tests/runtest`
+and `scripts/check-module-deps.sh` pass; no `CRANE_CHECK_IR` violation,
+`typed-shadow` 0 disagree.
+
+Next, in order: (1) route the remaining rows (3 `grouped_lambda`, 5
+`mk_arity_call`, 6 `apply_at_site`/`wrap_excess`: these build calls
+from parameters, so they become `Typed.apply` (3.4) rather than
+`into_slot`; 9-10 `gen_call_args`' inline-mapping naming and codomain
+wrap; 13 joins; 17 `gen_crossing`); (2) the census tail above, then
+`typed-fit` fatal, filing any genuine miss in `tests/wip`; (3) B2: make
+each plan carry what its expansion reads, move the bodies to
+`cpp_passes/coercions.ml`, and have `into_slot` return `Coerce (c, e)`.
