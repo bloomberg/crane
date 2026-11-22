@@ -1558,6 +1558,10 @@ let gen_custom_match_expr cx ?slot env ~typ ~t ~pv ~case_occ : Cpp_ir.Lowered.Ex
       | {Core.Match.Branch.result_type = rty; _} :: _ -> rty
       | [] -> typ
     in
+    (* The branches build their values at the slot's type where the
+       annotation erased what it states ({!Constructors.refined_by_slot}),
+       and so does the lambda returning them. *)
+    let branch_rty = match slot with Some s -> Constructors.refined_by_slot s branch_rty | None -> branch_rty in
     let r = Types.cpp_of_core cx env branch_rty in
     if is_cpp_unit_type r
        || Monadic.core_type_is_void_call branch_rty

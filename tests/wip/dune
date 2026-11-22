@@ -256,17 +256,6 @@
   (deps loopify_constant_local_fix.t.exe)
   (action (run ./loopify_constant_local_fix.t.exe))))
 
-(subdir boxed_fields_match_arg_obj
- (rule
-  (targets boxed_fields_match_arg_obj.t.exe)
-  (deps BoxedFieldsMatchArgObj.vo boxed_fields_match_arg_obj.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_fields_match_arg_obj.t.exe boxed_fields_match_arg_obj.t.cpp boxed_fields_match_arg_obj.cpp)))
- (rule
-  (alias runtest)
-  (deps boxed_fields_match_arg_obj.t.exe)
-  (action (run ./boxed_fields_match_arg_obj.t.exe))))
-
 (subdir bake_text_trigraph
  (rule
   (targets bake_text_trigraph.t.exe)

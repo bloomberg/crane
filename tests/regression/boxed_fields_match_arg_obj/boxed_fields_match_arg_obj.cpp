@@ -21,7 +21,7 @@ uint64_t BoxedFieldsMatchArgObj::count(uint64_t n) {
           }
         };
     return go(List<std::string>::cons("a", List<std::string>::nil()),
-              [&]() -> List<std::optional<crane::obj>> {
+              [&]() -> List<std::optional<uint64_t>> {
                 if (n <= 0) {
                   return List<std::optional<uint64_t>>::nil();
                 } else {
