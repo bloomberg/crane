@@ -103,9 +103,9 @@ std::string String0::append(const std::string &s1, std::string s2) {
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
 [[clang::no_destroy]] constinit crane::shared_array<unsigned long long>::fixed<10> crane_baked_table_6bda686fed62_b0{
-    0ULL, 1ULL, 2ULL, 3ULL, 4ULL, 5ULL, 6ULL, 7ULL, 8ULL, 9ULL};
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 [[clang::no_destroy]] constinit crane::shared_array<unsigned long long>::fixed<10> crane_baked_table_6bda686fed62_b1{
-    0ULL, 3ULL, 6ULL, 9ULL, 12ULL, 15ULL, 18ULL, 21ULL, 24ULL, 27ULL};
+    0, 3, 6, 9, 12, 15, 18, 21, 24, 27};
 [[clang::no_destroy]] constinit crane::shared_array<crane::shared_array<unsigned long long>>::fixed<4> crane_baked_table_6bda686fed62_b2{
     crane::shared_array<unsigned long long>::of_static(crane_baked_table_6bda686fed62_b0),
     crane::shared_array<unsigned long long>::of_static(crane_baked_table_6bda686fed62_b1),
@@ -116,40 +116,75 @@ static_assert(crane::bake::data_model == 0x80408080402u,
 constinit const void *const crane_baked_table_6bda686fed62_blocks[] = {
     &crane_baked_table_6bda686fed62_b2, &crane_baked_table_6bda686fed62_b3};
 constinit const std::uint64_t crane_baked_table_6bda686fed62_words[] = {
-    0x2u, 0x0u, 0x9b8u, 0x2u, 0x1u, 0x11u};
+    0,                     // no nodes
+    2, 0, 2488, 2, 1, 17,  // the value: {b2, b3}
+};
 constinit const crane::bake::image crane_baked_table_6bda686fed62{
-    crane_baked_table_6bda686fed62_words, 6,
-    crane_baked_table_6bda686fed62_blocks, 2};
+    crane_baked_table_6bda686fed62_words, 7,
+    crane_baked_table_6bda686fed62_blocks, 2, nullptr, 0};
 
 // Baked by crane::bake: the value of crane_baked_big_6a150784210f.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const void *const crane_baked_big_6a150784210f_blocks[] = {nullptr};
 constinit const std::uint64_t crane_baked_big_6a150784210f_words[] = {
-    0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u,
-    0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u,
-    0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x0u, 0x1u, 0x0u,
-    0x0u, 0x2u, 0x0u, 0x1u, 0x0u, 0x0u, 0x1u, 0x0u, 0x0u, 0x3u, 0x0u, 0x1u,
-    0x10u, 0x2u, 0x11u, 0x4u, 0x0u, 0x1u, 0xfu, 0x3u, 0x12u, 0x5u, 0x0u, 0x1u,
-    0xeu, 0x4u, 0x13u, 0x6u, 0x0u, 0x1u, 0xdu, 0x5u, 0x14u, 0x7u, 0x0u, 0x1u,
-    0xcu, 0x6u, 0x15u, 0x8u, 0x0u, 0x1u, 0xbu, 0x7u, 0x16u, 0x9u, 0x0u, 0x1u,
-    0xau, 0x8u, 0x17u, 0xau, 0x0u, 0x1u, 0x9u, 0x9u, 0x18u, 0xbu, 0x0u, 0x1u,
-    0x8u, 0xau, 0x19u, 0xcu, 0x0u, 0x1u, 0x7u, 0xbu, 0x1au, 0xdu, 0x0u, 0x1u,
-    0x6u, 0xcu, 0x1bu, 0xeu, 0x0u, 0x1u, 0x5u, 0xdu, 0x1cu, 0xfu, 0x0u, 0x1u,
-    0x4u, 0xeu, 0x1du, 0x10u, 0x0u, 0x1u, 0x3u, 0xfu, 0x1eu};
+    1, 32,          // BakedConstantsDefault::tree: #0 to #31
+    0,              // #0 Leaf
+    1, 0, 1, 0,     // #1 Node{l = #0, x = 1, r = #0}
+    1, 0, 1, 0,     // #2 Node{l = #0, x = 1, r = #0}
+    1, 1, 2, 2,     // #3 Node{l = #1, x = 2, r = #2}
+    1, 1, 2, 2,     // #4 Node{l = #1, x = 2, r = #2}
+    1, 3, 3, 4,     // #5 Node{l = #3, x = 3, r = #4}
+    1, 3, 3, 4,     // #6 Node{l = #3, x = 3, r = #4}
+    1, 5, 4, 6,     // #7 Node{l = #5, x = 4, r = #6}
+    1, 5, 4, 6,     // #8 Node{l = #5, x = 4, r = #6}
+    1, 7, 5, 8,     // #9 Node{l = #7, x = 5, r = #8}
+    1, 7, 5, 8,     // #10 Node{l = #7, x = 5, r = #8}
+    1, 9, 6, 10,    // #11 Node{l = #9, x = 6, r = #10}
+    1, 9, 6, 10,    // #12 Node{l = #9, x = 6, r = #10}
+    1, 11, 7, 12,   // #13 Node{l = #11, x = 7, r = #12}
+    1, 11, 7, 12,   // #14 Node{l = #11, x = 7, r = #12}
+    1, 13, 8, 14,   // #15 Node{l = #13, x = 8, r = #14}
+    1, 13, 8, 14,   // #16 Node{l = #13, x = 8, r = #14}
+    1, 15, 9, 16,   // #17 Node{l = #15, x = 9, r = #16}
+    1, 15, 9, 16,   // #18 Node{l = #15, x = 9, r = #16}
+    1, 17, 10, 18,  // #19 Node{l = #17, x = 10, r = #18}
+    1, 17, 10, 18,  // #20 Node{l = #17, x = 10, r = #18}
+    1, 19, 11, 20,  // #21 Node{l = #19, x = 11, r = #20}
+    1, 19, 11, 20,  // #22 Node{l = #19, x = 11, r = #20}
+    1, 21, 12, 22,  // #23 Node{l = #21, x = 12, r = #22}
+    1, 21, 12, 22,  // #24 Node{l = #21, x = 12, r = #22}
+    1, 23, 13, 24,  // #25 Node{l = #23, x = 13, r = #24}
+    1, 23, 13, 24,  // #26 Node{l = #23, x = 13, r = #24}
+    1, 25, 14, 26,  // #27 Node{l = #25, x = 14, r = #26}
+    1, 25, 14, 26,  // #28 Node{l = #25, x = 14, r = #26}
+    1, 27, 15, 28,  // #29 Node{l = #27, x = 15, r = #28}
+    1, 27, 15, 28,  // #30 Node{l = #27, x = 15, r = #28}
+    1, 29, 16, 30,  // #31 Node{l = #29, x = 16, r = #30}
+    0,              // end of the nodes
+    31,             // the value: #31
+};
 constinit const crane::bake::image crane_baked_big_6a150784210f{
-    crane_baked_big_6a150784210f_words, 129,
-    crane_baked_big_6a150784210f_blocks, 0};
+    crane_baked_big_6a150784210f_words, 129, nullptr, 0, nullptr, 0};
 
 // Baked by crane::bake: the value of crane_baked_entries_9913efaaf321.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const void *const crane_baked_entries_9913efaaf321_blocks[] = {
-    nullptr};
+constinit const char crane_baked_entries_9913efaaf321_text[] = "first";
 constinit const std::uint64_t crane_baked_entries_9913efaaf321_words[] = {
-    0x0u, 0x1u, 0x0u, 0x0u, 0x5u, 0x7473726966u, 0x1u, 0x7u, 0x0u, 0x1u, 0x0u,
-    0x1u, 0x0u, 0x0u, 0x1u, 0x0u, 0x0u, 0x2u, 0x0u, 0x1u, 0x0u, 0x0u, 0x1u,
-    0x0u, 0x0u, 0x0u, 0x1u, 0x0u, 0x0u, 0x0u, 0x0u, 0x0u, 0x0u, 0x0u, 0x0u};
+    2, 4,              // BakedConstantsDefault::tree: #0 to #3
+    0,                 // #0 Leaf
+    1, 0, 1, 0,        // #1 Node{l = #0, x = 1, r = #0}
+    1, 0, 1, 0,        // #2 Node{l = #0, x = 1, r = #0}
+    1, 1, 2, 2,        // #3 Node{l = #1, x = 2, r = #2}
+    1, 3,              // List<BakedConstantsDefault::entry>: #4 to #6
+    0,                 // #4 Nil
+    // #5 Cons{a = entry{name = "", weight = nullopt, label = #0}, l = #4}
+    1, 0, 0, 0, 4,
+    // #6 Cons{a = entry{name = "first", weight = 7, label = #3}, l = #5}
+    1, 5, 1, 7, 3, 5,
+    0,                 // end of the nodes
+    6,                 // the value: #6
+};
 constinit const crane::bake::image crane_baked_entries_9913efaaf321{
-    crane_baked_entries_9913efaaf321_words, 35,
-    crane_baked_entries_9913efaaf321_blocks, 0};
+    crane_baked_entries_9913efaaf321_words, 31, nullptr, 0,
+    crane_baked_entries_9913efaaf321_text, 5};

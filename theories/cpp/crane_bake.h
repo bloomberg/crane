@@ -11,29 +11,34 @@
 // and the unit's [c] is then initialised with [crane::bake::read<T>(image)]
 // instead of its body.
 //
-// An image is a stream of 64-bit words and a table of static blocks.
+// An image is a stream of 64-bit words, the bytes of its strings, and a
+// table of static blocks.  The stream is a table of nodes and then the
+// value.
 //
+// - A node is a value of a generated inductive (one with a constructor that
+//   has fields) or a [crane::list] cell: what the value shares, and what
+//   recurses.  Each is written once, as one row: its constructor's index and
+//   its fields, a node among them as its number.  Nodes are numbered in the
+//   order they are written, which is after the nodes they hold: a row only
+//   names rows above it, so the value is read back as the DAG it was, front
+//   to back, with no recursion.  The rows come in runs of one type each: the
+//   type's number (its place, counting from 1, in the order a walk of the
+//   value's type meets the node types: [walk_types]) and the run's length.
+//   0 ends the table.  A [crane::list] cell is [1], its head and its tail; a
+//   nil is [0].  A counted pointer ([std::shared_ptr], [bsl::shared_ptr],
+//   [crane::rc]) to a node is one pointer per node again when read.
 // - A scalar (integer, character, boolean, enumeration, floating point) is
-//   one word.  A string ([std::string], or any type with a [traits_type], an
-//   allocator and a constructor from a pointer and a length) is its length
-//   and its bytes, eight to a word.  A pair ([first] and [second]), a tuple
-//   and an optional (a presence word first) are their components in order; a
-//   type with no state is nothing.  A sequence container ([std::vector],
-//   [std::deque], ...) and a [persistent_array] (its default element after
-//   the length) are their length and elements.  A number with a text form
-//   ([mpz_class]: [get_str(16)] and a constructor from a string and a base) is
-//   its base-16 text.
-// - A value of a generated inductive, record or flat struct starts with a
-//   sharing word.  [k + 1] is the [k]th node already read, of this type: a
-//   subterm shared in the value stays shared, so the value is read back as
-//   the DAG it was.  0 is a new node: its constructor's index (0 for a record
-//   or a flat struct) and its fields follow.  An enumeration is a new node
-//   too, so it reads back as a nullary-constructor variant and back.  The
-//   node a field points to through a shared pointer ([std::shared_ptr],
-//   [bsl::shared_ptr]), [crane::shared_box], [crane::rc] or
-//   [crane::field_box] is written in place: the sharing is the inductive's.
-// - A [crane::list] is its cells in order, each [1] and its head, ended by
-//   [0] (nil) or [k + 2] (the tail is the [k]th cell already read).
+//   one word, as is a constructor of an inductive whose constructors have
+//   no fields.  A string ([std::string], or any type with a [traits_type],
+//   an allocator and a constructor from a pointer and a length) is its
+//   length; its bytes are in the image's text, in the order the strings are
+//   written.  A pair ([first] and [second]), a tuple, a record or flat
+//   struct (field by field) and an optional (a presence word first) are
+//   their components in order; a type with no state is nothing.  A sequence
+//   container ([std::vector], [std::deque], ...) and a [persistent_array]
+//   (its default element after the length) are their length and elements.
+//   A number with a text form ([mpz_class]: [get_str(16)] and a constructor
+//   from a string and a base) is its base-16 text.
 // - A [crane::shared_array] is [0] (empty), [1] (its length and elements),
 //   [k + 3] (the [k]th array already read) or [2] followed by a static block
 //   and its element type's code: an array of scalars, or of such arrays,
@@ -41,12 +46,14 @@
 //   count ([crane::shared_array::fixed]), so it costs nothing at startup and
 //   its count is never written.
 //
-// Writing and reading take one C++ frame per level of the value's type, not
-// of the value: a node's fields that point to a node of its own type are
-// walked with an explicit stack, so a list or a tree as deep as memory
-// allows is baked and read back.  (A type that recurses through another --
-// a mutual inductive, a tree whose children are in a list -- still takes a
-// frame per level of that recursion.)
+// The writer lays the stream out one row to a line, each with a comment
+// that spells it: its number, its constructor's and fields' names, its
+// scalars and strings as literals.  Strings are C++ string literals, words
+// decimal.  Past [annotated_rows] rows, rows are filled into lines bare.
+//
+// Writing walks the value with an explicit stack and reading is a loop over
+// the rows, so a list or a tree as deep as memory allows is baked and read
+// back.
 //
 // Reading builds the value once, at static initialisation, and makes every
 // block it allocates immortal ([crane::make_immortal]): the value lives as
@@ -54,14 +61,17 @@
 // counts.
 //
 // The format is the same on every byte order: a word is written as the
-// number it is, never as memory, and a string's bytes are packed by shifts.
-// What it does assume is asserted below; and an image asserts that the
-// target reads its scalars at the widths the bake host wrote them at
-// ([data_model]), which is what cross-compiling a baked unit could break.
+// number it is, never as memory.  What it does assume is asserted below; and
+// an image asserts that the target reads its scalars at the widths the bake
+// host wrote them at ([data_model]), which is what cross-compiling a baked
+// unit could break.
 
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <bit>
+#include <cctype>
 #include <cinttypes>
 #include <climits>
 #include <concepts>
@@ -69,11 +79,13 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <typeindex>
@@ -106,6 +118,8 @@ struct image {
   std::size_t size;
   const void *const *blocks;
   std::size_t block_count;
+  const char *text;
+  std::size_t text_size;
 };
 
 // The widths of the scalar types an image may hold, which the bake host and
@@ -166,6 +180,12 @@ template <class A> struct handle<crane::field_box<A>> : std::true_type {
   using element = A;
   static constexpr bool counted = false;
   static crane::field_box<A> make(A &&a) { return crane::field_box<A>(std::move(a)); }
+};
+// A [crane::list]'s boxed element (a mapping's [Boxed Element]).
+template <class A> struct handle<crane::box<A>> : std::true_type {
+  using element = A;
+  static constexpr bool counted = true;
+  static crane::box<A> make(A &&a) { return crane::box<A>(std::move(a)); }
 };
 
 // A field of a node of type [T] that holds another node of type [T]: the
@@ -247,23 +267,6 @@ template <class F, std::size_t... I> void on_index(std::size_t i, F &&f, std::in
   (void)((i == I ? (f(std::integral_constant<std::size_t, I>{}), true) : false) || ...);
 }
 
-// An alternative's fields as they are read, one by one: each empty until
-// read.  Index [I + 1] of [slots_of<alts>] is alternative [I]'s.
-template <class A, bool = std::is_empty_v<A>> struct slots_of_alt {
-  using type = std::monostate;
-};
-template <class A> struct slots_of_alt<A, false> {
-  template <class Fs> struct of;
-  template <class... F> struct of<std::tuple<F...>> {
-    using type = std::tuple<std::optional<F>...>;
-  };
-  using type = typename of<fields_t<A>>::type;
-};
-template <class Alts> struct slots_of;
-template <class... A> struct slots_of<std::tuple<A...>> {
-  using type = std::variant<std::monostate, typename slots_of_alt<A>::type...>;
-};
-
 // A scalar's literal type has a static block only if it can be spelled.
 template <class E> constexpr const char *scalar_name() {
   if constexpr (std::is_same_v<E, bool>) return "bool";
@@ -331,34 +334,270 @@ template <class T> T of_word(std::uint64_t w) {
 
 } // namespace detail
 
+namespace detail {
+
+// An inductive none of whose constructors has a field: one word, as an
+// enumeration is, so the two read each other.
+template <class T> constexpr bool all_nullary() {
+  using alts = typename alternatives<typename T::variant_t>::type;
+  return []<std::size_t... I>(std::index_sequence<I...>) {
+    return (std::is_empty_v<std::tuple_element_t<I, alts>> && ...);
+  }(std::make_index_sequence<std::tuple_size_v<alts>>{});
+}
+
+// A value with a row of its own, which other values name by number.
+template <class T> constexpr bool is_node() {
+  if constexpr (is_list<T>::value) return true;
+  else if constexpr (inductive<T>) return !all_nullary<T>();
+  else return false;
+}
+
+// The node types a value of [T] can hold, each once, in the order a walk of
+// [T]'s definition meets them ([v.template enter<N>()] is true the first
+// time): how the writer and the reader number them alike.  The cases are
+// [put]'s, in its order.
+template <class T, class V> void walk_types(V &v) {
+  if constexpr (std::is_enum_v<T> || std::is_arithmetic_v<T> || string_like<T>) {
+  } else if constexpr (pair_like<T>) {
+    walk_types<typename T::first_type>(v);
+    walk_types<typename T::second_type>(v);
+  } else if constexpr (is_std_tuple<T>::value) {
+    [&]<std::size_t... K>(std::index_sequence<K...>) {
+      (walk_types<std::tuple_element_t<K, T>>(v), ...);
+    }(std::make_index_sequence<std::tuple_size_v<T>>{});
+  } else if constexpr (optional_like<T>) {
+    walk_types<typename T::value_type>(v);
+  } else if constexpr (handle<T>::value) {
+    walk_types<typename handle<T>::element>(v);
+  } else if constexpr (is_list<T>::value) {
+    if (v.template enter<T>()) walk_types<typename T::value_type>(v);
+  } else if constexpr (is_shared_array<T>::value) {
+    walk_types<typename T::value_type>(v);
+  } else if constexpr (is_persistent_array<T>::value) {
+    walk_types<typename is_persistent_array<T>::element>(v);
+  } else if constexpr (inductive<T>) {
+    if constexpr (is_node<T>()) {
+      if (v.template enter<T>()) {
+        using alts = typename alternatives<typename T::variant_t>::type;
+        [&]<std::size_t... I>(std::index_sequence<I...>) {
+          (
+              [&] {
+                using A = std::tuple_element_t<I, alts>;
+                if constexpr (!std::is_empty_v<A>)
+                  [&]<std::size_t... K>(std::index_sequence<K...>) {
+                    (walk_types<std::tuple_element_t<K, fields_t<A>>>(v), ...);
+                  }(std::make_index_sequence<std::tuple_size_v<fields_t<A>>>{});
+              }(),
+              ...);
+        }(std::make_index_sequence<std::tuple_size_v<alts>>{});
+      }
+    }
+  } else if constexpr (std::is_empty_v<T> || textual_number<T>) {
+  } else if constexpr (sequence<T>) {
+    walk_types<typename T::value_type>(v);
+  } else if constexpr (fielded<T>) {
+    [&]<std::size_t... K>(std::index_sequence<K...>) {
+      (walk_types<std::tuple_element_t<K, fields_t<T>>>(v), ...);
+    }(std::make_index_sequence<std::tuple_size_v<fields_t<T>>>{});
+  }
+}
+
+// What the writer's comments call things.  [T]'s name as the compiler spells
+// it ([__PRETTY_FUNCTION__], clang's or GCC's form), and its last component:
+// a constructor's alternative struct [List<bool>::Cons] is [Cons].
+template <class T> std::string type_name() {
+  std::string_view p = __PRETTY_FUNCTION__;
+  std::size_t b = p.find("T = ");
+  if (b == std::string_view::npos) return "?";
+  b += 4;
+  std::size_t e = p.find_first_of(";]", b);
+  return std::string(p.substr(b, e == std::string_view::npos ? std::string_view::npos : e - b));
+}
+
+inline std::string last_component(const std::string &name) {
+  int depth = 0;
+  for (std::size_t i = name.size(); i > 1; --i) {
+    char c = name[i - 1];
+    if (c == '>') ++depth;
+    else if (c == '<') --depth;
+    else if (c == ':' && name[i - 2] == ':' && depth == 0) return name.substr(i);
+  }
+  return name;
+}
+
+// The names of an aggregate's fields, through clang's [__builtin_dump_struct]
+// (each field's line is [indent, type, name, value]; [indent] is two spaces
+// at the top level); [_0], [_1], ... without it.
+template <class A> const std::vector<std::string> &field_names(const A &a) {
+  static const std::vector<std::string> names = [&] {
+    std::vector<std::string> ns;
+#if defined(__has_builtin)
+#if __has_builtin(__builtin_dump_struct)
+    __builtin_dump_struct(&a, [&](const char *, auto... args) {
+      if constexpr (sizeof...(args) >= 3) {
+        auto t = std::make_tuple(args...);
+        if constexpr (std::is_convertible_v<std::tuple_element_t<0, decltype(t)>, const char *> &&
+                      std::is_convertible_v<std::tuple_element_t<2, decltype(t)>, const char *>)
+          if (std::strcmp(std::get<0>(t), "  ") == 0) ns.push_back(std::get<2>(t));
+      }
+      return 0;
+    });
+#endif
+#endif
+    constexpr std::size_t n = std::tuple_size_v<fields_t<A>>;
+    if (ns.size() != n) {
+      ns.clear();
+      for (std::size_t i = 0; i < n; ++i) ns.push_back("_" + std::to_string(i));
+    }
+    return ns;
+  }();
+  return names;
+}
+
+// An enumerator's name, read off [__PRETTY_FUNCTION__] for a scoped
+// enumeration's first 64 values; empty where it has none.
+template <auto V> constexpr std::string_view enumerator_text() { return __PRETTY_FUNCTION__; }
+
+template <class E> std::string enumerator_name(std::uint64_t w) {
+  if constexpr (std::is_convertible_v<E, int>) {
+    return "";
+  } else {
+    constexpr std::size_t n = 64;
+    if (w >= n) return "";
+    static const auto texts = []<std::size_t... I>(std::index_sequence<I...>) {
+      return std::array<std::string_view, n>{enumerator_text<static_cast<E>(I)>()...};
+    }(std::make_index_sequence<n>{});
+    std::string_view p = texts[w];
+    std::size_t b = p.find("V = ");
+    if (b == std::string_view::npos) return "";
+    b += 4;
+    std::size_t e = p.find_first_of(";]", b);
+    std::string s(p.substr(b, e == std::string_view::npos ? std::string_view::npos : e - b));
+    if (s.empty() || s[0] == '(' || (s[0] >= '0' && s[0] <= '9') || s[0] == '-') return "";
+    return last_component(s);
+  }
+}
+
+// A C++ string literal of [n] bytes at [p]: printable ASCII as itself,
+// anything else escaped (a hex escape ends its literal, so a hex digit after
+// it does not join it).
+inline std::string quoted(const char *p, std::size_t n) {
+  std::string out = "\"";
+  for (std::size_t i = 0; i < n; ++i) {
+    unsigned char c = static_cast<unsigned char>(p[i]);
+    switch (c) {
+    case '"': out += "\\\""; break;
+    case '\\': out += "\\\\"; break;
+    case '\n': out += "\\n"; break;
+    case '\t': out += "\\t"; break;
+    case '\r': out += "\\r"; break;
+    default:
+      if (c >= 0x20 && c < 0x7f) {
+        out += static_cast<char>(c);
+      } else {
+        char buf[8];
+        std::snprintf(buf, sizeof buf, "\\x%02x", c);
+        out += buf;
+        if (i + 1 < n && std::isxdigit(static_cast<unsigned char>(p[i + 1]))) out += "\" \"";
+      }
+    }
+  }
+  return out + "\"";
+}
+
+// A floating-point number as the shortest literal that reads back as it.
+template <class F> std::string float_literal(F x) {
+  const char *suffix = std::is_same_v<F, float> ? "f" : "";
+  const char *type = std::is_same_v<F, float> ? "float" : "double";
+  if (x != x) return std::string("std::numeric_limits<") + type + ">::quiet_NaN()";
+  if (x == std::numeric_limits<F>::infinity()) return std::string("std::numeric_limits<") + type + ">::infinity()";
+  if (x == -std::numeric_limits<F>::infinity())
+    return std::string("-std::numeric_limits<") + type + ">::infinity()";
+  char buf[64];
+  for (int prec = 1; prec <= 17; ++prec) {
+    std::snprintf(buf, sizeof buf, "%.*g", prec, static_cast<double>(x));
+    if (static_cast<F>(std::strtod(buf, nullptr)) == x) break;
+  }
+  std::string s = buf;
+  if (s.find_first_of(".en") == std::string::npos) s += ".0";
+  return s + suffix;
+}
+
+// A scalar as a C++ literal of its own type.
+template <class E> std::string scalar_literal(const E &x) {
+  char buf[64];
+  if constexpr (std::is_same_v<E, bool>) return x ? "true" : "false";
+  else if constexpr (std::is_floating_point_v<E>) return float_literal(x);
+  else if constexpr (std::is_signed_v<E>) {
+    long long v = x;
+    if (v == std::numeric_limits<long long>::min()) return "(-9223372036854775807LL - 1)";
+    std::snprintf(buf, sizeof buf, "%lld", v);
+  } else {
+    unsigned long long v = x;
+    std::snprintf(buf, sizeof buf, v > static_cast<unsigned long long>(std::numeric_limits<long long>::max()) ? "%lluu" : "%llu", v);
+  }
+  return buf;
+}
+
+// A word as a literal of [std::uint64_t].
+inline std::string word_literal(std::uint64_t w) {
+  char buf[32];
+  std::snprintf(buf, sizeof buf, w > static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) ? "%" PRIu64 "u" : "%" PRIu64, w);
+  return buf;
+}
+
+} // namespace detail
+
 // Writes a value as an image (the bake driver's side).
 class writer {
+public:
+  // How many rows get a comment; the rest are filled into lines bare.
+  static constexpr std::size_t annotated_rows = 1000;
+
+private:
   std::vector<std::uint64_t> words_;
-  // Per type, the nodes written so far, by address.
-  std::unordered_map<std::type_index, std::unordered_map<const void *, std::size_t>> seen_;
+  // The stream's lines: the words [begin, end), and the comment that spells
+  // them ([row]: a node, which past [annotated_rows] goes uncommented).
+  struct line {
+    std::size_t begin, end;
+    std::string note;
+    bool row;
+  };
+  std::vector<line> lines_;
+  // The node types, numbered as [detail::walk_types] meets them.
+  struct types {
+    std::unordered_map<std::type_index, std::size_t> ordinal;
+    std::vector<std::string> names;
+    template <class N> bool enter() {
+      if (!ordinal.emplace(typeid(N), names.size()).second) return false;
+      names.push_back(detail::type_name<N>());
+      return true;
+    }
+  } types_;
+  // The nodes written, per type, by identity, and how many.
+  std::unordered_map<std::type_index, std::unordered_map<const void *, std::size_t>> nodes_;
+  std::size_t node_count_ = 0;
+  // The run being written: its type, and the line of its header.
+  std::size_t run_type_ = std::size_t(-1), run_line_ = 0, run_first_ = 0;
+  // The strings' bytes, and their literals.
+  std::string text_;
+  std::vector<std::string> text_literals_;
+  // The arrays written, per type, by address.
+  std::unordered_map<std::type_index, std::unordered_map<const void *, std::size_t>> arrays_;
   // Static blocks: their declarations, by address; the ones the stream names.
   std::string decls_;
   std::unordered_map<const void *, std::string> block_names_;
   std::vector<std::string> stream_blocks_;
   std::unordered_map<const void *, std::size_t> stream_block_index_;
   std::string prefix_;
-
-  template <class T> std::unordered_map<const void *, std::size_t> &seen() { return seen_[typeid(T)]; }
-
-  // A node of type T at [addr]: its sharing word, true if it is new.
-  template <class T> bool node(const void *addr) {
-    auto &s = seen<T>();
-    if (addr) {
-      auto it = s.find(addr);
-      if (it != s.end()) {
-        words_.push_back(it->second + 1);
-        return false;
-      }
-      s.emplace(addr, s.size());
-    }
-    words_.push_back(0);
-    return true;
-  }
+  // The nodes left to write, each after the nodes it holds.
+  struct task {
+    std::type_index type;
+    const void *key;
+    std::function<void()> expand, emit;
+    bool expanded;
+  };
+  std::vector<task> tasks_;
 
   template <class P> static void check_not_null(const P &p) {
     if constexpr (requires { static_cast<bool>(p); })
@@ -368,32 +607,196 @@ class writer {
       }
   }
 
-  void put_text(const char *p, std::size_t n) {
-    words_.push_back(n);
-    for (std::size_t i = 0; i < n; i += 8) {
-      std::uint64_t w = 0;
-      for (std::size_t j = 0; j < 8 && i + j < n; ++j)
-        w |= std::uint64_t(static_cast<unsigned char>(p[i + j])) << (8 * j);
-      words_.push_back(w);
+  // A node's identity: its alternative's address, or for a constructor
+  // without fields the constructor (all its values are one row); a list
+  // cell's head, or for nil none.
+  template <class T> static const void *key_of(const T &x) {
+    if constexpr (detail::is_list<T>::value) {
+      return x.empty() ? nullptr : static_cast<const void *>(&*x.begin());
+    } else {
+      using alts = typename detail::alternatives<typename T::variant_t>::type;
+      const auto &v = x.v();
+      const void *k = nullptr;
+      detail::on_index(v.index(), [&](auto i) {
+        constexpr std::size_t I = decltype(i)::value;
+        if constexpr (std::is_empty_v<std::tuple_element_t<I, alts>>)
+          k = reinterpret_cast<const void *>(std::uintptr_t(I + 1));
+        else
+          k = &detail::alt_at<I>(v);
+      }, std::make_index_sequence<std::tuple_size_v<alts>>{});
+      return k;
     }
   }
 
-  template <class E> static std::string literal(const E &x) {
-    char buf[64];
-    if constexpr (std::is_same_v<E, bool>) return x ? "true" : "false";
-    else if constexpr (std::is_floating_point_v<E>) std::snprintf(buf, sizeof buf, "%a", static_cast<double>(x));
-    else if constexpr (std::is_signed_v<E>) {
-      long long v = x;
-      if (v == std::numeric_limits<long long>::min()) return "(-9223372036854775807LL - 1)";
-      std::snprintf(buf, sizeof buf, "%lldLL", v);
-    } else
-      std::snprintf(buf, sizeof buf, "%lluULL", static_cast<unsigned long long>(x));
-    return buf;
+  template <class T> std::size_t node_number(const T &x) {
+    auto &m = nodes_[typeid(T)];
+    auto it = m.find(key_of(x));
+    if (it == m.end()) {
+      std::fprintf(stderr, "crane::bake: a node named before it is written\n");
+      std::exit(2);
+    }
+    return it->second;
   }
 
-  template <class E> static std::string type_name() {
+  // Starts the row of a node of type [T] with identity [key]: its number.
+  template <class T> std::size_t begin_row(const void *key) {
+    std::size_t type = types_.ordinal.at(typeid(T));
+    if (type != run_type_) {
+      run_type_ = type;
+      run_first_ = node_count_;
+      run_line_ = lines_.size();
+      lines_.push_back({words_.size(), words_.size() + 2, "", false});
+      words_.push_back(type + 1);
+      words_.push_back(0);
+    }
+    ++words_[lines_[run_line_].begin + 1];
+    lines_[run_line_].note = types_.names[type] + ": " + node_range(run_first_, node_count_ + 1);
+    lines_.push_back({words_.size(), 0, "#" + std::to_string(node_count_) + " ", true});
+    nodes_[typeid(T)].emplace(key, node_count_);
+    return node_count_++;
+  }
+
+  void end_row() { lines_.back().end = words_.size(); }
+
+  static std::string node_range(std::size_t first, std::size_t end) {
+    if (end == first + 1) return "#" + std::to_string(first);
+    return "#" + std::to_string(first) + " to #" + std::to_string(end - 1);
+  }
+
+  void push_task(std::type_index type, const void *key, std::function<void()> expand,
+                 std::function<void()> emit) {
+    tasks_.push_back(task{type, key, std::move(expand), std::move(emit), false});
+  }
+
+  bool written(std::type_index type, const void *key) {
+    auto it = nodes_.find(type);
+    return it != nodes_.end() && it->second.count(key);
+  }
+
+  // The nodes [x] holds, outside other nodes: stacked to be written.
+  template <class T> void deps(const T &x) {
+    using namespace detail;
+    if constexpr (std::is_enum_v<T> || std::is_arithmetic_v<T> || string_like<T>) {
+    } else if constexpr (pair_like<T>) {
+      deps(x.first);
+      deps(x.second);
+    } else if constexpr (is_std_tuple<T>::value) {
+      std::apply([&](const auto &...e) { (deps(e), ...); }, x);
+    } else if constexpr (optional_like<T>) {
+      if (x.has_value()) deps(*x);
+    } else if constexpr (handle<T>::value) {
+      check_not_null(x);
+      deps(*x);
+    } else if constexpr (is_list<T>::value) {
+      push_cell<typename T::value_type>(x.begin(), x.end());
+    } else if constexpr (is_shared_array<T>::value) {
+      if constexpr (!static_element<typename T::value_type>())
+        for (const auto &e : x) deps(e);
+    } else if constexpr (is_persistent_array<T>::value) {
+      std::int64_t n = x.length();
+      deps(x.get(n));
+      for (std::int64_t i = 0; i < n; ++i) deps(x.get(i));
+    } else if constexpr (inductive<T>) {
+      if constexpr (is_node<T>()) push_node(x);
+    } else if constexpr (std::is_empty_v<T> || textual_number<T>) {
+    } else if constexpr (sequence<T>) {
+      for (const auto &e : x) deps(e);
+    } else if constexpr (fielded<T>) {
+      each(x, [&](const auto &f) { deps(f); });
+    }
+  }
+
+  template <class T> void push_node(const T &x) {
+    using alts = typename detail::alternatives<typename T::variant_t>::type;
+    using all_alts = std::make_index_sequence<std::tuple_size_v<alts>>;
+    const T *p = &x;
+    push_task(
+        typeid(T), key_of(x),
+        [this, p] {
+          const auto &v = p->v();
+          detail::on_index(v.index(), [&](auto i) {
+            constexpr std::size_t I = decltype(i)::value;
+            if constexpr (!std::is_empty_v<std::tuple_element_t<I, alts>>)
+              detail::each(detail::alt_at<I>(v), [&](const auto &f) { deps(f); });
+          }, all_alts{});
+        },
+        [this, p] {
+          const auto &v = p->v();
+          begin_row<T>(key_of(*p));
+          std::string &note = lines_.back().note;
+          detail::on_index(v.index(), [&](auto i) {
+            constexpr std::size_t I = decltype(i)::value;
+            using A = std::tuple_element_t<I, alts>;
+            words_.push_back(I);
+            note += detail::last_component(detail::type_name<A>());
+            if constexpr (!std::is_empty_v<A>) {
+              const A &a = detail::alt_at<I>(v);
+              put_fields(a, note);
+            }
+          }, all_alts{});
+          end_row();
+        });
+  }
+
+  template <class E>
+  void push_cell(typename crane::list<E>::const_iterator it, typename crane::list<E>::const_iterator end) {
+    using L = crane::list<E>;
+    if (it == end) {
+      push_task(typeid(L), nullptr, [] {}, [this] {
+        begin_row<L>(nullptr);
+        words_.push_back(0);
+        lines_.back().note += "nil";
+        end_row();
+      });
+      return;
+    }
+    push_task(
+        typeid(L), &*it,
+        [this, it, end] {
+          deps(*it);
+          auto next = it;
+          ++next;
+          push_cell<E>(next, end);
+        },
+        [this, it, end] {
+          auto next = it;
+          ++next;
+          begin_row<L>(&*it);
+          std::string &note = lines_.back().note;
+          words_.push_back(1);
+          note += "cons{head = ";
+          put(*it, note);
+          std::size_t tail = nodes_[typeid(L)].at(next == end ? nullptr : static_cast<const void *>(&*next));
+          words_.push_back(tail);
+          note += ", tail = #" + std::to_string(tail) + "}";
+          end_row();
+        });
+  }
+
+  // An aggregate's fields, each named in [note]: [{a = 1, b = #2}].
+  template <class A> void put_fields(const A &a, std::string &note) {
+    const auto &names = detail::field_names(a);
+    std::size_t k = 0;
+    note += "{";
+    detail::each(a, [&](const auto &f) {
+      note += (k ? ", " : "") + names[k] + " = ";
+      ++k;
+      put(f, note);
+    });
+    note += "}";
+  }
+
+  void put_text(const char *p, std::size_t n, std::string &note) {
+    words_.push_back(n);
+    text_.append(p, n);
+    std::string lit = detail::quoted(p, n);
+    note += lit;
+    text_literals_.push_back(std::move(lit));
+  }
+
+  template <class E> static std::string type_spelling() {
     if constexpr (detail::is_shared_array<E>::value)
-      return "crane::shared_array<" + type_name<typename E::value_type>() + ">";
+      return "crane::shared_array<" + type_spelling<typename E::value_type>() + ">";
     else return detail::scalar_name<E>();
   }
 
@@ -406,13 +809,13 @@ class writer {
     elems.reserve(a.size());
     for (const E &x : a) {
       if constexpr (detail::is_shared_array<E>::value) {
-        if (x.empty()) elems.push_back("crane::shared_array<" + type_name<typename E::value_type>() + ">{}");
-        else elems.push_back(type_name<E>() + "::of_static(" + static_block(x) + ")");
+        if (x.empty()) elems.push_back(type_spelling<E>() + "{}");
+        else elems.push_back(type_spelling<E>() + "::of_static(" + static_block(x) + ")");
       } else
-        elems.push_back(literal(x));
+        elems.push_back(detail::scalar_literal(x));
     }
     std::string name = prefix_ + "b" + std::to_string(block_names_.size());
-    decls_ += declaration("[[clang::no_destroy]] constinit " + type_name<crane::shared_array<E>>() + "::fixed<" +
+    decls_ += declaration("[[clang::no_destroy]] constinit " + type_spelling<crane::shared_array<E>>() + "::fixed<" +
                               std::to_string(a.size()) + "> " + name,
                           elems);
     block_names_.emplace(a.begin(), name);
@@ -424,7 +827,7 @@ class writer {
   // fits, else broken after the brace and the elements filled into lines
   // indented four columns.  The image is not handed to that layout, which
   // gives each element of a braced list too long for one line a line of its
-  // own: one per word of the stream.
+  // own.
   static std::string declaration(const std::string &head, const std::vector<std::string> &elems) {
     constexpr std::size_t limit = 80;
     std::string one = head + "{";
@@ -450,135 +853,228 @@ class writer {
     return out + "\n";
   }
 
-  // A node of a generated inductive and the nodes of its own type its fields
-  // point to, depth first, with an explicit stack.
-  template <class T> void put_inductive(const T &root) {
-    using V = typename T::variant_t;
-    using alts = typename detail::alternatives<V>::type;
-    struct frame {
-      std::size_t alt;
-      const void *node;
-      std::size_t next;
+  // The stream's words, a line each with its comment aligned after it; a
+  // line too wide for its comment takes it on a line of its own above.  Past
+  // [annotated_rows] rows, rows are filled into lines bare.
+  std::string stream_lines() const {
+    constexpr std::size_t limit = 80, max_column = 40;
+    auto words_of = [&](const line &l) {
+      std::string s;
+      for (std::size_t i = l.begin; i < l.end; ++i) s += (i > l.begin ? " " : "") + detail::word_literal(words_[i]) + ",";
+      return s;
     };
-    std::vector<frame> stack;
-    // Writes [x]'s sharing word and constructor, and stacks its fields.
-    auto start = [&](const T &x) {
-      const V &v = x.v();
-      detail::on_index(v.index(), [&](auto i) {
-        constexpr std::size_t I = decltype(i)::value;
-        using A = std::tuple_element_t<I, alts>;
-        const A &a = detail::alt_at<I>(v);
-        if (!node<T>(std::is_empty_v<A> ? nullptr : static_cast<const void *>(&a))) return;
-        words_.push_back(I);
-        if constexpr (!std::is_empty_v<A>) stack.push_back({I, &a, 0});
-      }, std::make_index_sequence<std::tuple_size_v<alts>>{});
+    auto words_list = [&](const line &l) {
+      std::vector<std::string> v;
+      for (std::size_t i = l.begin; i < l.end; ++i) v.push_back(detail::word_literal(words_[i]));
+      return v;
     };
-    start(root);
-    while (!stack.empty()) {
-      // [stack.back()] is only read before a field stacks a node.
-      bool started = false;
-      detail::on_index(stack.back().alt, [&](auto i) {
-        constexpr std::size_t I = decltype(i)::value;
-        using A = std::tuple_element_t<I, alts>;
-        if constexpr (!std::is_empty_v<A>) {
-          using Fs = detail::fields_t<A>;
-          constexpr std::size_t N = std::tuple_size_v<Fs>;
-          const A &a = *static_cast<const A *>(stack.back().node);
-          while (!started && stack.back().next < N) {
-            std::size_t k = stack.back().next++;
-            detail::on_index(k, [&](auto kk) {
-              constexpr std::size_t K = decltype(kk)::value;
-              const auto &f = detail::field_at<K>(a);
-              if constexpr (detail::self_handle<std::remove_cvref_t<decltype(f)>, T>) {
-                check_not_null(f);
-                std::size_t depth = stack.size();
-                start(*f);
-                started = stack.size() > depth;
-              } else
-                put(f);
-            }, std::make_index_sequence<N>{});
-          }
+    auto fill = [&](const std::vector<std::string> &ws) {
+      std::string out, cur = "   ";
+      for (const auto &w : ws) {
+        if (cur.size() + 1 + w.size() + 1 > limit) {
+          out += cur + "\n";
+          cur = "   ";
         }
-      }, std::make_index_sequence<std::tuple_size_v<alts>>{});
-      if (!started) stack.pop_back();
+        cur += " " + w + ",";
+      }
+      if (cur.size() > 3) out += cur + "\n";
+      return out;
+    };
+    // A comment too long for the end of its line, above it: broken after
+    // a comma where it can be, and cut at [max_note] characters.  No line
+    // ends with a backslash, which would join the next line to the comment.
+    auto comment_lines = [&](std::string note) {
+      constexpr std::size_t max_note = 480, room = limit - 7;
+      if (note.size() > max_note) {
+        std::size_t cut = max_note;
+        while (cut > 0 && note[cut - 1] == '\\') --cut;
+        note = note.substr(0, cut) + "...";
+      }
+      std::string out;
+      while (!note.empty()) {
+        std::size_t cut = note.size();
+        if (cut > room) {
+          std::size_t comma = note.rfind(", ", room - 1), space = note.rfind(' ', room - 1),
+                      scope = note.rfind("::", room - 2);
+          if (comma != std::string::npos && comma > room / 2) cut = comma + 1;
+          else if (space != std::string::npos && space > room / 3) cut = space;
+          else if (scope != std::string::npos && scope > room / 3) cut = scope + 2;
+          else cut = room;
+          while (cut > 1 && note[cut - 1] == '\\') --cut;
+        }
+        out += "    // " + note.substr(0, cut) + "\n";
+        note.erase(0, cut);
+        if (!note.empty() && note[0] == ' ') note.erase(0, 1);
+      }
+      return out;
+    };
+    // The comment column: past the widest annotated line that fits.
+    std::size_t column = 0, rows = 0;
+    for (const auto &l : lines_) {
+      if (l.row && rows++ >= annotated_rows) continue;
+      std::size_t w = 4 + words_of(l).size();
+      if (w <= max_column && w > column) column = w;
     }
+    column += 2;
+    std::string out;
+    std::vector<std::string> bare;
+    rows = 0;
+    for (const auto &l : lines_) {
+      bool annotate = !l.row || rows < annotated_rows;
+      if (l.row) ++rows;
+      if (!annotate) {
+        if (bare.empty())
+          out += "    // " + std::to_string(rows - 1) + " rows above have comments; these have none.\n";
+        auto ws = words_list(l);
+        bare.insert(bare.end(), ws.begin(), ws.end());
+        continue;
+      }
+      if (!bare.empty()) {
+        out += fill(bare);
+        bare.clear();
+      }
+      std::string ws = "    " + words_of(l);
+      if (ws.size() <= max_column && column + 3 + l.note.size() <= limit) {
+        out += ws + std::string(column - ws.size(), ' ') + "// " + l.note + "\n";
+      } else {
+        out += comment_lines(l.note);
+        out += fill(words_list(l));
+      }
+    }
+    if (!bare.empty()) out += fill(bare);
+    return out;
   }
 
 public:
   explicit writer(std::string prefix) : prefix_(std::move(prefix)) {}
 
-  template <class T> void put(const T &x) {
+  // Writes [root]: its nodes, then it.
+  template <class T> void put_root(const T &root) {
+    detail::walk_types<T>(types_);
+    deps(root);
+    while (!tasks_.empty()) {
+      task &t = tasks_.back();
+      if (written(t.type, t.key)) {
+        tasks_.pop_back();
+        continue;
+      }
+      if (!t.expanded) {
+        t.expanded = true;
+        std::function<void()> expand = t.expand;
+        std::size_t mark = tasks_.size();
+        expand();
+        std::reverse(tasks_.begin() + mark, tasks_.end());
+        continue;
+      }
+      std::function<void()> emit = std::move(t.emit);
+      tasks_.pop_back();
+      emit();
+    }
+    lines_.push_back({words_.size(), words_.size() + 1, node_count_ ? "end of the nodes" : "no nodes", false});
+    words_.push_back(0);
+    lines_.push_back({words_.size(), 0, "the value: ", false});
+    put(root, lines_.back().note);
+    end_row();
+  }
+
+  template <class T> void put(const T &x, std::string &note) {
     using namespace detail;
     if constexpr (std::is_enum_v<T>) {
-      words_.push_back(0);
       words_.push_back(to_word(x));
+      std::string name = enumerator_name<T>(to_word(x));
+      note += name.empty() ? std::to_string(to_word(x)) : name;
     } else if constexpr (std::is_arithmetic_v<T>) {
       words_.push_back(to_word(x));
+      if constexpr (std::is_same_v<T, char>) {
+        if (x >= 0x20 && x < 0x7f && x != '\'' && x != '\\') note += std::string("'") + x + "'";
+        else note += scalar_literal(static_cast<int>(x));
+      } else
+        note += scalar_literal(x);
     } else if constexpr (string_like<T>) {
-      put_text(x.data(), x.size());
+      put_text(x.data(), x.size(), note);
     } else if constexpr (pair_like<T>) {
-      put(x.first);
-      put(x.second);
+      note += "{";
+      put(x.first, note);
+      note += ", ";
+      put(x.second, note);
+      note += "}";
     } else if constexpr (is_std_tuple<T>::value) {
-      std::apply([&](const auto &...e) { (put(e), ...); }, x);
+      note += "{";
+      std::size_t k = 0;
+      std::apply([&](const auto &...e) { ((note += (k++ ? ", " : ""), put(e, note)), ...); }, x);
+      note += "}";
     } else if constexpr (optional_like<T>) {
       words_.push_back(x.has_value());
-      if (x.has_value()) put(*x);
+      if (x.has_value()) put(*x, note);
+      else note += "nullopt";
     } else if constexpr (handle<T>::value) {
       check_not_null(x);
-      put(*x);
+      put(*x, note);
     } else if constexpr (is_list<T>::value) {
-      put_list(x);
+      std::size_t n = node_number(x);
+      words_.push_back(n);
+      note += "#" + std::to_string(n);
     } else if constexpr (is_shared_array<T>::value) {
-      put_array(x);
+      put_array(x, note);
     } else if constexpr (is_persistent_array<T>::value) {
       std::int64_t n = x.length();
       words_.push_back(static_cast<std::uint64_t>(n));
-      put(x.get(n));  // out of bounds: the default element
-      for (std::int64_t i = 0; i < n; ++i) put(x.get(i));
+      note += "[default ";
+      put(x.get(n), note);  // out of bounds: the default element
+      for (std::int64_t i = 0; i < n; ++i) {
+        note += ", ";
+        put(x.get(i), note);
+      }
+      note += "]";
     } else if constexpr (inductive<T>) {
-      put_inductive(x);
+      if constexpr (is_node<T>()) {
+        std::size_t n = node_number(x);
+        words_.push_back(n);
+        note += "#" + std::to_string(n);
+      } else {
+        using alts = typename alternatives<typename T::variant_t>::type;
+        std::size_t i = x.v().index();
+        words_.push_back(i);
+        on_index(i, [&](auto ii) {
+          note += last_component(type_name<std::tuple_element_t<decltype(ii)::value, alts>>());
+        }, std::make_index_sequence<std::tuple_size_v<alts>>{});
+      }
     } else if constexpr (std::is_empty_v<T>) {
+      note += "{}";
     } else if constexpr (textual_number<T>) {
       std::string s = x.get_str(16);
-      put_text(s.data(), s.size());
+      put_text(s.data(), s.size(), note);
     } else if constexpr (sequence<T>) {
       words_.push_back(x.size());
-      for (const auto &e : x) put(e);
+      note += "[";
+      std::size_t k = 0;
+      for (const auto &e : x) {
+        note += k++ ? ", " : "";
+        put(e, note);
+      }
+      note += "]";
     } else if constexpr (fielded<T>) {
-      words_.push_back(0);
-      words_.push_back(0);
-      each(x, [&](const auto &f) { put(f); });
+      note += last_component(type_name<T>());
+      put_fields(x, note);
     } else {
       static_assert(dependent_false<T>, "crane::bake: no way to write a value of this type");
     }
   }
 
-  template <class E> void put_list(const crane::list<E> &l) {
-    auto &s = seen<crane::list<E>>();
-    for (auto it = l.begin(); it != l.end(); ++it) {
-      const void *cell = &*it;
-      auto found = s.find(cell);
-      if (found != s.end()) {
-        words_.push_back(found->second + 2);
-        return;
-      }
-      s.emplace(cell, s.size());
-      words_.push_back(1);
-      put(*it);
-    }
-    words_.push_back(0);
-  }
-
-  template <class E> void put_array(const crane::shared_array<E> &a) {
+  template <class E> void put_array(const crane::shared_array<E> &a, std::string &note) {
     if (a.empty()) {
       words_.push_back(0);
+      note += "[]";
       return;
     }
-    auto &s = seen<crane::shared_array<E>>();
+    auto &s = arrays_[typeid(crane::shared_array<E>)];
     auto found = s.find(a.begin());
+    // A static array is named by its block ([b3] for [<prefix>b3]), a heap
+    // one by its place among the arrays written.
     if (found != s.end()) {
       words_.push_back(found->second + 3);
+      if constexpr (detail::static_element<E>()) note += block_names_.at(a.begin()).substr(prefix_.size());
+      else note += "array " + std::to_string(found->second) + " again";
       return;
     }
     s.emplace(a.begin(), s.size());
@@ -589,15 +1085,23 @@ public:
       words_.push_back(2);
       words_.push_back(it->second);
       words_.push_back(detail::type_code<E>());
+      note += name.substr(prefix_.size());
     } else {
+      note += "array " + std::to_string(s.size() - 1) + " ";
       words_.push_back(1);
       words_.push_back(a.size());
-      for (const E &x : a) put(x);
+      note += "[";
+      std::size_t k = 0;
+      for (const E &x : a) {
+        note += k++ ? ", " : "";
+        put(x, note);
+      }
+      note += "]";
     }
   }
 
   // The image as C++: the host's data model asserted, the static blocks, the
-  // stream and [symbol], laid out as Crane lays out the code around it.
+  // text, the stream and [symbol].
   std::string cpp(const std::string &symbol) const {
     char buf[32];
     std::string out = "// Baked by crane::bake: the value of " + symbol + ".\n";
@@ -605,36 +1109,61 @@ public:
     out += "static_assert(crane::bake::data_model == " + std::string(buf) +
            ",\n              \"crane::bake: baked on a host with other scalar widths\");\n";
     out += decls_;
-    std::vector<std::string> blocks;
-    for (const auto &b : stream_blocks_) blocks.push_back("&" + b);
-    if (blocks.empty()) blocks.push_back("nullptr");
-    out += declaration("constinit const void *const " + prefix_ + "blocks[] = ", blocks);
-    std::vector<std::string> words;
-    words.reserve(words_.size());
-    for (std::uint64_t w : words_) {
-      std::snprintf(buf, sizeof buf, "0x%" PRIx64 "u", w);
-      words.push_back(buf);
+    std::string blocks = "nullptr", text = "nullptr";
+    if (!stream_blocks_.empty()) {
+      std::vector<std::string> bs;
+      for (const auto &b : stream_blocks_) bs.push_back("&" + b);
+      blocks = prefix_ + "blocks";
+      out += declaration("constinit const void *const " + blocks + "[] = ", bs);
     }
-    out += declaration("constinit const std::uint64_t " + prefix_ + "words[] = ", words);
+    if (!text_.empty()) {
+      text = prefix_ + "text";
+      std::string decl = "constinit const char " + text + "[] =";
+      std::size_t col = decl.size();
+      for (const auto &l : text_literals_) {
+        if (l == "\"\"") continue;
+        if (col + 1 + l.size() + 1 > 80) {
+          decl += "\n   ";
+          col = 3;
+        }
+        decl += " " + l;
+        col += 1 + l.size();
+      }
+      out += decl + ";\n";
+    }
+    out += "constinit const std::uint64_t " + prefix_ + "words[] = {\n" + stream_lines() + "};\n";
     out += declaration("constinit const crane::bake::image " + symbol,
-                       {prefix_ + "words", std::to_string(words_.size()), prefix_ + "blocks",
-                        std::to_string(stream_blocks_.size())});
+                       {prefix_ + "words", std::to_string(words_.size()), blocks,
+                        std::to_string(stream_blocks_.size()), text, std::to_string(text_.size())});
     return out;
   }
 };
 
 // Reads an image back.
 class reader {
-  static constexpr std::size_t no_node = std::size_t(-1);
-
   const image &img_;
-  std::size_t pos_ = 0;
+  std::size_t pos_ = 0, text_pos_ = 0;
+  // Per node type, numbered as [detail::walk_types] meets them, the function
+  // that reads a run of its rows.
+  struct types {
+    std::unordered_map<std::type_index, std::size_t> ordinal;
+    std::vector<void (reader::*)(std::size_t)> runs;
+    template <class N> bool enter() {
+      if (!ordinal.emplace(typeid(N), runs.size()).second) return false;
+      runs.push_back(&reader::template run<N>);
+      return true;
+    }
+  } types_;
+  // Every node read, by number: the table holding it and its index there.
+  std::vector<std::pair<const void *, std::size_t>> nodes_;
+  // Per type: the nodes read, the counted pointers made to them (by node
+  // number), the arrays read.
   std::unordered_map<std::type_index, std::shared_ptr<void>> tables_;
 
-  template <class T> std::vector<std::optional<T>> &table() {
+  template <class T> std::vector<T> &table() {
     auto &p = tables_[typeid(T)];
-    if (!p) p = std::make_shared<std::vector<std::optional<T>>>();
-    return *static_cast<std::vector<std::optional<T>> *>(p.get());
+    if (!p) p = std::make_shared<std::vector<T>>();
+    return *static_cast<std::vector<T> *>(p.get());
   }
 
   [[noreturn]] static void corrupt(const char *what) {
@@ -649,11 +1178,10 @@ class reader {
 
   std::string get_text() {
     std::size_t n = word();
-    std::string s(n, '\0');
-    for (std::size_t i = 0; i < n; i += 8) {
-      std::uint64_t w = word();
-      for (std::size_t j = 0; j < 8 && i + j < n; ++j) s[i + j] = static_cast<char>((w >> (8 * j)) & 0xff);
-    }
+    if (n == 0) return {};
+    if (n > img_.text_size - text_pos_) corrupt("a string");
+    std::string s(img_.text + text_pos_, n);
+    text_pos_ += n;
     return s;
   }
 
@@ -664,156 +1192,80 @@ class reader {
     }(std::make_index_sequence<std::tuple_size_v<F>>{});
   }
 
-  // A handle [P] to the node [u], the [fresh]th of its type read (or
-  // [no_node] for one shared or nullary).  A counted handle made for a fresh
-  // node is kept by the node's index, so a node shared in the value is
-  // pointed to by one pointer again rather than copied into a second one.
-  template <class P> P make_handle(typename detail::handle<P>::element &&u, std::size_t fresh) {
-    P p = detail::handle<P>::make(std::move(u));
-    if constexpr (detail::handle<P>::counted)
-      if (fresh != no_node) {
-        auto &ptrs = table<P>();
-        if (ptrs.size() <= fresh) ptrs.resize(fresh + 1);
-        ptrs[fresh] = p;
-      }
-    return p;
+  // The node the next word names, of type [T]; its number in [*number].
+  template <class T> const T &node(std::size_t *number = nullptr) {
+    std::uint64_t k = word();
+    if (k >= nodes_.size()) corrupt("a node not yet read");
+    auto &tab = table<T>();
+    if (nodes_[k].first != &tab) corrupt("a node of another type");
+    if (number) *number = k;
+    return tab[nodes_[k].second];
   }
 
-  // The counted handle already made for the shared node the stream names
-  // next, consumed; none if the stream holds no such reference.
-  template <class P> std::optional<P> shared_handle() {
-    if constexpr (detail::handle<P>::counted && detail::inductive<typename detail::handle<P>::element>) {
-      auto &ptrs = table<P>();
-      if (pos_ >= img_.size) corrupt("too short");
-      std::uint64_t share = img_.words[pos_];
-      if (share != 0 && share - 1 < ptrs.size() && ptrs[share - 1]) {
-        ++pos_;
-        return *ptrs[share - 1];
+  void add_node(const void *tab, std::size_t index) { nodes_.emplace_back(tab, index); }
+
+  // A run of [n] rows of the node type [T].
+  template <class T> void run(std::size_t n) {
+    auto &tab = table<T>();
+    tab.reserve(tab.size() + n);
+    for (std::size_t r = 0; r < n; ++r) {
+      std::uint64_t idx = word();
+      if constexpr (detail::is_list<T>::value) {
+        if (idx == 0) tab.emplace_back();
+        else if (idx == 1) {
+          auto h = get<typename T::value_type>();
+          T tail = node<T>();
+          tab.push_back(T::cons(std::move(h), std::move(tail)));
+        } else
+          corrupt("a list cell");
+      } else {
+        using alts = typename detail::alternatives<typename T::variant_t>::type;
+        if (idx >= std::tuple_size_v<alts>) corrupt("a constructor index");
+        detail::on_index(idx, [&](auto i) {
+          using A = std::tuple_element_t<decltype(i)::value, alts>;
+          if constexpr (std::is_empty_v<A>) tab.push_back(T(A{}));
+          else tab.push_back(T(get_fields<A>()));
+        }, std::make_index_sequence<std::tuple_size_v<alts>>{});
       }
+      crane::make_immortal(tab.back());
+      add_node(&tab, tab.size() - 1);
     }
-    return std::nullopt;
   }
 
   template <class P> P get_handle() {
     using U = typename detail::handle<P>::element;
-    if (auto p = shared_handle<P>()) return std::move(*p);
-    if constexpr (detail::inductive<U>) {
-      bool fresh = pos_ < img_.size && img_.words[pos_] == 0;
-      std::size_t id = table<U>().size();
-      U u = get<U>();
-      return make_handle<P>(std::move(u), fresh && table<U>().size() > id ? id : no_node);
+    if constexpr (detail::is_node<U>() && detail::handle<P>::counted) {
+      // One pointer per node.
+      std::size_t k;
+      const U &u = node<U>(&k);
+      auto &ptrs = table<std::optional<P>>();
+      if (ptrs.size() <= k) ptrs.resize(nodes_.size());
+      if (!ptrs[k]) ptrs[k] = detail::handle<P>::make(U(u));
+      return *ptrs[k];
     } else
-      return make_handle<P>(get<U>(), no_node);
-  }
-
-  // A node of a generated inductive, and the nodes of its own type its
-  // fields hold, depth first, with an explicit stack: each frame a node
-  // whose fields are being read, the next of them a node of its own type.
-  template <class T> T get_inductive() {
-    using alts = typename detail::alternatives<typename T::variant_t>::type;
-    using slots = typename detail::slots_of<alts>::type;
-    struct frame {
-      std::size_t id;
-      std::size_t alt;
-      std::size_t next;
-      slots fields;
-    };
-    constexpr auto all_alts = std::make_index_sequence<std::tuple_size_v<alts>>{};
-    auto &tab = table<T>();
-    std::vector<frame> stack;
-    // The node the stream starts here: its value if it is shared or has no
-    // fields, else none, its frame stacked.
-    auto start = [&]() -> std::optional<T> {
-      std::uint64_t share = word();
-      if (share != 0) {
-        if (share - 1 >= tab.size() || !tab[share - 1]) corrupt("a shared node");
-        return *tab[share - 1];
-      }
-      std::size_t idx = word();
-      if (idx >= std::tuple_size_v<alts>) corrupt("a constructor index");
-      std::optional<T> out;
-      detail::on_index(idx, [&](auto i) {
-        constexpr std::size_t I = decltype(i)::value;
-        using A = std::tuple_element_t<I, alts>;
-        if constexpr (std::is_empty_v<A>) out.emplace(A{});
-        else {
-          stack.push_back(frame{tab.size(), I, 0, slots(std::in_place_index<I + 1>)});
-          tab.emplace_back();
-        }
-      }, all_alts);
-      return out;
-    };
-    if (auto v = start()) return std::move(*v);
-    for (;;) {
-      // [stack.back()] is only touched before a field stacks a node.
-      bool started = false;
-      std::optional<T> done;
-      detail::on_index(stack.back().alt, [&](auto i) {
-        constexpr std::size_t I = decltype(i)::value;
-        using A = std::tuple_element_t<I, alts>;
-        if constexpr (!std::is_empty_v<A>) {
-          using Fs = detail::fields_t<A>;
-          constexpr std::size_t N = std::tuple_size_v<Fs>;
-          while (!started && stack.back().next < N) {
-            std::size_t k = stack.back().next++;
-            detail::on_index(k, [&](auto kk) {
-              constexpr std::size_t K = decltype(kk)::value;
-              using G = std::tuple_element_t<K, Fs>;
-              if constexpr (detail::self_handle<G, T>) {
-                if (auto p = shared_handle<G>()) {
-                  std::get<K>(std::get<I + 1>(stack.back().fields)).emplace(std::move(*p));
-                } else if (auto v = start()) {
-                  std::get<K>(std::get<I + 1>(stack.back().fields)).emplace(make_handle<G>(std::move(*v), no_node));
-                } else
-                  started = true;
-              } else {
-                G g = get<G>();
-                std::get<K>(std::get<I + 1>(stack.back().fields)).emplace(std::move(g));
-              }
-            }, std::make_index_sequence<N>{});
-          }
-          if (!started) {
-            auto &s = std::get<I + 1>(stack.back().fields);
-            [&]<std::size_t... K>(std::index_sequence<K...>) {
-              done.emplace(A{std::move(*std::get<K>(s))...});
-            }(std::make_index_sequence<N>{});
-          }
-        }
-      }, all_alts);
-      if (started) continue;
-      // A node read: kept by its index, and handed to the node holding it.
-      std::size_t id = stack.back().id;
-      stack.pop_back();
-      crane::make_immortal(*done);
-      tab[id] = *done;
-      if (stack.empty()) return std::move(*done);
-      std::size_t k = stack.back().next - 1;
-      detail::on_index(stack.back().alt, [&](auto i) {
-        constexpr std::size_t I = decltype(i)::value;
-        using A = std::tuple_element_t<I, alts>;
-        if constexpr (!std::is_empty_v<A>) {
-          using Fs = detail::fields_t<A>;
-          detail::on_index(k, [&](auto kk) {
-            constexpr std::size_t K = decltype(kk)::value;
-            using G = std::tuple_element_t<K, Fs>;
-            if constexpr (detail::self_handle<G, T>)
-              std::get<K>(std::get<I + 1>(stack.back().fields)).emplace(make_handle<G>(std::move(*done), id));
-          }, std::make_index_sequence<std::tuple_size_v<Fs>>{});
-        }
-      }, all_alts);
-    }
+      return detail::handle<P>::make(get<U>());
   }
 
 public:
   explicit reader(const image &img) : img_(img) {}
-  bool done() const { return pos_ == img_.size; }
+  bool done() const { return pos_ == img_.size && text_pos_ == img_.text_size; }
+
+  // The value of type [T]: its nodes, then it.
+  template <class T> T get_root() {
+    detail::walk_types<T>(types_);
+    for (;;) {
+      std::uint64_t t = word();
+      if (t == 0) break;
+      if (t - 1 >= types_.runs.size()) corrupt("a node type");
+      std::size_t n = word();
+      (this->*types_.runs[t - 1])(n);
+    }
+    return get<T>();
+  }
 
   template <class T> T get() {
     using namespace detail;
-    if constexpr (std::is_enum_v<T>) {
-      if (word() != 0) corrupt("an enumeration shared");
-      return of_word<T>(word());
-    } else if constexpr (std::is_arithmetic_v<T>) {
+    if constexpr (std::is_enum_v<T> || std::is_arithmetic_v<T>) {
       return of_word<T>(word());
     } else if constexpr (string_like<T>) {
       std::string s = get_text();
@@ -832,7 +1284,7 @@ public:
     } else if constexpr (handle<T>::value) {
       return get_handle<T>();
     } else if constexpr (is_list<T>::value) {
-      return get_list<typename T::value_type>();
+      return node<T>();
     } else if constexpr (is_shared_array<T>::value) {
       return get_array<typename T::value_type>();
     } else if constexpr (is_persistent_array<T>::value) {
@@ -843,7 +1295,16 @@ public:
       for (std::int64_t i = 0; i < n; ++i) a = std::move(a).set(i, get<E>());
       return a;
     } else if constexpr (inductive<T>) {
-      return get_inductive<T>();
+      if constexpr (is_node<T>()) return node<T>();
+      else {
+        using alts = typename alternatives<typename T::variant_t>::type;
+        std::uint64_t idx = word();
+        if (idx >= std::tuple_size_v<alts>) corrupt("a constructor index");
+        std::optional<T> out;
+        on_index(idx, [&](auto i) { out.emplace(std::tuple_element_t<decltype(i)::value, alts>{}); },
+                 std::make_index_sequence<std::tuple_size_v<alts>>{});
+        return std::move(*out);
+      }
     } else if constexpr (std::is_empty_v<T>) {
       return T{};
     } else if constexpr (textual_number<T>) {
@@ -854,35 +1315,10 @@ public:
       for (std::size_t i = 0; i < n; ++i) c.push_back(get<typename T::value_type>());
       return c;
     } else if constexpr (fielded<T>) {
-      if (word() != 0 || word() != 0) corrupt("a record");
       return get_fields<T>();
     } else {
       static_assert(dependent_false<T>, "crane::bake: no way to read a value of this type");
     }
-  }
-
-  template <class E> crane::list<E> get_list() {
-    auto &tab = table<crane::list<E>>();
-    std::vector<std::pair<std::size_t, E>> heads;
-    crane::list<E> rest;
-    for (;;) {
-      std::uint64_t w = word();
-      if (w == 0) break;
-      if (w >= 2) {
-        if (w - 2 >= tab.size() || !tab[w - 2]) corrupt("a shared list");
-        rest = *tab[w - 2];
-        break;
-      }
-      std::size_t id = tab.size();
-      tab.emplace_back();
-      E h = get<E>();
-      heads.emplace_back(id, std::move(h));
-    }
-    for (std::size_t k = heads.size(); k > 0; --k) {
-      rest = crane::list<E>::cons(std::move(heads[k - 1].second), std::move(rest));
-      table<crane::list<E>>()[heads[k - 1].first] = rest;
-    }
-    return rest;
   }
 
   template <class E> crane::shared_array<E> get_array() {
@@ -890,8 +1326,8 @@ public:
     if (w == 0) return {};
     auto &tab = table<crane::shared_array<E>>();
     if (w >= 3) {
-      if (w - 3 >= tab.size() || !tab[w - 3]) corrupt("a shared array");
-      return *tab[w - 3];
+      if (w - 3 >= tab.size()) corrupt("a shared array");
+      return tab[w - 3];
     }
     crane::shared_array<E> a;
     if (w == 2) {
@@ -909,7 +1345,7 @@ public:
       for (std::size_t i = 0; i < n; ++i) elems.push_back(get<E>());
       a = crane::shared_array<E>::of_range(elems);
     }
-    tab.emplace_back(a);
+    tab.push_back(a);
     return a;
   }
 };
@@ -917,7 +1353,7 @@ public:
 // The value of an image, at the type [T] of the declaration it initialises.
 template <class T> T read(const image &img) {
   reader r(img);
-  T v = r.template get<T>();
+  T v = r.template get_root<T>();
   crane::make_immortal(v);
   if (!r.done()) {
     std::fprintf(stderr, "crane::bake: the baked image does not match its type (too long)\n");
@@ -947,7 +1383,7 @@ inline std::function<std::string(const std::string &, const std::string &)> &roo
 template <class T> T root(T v) {
   detail::root_writer() = [v](const std::string &symbol, const std::string &prefix) {
     writer w(prefix);
-    w.put(v);
+    w.put_root(v);
     return w.cpp(symbol);
   };
   return v;
