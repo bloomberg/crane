@@ -297,13 +297,20 @@ public:
 };
 
 /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
-/// testing of Crane: generated program, shrunk by ephyra and delta-reduced
-/// (unrelated-looking declarations kept are needed for the trigger).
+/// testing of Crane, round 17: generated program, shrunk by ephyra and
+/// delta-reduced (unrelated-looking declarations kept are needed for the
+/// trigger).
 ///
-/// In a constrained polymorphic definition, pmap over a ptree (sum tree A)
-/// literal holding inr a20 builds Sum<crane::obj, ...> where a uint64_t is
-/// expected ("no viable conversion from 'Sum<crane::obj, unsigned long
-/// long>'").
+/// Fixed: in a constrained polymorphic definition, pmap over a
+/// ptree (sum tree A) literal holding inr a20 built
+/// Sum<crane::obj, ...> where a uint64_t was expected ("no viable
+/// conversion from 'Sum<crane::obj, unsigned long long>'"). The lambda
+/// fun y31 : sum tree A => 0 does not use its binder, and extraction gave
+/// a lambda binder a fresh type, ignoring its annotation, so nothing said
+/// tree and the literal's annotation was left open. Once a lambda's body
+/// is extracted, what inference left open in its binder type is now filled
+/// from the Rocq annotation, as a let's is (the same cause as
+/// snd_pair_poly_sum_scrutinee, round 23).
 
 template <typename I, typename A>
 concept Sz = requires {
@@ -796,9 +803,10 @@ struct PolySumPayloadObj {
     requires Sz<_tcI0, T1>
   static String f2(const T1 &a20, F1 &&, const ptree<bool> &) {
     auto _once1 =
-        ptree<uint64_t>::pnode(ptree<uint64_t>::pleaf(),
-                               Sum<crane::obj, T1>::inr(a20),
-                               ptree<uint64_t>::pleaf())
+        ptree<Sum<tree, T1>>::pnode(ptree<Sum<tree, T1>>::pleaf(),
+                                    Sum<tree, T1>::inr(a20),
+                                    ptree<Sum<tree,
+                                              T1>>::pleaf())
             .template pmap<uint64_t>([](Sum<tree,
                                             T1>) {
           return UINT64_C(0);

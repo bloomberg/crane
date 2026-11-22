@@ -19,10 +19,9 @@ bool LoopAccCurriedPartialApp::r(const List<uint64_t> &l) {
         const auto &[_, a1] =
             std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
         const List<uint64_t> &a1_value = *a1;
-        _lc1_loop_acc = [=](uint64_t) {
-          return [=, _lc1_loop_acc = _lc1_loop_acc](bool _pa0) {
-            return _lc1_loop_acc(UINT64_C(0), _pa0);
-          };
+        _lc1_loop_acc = [=](uint64_t,
+                            bool eta0_) {
+          return _lc1_loop_acc(UINT64_C(0), eta0_);
         };
         _lc1_loop_l0 = &a1_value;
       }

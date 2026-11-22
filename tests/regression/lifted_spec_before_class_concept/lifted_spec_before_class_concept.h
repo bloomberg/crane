@@ -30,8 +30,6 @@ concept Params = requires {
   }
   -> std::convertible_to<typename I::addr>;
 });
-template <Params _tcI0, typename T2, typename T1>
-Tagged<T2> walk_crane_mk(const T1 _x);
 
 struct Nat {
   // TYPES
@@ -117,9 +115,9 @@ template <typename addr> struct Box {
   static Box<addr> box0(addr a0) { return {std::move(a0)}; }
 };
 
-template <Params _tcI0, typename T2, typename T1>
-Tagged<T2> walk_crane_mk(const T1) {
-  return Tagged<T2>::tag(Nat::s(Nat::o()));
+template <Params _tcI0, typename T1>
+Tagged<T1> walk_crane_mk(const typename _tcI0::addr) {
+  return Tagged<T1>::tag(Nat::s(Nat::o()));
 }
 
 template <Params _tcI0>

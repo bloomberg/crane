@@ -6,7 +6,7 @@ TypeLevelFixpointArity::nfun TypeLevelFixpointArity::constN(uint64_t n,
     return v;
   } else {
     uint64_t k = n - 1;
-    return crane_erase_fn([=](const auto &) { return constN(k, v); });
+    return crane_erase_fn([=](uint64_t) { return constN(k, v); });
   }
 }
 

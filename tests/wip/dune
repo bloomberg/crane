@@ -217,17 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir poly_sum_payload_obj
- (rule
-  (targets poly_sum_payload_obj.t.exe)
-  (deps PolySumPayloadObj.vo poly_sum_payload_obj.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_sum_payload_obj.t.exe poly_sum_payload_obj.t.cpp poly_sum_payload_obj.cpp)))
- (rule
-  (alias runtest)
-  (deps poly_sum_payload_obj.t.exe)
-  (action (run ./poly_sum_payload_obj.t.exe))))
-
 
 (subdir shared_event_subevent
  (rule
@@ -245,16 +234,6 @@
 
 
 
-(subdir boxed_fields_match_arg_obj
- (rule
-  (targets boxed_fields_match_arg_obj.t.exe)
-  (deps BoxedFieldsMatchArgObj.vo boxed_fields_match_arg_obj.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_fields_match_arg_obj.t.exe boxed_fields_match_arg_obj.t.cpp boxed_fields_match_arg_obj.cpp)))
- (rule
-  (alias runtest)
-  (deps boxed_fields_match_arg_obj.t.exe)
-  (action (run ./boxed_fields_match_arg_obj.t.exe))))
 
 (subdir bake_text_trigraph
  (rule
@@ -289,16 +268,6 @@
   (deps bake_functor_application_constant.t.exe)
   (action (run ./bake_functor_application_constant.t.exe))))
 
-(subdir loop_acc_curried_partial_app
- (rule
-  (targets loop_acc_curried_partial_app.t.exe)
-  (deps LoopAccCurriedPartialApp.vo loop_acc_curried_partial_app.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loop_acc_curried_partial_app.t.exe loop_acc_curried_partial_app.t.cpp loop_acc_curried_partial_app.cpp)))
- (rule
-  (alias runtest)
-  (deps loop_acc_curried_partial_app.t.exe)
-  (action (run ./loop_acc_curried_partial_app.t.exe))))
 
 (subdir bake_alternating_types_quadratic
  (rule
@@ -322,24 +291,3 @@
   (deps bake_text_overlength.t.exe)
   (action (run ./bake_text_overlength.t.exe))))
 
-(subdir snd_pair_poly_sum_scrutinee
- (rule
-  (targets snd_pair_poly_sum_scrutinee.t.exe)
-  (deps SndPairPolySumScrutinee.vo snd_pair_poly_sum_scrutinee.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} snd_pair_poly_sum_scrutinee.t.exe snd_pair_poly_sum_scrutinee.t.cpp snd_pair_poly_sum_scrutinee.cpp)))
- (rule
-  (alias runtest)
-  (deps snd_pair_poly_sum_scrutinee.t.exe)
-  (action (run ./snd_pair_poly_sum_scrutinee.t.exe))))
-
-(subdir deque_fold_curried_acc
- (rule
-  (targets deque_fold_curried_acc.t.exe)
-  (deps DequeFoldCurriedAcc.vo deque_fold_curried_acc.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_curried_acc.t.exe deque_fold_curried_acc.t.cpp deque_fold_curried_acc.cpp)))
- (rule
-  (alias runtest)
-  (deps deque_fold_curried_acc.t.exe)
-  (action (run ./deque_fold_curried_acc.t.exe))))

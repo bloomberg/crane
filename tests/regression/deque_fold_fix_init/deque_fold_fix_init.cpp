@@ -11,7 +11,7 @@ uint64_t DequeFoldFixInit::compose_all(const std::deque<uint64_t> &l,
         return [=, acc = std::move(acc)](uint64_t x) { return (acc(x) + k); };
       },
       l,
-      crane::fn([&]() {
+      crane::fn<uint64_t(uint64_t)>([&]() {
         auto go =
             [](std::deque<uint64_t> m, crane::fn<uint64_t(uint64_t)> acc,
                uint64_t x0_0)
@@ -54,7 +54,7 @@ DequeFoldFixInit::with_let(bool b, const std::deque<uint64_t> &x0_) {
         _a1.push_front(_a0);
         return _a1;
       }(UINT64_C(0), std::deque<uint64_t>{}),
-      crane::fn([&]() {
+      crane::fn<std::deque<uint64_t>(std::deque<uint64_t>)>([&]() {
         bool c = !(b);
         return [=](std::deque<uint64_t> l) -> std::deque<uint64_t> {
           if (c) {

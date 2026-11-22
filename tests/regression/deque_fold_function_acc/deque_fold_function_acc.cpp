@@ -10,7 +10,7 @@ uint64_t DequeFoldFunctionAcc::compose_all(const std::deque<uint64_t> &l,
         return [=, acc = std::move(acc)](uint64_t x) { return (acc(x) + k); };
       },
       l,
-      crane::fn([](uint64_t x) { return x; }))(x0_);
+      crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }))(x0_);
 }
 
 /// The same through fold_right, and with a global function as the
@@ -24,7 +24,7 @@ uint64_t DequeFoldFunctionAcc::compose_right(const std::deque<uint64_t> &l,
       [](uint64_t k, crane::fn<uint64_t(uint64_t)> acc) {
         return [=, acc = std::move(acc)](uint64_t x) { return (acc(x) * k); };
       },
-      crane::fn([](uint64_t x) { return x; }),
+      crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }),
       l)(x0_);
 }
 
@@ -40,7 +40,7 @@ uint64_t DequeFoldFunctionAcc::compose_glob(const std::deque<uint64_t> &l,
         return [=, acc = std::move(acc)](uint64_t x) { return (acc(x) + k); };
       },
       l,
-      crane::fn(twice))(x0_);
+      crane::fn<uint64_t(uint64_t)>(twice))(x0_);
 }
 
 /// A list of functions built by the mapped map, applied.

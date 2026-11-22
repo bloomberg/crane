@@ -82,8 +82,8 @@ struct SndPairPolySumScrutinee {
   template <typename T1> static uint64_t f(const T1 &) {
     std::pair<uint64_t, Sum<T1, pt>> pp =
         std::make_pair(UINT64_C(0), Sum<T1, pt>::inr(pt{UINT64_C(0), true}));
-    auto sb = std::move(pp).second;
-    if (std::holds_alternative<typename Sum<crane::obj, pt>::Inl>(sb.v_mut())) {
+    Sum<T1, pt> sb = std::move(pp).second;
+    if (std::holds_alternative<typename Sum<T1, pt>::Inl>(sb.v_mut())) {
       return UINT64_C(1);
     } else {
       return UINT64_C(2);

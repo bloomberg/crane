@@ -8,10 +8,20 @@ Infix "mod" := Nat.modulo (at level 40, no associativity).
 Infix "/" := Nat.div.
 
 (** Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
-    testing of Crane: generated program, shrunk by ephyra and delta-reduced
-    (unrelated-looking declarations kept are needed for the trigger).
+    testing of Crane, round 17: generated program, shrunk by ephyra and
+    delta-reduced (unrelated-looking declarations kept are needed for the
+    trigger).
 
-    In a constrained polymorphic definition, [pmap] over a [ptree (sum tree A)] literal holding [inr a20] builds [Sum<crane::obj, ...>] where a [uint64_t] is expected ("no viable conversion from 'Sum<crane::obj, unsigned long long>'"). *)
+    Fixed: in a constrained polymorphic definition, [pmap] over a
+    [ptree (sum tree A)] literal holding [inr a20] built
+    [Sum<crane::obj, ...>] where a [uint64_t] was expected ("no viable
+    conversion from 'Sum<crane::obj, unsigned long long>'"). The lambda
+    [fun y31 : sum tree A => 0] does not use its binder, and extraction gave
+    a lambda binder a fresh type, ignoring its annotation, so nothing said
+    [tree] and the literal's annotation was left open. Once a lambda's body
+    is extracted, what inference left open in its binder type is now filled
+    from the Rocq annotation, as a let's is (the same cause as
+    [snd_pair_poly_sum_scrutinee], round 23). *)
 Module PolySumPayloadObj.
 
 Inductive tree : Type := Leaf : tree | Node : tree -> nat -> tree -> tree.
