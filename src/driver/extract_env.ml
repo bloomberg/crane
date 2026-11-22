@@ -820,6 +820,12 @@ let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
       h
   in
   let h =
+    if Base.Table.demanded Cpp_ir.Crane_rt.unreachable_header then
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.unreachable_header ++ fnl ()
+    else
+      h
+  in
+  let h =
     if Base.Table.demanded Cpp_ir.Crane_rt.obj_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.obj_header ++ fnl ()
     else

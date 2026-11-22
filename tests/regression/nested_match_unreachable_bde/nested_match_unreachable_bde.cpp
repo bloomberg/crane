@@ -48,6 +48,6 @@ bool NestedMatchUnreachableBde::same(Comparison c, Comparison d) {
     break;
   }
   default:
-    std::unreachable();
+    crane::unreachable();
   }
 }

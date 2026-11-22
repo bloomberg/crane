@@ -541,6 +541,10 @@ type std_names = Context.std_names = {
   variant : string;  (** the tagged union inductives store alternatives in *)
   variant_header : Base.Table.header;  (** the header declaring {!variant} *)
   enable_from_this : string;  (** the base a type that hands out pointers to itself derives from *)
+  unreachable : string;
+      (** what a switch over every constructor ends in: [std::unreachable], or
+          [crane::unreachable] where the build predates C++23 (BDE) *)
+  unreachable_header : Base.Table.header;  (** the header [unreachable] is declared in *)
 }
 
 (** The plain [std::] flavor of {!std_names}. *)

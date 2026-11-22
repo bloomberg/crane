@@ -264,14 +264,3 @@
   (alias runtest)
   (deps fix_acc_empty_erased.t.exe)
   (action (run ./fix_acc_empty_erased.t.exe))))
-
-(subdir nested_match_unreachable_bde
- (rule
-  (targets nested_match_unreachable_bde.t.exe)
-  (deps NestedMatchUnreachableBde.vo nested_match_unreachable_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} nested_match_unreachable_bde.t.exe nested_match_unreachable_bde.t.cpp nested_match_unreachable_bde.cpp)))
- (rule
-  (alias runtest)
-  (deps nested_match_unreachable_bde.t.exe)
-  (action (run ./nested_match_unreachable_bde.t.exe))))

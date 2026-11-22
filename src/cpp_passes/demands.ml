@@ -169,6 +169,7 @@ module Ir = struct
       | Throw _ -> std "stdexcept"
       | Switch {enum = r; _} ->
         std "utility";
+        need (Unit_plan.Cpp_state.std_names_of unit).unreachable_header;
         global r
       | Assert (Checked _) -> std "cassert"
       | If_constexpr {test = Convertible (t, _); _} ->
@@ -176,9 +177,11 @@ module Ir = struct
         if at_type_variable t then obj ()
       | Foreign_text text when String.equal text acquire_fence -> std "atomic"
       | Foreign_text text when Base.Common.contains_substring text "std::vector" -> std "vector"
-      | Match (scrut, _, _) ->
+      | Match (scrut, branches, default) ->
         variant ();
-        if scrut.owned then std "utility"
+        if scrut.owned then std "utility";
+        (* A match of no branch and no default is written unreachable. *)
+        if branches = [] && default = None then need (Unit_plan.Cpp_state.std_names_of unit).unreachable_header
       | _ -> () );
       match s with
       | Return (Some (Abort _)) -> std "stdexcept"

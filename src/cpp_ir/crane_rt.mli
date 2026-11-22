@@ -147,6 +147,10 @@ val field_header : string  (** [field.h] -- {!field} and [crane::unbox]. *)
 
 val writable_header : string  (** [writable.h] -- [crane::writable]. *)
 
+val unreachable_header : string
+(** [crane_unreachable.h] -- [crane::unreachable], for a build older than
+    C++23. *)
+
 val fn_header : string
 (** [fn.h], the header declaring {!fn}; demanded by the type printer. *)
 

@@ -1405,7 +1405,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
        | None ->
          str "default:"
          ++ fnl ()
-         ++ str "  std::unreachable();" )
+         ++ str ("  " ^ (sn ctx.unit).unreachable ^ "();") )
     ++ fnl ()
     ++ str "}"
   | Assert precond ->
@@ -1750,7 +1750,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
         fnl () ++ str "} else {"
         ++ fnl () ++ pp_list_stmt (pp_cpp_stmt ctx env args) stmts
       | None when branches = [] ->
-        str "std::unreachable();"
+        str ((sn ctx.unit).unreachable ^ "();")
       | None ->
         mt ()
     in
