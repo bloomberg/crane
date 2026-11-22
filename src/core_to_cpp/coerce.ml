@@ -81,7 +81,15 @@ type aliases = {
 
 (** The aliases of the unit being lowered. *)
 let aliases_in cx =
-  { unfold = (fun t -> Types.unfold_cpp_typedef cx (empty_env ()) (strip_cpp_ref_const t));
+  (* A mapped inductive of no arguments is the C++ type its mapping names:
+     [positive] and [N] mapped to [unsigned int] are one type. *)
+  let mapped (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+    match t with
+    | Entity_application (g, [], _) when Base.Table.is_custom g -> (
+      match Base.Table.find_custom_opt g with Some text -> External (text, []) | None -> t )
+    | t -> t
+  in
+  { unfold = (fun t -> mapped (Types.unfold_cpp_typedef cx (empty_env ()) (strip_cpp_ref_const t)));
     boxed_source = Erasure.is_boxed_source cx;
     spells_as_any = Erasure.spells_as_any cx }
 
@@ -179,6 +187,13 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
          only its instantiation decides is named through an adapter. *)
       | Some a, Some _ when (match from with Function_name _ -> has_obligation (Cpp_ir.Arrows.to_type a) | _ -> false) ->
         Option.map (fun b -> Cpp_ir.Coercion.Eta {declared = a; into = b}) (Cpp_ir.Arrows.of_type into)
+      (* Nor is the name of a function taking a callable: such a parameter
+         is a deduced [F&&], which makes the function a template
+         ({!curry_value_to_expected}). *)
+      | Some ({groups = d :: _; _} as a), Some b
+        when (match from with Function_name _ -> true | _ -> false)
+             && List.exists (fun t -> Option.has_some (Cpp_ir.Arrows.of_type (strip_cpp_ref_const t))) d ->
+        Some (Eta {declared = a; into = b})
       | Some a, Some b when Cpp_ir.Arrows.equal a b || (same_domain && Cpp_ir.Arrows.same_function a b && List.length a.groups = List.length b.groups) -> None
       | Some a, Some b when Cpp_ir.Arrows.same_function a b -> (
         match from with

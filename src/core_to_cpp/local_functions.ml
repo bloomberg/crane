@@ -575,9 +575,7 @@ let gen_fix cx env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_i
         None )
     | _ -> (None, None)
   in
-  let return_ : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t =
-    if fix_return_type = Some Void then Cpp_build.return_into_void else fun x -> Return (Some x)
-  in
+  let return_ = Destination.return_at fix_return_type in
   let result =
     ( (renamed_n, ty),
       ids,
@@ -593,7 +591,7 @@ let gen_fix cx env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_i
     the fixpoint lifted as template helpers where it has type variables of
     its own, otherwise declared in place, as a loop, a by-reference group or
     a Y-combinator closure. *)
-let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~let_ty ~x ~ids ~funs ~occ
+let gen_let_fix cx ~slot env (k : Destination.t) ~let_ty ~x ~ids ~funs ~occ
   ~fix_term ~b
   ~let_occ : Cpp_ir.Lowered.Stmt.t list =
   (* Special case for let-fix: the let binding name is the fix function name *)
@@ -811,7 +809,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
 
 (** [let x = a in b] with [a] a lambda, ending in [k]: a polymorphic lambda
     lifted out of the body as a helper, the others bound as closures. *)
-let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~t ~a ~b ~let_occ :
+let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
   Cpp_ir.Lowered.Stmt.t list =
   (* Check if this is a polymorphic lambda that should be lifted to a
      top-level template function. *)
@@ -863,7 +861,12 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
       let r_cpp = Types.cpp_of_core cx env r_core in
 
       let reified_ty = Monadic.mk_itree_type r_cpp in
-      let ret_k v : Cpp_ir.Lowered.Stmt.t = Return (Some (Monadic.mk_itree_ret_for_value r_cpp r_core v)) in
+      let ret_k =
+        Destination.Custom
+          { build = (fun v -> Return (Some (Monadic.mk_itree_ret_for_value r_cpp r_core v)));
+            into = Exactly r_cpp;
+            returns = true }
+      in
       let body_stmts = gen_stmts cx env ret_k a in
       let iife = Cpp_ir.Build.iife (Some reified_ty) body_stmts in
       (* Shift owned vars for the continuation *)
@@ -874,7 +877,6 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
       [(Bind_variable (x_renamed, Declare (reified_ty, core_binder cx ~site:(Binding let_occ) env' 1), iife) :
           Cpp_ir.Lowered.Stmt.t)] @ cont
     end else
-      let afun v : Cpp_ir.Lowered.Stmt.t = Bind_variable (x_renamed, Existing, v) in
       (* The lambda's slot is its binder's, not the position the let stands
          in: [cf] in [w := let cf := fun _ : tree => 1 in fun c => cf Leaf]
          takes a [tree], whatever [w] takes.  Only a signature the position
@@ -886,8 +888,14 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
          binding's lambda to return the pair. *)
       let asgn =
         match Option.map (Types.unfold_cpp_typedef cx env) (current_cpp_return_type cx ()) with
-        | Some (Function _) -> with_cpp_return_type cx (Types.let_value_result cx env t) (fun () -> gen_stmts cx env afun a)
-        | _ -> gen_stmts cx env afun a
+        | Some (Function _) ->
+          let into = Types.let_value_result cx env t in
+          with_cpp_return_type cx into (fun () ->
+              gen_stmts cx env (Destination.Assign (x_renamed, Destination.slot_of into)) a )
+        | _ ->
+          gen_stmts cx env
+            (Destination.Assign (x_renamed, Destination.slot_of (current_cpp_return_type cx ())))
+            a
       in
       (* When the RHS was a pair accessor on an erased argument (e.g.
          snd vs where vs : std::any), the result is std::any at runtime
@@ -1123,7 +1131,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
              the lambda's binders. *)
           let compiled_body =
             with_escape_analysis cx (fun () -> with_region cx body (fun () ->
-                gen_stmts cx lam_env (fun x -> Return (Some x)) body ) )
+                gen_stmts cx lam_env (Destination.return_ cx) body ) )
           in
           restore_env_types cx saved_env_types;
           (free_var_params, lam_param_ids, lam_env, compiled_body) )
@@ -1223,7 +1231,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
 (** A local fixpoint [fix_term] applied to [args] in place, ending in [k]:
     lifted as template helpers where it has type variables of its own,
     otherwise declared in place and called. *)
-let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~ids ~funs ~occ
+let gen_applied_fix cx ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
   ~fix_term ~args :
   Cpp_ir.Lowered.Stmt.t list =
   Core_passes.Local_types.check_minted ids;
@@ -1348,9 +1356,10 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
                | None -> [] )
       in
       let cpp_args = gen_args args in
-      [ k
-          (made_of occ
-             (Call (Cpp_ir.Build.signature ~nargs:0 (), mk_cppglob lifted_ref call_type_args, List.rev cpp_args)) ) ] )
+      [ Destination.finish cx k
+          (Cpp_ir.Typed.of_node
+             (made_of occ
+                (Call (Cpp_ir.Build.signature ~nargs:0 (), mk_cppglob lifted_ref call_type_args, List.rev cpp_args)) ) ) ] )
     else (* No extra Tvars - proceed with by-ref local fixpoint (immediately applied) *)
       let all_fix_ids_list = Array.to_list ids in
       (* A group escaping in its own bodies is closures, and so is one
@@ -1421,7 +1430,9 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
         (* The closure takes the rest as the position it fills takes them:
            curried where a type variable stands for the function type, a
            fold's accumulator. *)
-        @ deref_subst [k (Coerce.grouped_lambda ?into:(Coerce.position_cpp_ty cx None) pa_params full_call)]
+        @ deref_subst
+            [ Destination.finish cx k
+                (Cpp_ir.Typed.of_node (Coerce.grouped_lambda ?into:(Coerce.position_cpp_ty cx None) pa_params full_call)) ]
       end
       else
         let closures = escapes in
@@ -1453,7 +1464,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
            its own parameters only, while the term around it, eta-expanded
            at the unfolded type, hands it the state as well. *)
         let call =
-          k
+          Destination.finish cx k @@ Cpp_ir.Typed.of_node
             (made_of occ
                (Coerce.mk_arity_call
                   ~params:(List.rev_map (fun (_, t) -> Types.cpp_of_core cx env t) fix_params)
@@ -1474,7 +1485,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
 
 (** A local fixpoint [fix_term] not applied, ending in [k]: it escapes, so
     it is a Y-combinator closure. *)
-let gen_standalone_fix cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~ids ~funs ~occ ~fix_term :
+let gen_standalone_fix cx env (k : Destination.t) ~x ~ids ~funs ~occ ~fix_term :
   Cpp_ir.Lowered.Stmt.t list =
   (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
      RHS of a let-binding.  Since the fixpoint value itself is returned (not
@@ -1503,4 +1514,4 @@ let gen_standalone_fix cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
           renamed_ids funs_with_params
   in
   let fix_id = fst (List.nth renamed_ids x) in
-  decls @ defs @ [k (Local fix_id)]
+  decls @ defs @ [Destination.finish cx k (Cpp_ir.Typed.of_node (Local fix_id))]

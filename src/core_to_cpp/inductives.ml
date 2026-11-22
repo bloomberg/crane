@@ -709,13 +709,16 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
   let is_cofix_method =
     Suspension.suspends_whole func_ref ret_ty (snd (collect_lams body))
   in
-  let method_k x : Cpp_ir.Lowered.Stmt.t =
+  let method_k : Destination.t =
     if is_cofix_method then
-      suspend_whole
-        ~cpp_of:(Types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Core.Ref.User.Set.singleton name) vars)
-        ~cod:ret_cpp ret_ty x
-    else
-      Return (Some x)
+      Custom
+        { build =
+            suspend_whole
+              ~cpp_of:(Types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Core.Ref.User.Set.singleton name) vars)
+              ~cod:ret_cpp ret_ty;
+          into = Exactly ret_cpp;
+          returns = true }
+    else Return (Exactly ret_cpp)
   in
   (* Generate the method body, owning its owned parameters.  The de Bruijn
      environment has parameters in reverse order: ids_normal_order has

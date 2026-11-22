@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** The two entry points of expression lowering that every lowering module
     recurses through: {!gen_expr_typed} (an expression and its type, {!Expr}) and
-    {!gen_stmts} (statements ending in a continuation, {!Stmts}).
+    {!gen_stmts} (statements whose value goes to a {!Destination}, {!Stmts}).
 
     Lowering is one mutually recursive function spread over several modules:
     a lambda's body is statements, a statement's right-hand side is an
@@ -35,7 +35,7 @@ type lowering = {
     Lowering_state.t ->
     ?slot:Slot.slot ->
     env ->
-    (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ->
+    Destination.t ->
     Core.Expr.t ->
     Cpp_ir.Lowered.Stmt.t list;
 }
@@ -61,4 +61,4 @@ let gen_expr_typed cx ?expected_ty ?slot env e = (get ()).expr_typed cx ?expecte
 let gen_expr cx ?expected_ty ?slot env e = (gen_expr_typed cx ?expected_ty ?slot env e).expr
 
 (** {!Stmts.gen_stmts}. *)
-let gen_stmts cx ?slot env k e = (get ()).stmts cx ?slot env k e
+let gen_stmts cx ?slot env d e = (get ()).stmts cx ?slot env d e

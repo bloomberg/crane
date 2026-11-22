@@ -90,7 +90,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
      ({!plan_instance_methods}), decided by the very code that generates
      them. *)
   let gen_body env e =
-    if bodies then gen_stmts cx env (fun x -> Return (Some x)) e
+    if bodies then gen_stmts cx env (Destination.return_ cx) e
     else []
   in
   let inner_ty, inner_body, tc_temps, lam_params = instance_layers cx ty body in

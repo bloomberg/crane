@@ -509,7 +509,7 @@ module Body_scope = struct
         (** Under polymorphic recursion, the parameters a self-call has to
             write although the call is not at the declaration's own
             instantiation ({!self_call_reference}); [None] where it is. *)
-    gen_body_stmts : env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> Core.Expr.t ->
+    gen_body_stmts : env -> Destination.t -> Core.Expr.t ->
       Cpp_ir.Lowered.Stmt.t list;
         (** Generates body statements with the signature's higher-kinded
             resolutions applied. *)
@@ -1388,15 +1388,16 @@ let gen_dfun cx ~minted n b cty ty temps =
      only up to unfolding -- is suspended whole. *)
   let core_ret = core_return_type ty in
   let is_cofix_return = Suspension.suspends_whole n core_ret b in
-  let cofix_wrap (x : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Stmt.t =
+  let cofix_wrap : Destination.t =
     if is_cofix_return then
-      suspend_whole ~cpp_of:(Types.cpp_ir_of_core_type cx env type_var_ids) ~cod core_ret x
-    else if cod = Void then
+      Custom
+        { build = suspend_whole ~cpp_of:(Types.cpp_ir_of_core_type cx env type_var_ids) ~cod core_ret;
+          into = Exactly cod;
+          returns = true }
+    else
       (* Some tail expressions (like writeTVar) have side effects that must
          not be discarded. *)
-      Cpp_build.return_into_void x
-    else
-      Return (Some x)
+      Destination.return_at (Some cod)
   in
   (* Generate sigma type precondition assertions *)
   let sigma_asserts =

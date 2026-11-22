@@ -285,15 +285,30 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
       | Some core_ty when not (core_type_contains_erased core_ty) -> Some core_ty
       | _ -> slot.Slot.expected_core_ty
     in
-    let expr : Cpp_ir.Lowered.Expr.t =
+    let arg_typed =
       with_cpp_return_type cx ret (fun () ->
-          gen_expr cx ?expected_ty:arg_expected_ty
+          Knot.gen_expr_typed cx ?expected_ty:arg_expected_ty
             ~slot:
               { slot with
                 Slot.expected_core_ty = arg_expected_core_ty;
                 call_result = expected_result;
                 stated_core_ty = param_core_ty }
             env core_arg )
+    in
+    let expr = arg_typed.expr in
+    (* The slot the argument fills: the parameter at the call's
+       instantiation, a forwarding reference for a deduced callable, a
+       template parameter for an inline mapping's parameter at a type
+       variable. *)
+    let arg_slot : Cpp_ir.Lowered.Slot_type.t =
+      if deduced_callable then Forwarded
+      else if
+        Base.Table.is_inline_custom id
+        && match Option.map resolve_meta (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index) with
+           | Some (Core.Type.Variable _) -> true
+           | _ -> false
+      then Template_parameter arg_expected_ty
+      else Destination.slot_of arg_expected_ty
     in
     (* Annotate the outer lambda with the explicit return type computed
        during the split, so that C++ concept checking sees the concrete
@@ -449,6 +464,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
         Binders.read_is_boxed cx j occ
       | _ -> false
     in
+    let passed =
     match param_core_ty with
     | Some param_ty
       when ( Erasure.core_body_returns_erased_field core_arg || core_arg_is_erased_rel
@@ -648,6 +664,9 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
       in
       Cpp_ir.Build.lambda params None body ~capture:Runs_in_place
     | _ -> as_value ()
+    in
+    Typed_checks.fit cx ~site:"argument" (Typed_checks.adapted ~before:arg_typed arg_expected_ty passed) arg_slot;
+    passed
   ) regular_core_args
 
 (** The call of [f] applied to [args].  A global callee is called as

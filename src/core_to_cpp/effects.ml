@@ -54,13 +54,13 @@ let gen_bind_expr cx env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
   (* Sequential mode: bind in expression context (e.g., nested inside
      another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
   with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-    Match_types.value_iife cx env (Core_plan.Query.infer_core_body_type a) (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
+    Match_types.value_iife cx env (Core_plan.Query.infer_core_body_type a) (gen_stmts cx env (Destination.return_ cx) a) ) )
 
 (** [bind] of an effect monad, the global [use] (at [r]) applied to
     [a1 :: a2 :: l], in statement position ending in [k]: the action's
     statements, its result bound for the continuation in sequential mode, the
     [bind] call as an expression in reified mode. *)
-let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2
+let gen_bind_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2
   ~l : Cpp_ir.Lowered.Stmt.t list =
   let bind_tys = Base.Core_util.written_type_args use in
   (* The action's result type: the argument written for the variable the
@@ -77,7 +77,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
   in
   (* Reified mode: bind is a real function call, not desugared. *)
   if not (Monadic.is_sequential_effect cx Core_plan.Effects.Bind use) then
-    Cpp_build.inline_iife k ((gen_expr cx ~slot env ast))
+    Destination.finish_inlined cx k (Knot.gen_expr_typed cx ~slot env ast)
   else begin
     (* Sequential mode: desugar bind into sequential statements. *)
     let a_core, f = Base.Common.last_two (a1 :: a2 :: l) in
@@ -173,7 +173,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
       if returns_void cx then
         side_effect @ [(Return None : Cpp_ir.Lowered.Stmt.t)]
       else
-        [k a]
+        [Destination.finish cx k action]
     | _ ->
       (* Eta-reduced non-Ret continuation: f is a bare function reference.
          Bind action result to a temp var and apply f to it, instead of
@@ -193,12 +193,13 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
       ( match non_void_ty with
       | Some (cpp_ty, worth_moving) ->
         let temp_id = Id.of_string "_bind_result" in
-        let f_expr = gen_expr cx env f in
+        let f_typed = Knot.gen_expr_typed cx env f in
         (* The continuation is the temporary's one reader. *)
         let result : Cpp_ir.Lowered.Expr.t = if worth_moving then Move (Local temp_id) else Local temp_id in
-        let app = Cpp_ir.Build.call f_expr [result] in
+        let app = Cpp_ir.Build.call f_typed.expr [result] in
         Typed_checks.agreement cx ~site:"bind temporary" action (Exactly cpp_ty);
-        [Bind_variable (temp_id, Declare (cpp_ty, None), a); k app]
+        [ Bind_variable (temp_id, Declare (cpp_ty, None), a);
+          Destination.finish cx k (Cpp_ir.Typed.v ~ty:(Typed_checks.applied f_typed.ty 1) app) ]
       | None ->
         side_effect @ gen_stmts cx ~slot env k f ) ) )
   end
@@ -207,11 +208,11 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
     position ending in [k]: [k] of the returned value (a bare [return;] in a
     function returning [void]) in sequential mode, [k] of the whole term
     lowered as an [ITree<R>::ret] in reified mode. *)
-let gen_return_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~use ~a1 ~l :
+let gen_return_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~use ~a1 ~l :
   Cpp_ir.Lowered.Stmt.t list =
   if not (Monadic.is_sequential_effect cx Core_plan.Effects.Return use) then begin
     (* Reified mode: Ret is a constructor call, not desugared. *)
-    Cpp_build.inline_iife k ((gen_expr cx ~slot env ast))
+    Destination.finish_inlined cx k (Knot.gen_expr_typed cx ~slot env ast)
   end
   else begin
     (* Sequential mode: eliminate Ret, just use the value. *)
@@ -220,5 +221,5 @@ let gen_return_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.S
       (* Void-returning function: discard the value and return. *)
       [Return None]
     else
-      [k (gen_expr cx ?expected_ty:(Coerce.position_cpp_ty cx None) env t)]
+      [Destination.finish cx k (Knot.gen_expr_typed cx ?expected_ty:(Coerce.position_cpp_ty cx None) env t)]
   end

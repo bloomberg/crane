@@ -38,12 +38,12 @@ val gen_expr :
     Core.Expr.t -> Cpp_ir.Lowered.Expr.t
 
 (** Generate C++ statements from a Core expression
-    ({!Stmts.gen_stmts}).  The continuation [k] turns the final
-    expression into a statement (a return, an assignment). *)
+    ({!Stmts.gen_stmts}).  The final value goes to the {!Destination}
+    (a return, an assignment). *)
 val gen_stmts :
   Lowering_state.t -> ?slot:Slot.slot ->
   env ->
-  (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ->
+  Destination.t ->
   Core.Expr.t ->
   Cpp_ir.Lowered.Stmt.t list
 

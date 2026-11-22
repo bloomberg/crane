@@ -293,7 +293,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
        Wrap in an IIFE, delegating to gen_stmts which handles Core.Expr.Apply(Core.Expr.Fixpoint
        ...). *)
     form @@ with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (Destination.return_ cx) a) ) )
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries, as Core decided it
      ({!Core_plan.Elaborate.static_projection_call}). *)
@@ -539,7 +539,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
        against a position lowering does not give it. *)
     form @@ with_escape_analysis cx (fun () -> with_iife_return_type cx expected_ty (fun () ->
       with_region cx a (fun () ->
-        let body = gen_stmts cx ~slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a in
+        let body = gen_stmts cx ~slot env (Destination.return_ cx) a in
         (* Returning a closure from one path and another closure, or a
            function-typed local, from the next, the lambda deduces no
            common type: it is declared at the let's own, or at the expected
@@ -551,7 +551,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
     (* Bare fixpoint in expression context: wrap in IIFE, delegate to
        gen_stmts. *)
     form @@ with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (Destination.return_ cx) a) ) )
   | Core.Expr.String s -> Typed.v ~ty:(Typed_checks.primitive_type cx env "strings.pstring.type") (Literal (String s))
   | Core.Expr.UInt63 x -> Typed.v ~ty:(Typed_checks.primitive_type cx env "num.int63.type") (Literal (Uint63 x))
   | Core.Expr.Numeral {inductive = ind; value = n} ->

@@ -470,7 +470,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
       in
       let with_lam_return_type f =
         match Option.map (Types.unfold_cpp_typedef cx env) expected_ty with
-        | _ when binderless_result <> None -> with_cpp_return_type cx binderless_result f
+        | _ when binderless_result <> None -> with_cpp_return_type cx binderless_result (fun () -> f (Destination.Return (Destination.slot_of binderless_result)))
         | _ when carrier <> None ->
           (* A polymorphic function object returns at the type its own
              parameter fixes, so the enclosing function's return type is
@@ -488,7 +488,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
               cx) core_ty)
             | None, _ -> None
           in
-          with_cpp_return_type cx ret f
+          with_cpp_return_type cx ret (fun () -> f (Destination.Return (Destination.slot_of ret)))
         | Some (Function (_, cod)) when cod <> Void ->
           (* Read in this scope: a variable of the callee's the slot names
              ([tfmap]'s [T2]) is erased where it sits, as the binders'
@@ -506,20 +506,23 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
                 | t -> t )
               cod
           in
-          with_cpp_return_type cx (Some cod) f
-        | _ -> f ()
+          with_cpp_return_type cx (Some cod) (fun () -> f (Destination.Return (Exactly cod)))
+        (* The ambient return type is left alone for the body's legacy
+           readers, but it is not this lambda's: the destination states
+           nothing. *)
+        | _ -> f (Destination.Return Free)
       in
       let body_stmts =
         (match carrier with
          | None -> (fun f -> f ())
          | Some _ -> with_rank2_carrier cx carrier)
           (fun () ->
-            with_lam_return_type (fun () ->
+            with_lam_return_type (fun return_ ->
               with_region cx ~owned:lambda_owned a (fun () ->
                 gen_stmts cx
                   ~slot:{slot with Slot.expected_core_ty = body_expected_core_ty}
                   env
-                  (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x))
+                  return_
                   a ) ) )
       in
       let body_stmts =

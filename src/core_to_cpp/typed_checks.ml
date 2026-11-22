@@ -264,9 +264,37 @@ let rec node_name : Cpp_ir.Lowered.Expr.t -> string = function
   | Converting_construct _ -> "converting_construct"
   | _ -> "other"
 
+(** What {!Coerce.decide} says of [x] put in [into], for the census and
+    the checks: [`Unchecked why] where the slot states no type both sides
+    can be compared at, or [x] has none. *)
+let verdict cx (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  match into with
+  | _ when Cpp_ir.Value_type.not_yet_typed x.ty -> `Unchecked "untyped value"
+  | Exactly t when Base.Type_util.contains_tvar t -> `Unchecked "slot at type variables"
+  | Exactly _ -> (
+    match Coerce.decide cx x.ty into with
+    | None when Coerce.unrelated cx x.ty into -> `Unrelated
+    | None -> `Fits
+    | Some p when Coerce.implicit x.ty p -> `Fits_implicitly
+    | Some p -> `Plan p )
+  | _ -> `Unchecked "slot states no type"
+
+(** [verdict]'s census line for [x] in [into], [what] describing [x]. *)
+let verdict_line cx ~what (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  let slot = match into with Exactly t -> Binders.type_shape t | _ -> "?" in
+  let detail () = " in " ^ site cx ^ " " ^ what ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ slot in
+  match verdict cx x into with
+  | `Unchecked why -> "unchecked (" ^ why ^ ")"
+  | `Unrelated -> "unrelated" ^ detail ()
+  | `Fits -> "fits"
+  | `Fits_implicitly -> "fits-implicitly"
+  | `Plan p -> Cpp_ir.Coercion.plan_name p ^ detail ()
+
 (** [census ?expected_ty e x] is [x], the typed lowering of [e], counted by
-    [e]'s form and the kind of type [x] has, and where the position stated
-    a type, by whether {!Coerce.decide} finds [x] fits it. *)
+    [e]'s form and the kind of type [x] has, and where the caller passed an
+    [expected_ty], by whether {!Coerce.decide} finds [x] fits it
+    ([typed-expected]: an expected type is not always the slot the value
+    fills, so this is a census, never a check; {!fit} is the check). *)
 let census cx ?expected_ty e (x : Typed.t) =
   if Base.Probe.checking () && Cpp_ir.Value_type.not_yet_typed x.ty then
     Base.Probe.violation "typed lowering"
@@ -278,19 +306,18 @@ let census cx ?expected_ty e (x : Typed.t) =
       Base.Probe.hit "typed-untyped" (fun () -> form_name e ^ " " ^ site cx ^ " " ^ describe e ^ " " ^ node_name x.expr);
     Option.iter
       (fun t ->
-        let verdict =
-          match Coerce.decide cx x.ty (Exactly t) with
-          | _ when Base.Type_util.contains_tvar t -> "unchecked (slot at type variables)"
-          | None when Coerce.unrelated cx x.ty (Exactly t) ->
-            "unrelated in " ^ site cx ^ " " ^ describe e ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ Binders.type_shape t
-          | None -> "fits"
-          | Some p when Coerce.implicit x.ty p -> "fits-implicitly"
-          | Some p -> Cpp_ir.Coercion.plan_name p ^ " in " ^ site cx ^ " " ^ describe e ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ Binders.type_shape t
-        in
-        Base.Probe.hit "typed-fit" (fun () -> form_name e ^ " " ^ verdict) )
+        Base.Probe.hit "typed-expected" (fun () ->
+            form_name e ^ " " ^ verdict_line cx ~what:(describe e) x (Exactly t) ) )
       expected_ty
   end;
   x
+
+(** The fit check, counted under [CRANE_PROBE] as [typed-fit]: [x], as it
+    is put in the slot [into] at [site] -- a destination of statements, an
+    argument at its parameter -- needs no adapter by {!Coerce.decide}. *)
+let fit cx ~site (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  if Base.Probe.enabled () then
+    Base.Probe.hit "typed-fit" (fun () -> site ^ " " ^ verdict_line cx ~what:(node_name x.expr) x into)
 
 (** The declaration agreement check, fatal under [CRANE_CHECK_IR] and
     counted under [CRANE_PROBE]: [x], put as it is

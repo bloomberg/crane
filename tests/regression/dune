@@ -16037,3 +16037,14 @@
   (alias runtest)
   (deps bake_functor_application_constant.t.exe)
   (action (run ./bake_functor_application_constant.t.exe))))
+
+(subdir callable_crossing_matrix
+ (rule
+  (targets callable_crossing_matrix.t.exe)
+  (deps CallableCrossingMatrix.vo callable_crossing_matrix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} callable_crossing_matrix.t.exe callable_crossing_matrix.t.cpp callable_crossing_matrix.cpp)))
+ (rule
+  (alias runtest)
+  (deps callable_crossing_matrix.t.exe)
+  (action (run ./callable_crossing_matrix.t.exe))))
