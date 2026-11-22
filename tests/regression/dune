@@ -15809,3 +15809,14 @@
   (alias runtest)
   (deps frame_plan_rebind.t.exe)
   (action (run ./frame_plan_rebind.t.exe))))
+
+(subdir case_of_case_coercion
+ (rule
+  (targets case_of_case_coercion.t.exe)
+  (deps CaseOfCaseCoercion.vo case_of_case_coercion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} case_of_case_coercion.t.exe case_of_case_coercion.t.cpp case_of_case_coercion.cpp)))
+ (rule
+  (alias runtest)
+  (deps case_of_case_coercion.t.exe)
+  (action (run ./case_of_case_coercion.t.exe))))

@@ -83,7 +83,7 @@ let region cx ~outer ~reads body =
     | Core.Expr.Let _ -> stmts ~ret:pos lex e
     | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> stmts ~ret lex e
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} -> (
-      expr ~pos:None ~ret lex scrut;
+      scrutinee ~ret lex typ scrut branches occ;
       match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ branches occ with
       | Core_plan.Match_kind.Record _ -> Array.iter (branch ~ret:pos lex) branches
       | Core_plan.Match_kind.Custom ->
@@ -103,6 +103,17 @@ let region cx ~outer ~reads body =
     (* A lambda's body is a region of its own, planned where it begins. *)
     | Core.Expr.Lambda _ -> ()
     | e -> Base.Core_util.ast_iter (expr ~pos:None ~ret lex) e
+  (* A match's scrutinee, generated at no position, under the return type
+     in force -- but a custom match's under the match's own type
+     ({!Match.gen_custom_cpp_case}): a match the scrutinee is returns its
+     value to the template, not out of the enclosing function. *)
+  and scrutinee ~ret lex typ scrut branches occ =
+    let ret =
+      match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ branches occ with
+      | Core_plan.Match_kind.Custom -> Some (Types.cpp_of_core cx (named_env lex) typ)
+      | Core_plan.Match_kind.Record _ | Core_plan.Match_kind.Variant -> ret
+    in
+    expr ~pos:None ~ret lex scrut
   (* A value a constructor stores ({!Construction.gen_stored_value}). *)
   and stored ~pos ~ret ~slot lex e =
     match e with
@@ -162,7 +173,7 @@ let region cx ~outer ~reads body =
         if core_type_is_unit t then stmts ~ret ~slot lex a else stmts ~ret:(let_result cx env ~ret t) ~slot lex a );
       stmts ~ret ~slot (push [(x, t)] lex) b
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} ->
-      expr ~pos:None ~ret lex scrut;
+      scrutinee ~ret lex typ scrut branches occ;
       let slot =
         match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ branches occ with Core_plan.Match_kind.Record _ ->
           slot | _ -> Slot.empty_slot in
