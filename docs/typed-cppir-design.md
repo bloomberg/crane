@@ -425,7 +425,7 @@ callable_crossing_matrix.
 ## 7. Progress
 
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
-- [ ] Phase B1
+- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix done; see 8)
 - [ ] Phase B2
 - [ ] Phase C
 - [ ] Phase D
@@ -639,3 +639,113 @@ Next: Phase B1 as designed, starting with `Destination.t` behind
 `Slot_type.of_param` at call arguments; once every `gen_expr_typed` call
 passes a real slot, `typed-fit` becomes the fit check and can be made
 fatal.
+
+### Phase B1, first session (2026-11-22)
+
+Done:
+- **`Destination.t` behind `gen_stmts`** (`core_to_cpp/destination.ml`):
+  `Return of Slot_type.t | Return_void | Assign of Id.t * Slot_type.t |
+  Discard | Adapted of (Expr.t -> Expr.t) * t | Custom of {build; into;
+  returns}`.  `finish cx d x` checks the typed value against the slot and
+  builds the statement; `finish_inlined` inlines an invoked lambda's
+  returns where `d` returns (was `Cpp_build.inline_iife`, now
+  `Cpp_build.inline_returns`).  The three `k (Literal (Int 0))` probes are
+  gone (`returns`, `discards`).  Deviations from 3.2: no `Bind` (a let's
+  right-hand side is an `Assign` to the variable declared before it, which
+  `Stmts` folds into a declaration when it is one statement, as before);
+  `Return_void` is its own case (`return_into_void` drops a pure value, so it
+  is not `Return (Exactly Void)`); `Adapted` is the unbox
+  `gen_cpp_custom_body` puts before a template-parameter return, to become
+  a `Coerce` in B2; `Custom` builds from an `Expr.t` (a suspension, a
+  reified `ret`) and states `returns` itself.
+- **Destinations are honest, the ambient is not touched.**  A lambda whose
+  position states no signature returns to `Return Free` (the ambient still
+  holds the enclosing function's result for its legacy readers); a let's
+  right-hand side is `Assign (x, let_value_result)` on both let paths.  The
+  tail still passes the ambient as `?expected_ty` and recovers boxes at the
+  ambient: switching those to the destination is phase C (it changes output
+  where they differ).  `dest-ambient` counts where they differ.
+- **`typed-fit` is a check at real slots**: `Typed_checks.fit` at every
+  `Destination.finish` and at every global call argument
+  (`Application.gen_call_args`) against its parameter: `Forwarded` for a
+  deduced callable, `Template_parameter` for an inline mapping's parameter
+  at a type variable, else `Exactly` the parameter at the call's
+  instantiation (`Calls.argument_position.expected`).  The argument check
+  sees the argument after its adapters (`Typed_checks.adapted`).  The old
+  per-exit census is `typed-expected` (the expected type is not a slot).
+- **`decide`**: a mapped inductive with no arguments compares as its
+  mapping's C++ type (`positive`/`N` both `unsigned int`; 264 false
+  `unrelated`); the name of a function taking a callable is `Eta` at any
+  grouping (a deduced `F&&` parameter makes it a template;
+  `curry_value_to_expected` always expands it).  The second row was a real
+  `decide` gap the new matrix test hit (fatal shadow disagreement).
+- **Tests**: `unit_tests/coercion_decide_test.ml` (8 sources x 9 slots x
+  flat/curried x arity 1-3, plus the template-name row);
+  `tests/regression/callable_crossing_matrix` (7 sources x 8 slots at two
+  arguments, 4 x 7 at three; compiled with `-DCRANE_STRICT_ARITY` like the
+  whole suite, `scripts/compile-std.sh`).  Both pass.
+
+`typed-fit` census after this session (extraction of the whole suite,
+`0c73f034b`):
+
+| site | fits | implicit | unchecked | unrelated | planned |
+|---|---|---|---|---|---|
+| destination | 121987 | 688 | 74418 | 643 | 128: erase 84, unbox 20, eta 16, box 8 |
+| argument | 47813 | 520 | 143791 | 288 | 436: unbox 412, erase 16, convert 8 |
+
+Unchecked: at destinations 44527 slots at type variables (the callee's or
+lambda's own variables: `Template_parameter` from the declared
+signature), 27746 untyped values (`Typed.of_node` of a local fixpoint's
+call or name and of an inlined invoked lambda's returns: type them from
+the fixpoint's arrows / the lambda body's typed returns), 2145 slots
+stating no type; at arguments 125559 slots stating no type
+(`argument_position.expected = None`: the parameter's type is not
+computed when nothing needs it; compute it for every regular argument)
+and 18011 at type variables.  `dest-ambient`: 1260 of 197860 tails
+disagree (the honest lambda and let destinations).
+
+Remaining misses, by cause (each to fix before `typed-fit` is fatal):
+- All 432 planned `unbox` are a value typed `erased`/`ReSum<erased,erased>`
+  from Core where C++ instantiates the call concretely: goal 3, `yields`
+  from the written template arguments.  Plan: in `Application.eta_fun`'s
+  global branch `Calls.lower_call` returns `written_by_var`; substitute
+  them into the callee's codomain converted with its own variables
+  (`Cpp_ir.Types.substitute`), and type the call with it (in the `Typed.t`
+  first; writing `Call.yields` feeds `Tmc` and `Erasure`'s `%ret`, check
+  byte-identity separately).  This needs `gen_application` to return
+  `Typed.t` (it is wrapped by `form` in `Expr.gen_form` today).
+- `unrelated` at destinations, largest groups: constructor
+  values typed at their Core result (`lifted_param_const_v_mut`
+  `option<prod<T1,..>>`, `cpu_emulator` `nat` into a record: a record
+  field projected); calls whose result is a function partially applied
+  (`partial_app_prefix_work`, `fold_step_list_match_const_v_mut`: `nat`
+  into `fn(nat)->nat`, the call's `yields` is the codomain after all its
+  arguments).
+- `unrelated` at arguments: `TVar<fn>` into `TVar<nat>`
+  (`stm_tvar_of_function`), `future<nat>` into `future<prod>`
+  (`parallel`): the parameter slot of an effect primitive read from the
+  wrong instantiation; lambdas returning an alias of a function
+  (`function_alias_spelling`, `state_monad_type_synonym`, `monadic`):
+  compare after unfolding the closure's result alias.
+
+Not started: goal 4 (route every inventory adapter through
+`Coerce.into_slot` with eager expansion and origin tags), the remaining
+ambient readers (phase C), B2.
+
+Destinations still built from the ambient (`Destination.return_ cx`):
+match-branch and expression IIFEs (`Match`, `Expr`, `Effects`) and
+instance method bodies; each is inside the `with_cpp_return_type` that
+states its result, so they agree today, but they should take the slot
+from the caller explicitly before phase C deletes the ambient.
+
+Commits: `eb4b70e95` (Destination, fit census, decide rows, tests),
+`0c73f034b` (let and lifted-lambda slots).  Full `make test` from clean
+after `eb4b70e95`: 1526 passed, 16 failed (all `tests/wip`, as at the
+base), `git status --short tests` empty; extraction byte-identical after
+`0c73f034b`; `dune build @unit_tests/runtest` and
+`scripts/check-module-deps.sh` pass.
+
+Next, in order: (1) goal 3 as above; (2) the unchecked categories (argument
+slots for every parameter, typed local-fixpoint values); (3) the
+`unrelated` causes listed; (4) `typed-fit` fatal, filing any genuine miss
+in `tests/wip`; (5) goal 4.
