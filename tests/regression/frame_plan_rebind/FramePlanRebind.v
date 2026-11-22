@@ -1,15 +1,16 @@
 (** Found by Ephyra (round 22, first in the BDE flavour; the std flavour
-    fails the same way). A tree recursion whose [Node] case runs a local
+    failed the same way). A tree recursion whose [Node] case runs a local
     fixpoint over a list of two primitive strings, passing the recursive
     call [g2 l] both as the initial accumulator and in its step, with a
-    second (unused) inductive [ptree] in the module.
+    second (unused) inductive [ptree] in the module. Expected: extracts;
+    [result = true].
 
-    Expected: extracts; [result = true].
-
-    Actual: extraction fails under [CRANE_CHECK_IR]: "Crane IR check (frame
-    plan): a continuation binds again a local the recursion plan neither
-    keeps nor finds recomputable". Without [ptree], or with a list of [nat],
-    it extracts. Also on main. *)
+    Fixed: under [CRANE_CHECK_IR] the frame plan check reported "a
+    continuation binds again a local the recursion plan neither keeps nor
+    finds recomputable" for the closure [go]. The recursion plan lists [go]
+    as recomputable from [l], which the frame keeps, and the continuation
+    rebinds it after restoring [l]; the check only accepted recomputation
+    from parameters no turn changes. It now accepts what the frame keeps. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.

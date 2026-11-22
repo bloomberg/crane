@@ -901,11 +901,14 @@ let available ctx b = Id.Set.exists (stands_for ctx b) ctx.invariant_params
 
 (** The binders the point [p] has in scope that its continuation binds again
     rather than keeps: each recomputable from binders {!available} or so
-    bound in turn ({!Core_plan.Recursion.recomputable}). *)
-let rebuilt_binders ctx (p : Core_plan.Recursion.resume) =
+    bound in turn ({!Core_plan.Recursion.recomputable}).  With [kept], those
+    a frame keeps count as available too: the continuation binds them
+    first, then binds again what it recomputes from them -- a local
+    fixpoint's closure reading a pattern variable the frame keeps. *)
+let rebuilt_binders ?(kept = fun _ -> false) ctx (p : Core_plan.Recursion.resume) =
   List.fold_left
     (fun rebuilt (c : Core_plan.Recursion.recomputable) ->
-      if List.for_all (fun b -> available ctx b || List.exists (Core.Binder.equal b) rebuilt) c.from then
+      if List.for_all (fun b -> available ctx b || kept b || List.exists (Core.Binder.equal b) rebuilt) c.from then
         c.recomputed :: rebuilt
       else rebuilt )
     [] p.recomputable
@@ -1243,7 +1246,7 @@ and rewrite_enter_stmts ctx stmts =
         let kept v = List.exists (Id.equal v) cont_vars || Id.equal v id || Id.equal v id_result in
         let rebuilt = rebuilt_bindings ctx ~kept rest_free in
         ( if Base.Probe.checking () then
-            let recomputed = rebuilt_binders ctx p in
+            let recomputed = rebuilt_binders ~kept:(fun b -> List.exists (stands_for ctx b) cont_vars) ctx p in
             let rebindable (v, st) =
               ( match binder_of ctx v with
               | Some b -> List.exists (Core.Binder.equal b) recomputed || respells ctx v

@@ -15798,3 +15798,14 @@
   (alias runtest)
   (deps frame_box_pointer_scope.t.exe)
   (action (run ./frame_box_pointer_scope.t.exe))))
+
+(subdir frame_plan_rebind
+ (rule
+  (targets frame_plan_rebind.t.exe)
+  (deps FramePlanRebind.vo frame_plan_rebind.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} frame_plan_rebind.t.exe frame_plan_rebind.t.cpp frame_plan_rebind.cpp)))
+ (rule
+  (alias runtest)
+  (deps frame_plan_rebind.t.exe)
+  (action (run ./frame_plan_rebind.t.exe))))
