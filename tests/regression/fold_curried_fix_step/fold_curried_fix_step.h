@@ -166,9 +166,15 @@ struct FoldCurriedFixStep {
                   }
                 }
               };
-          return [=](uint64_t _pa0,
-                     uint64_t _pa1) {
-            return go(List<bool>::nil(), acc, _pa0, _pa1);
+          return [=](uint64_t _pa0) {
+            return [=, acc = acc](uint64_t _pa1) {
+              return go(List<bool>::nil(),
+                        [=, acc = acc](uint64_t _rg0_0,
+                                       uint64_t _rg0_1) {
+                          return crane::apply2(acc, _rg0_0, _rg0_1);
+                        },
+                        _pa0, _pa1);
+            };
           };
         },
         [=](uint64_t _ec0) {

@@ -1418,7 +1418,10 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
            it. *)
         let full_call = Cpp_ir.Build.call (Local fix_id) (List.rev args @ pa_exprs) in
         decls @ defs
-        @ deref_subst [k (Cpp_ir.Build.lambda pa_params None [Return (Some full_call)] ~capture:Stored)]
+        (* The closure takes the rest as the position it fills takes them:
+           curried where a type variable stands for the function type, a
+           fold's accumulator. *)
+        @ deref_subst [k (Coerce.grouped_lambda ?into:(Coerce.position_cpp_ty cx None) pa_params full_call)]
       end
       else
         let closures = escapes in

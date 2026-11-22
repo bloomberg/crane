@@ -266,17 +266,6 @@
   (deps case_of_case_coercion.t.exe)
   (action (run ./case_of_case_coercion.t.exe))))
 
-(subdir fold_curried_fix_step
- (rule
-  (targets fold_curried_fix_step.t.exe)
-  (deps FoldCurriedFixStep.vo fold_curried_fix_step.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_curried_fix_step.t.exe fold_curried_fix_step.t.cpp fold_curried_fix_step.cpp)))
- (rule
-  (alias runtest)
-  (deps fold_curried_fix_step.t.exe)
-  (action (run ./fold_curried_fix_step.t.exe))))
-
 (subdir frame_box_pointer_scope
  (rule
   (targets frame_box_pointer_scope.t.exe)
