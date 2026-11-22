@@ -4,3 +4,16 @@
  (package rocq-crane)
  (plugins rocq-crane.plugin)
  (theories Stdlib ITree ExtLib Paco))
+
+; The runtime headers' digest, which Crane.Extraction requires: see
+; scripts/runtime-headers-digest.sh.
+(rule
+ (targets RuntimeHeaders.v)
+ (deps
+  %{project_root}/scripts/runtime-headers-digest.sh
+  (source_tree cpp)
+  (source_tree cpp_bde))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run sh %{project_root}/scripts/runtime-headers-digest.sh))))

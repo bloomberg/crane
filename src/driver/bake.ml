@@ -157,30 +157,6 @@ let rec files_under dir ext =
       else acc )
     [] (Sys.readdir dir)
 
-(* Crane's runtime headers: [theories/cpp] of the tree the loaded Crane
-   theory was built in, whichever build directory ([_build/default],
-   [_build/census/default], ...) that was. *)
-let runtime_include () =
-  let has_runtime dir = Sys.file_exists (Filename.concat dir "crane_bake.h") in
-  match Benchmark.crane_runtime_include () with
-  | Some dir when has_runtime dir -> Some dir
-  | found -> (
-    let marker = Filename.dir_sep ^ "_build" ^ Filename.dir_sep in
-    let source_tree dir =
-      let n = String.length marker in
-      let rec find i =
-        if i + n > String.length dir then None
-        else if String.sub dir i n = marker then Some (String.sub dir 0 i)
-        else find (i + 1)
-      in
-      find 0
-    in
-    match Option.bind found source_tree with
-    | Some root ->
-      let dir = Filename.concat (Filename.concat root "theories") "cpp" in
-      if has_runtime dir then Some dir else found
-    | None -> found )
-
 let driver_source header =
   "#include \"crane_bake.h\"\n#include \"" ^ header ^ "\"\n"
   ^ "int main(int argc, char **argv) { return crane::bake::main(argc, argv); }\n"
@@ -255,24 +231,23 @@ let bake_one ~opaque_access qualid =
     try Subprocess.split_arguments flags
     with Subprocess.Invalid_arguments m -> fail_with dir Pp.(str ("invalid Crane Bake Flags: " ^ m))
   in
-  (* A BDE build reads the BDE flavour of a runtime header first
-     (scripts/compile-bde.sh). *)
-  let runtime =
-    match runtime_include () with
-    | Some d when Toolchain.is_bde () ->
-      let bde = Filename.concat (Filename.dirname d) "cpp_bde" in
-      if Sys.file_exists bde then [bde; d] else [d]
-    | Some d -> [d]
-    | None -> []
-  in
-  ( try
-      Toolchain.compile_cpp ~shouldlink:true ~includes:(include_dirs @ runtime)
-        ~flags:(["-O1"; "-w"; "-include"; "crane_bake.h"] @ user_flags @ sources)
-        ~outfile:exe driver
-    with
+  let runtime = Bake_inputs.runtime_dirs () in
+  (* Each source is compiled on its own, so the compiler writes each one's
+     dependency file ([-MD], next to its object): the headers the image was
+     computed from, which are recorded with it ({!Bake_inputs}). *)
+  let flags = ["-O1"; "-w"; "-include"; "crane_bake.h"; "-MD"] @ user_flags in
+  let includes = include_dirs @ runtime in
+  let compile ?shouldlink ?(extra = []) ?outfile source =
+    try Toolchain.compile_cpp ?shouldlink ~includes ~flags:(flags @ extra) ?outfile source with
     | Toolchain.NoClangFound -> fail_with dir Pp.(str "clang++ is not available.")
     | Toolchain.ClangError (_, errors) ->
-      fail_with dir Pp.(str "the bake driver failed to compile:" ++ fnl () ++ str (errors_of errors)) );
+      fail_with dir Pp.(str "the bake driver failed to compile:" ++ fnl () ++ str (errors_of errors))
+  in
+  List.iter (fun source -> compile source) sources;
+  let objects = List.map (fun source -> Filename.chop_suffix source ".cpp" ^ ".o") sources in
+  compile ~shouldlink:true ~extra:objects ~outfile:exe driver;
+  let depfiles = List.map (fun source -> Filename.chop_suffix source ".cpp" ^ ".d") sources @ [exe ^ ".d"] in
+  let inputs = Bake_inputs.record ~generated:dir (List.filter Sys.file_exists depfiles) in
   let out = Filename.concat dir "image.inc" in
   let result = Subprocess.capture exe [out; symbol; symbol ^ "_"] in
   ( match result.status with
@@ -283,6 +258,7 @@ let bake_one ~opaque_access qualid =
           ++ fnl () ++ str result.stderr) );
   let image = In_channel.with_open_bin out In_channel.input_all in
   remove_tree dir;
-  Base.Table.record_baked r {Base.Table.symbol; image}
+  Base.Table.record_baked r
+    {Base.Table.symbol; image; inputs; compiler = Bake_inputs.compiler (); env_flags = Bake_inputs.env_flags ()}
 
 let bake ~opaque_access l = List.iter (bake_one ~opaque_access) l

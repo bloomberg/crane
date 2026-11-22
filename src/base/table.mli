@@ -1457,9 +1457,19 @@ val is_erased_fix_group : Core.Occurrence.t -> bool
 
 (** {2 Baked constants ([Crane Bake c])} *)
 
+(** A file the bake driver's compilation read, and its digest then: a
+    runtime header named relative to the directory holding Crane's runtime
+    ([in_runtime]: [cpp/shared_array.h]), any other file by its absolute
+    path. *)
+type bake_input = {file : string; in_runtime : bool; digest : Digest.t}
+
 (** What a baked constant is initialised with: the C++ name its image is
-    declared under, and the image, C++ text the bake driver wrote. *)
-type baked = {symbol : string; image : string}
+    declared under, and the image, C++ text the bake driver wrote; and what it
+    was computed from outside the Rocq document, which an extraction checks
+    is unchanged ({!Driver.Bake_inputs.check}): the files the driver's
+    compilation read, the compiler ([clang++ --version]) and
+    [CRANE_BAKE_FLAGS]. *)
+type baked = {symbol : string; image : string; inputs : bake_input list; compiler : string; env_flags : string}
 
 (** Records [r]'s image (a libobject, so it survives [Require]); [r] is then
     never inlined. *)

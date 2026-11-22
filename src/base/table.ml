@@ -4356,9 +4356,17 @@ let () =
 
 (** {2 Baked constants ([Crane Bake c])} *)
 
+(* A file the bake driver's compilation read: a runtime header, named
+   relative to the directory holding Crane's runtime ([cpp/shared_array.h]),
+   or any other file by its absolute path; and its digest then. *)
+type bake_input = {file : string; in_runtime : bool; digest : Digest.t}
+
 (* What a baked constant is initialised with: the name its image is declared
-   under, and the image itself, C++ text ({!Driver.Bake}). *)
-type baked = {symbol : string; image : string}
+   under, and the image itself, C++ text ({!Driver.Bake}); and what the image
+   was computed from outside the Rocq document, which an extraction checks
+   is unchanged ({!Driver.Bake_inputs}): the files the driver's compilation
+   read, the compiler ([clang++ --version]) and [CRANE_BAKE_FLAGS]. *)
+type baked = {symbol : string; image : string; inputs : bake_input list; compiler : string; env_flags : string}
 
 let bake_table = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrBake"
 

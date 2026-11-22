@@ -46,12 +46,14 @@ Running the generated C++ once and emitting the value as data does work.
    `Table.bake_root = c`, the constant's initialiser becomes
    `crane::bake::root(<body>)` and its declaration `[[gnu::used]]`
    (`Cpp_state.read_by_a_function`), so it runs at static initialisation.
-   Crane links the unit with a driver whose `main` is `crane::bake::main`
-   (via `Toolchain.compile_cpp`, `-O1`, plus `Set Crane Bake Flags` and
-   `CRANE_BAKE_FLAGS`) and runs it through `Subprocess.capture`. The driver
-   writes the image as C++, and Crane records it with the constant
-   (`Table.record_baked`, a libobject, so it survives `Require`). A baked
-   constant is never inlined (`add_inline_entries false`).
+   Crane compiles each source of the unit on its own and links them with a
+   driver whose `main` is `crane::bake::main` (via `Toolchain.compile_cpp`,
+   `-O1 -MD`, plus `Set Crane Bake Flags` and `CRANE_BAKE_FLAGS`) and runs it
+   through `Subprocess.capture`. The driver writes the image as C++, and
+   Crane records it with the constant (`Table.record_baked`, a libobject, so
+   it survives `Require`), together with what it was computed from (see
+   [Stale images](#stale-images)). A baked constant is never inlined
+   (`add_inline_entries false`).
 3. **Use**. Lowering (`Functions.baked_initialiser`, on both the definition
    and the header specification path) still generates the body, so the unit
    plans and includes what it would. It then initialises the constant with
@@ -63,6 +65,44 @@ Running the generated C++ once and emitting the value as data does work.
    `print_structure_to_file` declares the image `extern` in the header (after
    `#include "crane_bake.h"`, ahead of the namespace) and appends the image
    text, as the driver wrote it, to the implementation file.
+   First it checks the image is not stale (`Bake_inputs.check`).
+
+## Stale images
+
+An image is the output of C++ code: the runtime headers (`crane_bake.h`
+writes it, and every header the unit includes computes the value), compiled
+by `clang++` with `CRANE_BAKE_FLAGS`. None of these is something a build
+system sees a `.vo` depend on, so a changed header could leave a library
+holding an image the new code reads differently (a changed `image` layout
+fails to compile; a changed representation could read wrong). Two
+mechanisms keep images current.
+
+- **The recorded inputs** (`src/driver/bake_inputs.ml`). Each source is
+  compiled on its own with `-MD`, so the compiler lists every file it read.
+  The bake records each with its digest (`Table.bake_input`: a runtime header
+  relative to the directory holding `cpp/` and `cpp_bde/`, so a library
+  baked against one checkout or installation of Crane is checked against the
+  one in use; any other file, system and mapping headers included, by its
+  absolute path), plus `clang++ --version` and `CRANE_BAKE_FLAGS`. An
+  extraction that would emit an image re-digests those files and compares
+  them; on any difference it fails with `Crane Bake: the baked image of <c> is
+  stale: <file> has changed since it was baked. Rebuild the file whose Crane
+  Bake command baked it.` It does not re-bake: a bake is a nested
+  extraction, which cannot run inside the one in progress. `Set Crane Bake
+  Flags` is not compared: it is set in the document, which the build system
+  does see. Libraries linked into the driver (BDE's) are not recorded.
+- **The dune dependency.** `theories/RuntimeHeaders.v` is generated
+  (`scripts/runtime-headers-digest.sh`, a rule in `theories/dune`) with the
+  headers' digest in a definition's name, and `Crane.Extraction` requires
+  it. Every file that loads Crane therefore depends on the runtime headers'
+  contents: editing a header rebuilds the files that bake (and the tests'
+  extractions and executables), rather than leaving the stale image for the
+  check to refuse. For an installed Crane the headers change only with a
+  reinstall, which installs a new `RuntimeHeaders.vo` too.
+
+`unit_tests/bake_inputs_test.ml` covers the dependency-file parser and the
+comparison (a changed or removed file, a runtime moved with the same
+headers).
 
 ## The image (`theories/cpp/crane_bake.h`)
 
