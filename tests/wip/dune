@@ -244,3 +244,157 @@
 
 
 
+
+(subdir loopify_constant_local_fix
+ (rule
+  (targets loopify_constant_local_fix.t.exe)
+  (deps LoopifyConstantLocalFix.vo loopify_constant_local_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_constant_local_fix.t.exe loopify_constant_local_fix.t.cpp loopify_constant_local_fix.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_constant_local_fix.t.exe)
+  (action (run ./loopify_constant_local_fix.t.exe))))
+
+(subdir boxed_fields_match_arg_obj
+ (rule
+  (targets boxed_fields_match_arg_obj.t.exe)
+  (deps BoxedFieldsMatchArgObj.vo boxed_fields_match_arg_obj.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_fields_match_arg_obj.t.exe boxed_fields_match_arg_obj.t.cpp boxed_fields_match_arg_obj.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_fields_match_arg_obj.t.exe)
+  (action (run ./boxed_fields_match_arg_obj.t.exe))))
+
+(subdir bake_text_trigraph
+ (rule
+  (targets bake_text_trigraph.t.exe)
+  (deps BakeTextTrigraph.vo bake_text_trigraph.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_text_trigraph.t.exe bake_text_trigraph.t.cpp bake_text_trigraph.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_text_trigraph.t.exe)
+  (action (run ./bake_text_trigraph.t.exe))))
+
+(subdir bake_array_of_nodes
+ (rule
+  (targets bake_array_of_nodes.t.exe)
+  (deps BakeArrayOfNodes.vo bake_array_of_nodes.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_array_of_nodes.t.exe bake_array_of_nodes.t.cpp bake_array_of_nodes.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_array_of_nodes.t.exe)
+  (action (run ./bake_array_of_nodes.t.exe))))
+
+(subdir bake_functor_application_constant
+ (rule
+  (targets bake_functor_application_constant.t.exe)
+  (deps BakeFunctorApplicationConstant.vo bake_functor_application_constant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_functor_application_constant.t.exe bake_functor_application_constant.t.cpp bake_functor_application_constant.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_functor_application_constant.t.exe)
+  (action (run ./bake_functor_application_constant.t.exe))))
+
+(subdir loop_acc_curried_partial_app
+ (rule
+  (targets loop_acc_curried_partial_app.t.exe)
+  (deps LoopAccCurriedPartialApp.vo loop_acc_curried_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loop_acc_curried_partial_app.t.exe loop_acc_curried_partial_app.t.cpp loop_acc_curried_partial_app.cpp)))
+ (rule
+  (alias runtest)
+  (deps loop_acc_curried_partial_app.t.exe)
+  (action (run ./loop_acc_curried_partial_app.t.exe))))
+
+(subdir bde_loop_acc_fn_std_string
+ (rule
+  (targets bde_loop_acc_fn_std_string.t.exe)
+  (deps BdeLoopAccFnStdString.vo bde_loop_acc_fn_std_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} bde_loop_acc_fn_std_string.t.exe bde_loop_acc_fn_std_string.t.cpp bde_loop_acc_fn_std_string.cpp)))
+ (rule
+  (alias runtest)
+  (deps bde_loop_acc_fn_std_string.t.exe)
+  (action (run ./bde_loop_acc_fn_std_string.t.exe))))
+
+(subdir bake_alternating_types_quadratic
+ (rule
+  (targets bake_alternating_types_quadratic.t.exe)
+  (deps BakeAlternatingTypesQuadratic.vo bake_alternating_types_quadratic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_alternating_types_quadratic.t.exe bake_alternating_types_quadratic.t.cpp bake_alternating_types_quadratic.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_alternating_types_quadratic.t.exe)
+  (action (run ./bake_alternating_types_quadratic.t.exe))))
+
+(subdir capture_move_then_alias
+ (rule
+  (targets capture_move_then_alias.t.exe)
+  (deps CaptureMoveThenAlias.vo capture_move_then_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} capture_move_then_alias.t.exe capture_move_then_alias.t.cpp capture_move_then_alias.cpp)))
+ (rule
+  (alias runtest)
+  (deps capture_move_then_alias.t.exe)
+  (action (run ./capture_move_then_alias.t.exe))))
+
+(subdir bake_text_overlength
+ (rule
+  (targets bake_text_overlength.t.exe)
+  (deps BakeTextOverlength.vo bake_text_overlength.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_text_overlength.t.exe bake_text_overlength.t.cpp bake_text_overlength.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_text_overlength.t.exe)
+  (action (run ./bake_text_overlength.t.exe))))
+
+(subdir bde_concept_declval_include
+ (rule
+  (targets bde_concept_declval_include.t.exe)
+  (deps BdeConceptDeclvalInclude.vo bde_concept_declval_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} bde_concept_declval_include.t.exe bde_concept_declval_include.t.cpp bde_concept_declval_include.cpp)))
+ (rule
+  (alias runtest)
+  (deps bde_concept_declval_include.t.exe)
+  (action (run ./bde_concept_declval_include.t.exe))))
+
+(subdir alias_param_convention_check
+ (rule
+  (targets alias_param_convention_check.t.exe)
+  (deps AliasParamConventionCheck.vo alias_param_convention_check.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_param_convention_check.t.exe alias_param_convention_check.t.cpp alias_param_convention_check.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_param_convention_check.t.exe)
+  (action (run ./alias_param_convention_check.t.exe))))
+
+(subdir snd_pair_poly_sum_scrutinee
+ (rule
+  (targets snd_pair_poly_sum_scrutinee.t.exe)
+  (deps SndPairPolySumScrutinee.vo snd_pair_poly_sum_scrutinee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} snd_pair_poly_sum_scrutinee.t.exe snd_pair_poly_sum_scrutinee.t.cpp snd_pair_poly_sum_scrutinee.cpp)))
+ (rule
+  (alias runtest)
+  (deps snd_pair_poly_sum_scrutinee.t.exe)
+  (action (run ./snd_pair_poly_sum_scrutinee.t.exe))))
+
+(subdir deque_fold_curried_acc
+ (rule
+  (targets deque_fold_curried_acc.t.exe)
+  (deps DequeFoldCurriedAcc.vo deque_fold_curried_acc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_curried_acc.t.exe deque_fold_curried_acc.t.cpp deque_fold_curried_acc.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_fold_curried_acc.t.exe)
+  (action (run ./deque_fold_curried_acc.t.exe))))
