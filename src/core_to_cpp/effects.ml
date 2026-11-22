@@ -199,7 +199,7 @@ let gen_bind_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use 
         let app = Cpp_ir.Build.call f_typed.expr [result] in
         Typed_checks.agreement cx ~site:"bind temporary" action (Exactly cpp_ty);
         [ Bind_variable (temp_id, Declare (cpp_ty, None), a);
-          Destination.finish cx k (Cpp_ir.Typed.v ~ty:(Typed_checks.applied f_typed.ty 1) app) ]
+          Destination.finish cx k (Cpp_ir.Typed.v ~ty:(Cpp_ir.Typed.applied f_typed.ty 1) app) ]
       | None ->
         side_effect @ gen_stmts cx ~slot env k f ) ) )
   end

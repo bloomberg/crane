@@ -87,6 +87,47 @@ let of_node expr = {expr; ty = node_type expr}
 let rewrap f x = {x with expr = f x.expr}
 let or_type ty x = if Value_type_.not_yet_typed x.ty then {x with ty} else x
 
+(** The type left once [groups] of a callable returning [result] are still
+    to come: [result] itself where none is. *)
+let rest_type groups result : Lowered.Type.t =
+  match groups with [] -> result | groups -> Arrows_.to_type {groups; result}
+
+let applied (f : Lowered.Value_type.t) n : Lowered.Value_type.t =
+  let rec take (groups : Lowered.Type.t list list) result n : Lowered.Type.t option =
+    match groups with
+    | _ when n = 0 -> Some (rest_type groups result)
+    | g :: rest when List.length g <= n -> take rest result (n - List.length g)
+    | g :: rest -> Some (rest_type (List.filteri (fun i _ -> i >= n) g :: rest) result)
+    | [] -> ( match Arrows_.of_type result with Some a -> take a.groups a.result n | None -> None )
+  in
+  match Value_type_.arrows f with
+  | Some a -> ( match take a.groups a.result n with Some t -> Typed t | None -> not_yet )
+  | None -> not_yet
+
+let apply ?first ?(prefix = "_sat") f args =
+  let rec go (call : Lowered.Expr.t list -> Lowered.Expr.t) ~pending (ty : Lowered.Value_type.t) fe args =
+    if args = [] && not pending then {expr = fe; ty}
+    else
+      match Value_type_.arrows ty with
+      | Some {groups = g :: rest; result} ->
+        let n = List.length g and given = List.length args in
+        if given >= n then
+          let e = call (List.filteri (fun i _ -> i < n) args) in
+          go (Build.call e) ~pending:false (Typed (rest_type rest result)) e (List.filteri (fun i _ -> i >= n) args)
+        else
+          let waiting =
+            List.mapi
+              (fun i t -> (t, Some (Names.Id.of_string (Printf.sprintf "%s%d" prefix i))))
+              (List.filteri (fun i _ -> i >= given) g)
+          in
+          let body = call (args @ List.map (fun (_, id) : Lowered.Expr.t -> Local (Option.get id)) waiting) in
+          { expr = Build.lambda waiting None [Return (Some body)] ~capture:Stored;
+            ty = Closure {groups = [List.map fst waiting]; result = rest_type rest result} }
+      | _ -> {expr = call args; ty = not_yet}
+  in
+  let call, pending = match first with Some c -> (c, true) | None -> (Build.call f.expr, false) in
+  go call ~pending f.ty f.expr (List.map (fun a -> a.expr) args)
+
 let rec const_type : Lowered.Type.t -> bool = function
   | Const _ -> true
   | Reference (_, t) | In_namespace (_, t) -> const_type t

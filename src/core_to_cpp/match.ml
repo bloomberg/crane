@@ -1862,7 +1862,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
         under_branch_binders (fun () -> Calls.split_instance_args ~lex:(current_lexenv cx ()) value_args)
       in
       let call =
-        (* Source order, as {!Coerce.mk_arity_call} takes them. *)
+        (* Source order, as {!Cpp_ir.Typed.apply} takes them. *)
         let arg_exprs =
           under_branch_binders @@ fun () ->
           List.mapi
@@ -1923,10 +1923,16 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
         in
         (* A class method is a static member function of the instance
            struct, so its arity is the field's. *)
-        (Coerce.mk_arity_call
-             ?params:(Option.map (fun _ -> List.map (Types.cpp_of_core cx env') fld_param_tys) fld_ty_opt)
-             ~saturated:(Cpp_ir.Build.call callee)
-             arg_exprs)
+        let method_ty : Cpp_ir.Lowered.Value_type.t =
+          match fld_ty_opt with
+          | Some ft ->
+            Typed
+              (Function
+                 ( List.map (Types.cpp_of_core cx env') fld_param_tys,
+                   Types.cpp_of_core cx env' (snd (get_args_and_ret [] ft)) ))
+          | None -> Deduced Not_yet_typed
+        in
+        (Cpp_ir.Typed.apply ~first:(Cpp_ir.Build.call callee) (Cpp_ir.Typed.v ~ty:method_ty callee) (List.map Cpp_ir.Typed.of_node arg_exprs)).expr
       in
       let n_value_args = List.length value_args in
       let erased_cod =

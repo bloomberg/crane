@@ -1032,29 +1032,31 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
             else None
           | _ -> None
         in
-        let rec chain_excess base cod excess =
-          if excess = [] then base
+        (* The groups [excess] goes to the result in, as the codomain [cod]
+           takes them.  A codomain written by name -- [stateT nat (stateT
+           bool m) A], which is [nat -> stateT bool m (nat * A)] -- takes the
+           arguments of the arrows the name stands for, and what is left
+           after them may be another such name.  The last group takes
+           whatever is left. *)
+        let rec excess_groups cod (excess : Cpp_ir.Typed.t list) : Cpp_ir.Lowered.Type.t list list =
+          if excess = [] then []
           else
-            (* A codomain written by name -- [stateT nat (stateT bool m) A],
-               which is [nat -> stateT bool m (nat * A)] -- takes the
-               arguments of the arrows the name stands for, and what is left
-               after them may be another such name. *)
             let cod = Option.map expand_core_fun_alias cod in
-            let n_here, cod' =
-              let cod_cpp c =
-                let t = Types.cpp_of_core cx env c in
-                Cpp_ir.Types.spell_arrows cod_site t
-              in
-              match Option.map cod_cpp cod with
-              | Some (Function (dom, _)) when List.length dom < List.length excess
-                ->
-                let n = List.length dom in
-                (n, Option.map (core_drop_arrows n) cod)
-              | _ -> (List.length excess, None)
-            in
-            let here = List.filteri (fun i _ -> i < n_here) excess in
-            let rest = List.filteri (fun i _ -> i >= n_here) excess in
-            chain_excess (Cpp_ir.Build.call base here) cod' rest
+            let cod_cpp c = Cpp_ir.Types.spell_arrows cod_site (Types.cpp_of_core cx env c) in
+            match Option.map cod_cpp cod with
+            | Some (Function (dom, _)) when List.length dom < List.length excess ->
+              let n = List.length dom in
+              dom :: excess_groups (Option.map (core_drop_arrows n) cod) (List.filteri (fun i _ -> i >= n) excess)
+            | _ ->
+              [ List.map
+                  (fun (a : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Type.t -> match a.ty with Typed t -> t | _ -> Auto)
+                  excess ]
+        in
+        let chain_excess base cod excess =
+          let excess = List.map Cpp_ir.Typed.of_node excess in
+          match excess_groups cod excess with
+          | [] -> base
+          | groups -> (Cpp_ir.Typed.apply (Cpp_ir.Typed.typed (Cpp_ir.Arrows.to_type {groups; result = Auto}) base) excess).expr
         in
         (* A domain the codomain spells [std::any] -- the event of a handler
            that [case_] combined at an erased family -- is opened by code that
@@ -1551,7 +1553,11 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
               in
               (* The surplus goes to the result in the groups its spelling
                  takes them in ({!Calls.call_result_site}). *)
-              Coerce.apply_at_site (Calls.call_result_site id) filled surplus
+              let filled_ty =
+                Cpp_ir.Types.spell_arrows (Calls.call_result_site id)
+                  (Function (List.map fst (List.filteri (fun i _ -> i >= k) eta_args), cod))
+              in
+              (Cpp_ir.Typed.apply (Cpp_ir.Typed.typed filled_ty filled) (List.map Cpp_ir.Typed.of_node surplus)).expr
             | None -> made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob (passed call_args))
           in
           let ret_ty, (body : Cpp_ir.Lowered.Stmt.t list) =

@@ -447,6 +447,12 @@ let slot_repr_of_cpp_type cx t =
     passing the wrong scope. *)
 let cpp_of_core cx env t = cpp_ir_of_core_type cx env (get_current_type_vars cx) t
 
+(** What a callee of the Core type [t] returns once given [n] value
+    arguments, converted; [auto] (C++ deduces it) where [t] has fewer
+    arrows. *)
+let codomain_after cx env n t : Cpp_ir.Lowered.Type.t =
+  match Base.Type_util.strip_arrows_n n t with Some c -> cpp_of_core cx env c | None -> Auto
+
 (** The result a let's right-hand side, bound at the Core type [t], falls
     back to where a position in it states nothing
     ({!Coerce.position_cpp_ty}): the bound value is not the enclosing

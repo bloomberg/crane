@@ -380,39 +380,6 @@ let name_fn_arg_built param_core_ty (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowe
   | Core.Type.Variable _, Lambda _ -> Function_value expr
   | _ -> expr
 
-(** [mk_arity_call ~params ~saturated args] applies a callee to [args], given
-    in {e source} order, where the callee's declaration fixes its parameters
-    to [params].  [saturated] builds the call, from exactly as many arguments
-    as [params] has.
-
-    A call site need not match that arity, and a flat call is wrong whichever
-    way it misses.  Arguments past the arity apply to the call's {e result} --
-    a binder instantiated at a function type, say -- rather than to the
-    callee.  Arguments short of it leave a closure over the ones still to
-    come, so the call is eta-expanded instead of emitted shorter than it is
-    declared.
-
-    Omit [params] where the declaration is not known: an empty list means a
-    nullary callee, which is a different thing and applies every argument to
-    the result. *)
-let mk_arity_call ?(params : Cpp_ir.Lowered.Type.t list option)
-    ~(saturated : Cpp_ir.Lowered.Expr.t list -> Cpp_ir.Lowered.Expr.t) args : Cpp_ir.Lowered.Expr.t =
-  match params with
-  | None -> saturated args
-  | Some params ->
-    let arity = List.length params in
-    let given = List.length args in
-    if given > arity then
-      match List.filteri (fun i _ -> i >= arity) args with
-      | [] -> saturated args
-      | rest -> Cpp_ir.Build.call (saturated (List.filteri (fun i _ -> i < arity) args)) rest
-    else if given < arity then
-      let waiting = adapter_params ~prefix:"_sat" (List.filteri (fun i _ -> i >= given) params) in
-      Cpp_ir.Build.lambda waiting None
-        [Return (Some (saturated (args @ List.map adapter_arg waiting)))]
-        ~capture:Stored
-    else saturated args
-
 (** [regroup_value ~from ~into expr]: [expr], a function value of the C++
     type [from], as one of [into] where the two are one function type with
     its arrows grouped otherwise ({!Cpp_ir.Types.same_arrows}) and [into]
@@ -763,23 +730,6 @@ let box_for_any_slot cx kind e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.E
   | _ -> ( match kind with Family_box -> deep_box_list cx e expr | Var_box -> expr )
 
 
-(** [apply_at_site site f args]: [f] applied to [args] as a callee spelled
-    at the arrow site [site] takes them -- all at once where it was declared
-    with them, one at a time through a type variable, and past the [n] a
-    declaration wrote one at a time.  No arguments is [f] itself. *)
-let apply_at_site (site : Cpp_ir.Types.arrow_site) (f : Cpp_ir.Lowered.Expr.t) args =
-  let apply f args = match args with [] -> f | _ -> Cpp_ir.Build.call f args in
-  let one_at_a_time f args = List.fold_left (fun f a -> Cpp_ir.Build.call f [a]) f args in
-  match site with
-  | Cpp_ir.Types.Declared -> apply f args
-  | Cpp_ir.Types.Through_tvar | Cpp_ir.Types.Declared_at 0 -> one_at_a_time f args
-  | Cpp_ir.Types.Declared_at n ->
-    if List.length args <= n then apply f args
-    else
-      one_at_a_time
-        (Cpp_ir.Build.call f (List.filteri (fun i _ -> i < n) args))
-        (List.filteri (fun i _ -> i >= n) args)
-
 (** [stored_adapter params e]: the lambda taking [params], in source order,
     that returns [e] and holds its captures by copy, its return type
     deduced. *)
@@ -914,11 +864,21 @@ let curry_value_to_expected_built cx env ?(expected_ty : Cpp_ir.Lowered.Type.t o
         match flat ty with
         | Function (dom, _) ->
           let ps = adapter_params ~prefix:(Id.to_string (Option.get id) ^ "_") dom in
-          stored_adapter ps (apply_at_site Through_tvar (Local (Option.get id)) (List.map adapter_arg ps))
+          stored_adapter ps
+            (Cpp_ir.Typed.apply
+               (Cpp_ir.Typed.typed ty (Local (Option.get id)))
+               (List.map (fun p -> Cpp_ir.Typed.of_node (adapter_arg p)) ps) )
+              .expr
         | _ -> adapter_arg (ty, id) )
       | _ -> adapter_arg (ty, id)
     in
-    let call = apply_at_site callee_site cglob (List.mapi passed params) in
+    (* The callee takes the parameters as the site it is spelled at groups
+       them. *)
+    let call =
+      let callee_ty = Cpp_ir.Types.spell_arrows callee_site (Function (decl_dom, Option.default Cpp_ir.Type.Auto decl_cod)) in
+      (Cpp_ir.Typed.apply (Cpp_ir.Typed.typed callee_ty cglob) (List.mapi (fun i p -> Cpp_ir.Typed.of_node (passed i p)) params))
+        .expr
+    in
     let expected_ty =
       match (expected_ty, exp_cod, decl_cod) with
       | Some _, Some (Variable _), Some cod when List.length decl_dom > List.length exp_dom ->
@@ -1073,6 +1033,10 @@ type origin =
       param_core_ty : Core.Type.t;
       term : Core.Expr.t;
     }  (** {!erase_fn_arg_for_param}: erase a callable, convert a carrier *)
+  | Pa
+      (** {!grouped_lambda}: the closure a partial application leaves
+          ({!Cpp_ir.Typed.apply}), regrouped by nesting its own
+          parameters rather than wrapped *)
 
 (** The adapter an origin names, for the census. *)
 let origin_name = function
@@ -1083,10 +1047,11 @@ let origin_name = function
   | Tvar_name _ -> "name_fn_arg_for_tvar_param"
   | Ue _ -> "coerce"
   | Param _ -> "erase_fn_arg_for_param"
+  | Pa -> "grouped_lambda"
 
 (** The plans an origin's expansion builds, by {!Cpp_ir.Coercion.plan_name}. *)
 let builds = function
-  | Rg | Ee _ -> ["regroup"]
+  | Rg | Ee _ | Pa -> ["regroup"]
   | Ec _ -> ["eta"; "regroup"]
   | Crossing -> ["convert"]
   | Tvar_name _ -> ["name"]
@@ -1131,6 +1096,10 @@ let expand origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   | Ue {cx; term; from}, _, Some into -> coerce_built cx ?term ?from ~into x.expr
   | Ue _, _, None -> x.expr
   | Param {cx; env; param_core_ty; term}, _, _ -> erase_fn_arg_built cx env param_core_ty term x.expr
+  | Pa, _, into -> (
+    match x.expr with
+    | Lambda {params; body = [Return (Some body)]; _} -> grouped_lambda ?into params body
+    | e -> e )
   | (Rg | Crossing), _, _ -> x.expr
 
 (** [into_slot ~origin x into]: [x] put in the slot [into] through the

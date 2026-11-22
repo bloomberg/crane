@@ -40,6 +40,25 @@ val rewrap : (Lowered.Expr.t -> Lowered.Expr.t) -> t -> t
 (** [x], typed as [ty] where it is not yet typed. *)
 val or_type : Lowered.Value_type.t -> t -> t
 
+(** [applied f n] is what a callable of type [f] yields given [n]
+    arguments, taken group by group as its type takes them: the rest of a
+    group they straddle and the groups after it, a function of what is left;
+    past its last group, the result's own groups.  Not yet typed where [f]
+    or a result the arguments reach is no callable. *)
+val applied : Lowered.Value_type.t -> int -> Lowered.Value_type.t
+
+(** [apply ?first ?prefix f args] is [f] applied to [args], in source order,
+    as its type groups its parameters: one C++ call per group.  A group the
+    arguments straddle at the end leaves a closure over the rest of it, its
+    parameters named [prefix] (default ["_sat"]) and a position.  Arguments
+    past [f]'s last group apply to its result, group by group at the
+    result's own type; all at once where that is no callable, or [f]'s type
+    is unknown.  [first] builds the call of the first group in place of
+    calling [f.expr] (a callee that takes more than the arguments, such as a
+    lifted function's captured variables); a callee given [first] is called
+    even with no arguments.  No arguments is [f] itself otherwise. *)
+val apply : ?first:(Lowered.Expr.t list -> Lowered.Expr.t) -> ?prefix:string -> t -> t list -> t
+
 (** The value category of [x], from its node: a variable is an lvalue,
     [const] where its type is, a move an xvalue, anything else a
     prvalue. *)

@@ -999,6 +999,13 @@ let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
         args
     in
     let opaque () = Cpp_ir.Build.signature ~nargs:0 () in
+    (* The lifted function's own type: the lambda's parameters, one group,
+       then what its body returns. *)
+    let lifted_type : Cpp_ir.Lowered.Type.t =
+      Function
+        ( List.map (Types.cpp_of_core cx env) param_core_tys,
+          Types.codomain_after cx env n_actual_params t )
+    in
     let rec subst_lifted_call_expr
         (target : Id.t)
         (lifted : Cpp_ir.Lowered.Expr.t)
@@ -1009,11 +1016,11 @@ let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
       | Call (_, Local id, args) when Id.equal id target ->
         (* The lifted template's parameters come from the lambda, so its
            arity is the lambda's. *)
-        Coerce.mk_arity_call
-          ~params:(List.map (Types.cpp_of_core cx env) param_core_tys)
-          ~saturated:(fun here ->
-            Call (opaque (), lifted, List.rev (free_args @ List.rev (name_lifted_args here))) )
-          (List.map sub args)
+        (Cpp_ir.Typed.apply
+           ~first:(fun here -> Call (opaque (), lifted, List.rev (free_args @ List.rev (name_lifted_args here))))
+           (Cpp_ir.Typed.typed lifted_type lifted)
+           (List.map (fun a -> Cpp_ir.Typed.of_node (sub a)) args) )
+          .expr
       | Local id when Id.equal id target ->
         (* Bare reference to lifted function: generate a properly-typed
            wrapper lambda with one parameter per non-erased Rocq lambda
@@ -1406,38 +1413,27 @@ let gen_applied_fix cx ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
             ~captures:(fix_captures cx ~in_place:false fix_term)
             renamed_ids funs_with_params
         in
-        let remaining_params =
-          (* [fix_params] is in de Bruijn order -- last parameter first -- so
-             the arguments already supplied fill its tail, not its head.  What
-             is left over is the front of the list, returned in source order
-             so the wrapper's parameters line up with the call below. *)
-          List.rev (safe_firstn (n_fix_params - n_provided) fix_params)
+        let member : Cpp_ir.Lowered.Type.t =
+          Function
+            ( List.rev_map (fun (_, t) -> Types.cpp_of_core cx env t) fix_params,
+              Types.codomain_after cx env n_fix_params (snd ids.(x)) )
         in
-        let pa_params =
-          List.mapi
-            (fun j (_, core_ty) ->
-              let cpp_ty =
-                Types.cpp_of_core cx env core_ty
-              in
-              (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
-            remaining_params
+        let fix_id = Cpp_ir.Expr.Local (fst (List.nth renamed_ids x)) in
+        (* [args] is last first ({!gen_args}).  The call takes them, and the
+           closure over the parameters still to come ([_pa]) takes those as
+           the position it fills takes them: curried where a type variable
+           stands for the function type, a fold's accumulator. *)
+        let closure =
+          Cpp_ir.Typed.apply ~first:(Cpp_ir.Build.call fix_id) ~prefix:"_pa" (Cpp_ir.Typed.typed member fix_id)
+            (List.rev_map Cpp_ir.Typed.of_node args)
         in
-        let pa_exprs =
-          List.map (fun (_, id_opt) : Cpp_ir.Lowered.Expr.t -> Local (Option.get id_opt)) pa_params
-        in
-        let fix_id = fst (List.nth renamed_ids x) in
-        (* [args] is last first ({!gen_args}), as the full calls below read
-           it. *)
-        let full_call = Cpp_ir.Build.call (Local fix_id) (List.rev args @ pa_exprs) in
+        let into = Coerce.position_cpp_ty cx None in
         decls @ defs
-        (* The closure takes the rest as the position it fills takes them:
-           curried where a type variable stands for the function type, a
-           fold's accumulator. *)
         @ deref_subst
             [ Destination.finish cx k
-                (let into = Coerce.position_cpp_ty cx None in
-                 Cpp_ir.Typed.or_type (applied_type n_provided)
-                   (Typed_checks.adapted_or_node into (Coerce.grouped_lambda ?into pa_params full_call)) ) ]
+                (Cpp_ir.Typed.or_type (applied_type n_provided)
+                   (Typed_checks.adapted_or_node into
+                      (Coerce.into_slot ~origin:Pa closure (Coerce.slot_of_expected into)) ) ) ]
       end
       else
         let closures = escapes in
@@ -1464,17 +1460,24 @@ let gen_applied_fix cx ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
            [return], which the suspending continuation takes in only once
            the IIFE is inlined ({!Lifting.fixpoint_named_in_returns}). *)
         (* Arguments past the lambda's parameters apply to what it returns
-           ({!Coerce.mk_arity_call}): a fixpoint whose codomain is a function
+           ({!Cpp_ir.Typed.apply}): a fixpoint whose codomain is a function
            type behind a definition -- [st nat], [nat -> nat * nat] -- takes
            its own parameters only, while the term around it, eta-expanded
            at the unfolded type, hands it the state as well. *)
         let call =
+          let member : Cpp_ir.Lowered.Type.t =
+            Function
+              ( List.rev_map (fun (_, t) -> Types.cpp_of_core cx env t) fix_params,
+                Types.codomain_after cx env n_fix_params (snd ids.(x)) )
+          in
+          let callee = Cpp_ir.Expr.Local (fst (List.nth renamed_ids x)) in
           Destination.finish cx k @@ fix_value n_provided
             (made_of occ
-               (Coerce.mk_arity_call
-                  ~params:(List.rev_map (fun (_, t) -> Types.cpp_of_core cx env t) fix_params)
-                  ~saturated:(fun a -> Call (Cpp_ir.Build.signature ~nargs:0 (), Local (fst (List.nth renamed_ids x)), a))
-                  (List.rev args) ) )
+               (Cpp_ir.Typed.apply
+                  ~first:(fun a -> Call (Cpp_ir.Build.signature ~nargs:0 (), callee, a))
+                  (Cpp_ir.Typed.typed member callee)
+                  (List.rev_map Cpp_ir.Typed.of_node args) )
+                 .expr )
         in
         let suspended = in_suspended_tail cx occ in
         check_fixpoint_escape (fst (List.nth renamed_ids x)) ~closures (fun () ->

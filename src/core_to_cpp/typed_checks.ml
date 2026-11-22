@@ -156,24 +156,6 @@ and under cx (x, t) body =
       Lowering_state.push_env_types cx [(Base.Core_util.id_of_binder_name x, t)];
       core_type_of cx body )
 
-(** The type of a callable of type [f] given [n] arguments: what is left
-    once its groups take them, a group straddled leaving a function of the
-    rest. *)
-let applied (f : Cpp_ir.Lowered.Value_type.t) n : Cpp_ir.Lowered.Value_type.t =
-  let rec take (groups : Cpp_ir.Lowered.Type.t list list) result n : Cpp_ir.Lowered.Type.t option =
-    match groups with
-    | _ when n = 0 -> Some (Cpp_ir.Arrows.to_type {groups; result})
-    | g :: rest when List.length g <= n -> take rest result (n - List.length g)
-    | g :: rest -> Some (Cpp_ir.Arrows.to_type {groups = List.filteri (fun i _ -> i >= n) g :: rest; result})
-    | [] -> (
-      match Cpp_ir.Arrows.of_type result with
-      | Some a -> take a.groups a.result n
-      | None -> None )
-  in
-  match Cpp_ir.Value_type.arrows f with
-  | Some a -> ( match take a.groups a.result n with Some t -> Typed t | None -> Deduced Not_yet_typed )
-  | None -> Deduced Not_yet_typed
-
 (** The Core type [e] yields, where it is an action of a sequential monad:
     a call that runs it, so what it yields is its result, whatever the call
     node recorded of the action's type. *)
@@ -201,7 +183,7 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
           | Typed t -> Typed (Types.unfold_cpp_typedef cx env t)
           | v -> v
         in
-        applied callee (Base.Type_util.count_real_core_args arguments)
+        Cpp_ir.Typed.applied callee (Base.Type_util.count_real_core_args arguments)
       (* [tt] applied: only an impossible branch of a dependent match
          writes it, and the crossing it stands under is an abort
          ({!Coerce.absurd_coercion}). *)
