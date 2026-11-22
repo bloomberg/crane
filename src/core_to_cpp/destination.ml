@@ -49,10 +49,6 @@ let rec slot = function
   | Adapted (_, d) -> slot d
   | Custom c -> c.into
 
-(** The type the slot states, for the [?expected_ty] of the tail
-    expression. *)
-let expected d = match slot d with Exactly t -> Some t | _ -> None
-
 (** Whether the statement the value becomes is a [return]. *)
 let rec returns = function
   | Return _ | Return_void -> true

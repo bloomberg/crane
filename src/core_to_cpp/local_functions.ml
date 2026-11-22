@@ -886,16 +886,14 @@ let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
          through an alias, [st nat] for [nat -> nat * nat], states one all
          the same: {!Lambda.gen_lambda} unfolds it, and would write the
          binding's lambda to return the pair. *)
+      let into = Types.let_value_result cx env t in
+      let afun = Destination.Assign (x_renamed, Destination.slot_of into) in
       let asgn =
         match Option.map (Types.unfold_cpp_typedef cx env) (current_cpp_return_type cx ()) with
-        | Some (Function _) ->
-          let into = Types.let_value_result cx env t in
-          with_cpp_return_type cx into (fun () ->
-              gen_stmts cx env (Destination.Assign (x_renamed, Destination.slot_of into)) a )
-        | _ ->
-          gen_stmts cx env
-            (Destination.Assign (x_renamed, Destination.slot_of (current_cpp_return_type cx ())))
-            a
+        | Some (Function _) -> with_cpp_return_type cx into (fun () -> gen_stmts cx env afun a)
+        (* The ambient return type is left for the right-hand side's legacy
+           readers; the destination is the binder's. *)
+        | _ -> gen_stmts cx env afun a
       in
       (* When the RHS was a pair accessor on an erased argument (e.g.
          snd vs where vs : std::any), the result is std::any at runtime
@@ -1131,7 +1129,7 @@ let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
              the lambda's binders. *)
           let compiled_body =
             with_escape_analysis cx (fun () -> with_region cx body (fun () ->
-                gen_stmts cx lam_env (Destination.return_ cx) body ) )
+                gen_stmts cx lam_env (Destination.Return Free) body ) )
           in
           restore_env_types cx saved_env_types;
           (free_var_params, lam_param_ids, lam_env, compiled_body) )
