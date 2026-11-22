@@ -112,9 +112,9 @@ std::string String0::append(const std::string &s1, std::string s2) {
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
 [[clang::no_destroy]] constinit crane::shared_array<unsigned long long>::fixed<10> crane_baked_table_c8c1801e8579_b0{
-    0ULL, 1ULL, 2ULL, 3ULL, 4ULL, 5ULL, 6ULL, 7ULL, 8ULL, 9ULL};
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 [[clang::no_destroy]] constinit crane::shared_array<unsigned long long>::fixed<10> crane_baked_table_c8c1801e8579_b1{
-    0ULL, 3ULL, 6ULL, 9ULL, 12ULL, 15ULL, 18ULL, 21ULL, 24ULL, 27ULL};
+    0, 3, 6, 9, 12, 15, 18, 21, 24, 27};
 [[clang::no_destroy]] constinit crane::shared_array<crane::shared_array<unsigned long long>>::fixed<4> crane_baked_table_c8c1801e8579_b2{
     crane::shared_array<unsigned long long>::of_static(crane_baked_table_c8c1801e8579_b0),
     crane::shared_array<unsigned long long>::of_static(crane_baked_table_c8c1801e8579_b1),
@@ -125,35 +125,59 @@ static_assert(crane::bake::data_model == 0x80408080402u,
 constinit const void *const crane_baked_table_c8c1801e8579_blocks[] = {
     &crane_baked_table_c8c1801e8579_b2, &crane_baked_table_c8c1801e8579_b3};
 constinit const std::uint64_t crane_baked_table_c8c1801e8579_words[] = {
-    0x2u, 0x0u, 0x9b8u, 0x2u, 0x1u, 0x11u};
+    0,                     // no nodes
+    2, 0, 2488, 2, 1, 17,  // the value: {b2, b3}
+};
 constinit const crane::bake::image crane_baked_table_c8c1801e8579{
-    crane_baked_table_c8c1801e8579_words, 6,
-    crane_baked_table_c8c1801e8579_blocks, 2};
+    crane_baked_table_c8c1801e8579_words, 7,
+    crane_baked_table_c8c1801e8579_blocks, 2, nullptr, 0};
 
 // Baked by crane::bake: the value of crane_baked_big_43cf8fb6d90e.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const void *const crane_baked_big_43cf8fb6d90e_blocks[] = {nullptr};
 constinit const std::uint64_t crane_baked_big_43cf8fb6d90e_words[] = {
-    0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u,
-    0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u,
-    0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x0u, 0x1u, 0x0u,
-    0x0u, 0x2u, 0x10u, 0x3u, 0xfu, 0x4u, 0xeu, 0x5u, 0xdu, 0x6u, 0xcu, 0x7u,
-    0xbu, 0x8u, 0xau, 0x9u, 0x9u, 0xau, 0x8u, 0xbu, 0x7u, 0xcu, 0x6u, 0xdu,
-    0x5u, 0xeu, 0x4u, 0xfu, 0x3u, 0x10u, 0x2u};
+    1, 17,          // BakedConstants::tree: #0 to #16
+    0,              // #0 Leaf
+    1, 0, 1, 0,     // #1 Node{l = #0, x = 1, r = #0}
+    1, 1, 2, 1,     // #2 Node{l = #1, x = 2, r = #1}
+    1, 2, 3, 2,     // #3 Node{l = #2, x = 3, r = #2}
+    1, 3, 4, 3,     // #4 Node{l = #3, x = 4, r = #3}
+    1, 4, 5, 4,     // #5 Node{l = #4, x = 5, r = #4}
+    1, 5, 6, 5,     // #6 Node{l = #5, x = 6, r = #5}
+    1, 6, 7, 6,     // #7 Node{l = #6, x = 7, r = #6}
+    1, 7, 8, 7,     // #8 Node{l = #7, x = 8, r = #7}
+    1, 8, 9, 8,     // #9 Node{l = #8, x = 9, r = #8}
+    1, 9, 10, 9,    // #10 Node{l = #9, x = 10, r = #9}
+    1, 10, 11, 10,  // #11 Node{l = #10, x = 11, r = #10}
+    1, 11, 12, 11,  // #12 Node{l = #11, x = 12, r = #11}
+    1, 12, 13, 12,  // #13 Node{l = #12, x = 13, r = #12}
+    1, 13, 14, 13,  // #14 Node{l = #13, x = 14, r = #13}
+    1, 14, 15, 14,  // #15 Node{l = #14, x = 15, r = #14}
+    1, 15, 16, 15,  // #16 Node{l = #15, x = 16, r = #15}
+    0,              // end of the nodes
+    16,             // the value: #16
+};
 constinit const crane::bake::image crane_baked_big_43cf8fb6d90e{
-    crane_baked_big_43cf8fb6d90e_words, 67, crane_baked_big_43cf8fb6d90e_blocks,
-    0};
+    crane_baked_big_43cf8fb6d90e_words, 69, nullptr, 0, nullptr, 0};
 
 // Baked by crane::bake: the value of crane_baked_entries_a4d00e69f151.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const void *const crane_baked_entries_a4d00e69f151_blocks[] = {
-    nullptr};
+constinit const char crane_baked_entries_a4d00e69f151_text[] = "first";
 constinit const std::uint64_t crane_baked_entries_a4d00e69f151_words[] = {
-    0x0u, 0x1u, 0x0u, 0x0u, 0x5u, 0x7473726966u, 0x1u, 0x7u, 0x0u, 0x1u, 0x0u,
-    0x1u, 0x0u, 0x0u, 0x1u, 0x0u, 0x0u, 0x2u, 0x2u, 0x0u, 0x1u, 0x0u, 0x0u,
-    0x0u, 0x0u, 0x0u, 0x0u, 0x0u, 0x0u};
+    2, 3,              // BakedConstants::tree: #0 to #2
+    0,                 // #0 Leaf
+    1, 0, 1, 0,        // #1 Node{l = #0, x = 1, r = #0}
+    1, 1, 2, 1,        // #2 Node{l = #1, x = 2, r = #1}
+    1, 3,              // List<BakedConstants::entry>: #3 to #5
+    0,                 // #3 Nil
+    // #4 Cons{a = entry{name = "", weight = nullopt, label = #0}, l = #3}
+    1, 0, 0, 0, 3,
+    // #5 Cons{a = entry{name = "first", weight = 7, label = #2}, l = #4}
+    1, 5, 1, 7, 2, 4,
+    0,                 // end of the nodes
+    5,                 // the value: #5
+};
 constinit const crane::bake::image crane_baked_entries_a4d00e69f151{
-    crane_baked_entries_a4d00e69f151_words, 29,
-    crane_baked_entries_a4d00e69f151_blocks, 0};
+    crane_baked_entries_a4d00e69f151_words, 27, nullptr, 0,
+    crane_baked_entries_a4d00e69f151_text, 5};

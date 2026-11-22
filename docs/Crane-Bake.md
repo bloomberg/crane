@@ -63,69 +63,117 @@ Running the generated C++ once and emitting the value as data does work.
 
 ## The image (`theories/cpp/crane_bake.h`)
 
-An image is a stream of 64-bit words plus a table of static blocks. The
-serialiser is generic over the generated types. It reads a struct's fields
-through `aggregate.h`: C++26 structured binding packs, or under C++20 (a BDE
-build) a counted binding of up to 32 fields; so no per-type code is
+An image is a stream of 64-bit words, a text (the bytes of its strings) and
+a table of static blocks. The stream is a table of nodes, then the value.
+The serialiser is generic over the generated types. It reads a struct's
+fields through `aggregate.h`: C++26 structured binding packs, or under C++20
+(a BDE build) a counted binding of up to 32 fields; so no per-type code is
 generated, and each type gets its own template instantiation.
 
-- A scalar (integer, char, bool, enum, `float`, `double`) is one word; a
-  wider one (`long double`, a 128-bit integer) is a compile error. A string
-  (`std::string`, `bsl::string`: a `traits_type`, an allocator and a
-  constructor from pointer and length) is its length and then its bytes,
-  eight to a word. Pairs (`first_type`/`second_type`), tuples and optionals
-  (`has_value`, presence word first) are their components. A sequence
-  container (`std::vector`, `std::deque`: an allocator and `push_back`) and a
-  `persistent_array` (its default element after the length) are their length
-  and elements. A number with a text form (`mpz_class`: `get_str(16)` and a
-  constructor from a string and a base) is its base-16 text. An empty type is
-  nothing. These hooks are structural, so the C++ type of every shipped
-  typed mapping (`Mapping/Std.v`, `BDE.v`, `DequeList.v`, the GMP mappings)
-  has one; `Real` (`Mapping/Real.v`, a private `long double`) does not.
-- A generated inductive, record or flat struct starts with a sharing word:
-  `k+1` means the k-th node already read of that type, and `0` means a new node
-  (constructor index, then fields). An enum is a new node with its index, so
-  an enum and a nullary-constructor variant read each other.
+- A **node** is a value of a generated inductive with a constructor that has
+  fields, or a `crane::list` cell. Each is written once, as one row: its
+  constructor's index, then its fields, a node among them as its number.
+  Nodes are numbered in the order they are written, after the nodes they
+  hold, so a row only names rows above it: sharing is kept (the value comes
+  back as the DAG it was, address-based identity on write), and reading is
+  one loop front to back, with no recursion and no stack, however deep the
+  value (`bake_long_list`, 30000 cells; a left spine in
+  `bake_mapped_values`). A constructor without fields is one row for all
+  its uses. Rows come in runs of one type: the type's number (its place,
+  from 1, in the order `detail::walk_types` meets the node types in the
+  value's type, which writer and reader both run) and the run's length; `0`
+  ends the table. A `crane::list` cell is `1 head tail`, nil `0`.
   Shared-pointer (`std::shared_ptr`, `bsl::shared_ptr`)/`crane::shared_box`/
-  `crane::rc`/`crane::field_box` fields (`detail::handle`) are transparent; the sharing lives at the node
-  level. When reading, a counted pointer to a node already read is the same
-  pointer again.
-- A node's fields that hold a node of its own type (`detail::self_handle`)
-  are written and read with an explicit stack, whichever field it is, so a
-  list or tree is as deep as memory allows (`bake_long_list`, 30000 cells; a
-  left spine in `bake_mapped_values`). A type that recurses through another
-  (a mutual inductive, a tree whose children are in a list) still takes C++
-  frames per level of that recursion.
-- `crane::list`: cells `1 head`, ended by `0` (nil) or `k+2` (shared suffix).
+  `crane::rc`/`crane::field_box`/`crane::box` (a list's `Boxed Element`)
+  fields (`detail::handle`) are transparent;
+  a counted pointer to a node is one pointer per node again when read.
+- A scalar (integer, char, bool, enum, `float`, `double`) is one word, as is
+  a constructor of an inductive none of whose constructors has a field, so
+  an enum and a nullary-constructor variant read each other; a wider scalar
+  (`long double`, a 128-bit integer) is a compile error. A string
+  (`std::string`, `bsl::string`: a `traits_type`, an allocator and a
+  constructor from pointer and length) is its length; its bytes are in the
+  text, in the order strings are written. Pairs (`first_type`/
+  `second_type`), tuples, records and flat structs, and optionals
+  (`has_value`, presence word first) are their components. A sequence
+  container (`std::vector`, `std::deque`: an allocator and `push_back`) and
+  a `persistent_array` (its default element after the length) are their
+  length and elements. A number with a text form (`mpz_class`:
+  `get_str(16)` and a constructor from a string and a base) is its base-16
+  text. An empty type is nothing. These hooks are structural, so the C++
+  type of every shipped typed mapping (`Mapping/Std.v`, `BDE.v`,
+  `DequeList.v`, the GMP mappings) has one; `Real` (`Mapping/Real.v`, a
+  private `long double`) does not.
 - `crane::shared_array<E>`: `0` empty, `1 n elems` heap, `k+3` shared, or
   `2 block code` for a static block. A static block is used when `E` is a
   spellable scalar or, recursively, such an array. The block is
   `crane::shared_array<E>::fixed<N>`, `constinit`, `[[clang::no_destroy]]`,
-  with its count at `block_detail::immortal`. `code` encodes `E`, and reading
-  checks it.
+  with its count at `block_detail::immortal`, its elements literals. `code`
+  encodes `E`, and reading checks it.
 
 The format does not depend on byte order: a word is written as the number it
-is (a C++ literal), a string's bytes are packed by shifts, a float is its
-IEEE bits as an integer. `crane_bake.h` asserts what it does assume (8-bit
-bytes, IEEE `float`/`double`, a length fits a word), and each image starts
-with `static_assert(crane::bake::data_model == ...)`: the widths of `short`,
+is (a C++ literal), a float is its IEEE bits as an integer. `crane_bake.h`
+asserts what it does assume (8-bit bytes, IEEE `float`/`double`, a length
+fits a word), and each image starts with
+`static_assert(crane::bake::data_model == ...)`: the widths of `short`,
 `int`, `long`, `long long`, `wchar_t` and `size_t` on the bake host, which
 the target must share (a `long` written on LP64 and read on LLP64 would be
 truncated). Cross-compiling a baked unit is otherwise unsupported.
 
-The driver lays the image out itself (`writer::declaration`): a declaration
-on one line if it fits in 80 columns, else broken after the brace with the
-elements filled into lines indented four columns, as clang-format writes a
-long initialiser. It is not handed to `Emit.Layout`, which gives every
-element of a braced list too long for one line a line of its own (90,002
-lines for `bake_long_list`'s stream). Routing it through CppIR would mean
-the driver emitting a structured image for OCaml to rebuild as declarations
-(`constinit`, `[[clang::no_destroy]]` and `shared_array::fixed<N>`, none of
-which CppIR spells) for the same text.
+### Layout
+
+The driver lays the image out itself (`writer::cpp`), for a reader: the
+text as C++ string literals, the words in decimal, one row to a line, each
+with a comment that spells it, aligned after it (above it, broken after
+commas, when it does not fit in 80 columns):
+
+```cpp
+constinit const std::uint64_t crane_baked_entries_a4d00e69f151_words[] = {
+    2, 3,              // BakedConstants::tree: #0 to #2
+    0,                 // #0 Leaf
+    1, 0, 1, 0,        // #1 Node{l = #0, x = 1, r = #0}
+    1, 1, 2, 1,        // #2 Node{l = #1, x = 2, r = #1}
+    1, 3,              // List<BakedConstants::entry>: #3 to #5
+    0,                 // #3 Nil
+    // #4 Cons{a = entry{name = "", weight = nullopt, label = #0}, l = #3}
+    1, 0, 0, 0, 3,
+    // #5 Cons{a = entry{name = "first", weight = 7, label = #2}, l = #4}
+    1, 5, 1, 7, 2, 4,
+    0,                 // end of the nodes
+    5,                 // the value: #5
+};
+```
+
+A comment names a node by its number (`#4`), a constructor and its fields
+by their C++ names, a scoped enumerator by its name, a string or char as a
+literal, a float by its shortest decimal, a static block by its name (`b2`
+for `<prefix>_b2`). The text holds `"first"`; a static block's elements are
+decimal literals of its element type.
+Names come from the compiler: a type's from `__PRETTY_FUNCTION__`, a
+struct's fields from clang's `__builtin_dump_struct` (`_0`, `_1`, ...
+without it). Past `writer::annotated_rows` (1000) rows, rows are filled into
+lines bare (`bake_long_list`). The image is not handed to `Emit.Layout`,
+which gives every element of a braced list too long for one line a line of
+its own. Routing it through CppIR would mean the driver emitting a
+structured image for OCaml to rebuild as declarations (`constinit`,
+`[[clang::no_destroy]]` and `shared_array::fixed<N>`, none of which CppIR
+spells) for the same text.
 
 Reading happens once, at static initialisation. Every block it allocates is
-made immortal (`crane::make_immortal`). Sharing is kept: the
-value comes back as the DAG it was (address-based hash-consing on write).
+made immortal (`crane::make_immortal`), node by node, bottom up.
+
+Other forms were measured and rejected (2026-11, clang 22). The value as
+constructor calls compiles in 5.9 s at -O3 for a 1000-cell list (0.6 s as
+words) and is about 140 bytes of code per cell against 24 of data; past a
+few hundred cells a nested expression hits the expression nesting limit, and
+it is the startup construction baking exists to avoid. Typed rows with
+designated initialisers (`{.ctor = 1, .a = true, .l = 0}`) cost the same as
+words to compile, but each image would declare row structs and every hook
+(optional, string, sequence, `mpz_class`) would need a constant form; the
+reader cannot name the row types without spelling the user's types, which
+the driver only knows by `__PRETTY_FUNCTION__`. Static reflection is not in
+clang 22 (`-freflection` is unknown), and `#embed` makes the data less
+readable, not more.
 
 ### Immortal representation
 

@@ -16,19 +16,24 @@ namespace BloombergLP {}
 // Baked by crane::bake: the value of crane_baked_table_a2f71269616f.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const void *const crane_baked_table_a2f71269616f_blocks[] = {nullptr};
 constinit const std::uint64_t crane_baked_table_a2f71269616f_words[] = {
-    0x0u, 0x1u, 0x1u, 0x0u, 0x1u, 0x2u, 0x0u, 0x1u, 0x3u, 0x0u, 0x0u};
+    1, 4,     // List<unsigned int>: #0 to #3
+    0,        // #0 Nil
+    1, 3, 0,  // #1 Cons{d_a = 3, d_l = #0}
+    1, 2, 1,  // #2 Cons{d_a = 2, d_l = #1}
+    1, 1, 2,  // #3 Cons{d_a = 1, d_l = #2}
+    0,        // end of the nodes
+    3,        // the value: #3
+};
 constinit const crane::bake::image crane_baked_table_a2f71269616f{
-    crane_baked_table_a2f71269616f_words, 11,
-    crane_baked_table_a2f71269616f_blocks, 0};
+    crane_baked_table_a2f71269616f_words, 14, nullptr, 0, nullptr, 0};
 
 // Baked by crane::bake: the value of crane_baked_pair_8a1742e7a213.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const void *const crane_baked_pair_8a1742e7a213_blocks[] = {nullptr};
 constinit const std::uint64_t crane_baked_pair_8a1742e7a213_words[] = {
-    0x1u, 0x5u};
+    0,     // no nodes
+    1, 5,  // the value: {1, 5}
+};
 constinit const crane::bake::image crane_baked_pair_8a1742e7a213{
-    crane_baked_pair_8a1742e7a213_words, 2,
-    crane_baked_pair_8a1742e7a213_blocks, 0};
+    crane_baked_pair_8a1742e7a213_words, 3, nullptr, 0, nullptr, 0};

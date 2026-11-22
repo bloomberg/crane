@@ -15536,6 +15536,17 @@
   (alias runtest)
   (deps bake_mapped_values.t.exe)
   (action (run ./bake_mapped_values.t.exe))))
+
+(subdir bake_readable_image
+ (rule
+  (targets bake_readable_image.t.exe)
+  (deps BakeReadableImage.vo bake_readable_image.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_readable_image.t.exe bake_readable_image.t.cpp bake_readable_image.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_readable_image.t.exe)
+  (action (run ./bake_readable_image.t.exe))))
 (subdir fold_init_curried_branches
  (rule
   (targets fold_init_curried_branches.t.exe)
