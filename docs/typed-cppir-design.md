@@ -425,7 +425,7 @@ callable_crossing_matrix.
 ## 7. Progress
 
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
-- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 11, 12 done; typed-fit not yet fatal; see 8, third session)
+- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 done; typed-fit not yet fatal; see 8, fourth session)
 - [ ] Phase B2
 - [ ] Phase C
 - [ ] Phase D
@@ -965,3 +965,81 @@ wrap; 13 joins; 17 `gen_crossing`); (2) the census tail above, then
 `typed-fit` fatal, filing any genuine miss in `tests/wip`; (3) B2: make
 each plan carry what its expansion reads, move the bodies to
 `cpp_passes/coercions.ml`, and have `into_slot` return `Coerce (c, e)`.
+
+### Phase B1, fourth session (2026-11-22)
+
+Done:
+- **Application by grouping (3.4), rows 3, 5, 6.**  `Cpp_ir.Typed.apply
+  ?first ?prefix f args` applies a typed callee group by group as its
+  `Arrows` take the arguments: a group straddled at the end leaves a
+  closure over the rest of it (parameters `prefix` + position, `_sat` by
+  default), arguments past the last group apply to the result at the
+  result's own groups, all at once where the result (or the callee) has no
+  arrows.  `first` builds the first group's call where the callee takes
+  more than the arguments (a lifted lambda's captured variables, a local
+  fixpoint's opaque signature); a callee given `first` is always called.
+  `Typed_checks.applied` moved next to it as `Typed.applied` (the same
+  rule, types only).  Replaced: `Coerce.mk_arity_call` (lifted let-lambda
+  calls, `gen_applied_fix`'s in-place call and its surplus, the class
+  method call in `Match`), `Coerce.apply_at_site` (both
+  `curry_value_to_expected` sites and the eta-lambda surplus in
+  `Application`: the callee is typed at `spell_arrows site`), and
+  `chain_excess` (now `excess_groups`, the codomain read through aliases
+  as a list of groups, then `Typed.apply`).  Each callee is typed at its
+  declared parameters and `Types.codomain_after` (the Core codomain after
+  the value arguments; `auto` where the type has fewer arrows).
+- **Row 3 is `Typed.apply` plus a regroup.**  A local fixpoint's partial
+  application is `Typed.apply ~prefix:"_pa"` (the straddle closure), put
+  in the position's slot through `into_slot ~origin:Pa`, whose expansion is
+  `grouped_lambda`: a fresh closure is regrouped by nesting its own
+  parameters rather than wrapped in an `_rg` adapter.  Shadow: 4 agree.
+- **Row 9.**  `gen_call_args`' naming of a callable at an inline
+  mapping's parameter declared at a type variable is origin
+  `Mapping_name` at `Template_parameter spelled` (`Coerce.mapping_name_built`:
+  `Converting_construct` at the instantiation where spellable, else
+  `Function_value`).  `decide` plans `Name` for a closure or a function's
+  name; a value already typed or deduced is named all the same (the text
+  keeps it in an `auto`; for a value of exactly that type the copy is an
+  identity), which the shadow accepts as `["name"; "none"]` and phase C
+  may drop.  Shadow: 52 agree.
+
+Deviations:
+- `wrap_excess` keeps its erased-convention path
+  (`Coerce.apply_erased_callee`) and `boxed_group_target`'s unbox between
+  groups: both are coercions between groups, which `Typed.apply` does not
+  do (each argument and result is coerced by its caller); they move once
+  the result of a group is a `Typed.t` the next group's slot can coerce.
+- Not yet through `Typed.apply`: the bound-variable call in
+  `Application` (its own `_pa` closure with `moved`, and the over-applied
+  `Call (sig0, Call (sig0, f, primary), excess)` whose signatures say
+  `nargs = 0`).  Routing them needs the provided arguments' types as the
+  callee's first group; `auto` placeholders would do for the count, but
+  the honest fix is typing the callee from the binder (`Binders.read_value_type`).
+- Rows 10 (a lambda argument's return annotation and `Shared_pointer`
+  codomain wrap), 13 (joins) and 17 (`gen_crossing`) are not started.
+  Row 10 is a lambda's returns coerced into the slot's codomain: it wants
+  the lambda lowered against `Return (Exactly cod)` (its destination), not
+  an adapter after the fact.  Row 17 already expands through `Coerce.coerce`
+  (origin `Ue`) on each branch; what is left is choosing `from` from the
+  typed inner value instead of the decision tree.
+
+`typed-fit` census after `2498b061f` (whole-suite extraction): unchanged
+from the third session except destination `box` 8 -> 12 and fits-implicitly
+624 -> 696 (the `_pa` closure now typed as a closure before its slot);
+destination 492 unrelated / 183 tvar-other / 132 planned / 112 untyped /
+2304 no slot type; argument 427 / 230 / 60 / 221 / 0.
+
+Commits: `0205e7195` (Typed.apply, rows 3, 5, 6), `2498b061f` (row 9).
+Extraction byte-identical after each (`git status --short tests` empty,
+the same 2 wip extraction errors); full `make test` from clean after
+`2498b061f`: 1526 passed, 16 failed (all `tests/wip`, as at the base),
+`git status --short tests` empty; `dune build @unit_tests/runtest` and
+`scripts/check-module-deps.sh` pass; no `CRANE_CHECK_IR` violation,
+`typed-shadow` 0 disagree.
+
+Next, in order: (1) rows 10, 13, 17 and the bound-variable call above;
+(2) the census tail (third session's list: the 2304 destinations stating
+no type are `Destination.return_ cx` with no ambient type; applied indexed
+events; constructor values at their Core result; effect-primitive slots),
+then drop the type-variable exemption and make `typed-fit` fatal under
+`CRANE_CHECK_IR`, filing genuine misses in `tests/wip`; (3) B2.
