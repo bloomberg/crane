@@ -6,6 +6,6 @@
 int main() {
   auto t = BakeTextTrigraph::total;
   std::cout << "total = " << t << std::endl;
-  assert(t == 6);
+  assert(t == 24);
   return 0;
 }

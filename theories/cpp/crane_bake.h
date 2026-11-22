@@ -480,12 +480,15 @@ template <class E> std::string enumerator_name(std::uint64_t w) {
 
 // A C++ string literal of [n] bytes at [p]: printable ASCII as itself,
 // anything else escaped (a hex escape ends its literal, so a hex digit after
-// it does not join it).
+// it does not join it), and a [?] after a [?] as [\?], so no trigraph
+// ([??=]) is spelled, as Crane's printer writes string literals
+// (emit/print.ml, [escape_cpp_string]).
 inline std::string quoted(const char *p, std::size_t n) {
   std::string out = "\"";
   for (std::size_t i = 0; i < n; ++i) {
     unsigned char c = static_cast<unsigned char>(p[i]);
     switch (c) {
+    case '?': out += i > 0 && p[i - 1] == '?' ? "\\?" : "?"; break;
     case '"': out += "\\\""; break;
     case '\\': out += "\\\\"; break;
     case '\n': out += "\\n"; break;

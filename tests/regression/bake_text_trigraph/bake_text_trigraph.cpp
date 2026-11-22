@@ -82,19 +82,27 @@ Z Uint63Axioms::to_Z(int64_t x0_) {
   return Uint63Axioms::to_Z_rec(Uint63Axioms::size, x0_);
 }
 
-// Baked by crane::bake: the value of crane_baked_words_0efe2e38af3c.
+// Baked by crane::bake: the value of crane_baked_words_73eb7cade1a4.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const char crane_baked_words_0efe2e38af3c_text[] = "??" "a" "??=";
-constinit const std::uint64_t crane_baked_words_0efe2e38af3c_words[] = {
-    1, 4,     // List<std::string>: #0 to #3
+constinit const char crane_baked_words_73eb7cade1a4_text[] = "?=" "?" "a\\b"
+    "?\?)" "?\"?" "?\?\?" "?\?/" "?\?" "a" "?\?=";
+constinit const std::uint64_t crane_baked_words_73eb7cade1a4_words[] = {
+    1, 11,    // List<std::string>: #0 to #10
     0,        // #0 Nil
-    1, 2, 0,  // #1 Cons{a = "??", l = #0}
-    1, 1, 1,  // #2 Cons{a = "a", l = #1}
-    1, 3, 2,  // #3 Cons{a = "??=", l = #2}
+    1, 2, 0,  // #1 Cons{a = "?=", l = #0}
+    1, 1, 1,  // #2 Cons{a = "?", l = #1}
+    1, 3, 2,  // #3 Cons{a = "a\\b", l = #2}
+    1, 3, 3,  // #4 Cons{a = "?\?)", l = #3}
+    1, 3, 4,  // #5 Cons{a = "?\"?", l = #4}
+    1, 3, 5,  // #6 Cons{a = "?\?\?", l = #5}
+    1, 3, 6,  // #7 Cons{a = "?\?/", l = #6}
+    1, 2, 7,  // #8 Cons{a = "?\?", l = #7}
+    1, 1, 8,  // #9 Cons{a = "a", l = #8}
+    1, 3, 9,  // #10 Cons{a = "?\?=", l = #9}
     0,        // end of the nodes
-    3,        // the value: #3
+    10,       // the value: #10
 };
-constinit const crane::bake::image crane_baked_words_0efe2e38af3c{
-    crane_baked_words_0efe2e38af3c_words, 14, nullptr, 0,
-    crane_baked_words_0efe2e38af3c_text, 6};
+constinit const crane::bake::image crane_baked_words_73eb7cade1a4{
+    crane_baked_words_73eb7cade1a4_words, 35, nullptr, 0,
+    crane_baked_words_73eb7cade1a4_text, 24};

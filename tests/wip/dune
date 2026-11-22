@@ -267,16 +267,6 @@
   (deps boxed_fields_match_arg_obj.t.exe)
   (action (run ./boxed_fields_match_arg_obj.t.exe))))
 
-(subdir bake_text_trigraph
- (rule
-  (targets bake_text_trigraph.t.exe)
-  (deps BakeTextTrigraph.vo bake_text_trigraph.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_text_trigraph.t.exe bake_text_trigraph.t.cpp bake_text_trigraph.cpp)))
- (rule
-  (alias runtest)
-  (deps bake_text_trigraph.t.exe)
-  (action (run ./bake_text_trigraph.t.exe))))
 
 (subdir bake_array_of_nodes
  (rule
