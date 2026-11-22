@@ -15874,3 +15874,14 @@
   (alias runtest)
   (deps fold_curried_fix_step.t.exe)
   (action (run ./fold_curried_fix_step.t.exe))))
+
+(subdir capture_move_then_alias
+ (rule
+  (targets capture_move_then_alias.t.exe)
+  (deps CaptureMoveThenAlias.vo capture_move_then_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} capture_move_then_alias.t.exe capture_move_then_alias.t.cpp capture_move_then_alias.cpp)))
+ (rule
+  (alias runtest)
+  (deps capture_move_then_alias.t.exe)
+  (action (run ./capture_move_then_alias.t.exe))))

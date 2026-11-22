@@ -131,11 +131,12 @@ let exists_expr p (stmts : stmt list) =
 
 (* Whether [stmts] move from [v] anywhere, or from anything inside it, or
    reach into it mutably -- a reuse arm decomposes its scrutinee through
-   [v_mut()]. *)
+   [v_mut()] -- or a lambda takes it into its capture by move. *)
 let takes_from v stmts =
   exists_expr
     (function
       | Move e -> path_root e = Some v
+      | Lambda l -> List.exists (Id.equal v) l.moved
       | Access (_, e, f) | Access_call (_, e, f, _) -> String.equal (Id.to_string f) "v_mut" && path_root e = Some v
       | _ -> false )
     stmts

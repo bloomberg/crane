@@ -239,7 +239,7 @@ struct CaptureMoveThenAlias {
               List<uint64_t>::cons(
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))));
-      const Sum<List<uint64_t>, uint64_t> &sb = pp.second;
+      Sum<List<uint64_t>, uint64_t> sb = pp.second;
       return List<std::optional<bool>>::cons(
           std::optional<bool>(),
           List<std::optional<bool>>::cons(std::make_optional<bool>(true),
