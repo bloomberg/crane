@@ -308,3 +308,14 @@
   (alias runtest)
   (deps fix_acc_match_none_erased.t.exe)
   (action (run ./fix_acc_match_none_erased.t.exe))))
+
+(subdir pair_mix_bde
+ (rule
+  (targets pair_mix_bde.t.exe)
+  (deps PairMixBde.vo pair_mix_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} pair_mix_bde.t.exe pair_mix_bde.t.cpp pair_mix_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_mix_bde.t.exe)
+  (action (run ./pair_mix_bde.t.exe))))
