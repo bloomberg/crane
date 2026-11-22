@@ -300,17 +300,6 @@
   (deps bake_functor_application_constant.t.exe)
   (action (run ./bake_functor_application_constant.t.exe))))
 
-(subdir loop_acc_curried_partial_app
- (rule
-  (targets loop_acc_curried_partial_app.t.exe)
-  (deps LoopAccCurriedPartialApp.vo loop_acc_curried_partial_app.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loop_acc_curried_partial_app.t.exe loop_acc_curried_partial_app.t.cpp loop_acc_curried_partial_app.cpp)))
- (rule
-  (alias runtest)
-  (deps loop_acc_curried_partial_app.t.exe)
-  (action (run ./loop_acc_curried_partial_app.t.exe))))
-
 (subdir bde_loop_acc_fn_std_string
  (rule
   (targets bde_loop_acc_fn_std_string.t.exe)

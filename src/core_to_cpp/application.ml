@@ -1975,8 +1975,19 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
         match x with
         | e when Monadic.core_value_is_void_call cx e ->
           Monadic.wrap_void_call_as_value (gen_expr cx ~slot:arg_slot env x)
+        (* A lambda is written against the parameter's Core type as well
+           as its C++ one: the binders a flat parameter takes that the term
+           does not write become its own ({!Lambda.gen_lambda}), so that it
+           takes them as the parameter does.  Not a function type with an
+           erased part -- a rank-2 handler's quantifier -- which says less
+           than the lambda's own binders. *)
         | Core.Expr.Lambda _ ->
-          gen_expr cx ?expected_ty:(declared_dom i) ~slot:arg_slot env x
+          let expected_core_ty =
+            match declared_core_dom i with
+            | Some t when not (core_type_contains_erased ~in_arrows:true t) -> Some t
+            | _ -> None
+          in
+          gen_expr cx ?expected_ty:(declared_dom i) ~slot:{arg_slot with Slot.expected_core_ty} env x
         | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ ->
           let expected = Types.param_expected_cpp_ty cx env callee_param_tys i in
           gen_expr cx ?expected_ty:expected ~slot:arg_slot env x
