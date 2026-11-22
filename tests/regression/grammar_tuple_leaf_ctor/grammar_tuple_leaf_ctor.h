@@ -16,6 +16,8 @@ template <typename A, typename P> struct SigT;
 enum class Terminal;
 struct Val;
 struct Symbol;
+using tuple = crane::obj;
+using symbols_semty = tuple;
 using predicate_semty = crane::obj;
 using action_semty = crane::obj;
 
