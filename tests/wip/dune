@@ -376,3 +376,14 @@
   (alias runtest)
   (deps alias_param_convention_check.t.exe)
   (action (run ./alias_param_convention_check.t.exe))))
+
+(subdir snd_pair_poly_sum_scrutinee
+ (rule
+  (targets snd_pair_poly_sum_scrutinee.t.exe)
+  (deps SndPairPolySumScrutinee.vo snd_pair_poly_sum_scrutinee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} snd_pair_poly_sum_scrutinee.t.exe snd_pair_poly_sum_scrutinee.t.cpp snd_pair_poly_sum_scrutinee.cpp)))
+ (rule
+  (alias runtest)
+  (deps snd_pair_poly_sum_scrutinee.t.exe)
+  (action (run ./snd_pair_poly_sum_scrutinee.t.exe))))
