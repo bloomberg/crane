@@ -6,6 +6,6 @@
 int main() {
   auto t = BakeArrayOfNodes::total;
   std::cout << "total = " << t << std::endl;
-  assert(t == 14);
+  assert(t == 21);
   return 0;
 }

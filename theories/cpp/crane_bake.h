@@ -683,7 +683,10 @@ private:
     return it != nodes_.end() && it->second.count(key);
   }
 
-  // The nodes [x] holds, outside other nodes: stacked to be written.
+  // The nodes [x] holds, outside other nodes: stacked to be written.  [x]
+  // is in place in the value, never a copy: a node is known by its address,
+  // and its task keeps a pointer to it.  So every container is walked by
+  // reference ([persistent_array::ref], not [get], which copies).
   template <class T> void deps(const T &x) {
     using namespace detail;
     if constexpr (std::is_enum_v<T> || std::is_arithmetic_v<T> || string_like<T>) {
@@ -704,8 +707,8 @@ private:
         for (const auto &e : x) deps(e);
     } else if constexpr (is_persistent_array<T>::value) {
       std::int64_t n = x.length();
-      deps(x.get(n));
-      for (std::int64_t i = 0; i < n; ++i) deps(x.get(i));
+      deps(x.ref(n));  // out of bounds: the default element
+      for (std::int64_t i = 0; i < n; ++i) deps(x.ref(i));
     } else if constexpr (inductive<T>) {
       if constexpr (is_node<T>()) push_node(x);
     } else if constexpr (std::is_empty_v<T> || textual_number<T>) {
@@ -1080,10 +1083,10 @@ public:
       std::int64_t n = x.length();
       words_.push_back(static_cast<std::uint64_t>(n));
       note += "[default ";
-      put(x.get(n), note);  // out of bounds: the default element
+      put(x.ref(n), note);  // out of bounds: the default element
       for (std::int64_t i = 0; i < n; ++i) {
         note += ", ";
-        put(x.get(i), note);
+        put(x.ref(i), note);
       }
       note += "]";
     } else if constexpr (inductive<T>) {

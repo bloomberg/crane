@@ -200,6 +200,9 @@ the `crane::bake::value` proxy. The reader marks the decoded value itself
   `of_static(fixed&)` (constexpr), `adopt_static(const void*)`, and constexpr
   default/move constructors and destructor.
 - `shared_block.h`: `block_detail::born_immortal`.
+- `persistent_array.h` (both flavours): `ref(i)`, an element in place. The
+  writer knows a node by its address, so it walks every container by
+  reference; `get` returns a copy.
 - `crane_bake.h`: new.
 
 ## Not done (follow-ups)
