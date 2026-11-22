@@ -254,3 +254,14 @@
   (alias runtest)
   (deps deque_fold_fix_init.t.exe)
   (action (run ./deque_fold_fix_init.t.exe))))
+
+(subdir scrutinee_list_return_type
+ (rule
+  (targets scrutinee_list_return_type.t.exe)
+  (deps ScrutineeListReturnType.vo scrutinee_list_return_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} scrutinee_list_return_type.t.exe scrutinee_list_return_type.t.cpp scrutinee_list_return_type.cpp)))
+ (rule
+  (alias runtest)
+  (deps scrutinee_list_return_type.t.exe)
+  (action (run ./scrutinee_list_return_type.t.exe))))
