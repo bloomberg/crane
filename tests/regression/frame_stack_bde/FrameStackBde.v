@@ -4,10 +4,11 @@
 
     Expected: compiles with the BDE flavour; [total = 6], [all_small = true].
 
-    Actual: the BDE [crane::small_vector] (theories/cpp_bde/small_vector.h)
-    has [push_back] only, and the frame machine pushes with
-    [_stack.emplace_back(...)]: "no member named 'emplace_back' in
-    'crane::small_vector<...>'". *)
+    Fixed: the BDE [crane::small_vector] (theories/cpp_bde/small_vector.h)
+    had [push_back] only, and the frame machine pushes with
+    [_stack.emplace_back(...)]; it now has [emplace_back].  The frame then
+    walked the list with [crane_raw] of a [bsl::shared_ptr], which had no
+    overload; crane_fn.h now takes any smart pointer with [get()]. *)
 From Crane Require Import Mapping.NatIntBDE Mapping.BDE.
 From Crane Require Extraction.
 From Stdlib Require Import List.

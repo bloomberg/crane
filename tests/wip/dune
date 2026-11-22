@@ -265,17 +265,6 @@
   (deps fix_acc_empty_erased.t.exe)
   (action (run ./fix_acc_empty_erased.t.exe))))
 
-(subdir frame_stack_bde
- (rule
-  (targets frame_stack_bde.t.exe)
-  (deps FrameStackBde.vo frame_stack_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} frame_stack_bde.t.exe frame_stack_bde.t.cpp frame_stack_bde.cpp)))
- (rule
-  (alias runtest)
-  (deps frame_stack_bde.t.exe)
-  (action (run ./frame_stack_bde.t.exe))))
-
 (subdir nested_match_unreachable_bde
  (rule
   (targets nested_match_unreachable_bde.t.exe)
