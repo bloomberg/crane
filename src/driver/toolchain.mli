@@ -71,3 +71,7 @@ val compile_ocaml :
     @raise Failure when the test executable exits unsuccessfully *)
 val compile_and_test :
   ?outfile:string -> ?errfile:string -> string -> string
+
+(** Crane's C++ runtime header directory ([theories/cpp]), found from the
+    loaded [Crane] theory. *)
+val crane_runtime_include : unit -> string option

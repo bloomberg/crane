@@ -13,7 +13,7 @@
 #include <variant>
 
 #include "crane_bake.h"
-extern const crane::bake::image crane_baked_words_0efe2e38af3c;
+extern const crane::bake::image crane_baked_words_73eb7cade1a4;
 
 template <typename A> struct List;
 struct Positive;
@@ -274,7 +274,7 @@ struct Uint63Axioms {
 
 struct BakeTextTrigraph {
   static inline const List<std::string> words =
-      crane::bake::read<List<std::string>>(crane_baked_words_0efe2e38af3c);
+      crane::bake::read<List<std::string>>(crane_baked_words_73eb7cade1a4);
   static inline const uint64_t total =
       words.template fold_left<uint64_t>([](uint64_t a,
                                             const std::string &s) {

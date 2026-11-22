@@ -1,11 +1,11 @@
-#include <bake_text_trigraph.h>
+#include <bake_array_of_nodes.h>
 
 #include <cassert>
 #include <iostream>
 
 int main() {
-  auto t = BakeTextTrigraph::total;
+  auto t = BakeArrayOfNodes::total;
   std::cout << "total = " << t << std::endl;
-  assert(t == 6);
+  assert(t == 21);
   return 0;
 }

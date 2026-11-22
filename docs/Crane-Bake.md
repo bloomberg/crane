@@ -24,7 +24,10 @@ Running the generated C++ once and emitting the value as data does work.
 ## How it runs
 
 1. **Check** (`src/driver/bake.ml`, `check`). The constant must be a
-   transparent constant outside any functor or module type, and its type must
+   transparent constant outside any functor or module type and outside any
+   functor application (`Module FN := F N`, or an alias of one: its constants
+   are members of the functor's C++ template, `using FN = F<N>;`, which an
+   image cannot initialise for one instantiation), and its type must
    hold only data: no function, type, proof (at the top), coinductive (lazy or
    effectful, `itree` included) or opaque axiom type unless it is mapped (a
    typed `TypeMapping` or a legacy custom extraction) or primitive. The check
@@ -43,12 +46,14 @@ Running the generated C++ once and emitting the value as data does work.
    `Table.bake_root = c`, the constant's initialiser becomes
    `crane::bake::root(<body>)` and its declaration `[[gnu::used]]`
    (`Cpp_state.read_by_a_function`), so it runs at static initialisation.
-   Crane links the unit with a driver whose `main` is `crane::bake::main`
-   (via `Toolchain.compile_cpp`, `-O1`, plus `Set Crane Bake Flags` and
-   `CRANE_BAKE_FLAGS`) and runs it through `Subprocess.capture`. The driver
-   writes the image as C++, and Crane records it with the constant
-   (`Table.record_baked`, a libobject, so it survives `Require`). A baked
-   constant is never inlined (`add_inline_entries false`).
+   Crane compiles each source of the unit on its own and links them with a
+   driver whose `main` is `crane::bake::main` (via `Toolchain.compile_cpp`,
+   `-O1 -MD`, plus `Set Crane Bake Flags` and `CRANE_BAKE_FLAGS`) and runs it
+   through `Subprocess.capture`. The driver writes the image as C++, and
+   Crane records it with the constant (`Table.record_baked`, a libobject, so
+   it survives `Require`), together with what it was computed from (see
+   [Stale images](#stale-images)). A baked constant is never inlined
+   (`add_inline_entries false`).
 3. **Use**. Lowering (`Functions.baked_initialiser`, on both the definition
    and the header specification path) still generates the body, so the unit
    plans and includes what it would. It then initialises the constant with
@@ -60,6 +65,44 @@ Running the generated C++ once and emitting the value as data does work.
    `print_structure_to_file` declares the image `extern` in the header (after
    `#include "crane_bake.h"`, ahead of the namespace) and appends the image
    text, as the driver wrote it, to the implementation file.
+   First it checks the image is not stale (`Bake_inputs.check`).
+
+## Stale images
+
+An image is the output of C++ code: the runtime headers (`crane_bake.h`
+writes it, and every header the unit includes computes the value), compiled
+by `clang++` with `CRANE_BAKE_FLAGS`. None of these is something a build
+system sees a `.vo` depend on, so a changed header could leave a library
+holding an image the new code reads differently (a changed `image` layout
+fails to compile; a changed representation could read wrong). Two
+mechanisms keep images current.
+
+- **The recorded inputs** (`src/driver/bake_inputs.ml`). Each source is
+  compiled on its own with `-MD`, so the compiler lists every file it read.
+  The bake records each with its digest (`Table.bake_input`: a runtime header
+  relative to the directory holding `cpp/` and `cpp_bde/`, so a library
+  baked against one checkout or installation of Crane is checked against the
+  one in use; any other file, system and mapping headers included, by its
+  absolute path), plus `clang++ --version` and `CRANE_BAKE_FLAGS`. An
+  extraction that would emit an image re-digests those files and compares
+  them; on any difference it fails with `Crane Bake: the baked image of <c> is
+  stale: <file> has changed since it was baked. Rebuild the file whose Crane
+  Bake command baked it.` It does not re-bake: a bake is a nested
+  extraction, which cannot run inside the one in progress. `Set Crane Bake
+  Flags` is not compared: it is set in the document, which the build system
+  does see. Libraries linked into the driver (BDE's) are not recorded.
+- **The dune dependency.** `theories/RuntimeHeaders.v` is generated
+  (`scripts/runtime-headers-digest.sh`, a rule in `theories/dune`) with the
+  headers' digest in a definition's name, and `Crane.Extraction` requires
+  it. Every file that loads Crane therefore depends on the runtime headers'
+  contents: editing a header rebuilds the files that bake (and the tests'
+  extractions and executables), rather than leaving the stale image for the
+  check to refuse. For an installed Crane the headers change only with a
+  reinstall, which installs a new `RuntimeHeaders.vo` too.
+
+`unit_tests/bake_inputs_test.ml` covers the dependency-file parser and the
+comparison (a changed or removed file, a runtime moved with the same
+headers).
 
 ## The image (`theories/cpp/crane_bake.h`)
 
@@ -148,11 +191,19 @@ A comment names a node by its number (`#4`), a constructor and its fields
 by their C++ names, a scoped enumerator by its name, a string or char as a
 literal, a float by its shortest decimal, a static block by its name (`b2`
 for `<prefix>_b2`). The text holds `"first"`; a static block's elements are
-decimal literals of its element type.
+decimal literals of its element type. The text is a table of character
+arrays (`<prefix>text0`, `<prefix>text1`, ...) of at most 65535 bytes each,
+the longest string literal C++ compilers must support
+(`-Woverlength-strings`), a string split across two where it falls on a cut,
+and long strings are split into literals that fit a line. A `?` after a `?`
+is written `\?`, so no literal spells a trigraph.
 Names come from the compiler: a type's from `__PRETTY_FUNCTION__`, a
 struct's fields from clang's `__builtin_dump_struct` (`_0`, `_1`, ...
-without it). Past `writer::annotated_rows` (1000) rows, rows are filled into
-lines bare (`bake_long_list`). The image is not handed to `Emit.Layout`,
+without it). Past `writer::annotated_rows` (1000) rows, rows and run
+headers are filled into lines bare (`bake_long_list`;
+`bake_alternating_types_quadratic`, where every run is one row long). The
+reader's per-type tables grow as vectors do, so reading alternating types
+stays linear. The image is not handed to `Emit.Layout`,
 which gives every element of a braced list too long for one line a line of
 its own. Routing it through CppIR would mean the driver emitting a
 structured image for OCaml to rebuild as declarations (`constinit`,
@@ -192,6 +243,9 @@ the `crane::bake::value` proxy. The reader marks the decoded value itself
   `of_static(fixed&)` (constexpr), `adopt_static(const void*)`, and constexpr
   default/move constructors and destructor.
 - `shared_block.h`: `block_detail::born_immortal`.
+- `persistent_array.h` (both flavours): `ref(i)`, an element in place. The
+  writer knows a node by its address, so it walks every container by
+  reference; `get` returns a copy.
 - `crane_bake.h`: new.
 
 ## Not done (follow-ups)

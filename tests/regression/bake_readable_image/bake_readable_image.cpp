@@ -19,8 +19,10 @@ std::string BakeReadableImage::labels(const BakeReadableImage::rose &r) {
 // Baked by crane::bake: the value of crane_baked_forest_ac321626c191.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const char crane_baked_forest_ac321626c191_text[] = "b" "c" "a" "e"
+constinit const char crane_baked_forest_ac321626c191_text0[] = "b" "c" "a" "e"
     "d";
+constinit const std::string_view crane_baked_forest_ac321626c191_text[] = {
+    std::string_view(crane_baked_forest_ac321626c191_text0, 5)};
 constinit const std::uint64_t crane_baked_forest_ac321626c191_words[] = {
     1, 1,        // crane::list<crane::box<BakeReadableImage::rose>>: #0
     0,           // #0 nil
@@ -45,7 +47,7 @@ constinit const std::uint64_t crane_baked_forest_ac321626c191_words[] = {
 };
 constinit const crane::bake::image crane_baked_forest_ac321626c191{
     crane_baked_forest_ac321626c191_words, 52, nullptr, 0,
-    crane_baked_forest_ac321626c191_text, 5};
+    crane_baked_forest_ac321626c191_text, 1};
 
 // Baked by crane::bake: the value of crane_baked_numbers_f28e8ab85c63.
 static_assert(crane::bake::data_model == 0x80408080402u,
@@ -61,8 +63,10 @@ constinit const crane::bake::image crane_baked_numbers_f28e8ab85c63{
 // Baked by crane::bake: the value of crane_baked_odd_strings_48cd7c9a95e8.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const char crane_baked_odd_strings_48cd7c9a95e8_text[] = "\x00\x00"
+constinit const char crane_baked_odd_strings_48cd7c9a95e8_text0[] = "\x00\x00"
     "\x01" "a" "back\\slash" "say \"hi\"";
+constinit const std::string_view crane_baked_odd_strings_48cd7c9a95e8_text[] = {
+    std::string_view(crane_baked_odd_strings_48cd7c9a95e8_text0, 22)};
 constinit const std::uint64_t crane_baked_odd_strings_48cd7c9a95e8_words[] = {
     1, 5,      // crane::list<std::string>: #0 to #4
     0,         // #0 nil
@@ -75,4 +79,4 @@ constinit const std::uint64_t crane_baked_odd_strings_48cd7c9a95e8_words[] = {
 };
 constinit const crane::bake::image crane_baked_odd_strings_48cd7c9a95e8{
     crane_baked_odd_strings_48cd7c9a95e8_words, 17, nullptr, 0,
-    crane_baked_odd_strings_48cd7c9a95e8_text, 22};
+    crane_baked_odd_strings_48cd7c9a95e8_text, 1};

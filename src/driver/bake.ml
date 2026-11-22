@@ -81,11 +81,39 @@ let check_type env sigma r ty =
   if is_proof env ty then refuse r "is a proof, which extraction erases";
   value env ~what:"is" ty
 
+(** The functor application ([Module FN := F N]) that [mp] or a module
+    enclosing it is, or aliases ([Module M := FN]).  Its constants
+    are extracted as members of the functor's template ([using FN = F<N>;]),
+    which an image cannot initialise for one instantiation. *)
+let rec applied_module env mp =
+  match mp with
+  | ModPath.MPdot (parent, _) -> (
+    let applied =
+      match Mod_declarations.mod_expr (Environ.lookup_module mp env) with
+      | Algebraic (MENoFunctor me) -> application env mp me
+      | _ -> None
+    in
+    match applied with Some _ -> applied | None -> applied_module env parent )
+  | ModPath.MPfile _ | ModPath.MPbound _ -> None
+
+(* The functor application [mp], defined by [me], is or aliases. *)
+and application env mp : _ Declarations.module_alg_expr -> _ = function
+  | MEapply _ -> Some mp
+  | MEident target -> applied_module env target
+  | MEwith (me, _) -> application env mp me
+
 let check r =
   match r with
   | GlobRef.ConstRef c ->
     if has_bound_path (Constant.modpath c) then
       refuse r "is declared inside a functor or a module type, so it is not closed";
+    ( match applied_module (Global.env ()) (Constant.modpath c) with
+    | Some mp ->
+      refuse r
+        ( "is declared in " ^ ModPath.to_string mp
+        ^ ", a functor application, so it is a member of the functor's C++ template, not a declaration of \
+           its own" )
+    | None -> () );
     let env = Global.env () in
     let cb = Environ.lookup_constant c env in
     ( match cb.Declarations.const_body with
@@ -128,30 +156,6 @@ let rec files_under dir ext =
       else if Filename.check_suffix f ext then path :: acc
       else acc )
     [] (Sys.readdir dir)
-
-(* Crane's runtime headers: [theories/cpp] of the tree the loaded Crane
-   theory was built in, whichever build directory ([_build/default],
-   [_build/census/default], ...) that was. *)
-let runtime_include () =
-  let has_runtime dir = Sys.file_exists (Filename.concat dir "crane_bake.h") in
-  match Benchmark.crane_runtime_include () with
-  | Some dir when has_runtime dir -> Some dir
-  | found -> (
-    let marker = Filename.dir_sep ^ "_build" ^ Filename.dir_sep in
-    let source_tree dir =
-      let n = String.length marker in
-      let rec find i =
-        if i + n > String.length dir then None
-        else if String.sub dir i n = marker then Some (String.sub dir 0 i)
-        else find (i + 1)
-      in
-      find 0
-    in
-    match Option.bind found source_tree with
-    | Some root ->
-      let dir = Filename.concat (Filename.concat root "theories") "cpp" in
-      if has_runtime dir then Some dir else found
-    | None -> found )
 
 let driver_source header =
   "#include \"crane_bake.h\"\n#include \"" ^ header ^ "\"\n"
@@ -227,24 +231,23 @@ let bake_one ~opaque_access qualid =
     try Subprocess.split_arguments flags
     with Subprocess.Invalid_arguments m -> fail_with dir Pp.(str ("invalid Crane Bake Flags: " ^ m))
   in
-  (* A BDE build reads the BDE flavour of a runtime header first
-     (scripts/compile-bde.sh). *)
-  let runtime =
-    match runtime_include () with
-    | Some d when Toolchain.is_bde () ->
-      let bde = Filename.concat (Filename.dirname d) "cpp_bde" in
-      if Sys.file_exists bde then [bde; d] else [d]
-    | Some d -> [d]
-    | None -> []
-  in
-  ( try
-      Toolchain.compile_cpp ~shouldlink:true ~includes:(include_dirs @ runtime)
-        ~flags:(["-O1"; "-w"; "-include"; "crane_bake.h"] @ user_flags @ sources)
-        ~outfile:exe driver
-    with
+  let runtime = Bake_inputs.runtime_dirs () in
+  (* Each source is compiled on its own, so the compiler writes each one's
+     dependency file ([-MD], next to its object): the headers the image was
+     computed from, which are recorded with it ({!Bake_inputs}). *)
+  let flags = ["-O1"; "-w"; "-include"; "crane_bake.h"; "-MD"] @ user_flags in
+  let includes = include_dirs @ runtime in
+  let compile ?shouldlink ?(extra = []) ?outfile source =
+    try Toolchain.compile_cpp ?shouldlink ~includes ~flags:(flags @ extra) ?outfile source with
     | Toolchain.NoClangFound -> fail_with dir Pp.(str "clang++ is not available.")
     | Toolchain.ClangError (_, errors) ->
-      fail_with dir Pp.(str "the bake driver failed to compile:" ++ fnl () ++ str (errors_of errors)) );
+      fail_with dir Pp.(str "the bake driver failed to compile:" ++ fnl () ++ str (errors_of errors))
+  in
+  List.iter (fun source -> compile source) sources;
+  let objects = List.map (fun source -> Filename.chop_suffix source ".cpp" ^ ".o") sources in
+  compile ~shouldlink:true ~extra:objects ~outfile:exe driver;
+  let depfiles = List.map (fun source -> Filename.chop_suffix source ".cpp" ^ ".d") sources @ [exe ^ ".d"] in
+  let inputs = Bake_inputs.record ~generated:dir (List.filter Sys.file_exists depfiles) in
   let out = Filename.concat dir "image.inc" in
   let result = Subprocess.capture exe [out; symbol; symbol ^ "_"] in
   ( match result.status with
@@ -255,6 +258,7 @@ let bake_one ~opaque_access qualid =
           ++ fnl () ++ str result.stderr) );
   let image = In_channel.with_open_bin out In_channel.input_all in
   remove_tree dir;
-  Base.Table.record_baked r {Base.Table.symbol; image}
+  Base.Table.record_baked r
+    {Base.Table.symbol; image; inputs; compiler = Bake_inputs.compiler (); env_flags = Bake_inputs.env_flags ()}
 
 let bake ~opaque_access l = List.iter (bake_one ~opaque_access) l
