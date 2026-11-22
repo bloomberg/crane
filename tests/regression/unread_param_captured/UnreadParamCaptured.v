@@ -4,11 +4,13 @@
 
     Expected: compiles; [result = 3] ([go [] u = u = "abc"]).
 
-    Actual: compile error "use of undeclared identifier 'v'". [op]'s
-    parameter is printed unnamed ([String op(String u, String)]) because
+    Fixed: compile error "use of undeclared identifier 'v'". [op]'s
+    parameter was printed unnamed ([String op(String u, String)]) because
     nothing reads it once Loopify drops the unread accumulator, but the step
-    lambda still captures it ([[=, u = std::move(u), v = std::move(v)]]).
-    Also on main. *)
+    lambda still captured it ([[=, u = std::move(u), v = std::move(v)]]):
+    the planned moves were written as captures whether or not the final
+    body read them.  A lambda now captures by move only what its body
+    reads. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
 From Stdlib Require Import List String Ascii.

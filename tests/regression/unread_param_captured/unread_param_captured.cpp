@@ -7,7 +7,7 @@ String UnreadParamCaptured::op(String u, String) {
           Ascii::ascii0(false, true, false, false, false, true, true, false),
           List<Ascii>::nil()))
              .template fold_left<String>(
-      [=, u = std::move(u), v = std::move(v)](String, Ascii) {
+      [=, u = std::move(u)](String, Ascii) {
         auto go =
             [&](const List<std::optional<uint64_t>> &l,
                 const String &)
