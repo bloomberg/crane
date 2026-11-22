@@ -2064,8 +2064,8 @@ let spell_as_declared ~(declared : Core.Type.t list) (orig : Core.Type.t) (t : C
 (** The slot an argument of the call to [id] fills at the parameter
     declared at the Core type [orig]: what C++ checks it against.  A
     forwarding reference for a deduced callable; for an inline mapping, a
-    template parameter where [orig] is a type variable and otherwise the
-    type the argument is generated against ([expected]); for any other
+    template parameter (its text takes the argument as it comes, at the
+    type it is generated against, [expected]); for any other
     callee, its declared parameter at the type arguments the call writes
     ([written_by_var]), a template parameter where a variable the call
     leaves to C++ to deduce remains in it. *)
@@ -2075,9 +2075,10 @@ let argument_slot cx env id ~deduced_callable ~written_by_var ~(expected : Cpp_i
   if deduced_callable then Forwarded
   else
     match Option.map resolve_meta orig with
-    | None -> slot_of expected
-    | Some (Core.Type.Variable _) when Base.Table.is_inline_custom id -> Template_parameter expected
-    | Some _ when Base.Table.is_inline_custom id -> slot_of expected
+    | _ when Base.Table.is_inline_custom id -> Template_parameter expected
+    | None ->
+      Base.Probe.hit "argument-without-parameter" (fun () -> Pp.string_of_ppcmds (GlobRef.print id));
+      slot_of expected
     | Some orig -> (
       match Types.cpp_of_core cx env orig with
       | exception e when CErrors.noncritical e -> slot_of expected

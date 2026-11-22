@@ -83,10 +83,15 @@ type aliases = {
 let aliases_in cx =
   (* A mapped inductive of no arguments is the C++ type its mapping names:
      [positive] and [N] mapped to [unsigned int] are one type. *)
+  let scope = Lowering_state.get_current_type_vars cx in
   let mapped (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     match t with
     | Entity_application (g, [], _) when Base.Table.is_custom g -> (
       match Base.Table.find_custom_opt g with Some text -> External (text, []) | None -> t )
+    (* A variable written by its index alone is the one the scope names
+       at that index. *)
+    | Variable (Index (i, None)) when i >= 1 -> (
+      match List.nth_opt scope (i - 1) with Some n -> Variable (Index (i, Some n)) | None -> t )
     | t -> t
   in
   { unfold = (fun t -> mapped (Types.unfold_cpp_typedef cx (empty_env ()) (strip_cpp_ref_const t)));

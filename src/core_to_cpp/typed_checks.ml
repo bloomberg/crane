@@ -296,6 +296,8 @@ let verdict_line cx ~what (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   let slot = match into with Exactly t -> Binders.type_shape t | _ -> "?" in
   let detail () = " in " ^ site cx ^ " " ^ what ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ slot in
   match verdict cx x into with
+  | `Unchecked why when String.ends_with ~suffix:"fits" why -> "unchecked (" ^ why ^ ")"
+  | `Unchecked why when String.starts_with ~prefix:"slot at" why -> "unchecked (" ^ why ^ ")" ^ detail ()
   | `Unchecked why -> "unchecked (" ^ why ^ ")"
   | `Unrelated -> "unrelated" ^ detail ()
   | `Fits -> "fits"
