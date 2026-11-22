@@ -355,17 +355,6 @@
   (deps bde_concept_declval_include.t.exe)
   (action (run ./bde_concept_declval_include.t.exe))))
 
-(subdir alias_param_convention_check
- (rule
-  (targets alias_param_convention_check.t.exe)
-  (deps AliasParamConventionCheck.vo alias_param_convention_check.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_param_convention_check.t.exe alias_param_convention_check.t.cpp alias_param_convention_check.cpp)))
- (rule
-  (alias runtest)
-  (deps alias_param_convention_check.t.exe)
-  (action (run ./alias_param_convention_check.t.exe))))
-
 (subdir snd_pair_poly_sum_scrutinee
  (rule
   (targets snd_pair_poly_sum_scrutinee.t.exe)

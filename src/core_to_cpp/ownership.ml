@@ -52,12 +52,20 @@ let infer_access cx ?owner body params =
   | Some settled when List.length settled = List.length params -> settled
   | _ -> Core_plan.Access.read_off ~settled:(settled_access cx) (List.length params) body
 
+(** The typed mapping of the Core type [ty], if it is a typed-mapped type,
+    named as itself or through type abbreviations. *)
+let rec core_mapped_plan ty =
+  match resolve_meta ty with
+  | Core.Type.Global_app {head = r; _} when Base.Mapping_plan.is_type_head r -> Some (Base.Mapping_plan.find r)
+  | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); _} when not (Base.Table.is_custom r) ->
+    Option.bind (Base.Table.lookup_typedef_unchecked kn) core_mapped_plan
+  | _ -> None
+
 (** The typed mapping of the parameter type [core] or [cpp_ty], if it is a
-    typed-mapped type. *)
+    typed-mapped type ({!core_mapped_plan}). *)
 let mapped_plan ?core (cpp_ty : Cpp_ir.Lowered.Type.t) =
-  match Option.map resolve_meta core with
-  | Some (Core.Type.Global_app {head = r; _}) when Base.Mapping_plan.is_type_head r -> Some (Base.Mapping_plan.find r)
-  | Some _ -> None
+  match core with
+  | Some ty -> core_mapped_plan ty
   | None -> (
     match cpp_ty with
     | Entity_application (r, _, _) | In_namespace (_, Entity_application (r, _, _))
@@ -88,6 +96,9 @@ let rec names_value_inductive (cpp_ty : Cpp_ir.Lowered.Type.t) =
    abbreviation stands for the argument written for it. *)
 and abbreviates_value_inductive args body =
   match resolve_meta body with
+  (* A typed-mapped type is lent as its read style says
+     ({!abbreviated_mapping}), not as the inductive it maps. *)
+  | Core.Type.Global_app {head = r; _} when Base.Mapping_plan.is_type_head r -> false
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
     (not (Base.Table.is_enum_inductive r)) && (not (Base.Table.is_coinductive r)) && not (Base.Table.is_custom_scalar_ref r)
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r);
@@ -98,6 +109,30 @@ and abbreviates_value_inductive args body =
   | Core.Type.Variable {variable = j; _} when j >= 1 -> (
     match List.nth_opt args (j - 1) with Some t -> names_value_inductive t | None -> false )
   | _ -> false
+
+(* The typed-mapped type the body [body] of a type abbreviation applied to
+   the C++ types [args] names, through abbreviations: its mapping, and
+   whether each of its arguments copies for free, as {!cpp_lent_by_reference}
+   reads one -- a variable of the abbreviation as the argument written for
+   it, any other off its Core type, as {!core_lent_by_reference} reads the
+   abbreviation unfolded. *)
+let rec abbreviated_mapping args body =
+  match resolve_meta body with
+  | Core.Type.Global_app {head = r; type_arguments = inner; _} when Base.Mapping_plan.is_type_head r ->
+    let argument i =
+      match Option.map resolve_meta (List.nth_opt inner i) with
+      | Some (Core.Type.Variable {variable = j; _}) when j >= 1 -> (
+        match List.nth_opt args (j - 1) with Some t -> is_trivially_copyable_type t | None -> false )
+      | Some t -> core_is_trivially_copyable t
+      | None -> false
+    in
+    Some (Base.Mapping_plan.find r, argument)
+  | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); type_arguments = inner; _} when not (Base.Table.is_custom r)
+    -> (
+    match Base.Table.lookup_typedef_unchecked kn with
+    | Some body -> abbreviated_mapping args (Base.Core_util.type_subst_list inner body)
+    | None -> None )
+  | _ -> None
 
 (* Whether the body [body] of a type abbreviation is a closure: an arrow,
    under the type abstractions erasure removes -- [IFun A B := forall T, A T
@@ -148,6 +183,12 @@ let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
     not
       (Base.Mapping_plan.read_by_value (Base.Mapping_plan.find r) ~argument:(fun i ->
            match List.nth_opt ts i with Some t -> is_trivially_copyable_type t | None -> false))
+  (* So is one named through an abbreviation, [t1 := nat * bool]. *)
+  | Entity_application ((GlobRef.ConstRef kn as r), args, _)
+    when (not (Base.Table.is_custom r))
+         && Option.has_some (Option.bind (Base.Table.lookup_typedef_unchecked kn) (abbreviated_mapping args)) ->
+    let plan, argument = Option.get (Option.bind (Base.Table.lookup_typedef_unchecked kn) (abbreviated_mapping args)) in
+    not (Base.Mapping_plan.read_by_value plan ~argument)
   | Shared_pointer _ -> true
   | _ when shared_block cpp_ty -> true
   | _ when names_value_inductive cpp_ty -> true
