@@ -345,11 +345,19 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
       else
         match (Option.map resolve_meta (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index), expr) with
         | _, Function_value _ -> expr
-        | Some (Core.Type.Variable _), _
-          when (match param_core_ty with
-                | Some t -> (match resolve_meta t with Core.Type.Arrow _ -> true | _ -> false)
-                | None -> false) ->
-          Function_value expr
+        | Some (Core.Type.Variable _), _ -> (
+          match Option.map resolve_meta param_core_ty with
+          | Some (Core.Type.Arrow _ as t) -> (
+            (* Named at the instantiation itself where it can be spelled
+               here, as a type argument spells it: deduced from a closure
+               returning a closure, [crane::fn]'s result would be the inner
+               closure's own type, which no later step's result is. *)
+            match Types.template_params_of_core cx ~site:Cpp_ir.Types.Through_tvar env [t] with
+            | [(Function _ as f)]
+              when Types.names_only_scoped_tvars cx f && not (Base.Type_util.has_tany_written f) ->
+              Converting_construct (f, [expr])
+            | _ -> Function_value expr )
+          | _ -> expr )
         | _ -> expr
     in
     (* A methodified callee is spelled [recv.f(rest)], and [std::any] has no

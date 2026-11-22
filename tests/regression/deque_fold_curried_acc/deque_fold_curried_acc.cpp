@@ -13,7 +13,7 @@ uint64_t DequeFoldCurriedAcc::g(const std::deque<uint64_t> &l, uint64_t x0_,
           };
         };
       },
-      crane::fn([](uint64_t x) {
+      crane::fn<crane::fn<uint64_t(bool)>(uint64_t)>([](uint64_t x) {
         return [=](bool b) -> uint64_t {
           if (b) {
             return x;
@@ -22,5 +22,5 @@ uint64_t DequeFoldCurriedAcc::g(const std::deque<uint64_t> &l, uint64_t x0_,
           }
         };
       }),
-      l)(x0_, x1_);
+      l)(x0_)(x1_);
 }

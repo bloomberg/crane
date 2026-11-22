@@ -15885,3 +15885,14 @@
   (alias runtest)
   (deps loop_acc_curried_partial_app.t.exe)
   (action (run ./loop_acc_curried_partial_app.t.exe))))
+
+(subdir deque_fold_curried_acc
+ (rule
+  (targets deque_fold_curried_acc.t.exe)
+  (deps DequeFoldCurriedAcc.vo deque_fold_curried_acc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_curried_acc.t.exe deque_fold_curried_acc.t.cpp deque_fold_curried_acc.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_fold_curried_acc.t.exe)
+  (action (run ./deque_fold_curried_acc.t.exe))))
