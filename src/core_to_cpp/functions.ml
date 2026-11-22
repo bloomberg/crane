@@ -790,7 +790,8 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
   (* Type annotations inside the body must name the same resolved types as the
      signature does. *)
   let gen_body_stmts env cw e =
-    apply_hkt_resolutions_stmts hkt_tvar_resolutions (gen_stmts cx env cw e)
+    apply_hkt_resolutions_stmts hkt_tvar_resolutions
+      (with_hkt_resolutions cx hkt_tvar_resolutions (fun () -> gen_stmts cx env cw e))
   in
   (* Substitute promoted type var markers [Tpromoted name] with their
      qualified resolutions throughout a C++ type tree. *)

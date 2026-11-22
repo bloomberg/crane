@@ -28,10 +28,16 @@ let to_type (a : 'p t) : 'p Type.t = List.fold_right (fun dom cod -> Type.Functi
 let arity (a : 'p t) = List.fold_left (fun n g -> n + List.length g) 0 a.groups
 
 (** [a] as one curried chain, its leaves curried too: the form two
-    groupings of the same callable share. *)
+    groupings of the same callable share.  A result that is itself a
+    function (a closure's, once an alias over a function type is unfolded)
+    continues the chain. *)
 let curried (a : 'p t) =
   let leaf t = Types.spell_arrows Through_tvar t in
-  (List.map leaf (List.concat a.groups), leaf a.result)
+  let rec result (doms : 'p Type.t list) (t : 'p Type.t) =
+    match t with Function (d, c) -> result (List.rev_append d doms) c | t -> (List.rev doms, t)
+  in
+  let doms, r = result (List.rev (List.concat a.groups)) a.result in
+  (List.map leaf doms, leaf r)
 
 (** Whether [a] and [b] are one callable grouped the same way or not: the
     same parameters and result once every group and every arrow inside a

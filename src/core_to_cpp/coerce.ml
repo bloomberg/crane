@@ -84,8 +84,12 @@ let aliases_in cx =
   (* A mapped inductive of no arguments is the C++ type its mapping names:
      [positive] and [N] mapped to [unsigned int] are one type. *)
   let scope = Lowering_state.get_current_type_vars cx in
+  let hkt = Lowering_state.hkt_resolutions cx in
   let mapped (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     match t with
+    (* A variable standing for an instance's associated type is that type,
+       as the body will be rewritten to say. *)
+    | Variable (Index (i, _)) when List.mem_assoc i hkt -> List.assoc i hkt
     | Entity_application (g, [], _) when Base.Table.is_custom g -> (
       match Base.Table.find_custom_opt g with Some text -> External (text, []) | None -> t )
     (* A variable written by its index alone is the one the scope names
@@ -120,12 +124,22 @@ let normal al t =
     | In_namespace (g, (Entity_application (g', _, _) as t')) when GlobRef.CanOrd.equal g g' -> spelled t'
     | t -> t
   in
-  Cpp_ir.Types.map (fun t -> spelled (al.unfold t)) t
+  let rec bare (t : Cpp_ir.Lowered.Type.t) = match t with Const t | Reference (_, t) -> bare t | t -> t in
+  (* An alias may unfold to another alias, or to a qualified one. *)
+  let rec unfolded n t =
+    let t' = spelled (al.unfold (bare t)) in
+    if n = 0 || t' = t then t' else unfolded (n - 1) t'
+  in
+  Cpp_ir.Types.map (unfolded 8) t
 
 (** [a] with every leaf {!normal}: a closure's parameters as the values
     they take, whatever reference they are declared through. *)
 let normal_arrows al (a : Cpp_ir.Lowered.Arrows.t) : Cpp_ir.Lowered.Arrows.t =
-  {groups = List.map (List.map (normal al)) a.groups; result = normal al a.result}
+  let groups = List.map (List.map (normal al)) a.groups and result = normal al a.result in
+  (* A result an alias spelled as a function continues the chain. *)
+  match Cpp_ir.Arrows.of_type result with
+  | Some r -> {groups = groups @ r.groups; result = r.result}
+  | None -> {groups; result}
 
 (** [decide_with aliases from into]: how a value of type [from] is adapted
     to a slot of type [into], or [None] where it fits as it is (typed CppIR
@@ -218,13 +232,13 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
     no callable (the box's converting constructor), and the erasure of a
     callable whose domain is erased already or which is generic (the
     [crane::fn] at the erased signature takes it as it is). *)
-let implicit (from : Cpp_ir.Lowered.Value_type.t) : Cpp_ir.Lowered.Coercion.plan -> bool = function
+let implicit ?(al = as_written) (from : Cpp_ir.Lowered.Value_type.t) : Cpp_ir.Lowered.Coercion.plan -> bool = function
   | Box None -> true
   | Erase _ -> (
     match from with
     | Deduced Generic_lambda -> true
     | Typed t -> (
-      match Cpp_ir.Arrows.of_type (strip_cpp_ref_const t) with
+      match Cpp_ir.Arrows.of_type (normal al t) with
       | Some {groups = d :: _; _} -> List.for_all Cpp_ir.Types.prints_as_any d
       | _ -> false )
     | Closure {groups = d :: _; _} | Function_name (_, {groups = d :: _; _}) -> List.for_all Cpp_ir.Types.prints_as_any d
@@ -278,6 +292,21 @@ let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slo
     value otherwise. *)
 let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t)
     ~(before : Cpp_ir.Lowered.Expr.t) (after : Cpp_ir.Lowered.Expr.t) =
+  (* The other direction, counted: an adapter that built nothing where
+     {!decide} plans a coercion C++ does not perform by itself, at a slot
+     both sides can be compared at. *)
+  if Base.Probe.enabled () && (after == before || after = before) then begin
+    match (decide_with al from into, into) with
+    | Some p, Exactly t
+      when (not (implicit ~al from p))
+           && (not (Cpp_ir.Value_type.not_yet_typed from))
+           && (not (contains_tvar t))
+           && not (Cpp_ir.Types.exists (fun t -> t = Auto) t) ->
+      Base.Probe.hit "typed-declined" (fun () ->
+          adapter ^ " " ^ Cpp_ir.Coercion.plan_name p ^ " in " ^ Base.Probe.library () ^ " from "
+          ^ Binders.show_value_type from ^ " into " ^ Binders.type_shape t )
+    | _ -> Base.Probe.hit "typed-declined" (fun () -> adapter ^ " none")
+  end;
   (* An adapter may rebuild what it was given unchanged. *)
   if (Base.Probe.enabled () || Base.Probe.checking ()) && after != before && after <> before then begin
     let planned = Option.map Cpp_ir.Coercion.plan_name (decide_with al from into) in
@@ -975,7 +1004,7 @@ let curry_value_to_expected_built cx env ?(expected_ty : Cpp_ir.Lowered.Type.t o
 let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?callee_site ?exact core_ty
     (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   let after = curry_value_to_expected_built cx env ?expected_ty ?callee_site ?exact core_ty cglob in
-  if Base.Probe.enabled () && after != cglob then begin
+  if Base.Probe.enabled () then begin
     let declared = Option.map (Types.cpp_of_core cx env) core_ty in
     let from : Cpp_ir.Lowered.Value_type.t =
       match (cglob, declared) with

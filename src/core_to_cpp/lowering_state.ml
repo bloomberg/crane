@@ -277,6 +277,13 @@ type lexical = {
      markers.  Lexical: each such function or instance binds its own class
      parameters. *)
   promoted_var_map : (Id.t * Cpp_ir.Lowered.Type.t) list;
+  (** The function's own type variables, by Core index, that stand for an
+      associated type of a class instance ([M A] read as
+      [typename _tcI0::M]): {!Decl_state.hkt_tvar_resolutions_of_type}.  The
+      body is rewritten with them once lowered; until then a type lowering
+      synthesises still names the variable, and reads it through these
+      ({!Coerce.aliases_in}).  Lexical: each function has its own. *)
+  hkt_resolutions : (int * Cpp_ir.Lowered.Type.t) list;
   (** When true, we are inside a constructor expression (module-level static
      initializer). Promoted type vars that can't be resolved via
      [promoted_var_map] fall back to [Any] ([std::any]) instead of keeping
@@ -394,6 +401,7 @@ let create ~pp_cpp_type () =
           cpp_binder_types = IntMap.empty;
           declared_outer = None;
           promoted_var_map = [];
+          hkt_resolutions = [];
           in_constructor_expr = false;
           rank2_carrier = None;
           lifted_fixpoints = [];
@@ -480,6 +488,14 @@ let current_class_temps cx =
     -- and is as much this scope's as [T1] is. *)
 let current_scope_type_names cx =
   cx.ctx.lexical.current_type_vars @ List.map snd (current_class_temps cx)
+
+(** The associated types the function's own type variables stand for
+    ({!lexical.hkt_resolutions}). *)
+let hkt_resolutions cx = cx.ctx.lexical.hkt_resolutions
+
+(** [f] with [r] as {!lexical.hkt_resolutions}. *)
+let with_hkt_resolutions cx r f =
+  with_field cx (fun c -> c.lexical.hkt_resolutions) (fun v -> set_lexical cx (fun l -> {l with hkt_resolutions = v})) r f
 
 (** [with_type_vars tvars f] runs [f] with [tvars] as the type-variable scope,
     and puts the enclosing scope back on the way out however [f] leaves --

@@ -272,7 +272,7 @@ let exact_verdict cx (x : Typed.t) into =
   match Coerce.decide cx x.ty into with
   | None when Coerce.unrelated cx x.ty into -> `Unrelated
   | None -> `Fits
-  | Some p when Coerce.implicit x.ty p -> `Fits_implicitly
+  | Some p when Coerce.implicit ~al:(Coerce.aliases_in cx) x.ty p -> `Fits_implicitly
   | Some p -> `Plan p
 
 let verdict_name = function
@@ -294,12 +294,16 @@ let verdict cx (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
 (** [verdict]'s census line for [x] in [into], [what] describing [x]. *)
 let verdict_line cx ~what (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   let slot = match into with Exactly t -> Binders.type_shape t | _ -> "?" in
-  let detail () = " in " ^ site cx ^ " " ^ what ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ slot in
+  let detail () = " in " ^ site cx ^ " " ^ what ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ slot ^ " scope=[" ^ String.concat "," (List.map Names.Id.to_string (Lowering_state.get_current_type_vars cx)) ^ "]" in
   match verdict cx x into with
   | `Unchecked why when String.ends_with ~suffix:"fits" why -> "unchecked (" ^ why ^ ")"
   | `Unchecked why when String.starts_with ~prefix:"slot at" why -> "unchecked (" ^ why ^ ")" ^ detail ()
   | `Unchecked why -> "unchecked (" ^ why ^ ")"
-  | `Unrelated -> "unrelated" ^ detail ()
+  | `Unrelated ->
+    let al = Coerce.aliases_in cx in
+    let n = match x.ty with Typed t -> Binders.type_shape (Coerce.normal al t) | Closure a -> Binders.type_shape (Cpp_ir.Arrows.to_type (Coerce.normal_arrows al a)) | _ -> "?" in
+    let m = match into with Exactly t -> Binders.type_shape (Coerce.normal al t) | _ -> "?" in
+    "unrelated" ^ detail () ^ " NORMAL " ^ n ^ " INTO " ^ m
   | `Fits -> "fits"
   | `Fits_implicitly -> "fits-implicitly"
   | `Plan p -> Cpp_ir.Coercion.plan_name p ^ detail ()
@@ -346,7 +350,7 @@ let agreement cx ~site (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
       Base.Probe.violation "binder agreement"
         Pp.(str site ++ str ": a value of type " ++ str (Binders.show_value_type x.ty) ++ str " declared at "
             ++ str slot)
-    | Some p when not (Coerce.implicit x.ty p) ->
+    | Some p when not (Coerce.implicit ~al:(Coerce.aliases_in cx) x.ty p) ->
       Base.Probe.violation "binder agreement"
         Pp.(str site ++ str ": a value of type " ++ str (Binders.show_value_type x.ty) ++ str " declared at "
             ++ str slot ++ str " without the " ++ str (Cpp_ir.Coercion.plan_name p) ++ str " it needs")
@@ -356,7 +360,7 @@ let agreement cx ~site (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
       match Coerce.decide cx x.ty into with
       | None when Coerce.unrelated cx x.ty into -> "unrelated from " ^ Binders.show_value_type x.ty
       | None -> "fits"
-      | Some p when Coerce.implicit x.ty p -> "fits-implicitly"
+      | Some p when Coerce.implicit ~al:(Coerce.aliases_in cx) x.ty p -> "fits-implicitly"
       | Some p ->
         let slot = match into with Exactly t -> Binders.type_shape t | _ -> "?" in
         Cpp_ir.Coercion.plan_name p ^ " in " ^ Base.Probe.library () ^ " from " ^ Binders.show_value_type x.ty
