@@ -265,3 +265,14 @@
   (alias runtest)
   (deps scrutinee_list_return_type.t.exe)
   (action (run ./scrutinee_list_return_type.t.exe))))
+
+(subdir nested_fix_alias_result
+ (rule
+  (targets nested_fix_alias_result.t.exe)
+  (deps NestedFixAliasResult.vo nested_fix_alias_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_fix_alias_result.t.exe nested_fix_alias_result.t.cpp nested_fix_alias_result.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_fix_alias_result.t.exe)
+  (action (run ./nested_fix_alias_result.t.exe))))
