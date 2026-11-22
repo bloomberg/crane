@@ -430,3 +430,58 @@ callable_crossing_matrix.
 - [ ] Phase C
 - [ ] Phase D
 - [ ] Phase E (optional)
+
+## 8. Findings
+
+### Phase A
+
+Where the implementation departs from sections 1-4, and why.
+
+- **Grammar.** As designed: `Arrows`, `Deduction`, `Value_type`,
+  `Slot_type`, `Coercion` in `cpp_ir/grammar.ml`, re-exported from
+  `arrows.ml`, `value_type.ml`, `slot_type.ml`, `coercion.ml` (with
+  `Deduction` inside `Value_type`), and `Lowered.{Arrows,Value_type,
+  Slot_type,Coercion}`.  `Expr.Coerce` is lowered-only and owed by
+  `Resolve`; `Map.coercion` rewrites every type in a coercion and
+  `Children` reuses it, so the two cannot drift.  `Slot_type.of_param`
+  reads `Param_mode.value_type`.
+- **`Typed`.** `cpp_ir/typed.ml{,i}`: the private record, `v`, `typed`,
+  `untyped`, `category`, plus `of_node`/`node_type` (the rows of section 1
+  a node answers by itself: casts, boxes, conversions, calls with
+  `Yields`, aborts, foreign text, runtime helpers, requirements, moves,
+  `Function_value`, `Erase_callable`, lambdas with a written or nested
+  return type), `rewrap` (a rewrite that keeps the value, such as
+  `made_of`), and `or_type`.  `Typed.apply` is left to B1, where it first
+  has a caller.
+- **Knot.** `lowering.expr_typed` replaces `lowering.expr`;
+  `Knot.gen_expr` and `Expr.gen_expr` are the shims.
+- **Form conversion is at the dispatcher first.** Each `Expr.gen_form` arm
+  returns `Typed.t`.  Arms Expr owns are typed from what they know:
+  variable reads from the binder table (`Binders.read_value_type`, the
+  declared type without its parameter spelling, or the Core type's
+  conversion where it is `auto`), adapters at the slot type
+  (`Typed_checks.adapted_to`: a closure grouped as the slot), globals as
+  `Function_name` at the declared grouping (`Typed_checks.global_value_type`:
+  the first group the declaration takes, the rest of the chain curried) or
+  their declared type, literals at their primitive's registered type
+  (`strings.pstring.type`, `num.int63.type`, `num.float.type`), numerals and
+  enum constructors at their inductive.  Arms that delegate to a form module
+  are typed by `Typed_checks.of_built`: the node's own type, and failing
+  that the conversion of the Core term's type (a closure grouped as the
+  lambda's own parameters where the node is a lambda), each such fallback
+  counted under the `typed-derived` probe.  Moving the synthesis into each
+  form module (so `Application` holds typed arguments) is B1 work: it is
+  what `Typed.apply` and `into_slot` consume, and nothing in phase A reads
+  a form module's internal types.
+- **`decide` takes its aliases as a record.** `Coerce.decide_with aliases`
+  is the total function; `Coerce.decide cx` instantiates it with the unit's
+  alias unfolding and box classification, `Coerce.as_written` with the
+  structural ones, so the adapters that take no context
+  (`regroup_value`, `regroup_crossing`, `eta_expand_to_expected`,
+  `name_fn_arg_for_tvar_param`) are shadow-checked too.
+- **Checks.** Under `CRANE_PROBE`: `typed` (form x kind of type, the
+  `Not_yet_typed` census), `typed-derived` (fallbacks to the Core type),
+  `typed-fit` (at every `gen_expr_typed` exit with an `expected_ty`, whether
+  `decide` finds the value fits), `typed-shadow` (each inventory adapter
+  that built something, against `decide`'s plan kind; `coerce` classified
+  by the shape it built, `Coerce.coerced_kind`).

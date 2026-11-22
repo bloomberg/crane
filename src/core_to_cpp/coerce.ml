@@ -71,6 +71,149 @@ let adapter_arg (_, id) : Cpp_ir.Lowered.Expr.t = Local (Option.get id)
     would be a guess about an instantiation this site cannot see. *)
 let states_unboxed_target into = not (Cpp_ir.Types.prints_as_any into || contains_tvar into)
 
+(** What {!decide} asks of the context: to unfold an alias, and whether a
+    type is a box or spelled as one once aliases are followed. *)
+type aliases = {
+  unfold : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t;
+  boxed_source : Cpp_ir.Lowered.Type.t -> bool;
+  spells_as_any : Cpp_ir.Lowered.Type.t -> bool;
+}
+
+(** The aliases of the unit being lowered. *)
+let aliases_in cx =
+  { unfold = (fun t -> Types.unfold_cpp_typedef cx (empty_env ()) (strip_cpp_ref_const t));
+    boxed_source = Erasure.is_boxed_source cx;
+    spells_as_any = Erasure.spells_as_any cx }
+
+(** No aliases followed: the types as written. *)
+let as_written =
+  { unfold = strip_cpp_ref_const;
+    boxed_source = is_boxed_type;
+    spells_as_any = Cpp_ir.Types.prints_as_any }
+
+(** Whether [t] holds a type resolution has still to decide: an opaque one
+    says nothing a coercion could act on. *)
+let has_obligation = Cpp_ir.Types.exists (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Obligation _ -> true | _ -> false)
+
+(** [t] with its aliases unfolded and its spelling normalised: a type
+    variable by the name C++ knows it under, an inductive without the
+    namespace it is qualified by. *)
+let normal al t =
+  Cpp_ir.Types.map
+    (fun (t : Cpp_ir.Lowered.Type.t) ->
+      match t with
+      | Variable (Index (_, Some n)) -> Variable (Named n)
+      | Variable (Index (i, None)) -> Variable (Named (Cpp_ir.Type.positional_id i))
+      | In_namespace (g, (Entity_application (g', _, _) as t')) when GlobRef.CanOrd.equal g g' -> t'
+      | t -> t )
+    (al.unfold t)
+
+(** [decide_with aliases from into]: how a value of type [from] is adapted
+    to a slot of type [into], or [None] where it fits as it is (typed CppIR
+    design 3.3).  A total function of the two types; [aliases] only unfolds
+    them.  The first row that matches answers. *)
+let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) :
+    Cpp_ir.Lowered.Coercion.plan option =
+  let callable : Cpp_ir.Lowered.Value_type.t -> Cpp_ir.Lowered.Arrows.t option = function
+    | Typed t -> Cpp_ir.Arrows.of_type (normal al t)
+    | Closure a | Function_name (_, a) -> Some a
+    | Never | Deduced _ -> None
+  in
+  (* A generic lambda is a callable with no signature to read. *)
+  let function_value = Option.has_some (callable from) || from = Deduced Generic_lambda in
+  match (from, into) with
+  | _, (Free | Forwarded | View _ | Join _ | Exactly Void) | Never, _ -> None
+  | (Closure _ | Function_name _), Template_parameter t -> Some (Name t)
+  | (Typed _ | Deduced _), Template_parameter _ -> None
+  | _, Exactly into -> (
+    let into = normal al into in
+    let source = match from with Typed t -> Some (normal al t) | _ -> None in
+    let classified =
+      match source with
+      | None -> `Unknown
+      | Some f when al.boxed_source f -> `Boxed
+      | Some f when Cpp_ir.Types.prints_as_any f -> `Opaque
+      | Some f -> `Concrete f
+    in
+    match (source, classified) with
+    | Some t, _ when cpp_ty_eq t into -> None
+    | _, `Boxed when al.spells_as_any into -> None
+    | _, `Boxed -> (
+      match Cpp_passes.Erasure.erased_list_shape into with
+      | Some (g, shape) when Base.Table.is_custom g -> Some (Unbox (To shape))
+      | Some (_, shape) -> Some (Unbox (List (into, shape)))
+      | None -> Some (Unbox (To into)) )
+    | _, `Opaque -> None
+    | _ when is_boxed_type into -> Some (Box (if function_value then Some Boxed_whole else None))
+    | _ when function_value && erased_domain_fun_ty into -> (
+      match into with Function (_, cod) -> Some (Erase (At_signature cod)) | _ -> None )
+    | _ -> (
+      match (callable from, Cpp_ir.Arrows.of_type into) with
+      | Some a, Some b when Cpp_ir.Types.prints_as_any a.result && not (Cpp_ir.Types.prints_as_any b.result) ->
+        Some (Recover (a, b))
+      | Some a, Some b when Cpp_ir.Arrows.equal a b -> None
+      | Some a, Some b when Cpp_ir.Arrows.same_function a b -> (
+        match from with
+        | Function_name _ -> Some (Eta {declared = a; into = b})
+        | _ -> Some (Regroup (a, b)) )
+      | Some _, _ -> None
+      | None, _ -> (
+        match source with
+        | Some t when has_obligation t || has_obligation into || Cpp_ir.Types.prints_as_any into -> None
+        | Some t when Cpp_ir.Types.same_arrows t into -> Some (Convert into)
+        | Some (Shared_pointer t) when cpp_ty_eq t into -> Some (Convert into)
+        | Some t when (match into with Shared_pointer t' -> cpp_ty_eq t t' | _ -> false) -> Some (Convert into)
+        | Some _ | None -> None ) ) )
+
+(** {!decide_with} the aliases of the unit being lowered. *)
+let decide cx from into = decide_with (aliases_in cx) from into
+
+(** Whether [from] and the slot [into] are types no plan relates, where
+    {!decide} finds no plan: neither a box nor opaque, and not one type, nor
+    one callable grouped otherwise.  For diagnostics: such a pair is a type
+    synthesised wrong, or a value C++ converts by itself. *)
+let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  let al = aliases_in cx in
+  let plain t = not (has_obligation t || Cpp_ir.Types.prints_as_any t || al.boxed_source t) in
+  match (from, into) with
+  | Typed t, Exactly t' ->
+    let t = normal al t and t' = normal al t' in
+    plain t && plain t' && t' <> Void && not (cpp_ty_eq t t')
+  | (Closure a | Function_name (_, a)), Exactly t' -> (
+    match Cpp_ir.Arrows.of_type (normal al t') with
+    | Some b -> not (Cpp_ir.Arrows.same_function a b)
+    | None -> plain (normal al t') )
+  | _ -> false
+
+(** Under [CRANE_PROBE], the boundary shadow check: [after], what the
+    adapter named [adapter] built from [before] for a slot of type [into],
+    held to what {!decide} plans for a value of type [from] there.  An
+    adapter that built nothing is not compared: its caller may adapt the
+    value otherwise. *)
+let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t)
+    ~(before : Cpp_ir.Lowered.Expr.t) (after : Cpp_ir.Lowered.Expr.t) =
+  if Base.Probe.enabled () && after != before then begin
+    let planned = Option.map Cpp_ir.Coercion.plan_name (decide_with al from into) in
+    let agrees = match planned with Some p -> List.mem p kind | None -> false in
+    let variables = function
+      | Cpp_ir.Grammar.Slot_type.Exactly t -> contains_tvar t
+      | _ -> false
+    in
+    let from_variables = match Cpp_ir.Value_type.as_function_type from with Some t -> contains_tvar t | None -> false in
+    Base.Probe.hit "typed-shadow" (fun () ->
+        adapter
+        ^
+        if agrees then " agree"
+        else if into = Free then " unchecked (no slot type)"
+        else if planned = None && variables into && not from_variables then
+          " unchecked (slot at the callee's own variables)"
+        else
+          " disagree decide " ^ Option.default "none" planned ^ " built " ^ String.concat "/" kind ^ " from "
+          ^ Binders.show_value_type from ^ " into "
+          ^ match into with Exactly t -> Binders.type_shape t | _ -> "?" )
+  end;
+  after
+
 (** The C++ type a position is being generated into: what it states
     ([expected], a generator's [?expected_ty]), and where it states nothing,
     the enclosing function's return type -- which a tail position lands in.
@@ -93,6 +236,9 @@ let position_cpp_ty cx (expected : Cpp_ir.Lowered.Type.t option) =
     instantiation is substituted into it: it is the template parameter that
     C++ has to deduce, not what it should deduce to. *)
 let name_fn_arg_for_tvar_param param_core_ty (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  shadow ~adapter:"name_fn_arg_for_tvar_param" ~kind:["name"] (Cpp_ir.Typed.node_type expr) (Template_parameter None)
+    ~before:expr
+  @@
   match (resolve_meta param_core_ty, expr) with
   | Core.Type.Variable _, Lambda _ -> Function_value expr
   | _ -> expr
@@ -164,7 +310,7 @@ let regroup_value ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t
       | None -> expr )
     | _ -> expr
   in
-  go 0 from into expr
+  shadow ~adapter:"regroup_value" ~kind:["regroup"] (Typed from) (Exactly into) ~before:expr (go 0 from into expr)
 
 (** [grouped_lambda ?into params body]: a closure taking [params] and
     returning [body], its parameters grouped as the function type [into]
@@ -237,6 +383,10 @@ let apply_erased_callee callee arg_exprs =
     [returns_a_lambda], having spelled the remaining arguments out itself. *)
 let eta_expand_to_expected ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~core_arity ~returns_a_lambda ~arity
     (f : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  shadow ~adapter:"eta_expand_to_expected" ~kind:["regroup"] (Cpp_ir.Typed.node_type f)
+    (match expected_ty with Some t -> Exactly t | None -> Free)
+    ~before:f
+  @@
   match Option.map strip_cpp_ref_const expected_ty with
   | Some (Function (dom, _)) when arity > 0 && core_arity > arity && List.length dom > arity && not returns_a_lambda ->
     let params = adapter_params ~prefix:"_ee" dom in
@@ -271,7 +421,7 @@ let eta_expand_to_expected ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~core_a
     only for the one question a missing [from] leaves open: whether the value
     is a function, and so has to be adapted by [crane_erase_fn] before it is
     boxed. *)
-let rec coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t)
+let rec coerce_built cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t)
   (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   let source = Erasure.classify_erasure cx from in
@@ -291,7 +441,7 @@ let rec coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.L
       match (expr, Types.unfold_cpp_typedef cx (empty_env ()) into) with
       | Lambda l, Function (_, cod) ->
         let rec at_returns : Cpp_ir.Lowered.Stmt.t -> Cpp_ir.Lowered.Stmt.t = function
-          | Return (Some e) -> Return (Some (coerce cx ~from:Any ~into:cod e))
+          | Return (Some e) -> Return (Some (coerce_built cx ~from:Any ~into:cod e))
           | st -> Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:Fun.id ~stmt:at_returns ~type_:Fun.id ()) st
         in
         Lambda
@@ -374,16 +524,38 @@ let rec coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.L
             List.mapi
               (fun i ((ty, _) as p) ->
                 let into = Option.default Cpp_ir.Type.Any (List.nth_opt sdom i) in
-                coerce cx ~from:ty ~into (adapter_arg p) )
+                coerce_built cx ~from:ty ~into (adapter_arg p) )
               params
           in
-          let call = coerce cx ~from:scod ~into:cod (Cpp_ir.Build.call expr args) in
+          let call = coerce_built cx ~from:scod ~into:cod (Cpp_ir.Build.call expr args) in
           Cpp_ir.Build.lambda params None [Return (Some call)] ~capture:Stored
         | _ -> (
           match concrete_source with
           | `Concrete f when not (Cpp_ir.Types.prints_as_any into) ->
             Convert.gen_type_conversion_expr ~src_ty:f ~dst_ty:into expr
           | _ -> expr ) )
+
+(** The kind of adapter [e] is, as {!coerce} builds them, named as the
+    plan {!decide} would name it. *)
+let coerced_kind : Cpp_ir.Lowered.Expr.t -> string = function
+  | Box _ | Converting_construct (Any, _) -> "box"
+  | Erase_callable _ -> "erase"
+  | Unbox _ | Any_cast _ | Converting_construct (_, [(Unbox _ | Any_cast _)]) -> "unbox"
+  | Lambda _ -> "recover"
+  | Convert _ -> "convert"
+  | Container_cast _ -> "container cast"
+  | _ -> "other"
+
+(** {!coerce_built}, held to {!decide} under [CRANE_PROBE] ({!shadow}). *)
+let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t) expr =
+  let after = coerce_built cx ?term ?from ~into expr in
+  (* A lambda is a closure, whatever box the caller says it comes from. *)
+  let from_ty : Cpp_ir.Lowered.Value_type.t =
+    match (from, expr) with
+    | _, Lambda _ | None, _ -> Cpp_ir.Typed.node_type expr
+    | Some t, _ -> Typed t
+  in
+  shadow ~al:(aliases_in cx) ~adapter:"coerce" ~kind:[coerced_kind after] from_ty (Exactly into) ~before:expr after
 
 (** [regroup_crossing ~from ~into expr]: [expr], whose C++ type is [from],
     read at [into] where the two differ only in how their arrows are grouped
@@ -395,6 +567,8 @@ let rec coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.L
     whose type is the slot's. *)
 let regroup_crossing ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
+  shadow ~adapter:"regroup_crossing" ~kind:["convert"] (Typed from) (Exactly into) ~before:expr
+  @@
   let from = strip_cpp_ref_const from and into = strip_cpp_ref_const into in
   match (from, into) with
   | Function _, _ | _, Function _ -> expr
@@ -576,7 +750,7 @@ let adapter_param_moves (ty : Cpp_ir.Lowered.Type.t) =
     time ([Declared_at n]).
 
     Returns [cglob] unchanged when the declaration is already a value. *)
-let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(callee_site = Cpp_ir.Types.Declared)
+let curry_value_to_expected_built cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(callee_site = Cpp_ir.Types.Declared)
   ?(exact = false) core_ty
     (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   let decl_dom, decl_cod =
@@ -683,6 +857,30 @@ let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option)
       | _ -> stored_adapter ~moved params call
     in
     nest ~moved:[] params (if n_outer < List.length params then expected_ty else None)
+
+(** {!curry_value_to_expected_built}, held to {!decide} under [CRANE_PROBE]
+    ({!shadow}): a global's name is taken at the grouping it is declared at,
+    a variable at its type. *)
+let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?callee_site ?exact core_ty
+    (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  let after = curry_value_to_expected_built cx env ?expected_ty ?callee_site ?exact core_ty cglob in
+  if Base.Probe.enabled () && after != cglob then begin
+    let declared = Option.map (Types.cpp_of_core cx env) core_ty in
+    let from : Cpp_ir.Lowered.Value_type.t =
+      match (cglob, declared) with
+      | Entity (r, _, _), Some (Function (dom, cod)) -> (
+        match Cpp_ir.Arrows.of_type (Function (dom, Cpp_ir.Types.spell_arrows Through_tvar cod)) with
+        | Some a -> Function_name (r, a)
+        | None -> Typed (Function (dom, cod)) )
+      | _, Some t -> Typed t
+      | _, None -> Deduced Not_yet_typed
+    in
+    ignore
+      (shadow ~al:(aliases_in cx) ~adapter:"curry_value_to_expected" ~kind:["eta"; "regroup"] from
+         (match expected_ty with Some t -> Exactly t | None -> Free)
+         ~before:cglob after )
+  end;
+  after
 
 (** The mirror of {!recover_carrier_result}: a value reaching a parameter the
     callee declared as a carrier applied to a type variable -- [M A], a

@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** The two entry points of expression lowering that every lowering module
-    recurses through: {!gen_expr} (an expression, {!Expr}) and
+    recurses through: {!gen_expr_typed} (an expression and its type, {!Expr}) and
     {!gen_stmts} (statements ending in a continuation, {!Stmts}).
 
     Lowering is one mutually recursive function spread over several modules:
@@ -21,16 +21,16 @@
 
 open Base.Common
 
-(** The entry points, at the types {!Expr.gen_expr} and
+(** The entry points, at the types {!Expr.gen_expr_typed} and
     {!Stmts.gen_stmts} have. *)
 type lowering = {
-  expr :
+  expr_typed :
     Lowering_state.t ->
     ?expected_ty:Cpp_ir.Lowered.Type.t ->
     ?slot:Slot.slot ->
     env ->
     Core.Expr.t ->
-    Cpp_ir.Lowered.Expr.t;
+    Cpp_ir.Typed.t;
   stmts :
     Lowering_state.t ->
     ?slot:Slot.slot ->
@@ -53,8 +53,12 @@ let get () =
   | Some l -> l
   | None -> CErrors.anomaly (Pp.str "Crane: expression lowering ran before Translation installed it.")
 
-(** {!Expr.gen_expr}. *)
-let gen_expr cx ?expected_ty ?slot env e = (get ()).expr cx ?expected_ty ?slot env e
+(** {!Expr.gen_expr_typed}. *)
+let gen_expr_typed cx ?expected_ty ?slot env e = (get ()).expr_typed cx ?expected_ty ?slot env e
+
+(** {!gen_expr_typed}'s expression alone, for a caller that does not read
+    the type yet. *)
+let gen_expr cx ?expected_ty ?slot env e = (gen_expr_typed cx ?expected_ty ?slot env e).expr
 
 (** {!Stmts.gen_stmts}. *)
 let gen_stmts cx ?slot env k e = (get ()).stmts cx ?slot env k e

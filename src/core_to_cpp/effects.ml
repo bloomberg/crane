@@ -81,7 +81,8 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
   else begin
     (* Sequential mode: desugar bind into sequential statements. *)
     let a_core, f = Base.Common.last_two (a1 :: a2 :: l) in
-    let a = gen_expr cx env a_core in
+    let action = Knot.gen_expr_typed cx env a_core in
+    let a = action.expr in
     let ids', f = collect_lams f in
   let ids, env =
     push_vars'
@@ -142,6 +143,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
             binder = bound_by_bind env } : Cpp_ir.Lowered.Stmt.t)
         :: gen_stmts cx ~slot env k f
       | None ->
+        Typed_checks.agreement cx ~site:"bind result" action (Exactly ty);
         (Bind_variable (x, Declare (ty, bound_by_bind env), a) : Cpp_ir.Lowered.Stmt.t) :: gen_stmts cx ~slot env k f
     end
   | _ ->
@@ -181,6 +183,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
         (* The continuation is the temporary's one reader. *)
         let result : Cpp_ir.Lowered.Expr.t = if worth_moving then Move (Local temp_id) else Local temp_id in
         let app = Cpp_ir.Build.call f_expr [result] in
+        Typed_checks.agreement cx ~site:"bind temporary" action (Exactly cpp_ty);
         [Bind_variable (temp_id, Declare (cpp_ty, None), a); k app]
       | None ->
         side_effect @ gen_stmts cx ~slot env k f ) ) )
