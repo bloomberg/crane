@@ -366,10 +366,7 @@ let position_cpp_ty cx (expected : Cpp_ir.Lowered.Type.t option) =
     The parameter type must be the callee's own, before this call site's
     instantiation is substituted into it: it is the template parameter that
     C++ has to deduce, not what it should deduce to. *)
-let name_fn_arg_for_tvar_param param_core_ty (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  shadow ~adapter:"name_fn_arg_for_tvar_param" ~kind:["name"] (Cpp_ir.Typed.node_type expr) (Template_parameter None)
-    ~before:expr
-  @@
+let name_fn_arg_built param_core_ty (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match (resolve_meta param_core_ty, expr) with
   | Core.Type.Variable _, Lambda _ -> Function_value expr
   | _ -> expr
@@ -417,7 +414,7 @@ let mk_arity_call ?(params : Cpp_ir.Lowered.Type.t list option)
     reaching a curried slot, is the curried adapter of
     {!curry_value_to_expected}.  [expr] itself where the types are not so
     related. *)
-let regroup_value ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
+let regroup_value_built ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   let rec go depth (from : Cpp_ir.Lowered.Type.t) (into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) =
     let from = strip_cpp_ref_const from and into = strip_cpp_ref_const into in
@@ -441,7 +438,7 @@ let regroup_value ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t
       | None -> expr )
     | _ -> expr
   in
-  shadow ~adapter:"regroup_value" ~kind:["regroup"] (Typed from) (Exactly into) ~before:expr (go 0 from into expr)
+  go 0 from into expr
 
 (** [grouped_lambda ?into params body]: a closure taking [params] and
     returning [body], its parameters grouped as the function type [into]
@@ -512,12 +509,8 @@ let apply_erased_callee callee arg_exprs =
     that takes fewer than its C++ slot but as many as its Core type is curried
     on purpose, not shortened, and is left alone -- as is one whose body
     [returns_a_lambda], having spelled the remaining arguments out itself. *)
-let eta_expand_to_expected ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~core_arity ~returns_a_lambda ~arity
+let eta_expand_built ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~core_arity ~returns_a_lambda ~arity
     (f : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  shadow ~adapter:"eta_expand_to_expected" ~kind:["regroup"] (Cpp_ir.Typed.node_type f)
-    (match expected_ty with Some t -> Exactly t | None -> Free)
-    ~before:f
-  @@
   match Option.map strip_cpp_ref_const expected_ty with
   | Some (Function (dom, _)) when arity > 0 && core_arity > arity && List.length dom > arity && not returns_a_lambda ->
     let params = adapter_params ~prefix:"_ee" dom in
@@ -705,10 +698,8 @@ let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lower
     another arity).  A function value itself is not this: it reaches a slot
     through the adapter {!curry_value_to_expected} writes,
     whose type is the slot's. *)
-let regroup_crossing ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
+let regroup_crossing_built ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
-  shadow ~adapter:"regroup_crossing" ~kind:["convert"] (Typed from) (Exactly into) ~before:expr
-  @@
   let from = strip_cpp_ref_const from and into = strip_cpp_ref_const into in
   match (from, into) with
   | Function _, _ | _, Function _ -> expr
@@ -998,29 +989,125 @@ let curry_value_to_expected_built cx env ?(expected_ty : Cpp_ir.Lowered.Type.t o
     in
     nest ~moved:[] params (if n_outer < List.length params then expected_ty else None)
 
-(** {!curry_value_to_expected_built}, held to {!decide} under [CRANE_PROBE]
-    ({!shadow}): a global's name is taken at the grouping it is declared at,
-    a variable at its type. *)
+(** The adapters of section 0 of the typed CppIR design that go through
+    {!into_slot}, each by the name its parameters are prefixed with (B1's
+    origin tag), carrying what its expansion reads beyond the value and
+    the slot. *)
+type origin =
+  | Rg  (** {!regroup_value}: [_rg] *)
+  | Ee of {core_arity : int; returns_a_lambda : bool; arity : int}  (** {!eta_expand_to_expected}: [_ee] *)
+  | Ec of {
+      cx : Lowering_state.t;
+      env : env;
+      core_ty : Core.Type.t option;
+      callee_site : Cpp_ir.Types.arrow_site option;
+      exact : bool option;
+    }  (** {!curry_value_to_expected}: [_ec] *)
+  | Crossing  (** {!regroup_crossing}: [crane_convert] *)
+  | Tvar_name of Core.Type.t  (** {!name_fn_arg_for_tvar_param}: [crane::fn] *)
+
+(** The adapter an origin names, for the census. *)
+let origin_name = function
+  | Rg -> "regroup_value"
+  | Ee _ -> "eta_expand_to_expected"
+  | Ec _ -> "curry_value_to_expected"
+  | Crossing -> "regroup_crossing"
+  | Tvar_name _ -> "name_fn_arg_for_tvar_param"
+
+(** The plans an origin's expansion builds, by {!Cpp_ir.Coercion.plan_name}. *)
+let builds = function
+  | Rg | Ee _ -> ["regroup"]
+  | Ec _ -> ["eta"; "regroup"]
+  | Crossing -> ["convert"]
+  | Tvar_name _ -> ["name"]
+
+(** Whether {!decide} answers for a value of type [from] at [into]: a typed
+    value and a slot that states a type, neither mentioning a type variable
+    (the two may number them differently), the slot no generic one, and not
+    a callable said to fill a slot no callable fills (a position describing
+    the aggregate the value goes into).  Where it does not, the adapter's
+    own test still decides; phase C removes those. *)
+let decides al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  match into with
+  | Exactly t ->
+    (not (Cpp_ir.Value_type.not_yet_typed from))
+    && (not (contains_tvar t))
+    && (not (Cpp_ir.Types.exists (fun t -> t = Auto) t))
+    && (match from with
+        | Typed f -> not (contains_tvar f)
+        | Closure a | Function_name (_, a) -> not (contains_tvar (Cpp_ir.Arrows.to_type a))
+        | _ -> true)
+    &&
+    let t = normal al t in
+    not
+      (Option.has_some (Cpp_ir.Value_type.arrows from)
+       && Cpp_ir.Arrows.of_type t = None
+       && not (al.boxed_source t || al.spells_as_any t))
+  | _ -> false
+
+(** The adapter body an origin names, applied to [x] for the slot [into]. *)
+let expand origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  let stated = match into with Exactly t -> Some t | _ -> None in
+  match (origin, x.ty, stated) with
+  | Rg, Typed from, Some into -> regroup_value_built ~from ~into x.expr
+  | Crossing, Typed from, Some into -> regroup_crossing_built ~from ~into x.expr
+  | Ee {core_arity; returns_a_lambda; arity}, _, expected_ty ->
+    eta_expand_built ?expected_ty ~core_arity ~returns_a_lambda ~arity x.expr
+  | Ec {cx; env; core_ty; callee_site; exact}, _, expected_ty ->
+    curry_value_to_expected_built cx env ?expected_ty ?callee_site ?exact core_ty x.expr
+  | Tvar_name t, _, _ -> name_fn_arg_built t x.expr
+  | (Rg | Crossing), _, _ -> x.expr
+
+(** [into_slot ~origin x into]: [x] put in the slot [into] through the
+    adapter [origin] names.  Where {!decide} answers ({!decides}), its plan
+    decides whether the adapter is built at all; elsewhere the adapter's own
+    test does.  Held to {!decide} under [CRANE_PROBE] ({!shadow}). *)
+let into_slot ?(al = as_written) ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  let built =
+    if decides al x.ty into then
+      match decide_with al x.ty into with
+      | Some p when List.mem (Cpp_ir.Coercion.plan_name p) (builds origin) -> expand origin x into
+      | _ -> x.expr
+    else expand origin x into
+  in
+  shadow ~al ~adapter:(origin_name origin) ~kind:(builds origin) x.ty into ~before:x.expr built
+
+let slot_of_expected (t : Cpp_ir.Lowered.Type.t option) : Cpp_ir.Lowered.Slot_type.t =
+  match t with Some t -> Exactly t | None -> Free
+
+(** {!name_fn_arg_built} through {!into_slot}. *)
+let name_fn_arg_for_tvar_param param_core_ty (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  into_slot ~origin:(Tvar_name param_core_ty) (Cpp_ir.Typed.of_node expr) (Template_parameter None)
+
+(** {!regroup_value_built} through {!into_slot}. *)
+let regroup_value ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) =
+  into_slot ~origin:Rg (Cpp_ir.Typed.typed from expr) (Exactly into)
+
+(** {!eta_expand_built} through {!into_slot}. *)
+let eta_expand_to_expected ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~core_arity ~returns_a_lambda ~arity
+    (f : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  into_slot ~origin:(Ee {core_arity; returns_a_lambda; arity}) (Cpp_ir.Typed.of_node f) (slot_of_expected expected_ty)
+
+(** {!regroup_crossing_built} through {!into_slot}. *)
+let regroup_crossing ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) =
+  into_slot ~origin:Crossing (Cpp_ir.Typed.typed from expr) (Exactly into)
+
+(** {!curry_value_to_expected_built} through {!into_slot}: a global's name
+    is taken at the grouping it is declared at, a variable at its type. *)
 let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?callee_site ?exact core_ty
     (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  let after = curry_value_to_expected_built cx env ?expected_ty ?callee_site ?exact core_ty cglob in
-  if Base.Probe.enabled () then begin
-    let declared = Option.map (Types.cpp_of_core cx env) core_ty in
-    let from : Cpp_ir.Lowered.Value_type.t =
-      match (cglob, declared) with
-      | Entity (r, _, _), Some (Function (dom, cod)) -> (
-        match Cpp_ir.Arrows.of_type (Function (dom, Cpp_ir.Types.spell_arrows Through_tvar cod)) with
-        | Some a -> Function_name (r, a)
-        | None -> Typed (Function (dom, cod)) )
-      | _, Some t -> Typed t
-      | _, None -> Deduced Not_yet_typed
-    in
-    ignore
-      (shadow ~al:(aliases_in cx) ~adapter:"curry_value_to_expected" ~kind:["eta"; "regroup"] from
-         (match expected_ty with Some t -> Exactly t | None -> Free)
-         ~before:cglob after )
-  end;
-  after
+  let declared = Option.map (Types.cpp_of_core cx env) core_ty in
+  let from : Cpp_ir.Lowered.Value_type.t =
+    match (cglob, declared) with
+    | Entity (r, _, _), Some (Function (dom, cod)) -> (
+      match Cpp_ir.Arrows.of_type (Function (dom, Cpp_ir.Types.spell_arrows Through_tvar cod)) with
+      | Some a -> Function_name (r, a)
+      | None -> Typed (Function (dom, cod)) )
+    | _, Some t -> Typed t
+    | _, None -> Deduced Not_yet_typed
+  in
+  into_slot ~al:(aliases_in cx) ~origin:(Ec {cx; env; core_ty; callee_site; exact}) (Cpp_ir.Typed.v ~ty:from cglob)
+    (slot_of_expected expected_ty)
 
 (** The mirror of {!recover_carrier_result}: a value reaching a parameter the
     callee declared as a carrier applied to a type variable -- [M A], a
