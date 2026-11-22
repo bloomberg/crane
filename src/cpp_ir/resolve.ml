@@ -115,6 +115,7 @@ and expr : l Expr.t -> r Expr.t = function
   | Forward (t, e) -> Forward (type_ t, expr e)
   | Lambda l -> Lambda (lambda l)
   | Suspend _ -> owed "a suspended constructor"
+  | Coerce _ -> owed "an unexpanded coercion"
   | Allocate (k, t) -> Allocate (k, type_ t)
   | Aggregate a -> Aggregate (aggregate a)
   | Local_aggregate a -> Local_aggregate (aggregate a)

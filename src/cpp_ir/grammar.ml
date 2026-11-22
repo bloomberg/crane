@@ -242,6 +242,97 @@ and Erase_shape : sig
 end =
   Erase_shape
 
+and Arrows : sig
+  (** How a callable takes its arguments: [groups] in call order, each group
+      one C++ call, never empty ([[[]]] for a nullary callable).  The flat
+      [crane::fn<R(A, B)>] is [[[A; B]]]; its curried spelling is
+      [[[A]; [B]]]. *)
+  type 'p t = {
+    groups : 'p Type.t list list;
+    result : 'p Type.t;
+  }
+end =
+  Arrows
+
+and Deduction : sig
+  (** Why only C++ knows the type of an expression: a closed list of honest
+      admissions. *)
+  type t =
+    | Foreign_text  (** C++ text from a user template *)
+    | Runtime_helper of Crane_rt.helper  (** a runtime helper, named *)
+    | Generic_lambda  (** a polymorphic function object *)
+    | Requirement  (** a requires expression's subject or constraint *)
+    | Not_yet_typed
+        (** lowering does not synthesise this form's type yet (typed CppIR
+            phases A to C) *)
+end =
+  Deduction
+
+and Value_type : sig
+  (** The type of a lowered expression: what lowering synthesised for it,
+      which [Type.t] alone cannot say for a closure, a function's name, or
+      an abort. *)
+  type 'p t =
+    | Typed of 'p Type.t  (** exactly this nameable type *)
+    | Closure of 'p Arrows.t  (** a lambda's own, unnameable, type *)
+    | Function_name of GlobRef.t * 'p Arrows.t
+        (** a global function named as a value, grouped as it is declared *)
+    | Never  (** an abort: fits every slot *)
+    | Deduced of Deduction.t
+end =
+  Value_type
+
+and Slot_type : sig
+  (** What a position asks of the value put in it. *)
+  type _ t =
+    | Exactly : 'p Type.t -> 'p t
+        (** a declared type: a parameter's value type, a variable, a field,
+            a loop variable, a frame field, a return type; [Any] where the
+            slot is erased *)
+    | Template_parameter : 'p Type.t option -> 'p t
+        (** a type C++ deduces (an inline mapping's [auto], a callee's own
+            type variable), with its instantiation, curried, where it is
+            spellable *)
+    | Forwarded : 'p t  (** a forwarding reference [F&&] *)
+    | View : Param_mode.view * GlobRef.t -> 'p t
+        (** a typed mapping's view of the type headed so *)
+    | Free : 'p t  (** an [auto] variable, or a discarded value *)
+    | Join : int -> lowered t
+        (** the return type of lambda number [n], decided from its returns *)
+end =
+  Slot_type
+
+and Coercion : sig
+  (** How a value is adapted to the slot it is put in. *)
+  type 'p plan =
+    | Regroup of 'p Arrows.t * 'p Arrows.t
+        (** a callable taken at one grouping, called at another *)
+    | Name of 'p Type.t option
+        (** a closure or a function name given a nameable type
+            ([crane::fn]), at a template parameter *)
+    | Eta of {
+        declared : 'p Arrows.t;
+        into : 'p Arrows.t;
+      }  (** a global function eta-expanded to another grouping *)
+    | Box of 'p Erase_shape.t option
+    | Deep_box  (** a list boxed element by element *)
+    | Unbox of 'p Unbox.t
+    | Erase of 'p Erase_shape.t
+    | Recover of 'p Arrows.t * 'p Arrows.t
+        (** a callable with an erased codomain read at a concrete one *)
+    | Convert of 'p Type.t
+    | Container_cast of 'p Type.t * bool
+    | Then of 'p plan * 'p plan  (** the first, then the second *)
+
+  (** A coercion: the value's type, the slot's, and the plan between them. *)
+  type 'p t = {
+    from : 'p Value_type.t;
+    into : 'p Slot_type.t;
+    plan : 'p plan;
+  }
+end =
+  Coercion
+
 and Access : sig
   (** How a member name attaches to the object in front of it. *)
   type t =
@@ -486,6 +577,9 @@ and Expr : sig
         (** a coinductive value with its constructor suspended in a thunk,
             written by resolution as its type's [lazy_] factory applied to
             the thunk *)
+    | Coerce : lowered Coercion.t * lowered t -> lowered t
+        (** a value adapted to the slot it is put in, as {!Coercion.plan}
+            says; expanded by finishing *)
     | Allocate : Allocation.t * 'p Type.t -> 'p t
         (** the allocating factory for [T], unapplied; a [Call] supplies
             the constructor arguments *)

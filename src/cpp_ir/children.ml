@@ -83,6 +83,14 @@ let expr : type p. p visitor -> p Expr.t -> unit =
   | Suspend (t, e) ->
     v.type_ t;
     v.expr e
+  | Coerce (c, e) ->
+    ignore
+      (Map.coercion
+         (fun t ->
+           v.type_ t;
+           t )
+         c );
+    v.expr e
   | Dereference e | Move e | Member (e, _) | Access (_, e, _) | Function_value e -> v.expr e
   | Lambda l ->
     typed v l.params;
