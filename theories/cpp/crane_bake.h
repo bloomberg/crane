@@ -29,9 +29,9 @@
 //   the DAG it was.  0 is a new node: its constructor's index (0 for a record
 //   or a flat struct) and its fields follow.  An enumeration is a new node
 //   too, so it reads back as a nullary-constructor variant and back.  The
-//   node a field points to through [std::shared_ptr], [crane::shared_box],
-//   [crane::rc] or [crane::field_box] is written in place: the sharing is the
-//   inductive's.
+//   node a field points to through a shared pointer ([std::shared_ptr],
+//   [bsl::shared_ptr]), [crane::shared_box], [crane::rc] or
+//   [crane::field_box] is written in place: the sharing is the inductive's.
 // - A [crane::list] is its cells in order, each [1] and its head, ended by
 //   [0] (nil) or [k + 2] (the tail is the [k]th cell already read).
 // - A [crane::shared_array] is [0] (empty), [1] (its length and elements),
@@ -82,6 +82,7 @@
 #include <variant>
 #include <vector>
 
+#include "aggregate.h"
 #include "conslist.h"
 #include "field.h"
 #include "shared_array.h"
@@ -131,10 +132,25 @@ template <class A> struct is_persistent_array<::persistent_array<A>> : std::true
 // to, and whether it shares that value by identity ([counted]), which
 // reading then keeps, rather than by the value's own node sharing.
 template <class P> struct handle : std::false_type {};
-template <class A> struct handle<std::shared_ptr<A>> : std::true_type {
-  using element = A;
+// A shared pointer: [std::shared_ptr], or another library's with its
+// interface ([bsl::shared_ptr]), which takes ownership of a new element.
+template <class P>
+concept shared_pointer = requires(const P &p) {
+  typename P::element_type;
+  p.use_count();
+  { p.get() } -> std::convertible_to<const typename P::element_type *>;
+} && std::is_constructible_v<P, typename P::element_type *>;
+template <class P>
+  requires shared_pointer<P>
+struct handle<P> : std::true_type {
+  using element = typename P::element_type;
   static constexpr bool counted = true;
-  static std::shared_ptr<A> make(A &&a) { return std::make_shared<A>(std::move(a)); }
+  static P make(element &&a) {
+    if constexpr (std::is_same_v<P, std::shared_ptr<element>>)
+      return std::make_shared<element>(std::move(a));
+    else
+      return P(new element(std::move(a)));
+  }
 };
 template <class A> struct handle<crane::rc<A>> : std::true_type {
   using element = A;
@@ -216,21 +232,11 @@ concept inductive = requires(const T &t) {
 template <class T>
 concept fielded = std::is_aggregate_v<T> && std::is_class_v<T> && !std::is_empty_v<T>;
 
-template <class A> auto field_types(A &a) {
-  auto &[... fs] = a;
-  return std::type_identity<std::tuple<std::remove_cvref_t<decltype(fs)>...>>{};
-}
-template <class A> using fields_t = typename decltype(field_types(std::declval<A &>()))::type;
+template <class A> using fields_t = aggregate::fields_t<A>;
 
-template <class A, class F> void each(const A &a, F &&f) {
-  const auto &[... fs] = a;
-  (f(fs), ...);
-}
+template <class A, class F> void each(const A &a, F &&f) { aggregate::each(a, f); }
 
-template <std::size_t K, class A> const auto &field_at(const A &a) {
-  const auto &[... fs] = a;
-  return fs...[K];
-}
+template <std::size_t K, class A> const auto &field_at(const A &a) { return aggregate::get<K>(a); }
 
 template <std::size_t I, class V> const auto &alt_at(const V &v) {
   using std::get;

@@ -159,7 +159,8 @@ let driver_source header =
 
 let fail_with dir msg = CErrors.user_err Pp.(str "Crane Bake: " ++ msg ++ fnl () ++ str ("(files kept in " ^ dir ^ ")"))
 
-(* A compiler's diagnostics, cut to its errors and what follows each. *)
+(* A compiler's diagnostics, cut to its errors and what follows each: a
+   linker's ([Undefined symbols ...]) as well as the compiler's. *)
 let errors_of diagnostics =
   let lines = String.split_on_char '\n' diagnostics in
   let rec keep n = function
@@ -169,7 +170,7 @@ let errors_of diagnostics =
       let is_error =
         let n = String.length l in
         let rec at i = i + 6 <= n && (String.sub l i 6 = "error:" || at (i + 1)) in
-        at 0
+        at 0 || String.starts_with ~prefix:"Undefined symbols" l
       in
       if is_error then l :: keep 3 rest else keep 0 rest
   in
@@ -226,7 +227,16 @@ let bake_one ~opaque_access qualid =
     try Subprocess.split_arguments flags
     with Subprocess.Invalid_arguments m -> fail_with dir Pp.(str ("invalid Crane Bake Flags: " ^ m))
   in
-  let runtime = match runtime_include () with Some d -> [d] | None -> [] in
+  (* A BDE build reads the BDE flavour of a runtime header first
+     (scripts/compile-bde.sh). *)
+  let runtime =
+    match runtime_include () with
+    | Some d when Toolchain.is_bde () ->
+      let bde = Filename.concat (Filename.dirname d) "cpp_bde" in
+      if Sys.file_exists bde then [bde; d] else [d]
+    | Some d -> [d]
+    | None -> []
+  in
   ( try
       Toolchain.compile_cpp ~shouldlink:true ~includes:(include_dirs @ runtime)
         ~flags:(["-O1"; "-w"; "-include"; "crane_bake.h"] @ user_flags @ sources)

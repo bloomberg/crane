@@ -64,9 +64,10 @@ Running the generated C++ once and emitting the value as data does work.
 ## The image (`theories/cpp/crane_bake.h`)
 
 An image is a stream of 64-bit words plus a table of static blocks. The
-serialiser is generic over the generated types. It uses C++26 structured
-binding packs to read a struct's fields, so no per-type code is generated;
-each type gets its own template instantiation.
+serialiser is generic over the generated types. It reads a struct's fields
+through `aggregate.h`: C++26 structured binding packs, or under C++20 (a BDE
+build) a counted binding of up to 32 fields; so no per-type code is
+generated, and each type gets its own template instantiation.
 
 - A scalar (integer, char, bool, enum, `float`, `double`) is one word; a
   wider one (`long double`, a 128-bit integer) is a compile error. A string
@@ -85,8 +86,8 @@ each type gets its own template instantiation.
   `k+1` means the k-th node already read of that type, and `0` means a new node
   (constructor index, then fields). An enum is a new node with its index, so
   an enum and a nullary-constructor variant read each other.
-  `std::shared_ptr`/`crane::shared_box`/`crane::rc`/`crane::field_box`
-  fields (`detail::handle`) are transparent; the sharing lives at the node
+  Shared-pointer (`std::shared_ptr`, `bsl::shared_ptr`)/`crane::shared_box`/
+  `crane::rc`/`crane::field_box` fields (`detail::handle`) are transparent; the sharing lives at the node
   level. When reading, a counted pointer to a node already read is the same
   pointer again.
 - A node's fields that hold a node of its own type (`detail::self_handle`)

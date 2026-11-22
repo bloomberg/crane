@@ -38,14 +38,29 @@ let make_error_file prefix infile =
 (** Report whether Crane is currently targeting the BDE standard library. *)
 let is_bde () = String.equal (Base.Table.std_lib ()) "BDE"
 
-(** Return the configured BDE root without a trailing slash. *)
+(** Return the configured BDE root without a trailing slash, a leading [~]
+    expanded to [HOME] as a shell would: the compiler is run without one, and
+    [Set Crane BDE Directory "~/bde_install/"] is how BDE roots are given. *)
 let normalize_bde_dir () =
   let directory = Base.Table.bde_dir () in
+  let directory =
+    match Sys.getenv_opt "HOME" with
+    | Some home when String.equal directory "~" -> home
+    | Some home when String.starts_with ~prefix:"~/" directory ->
+      home ^ String.sub directory 1 (String.length directory - 1)
+    | _ -> directory
+  in
   let length = String.length directory in
   if length > 0 && Char.equal directory.[length - 1] '/' then
     String.sub directory 0 (length - 1)
   else
     directory
+
+(** The library ABI a BDE program is compiled for: the one the BDE libraries
+    are built with (C++17), whatever [-std] says; otherwise the program
+    references a C++20 ABI tag the libraries do not define and fails to link
+    (scripts/compile-bde.sh passes the same). *)
+let bde_abi = "-DBSLS_LIBRARYFEATURES_FORCE_ABI_CPP17"
 
 (** Convert values into alternating [prefix; value] argument pairs. *)
 let prepend_to_all prefix values =
@@ -131,6 +146,7 @@ let compile_cpp
       @ (if shouldlink then [] else ["-c"])
       @ [
           "-std=c++20";
+          bde_abi;
           "-Wno-deprecated-literal-operator";
           "-Wno-unused-command-line-argument";
           "-I";
@@ -225,6 +241,7 @@ let compile_and_test ?outfile ?errfile infile =
       [
         "-O2";
         "-std=c++20";
+        bde_abi;
         "-Wno-deprecated-literal-operator";
         "-Wno-unused-command-line-argument";
         "-I";
