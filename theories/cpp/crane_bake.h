@@ -49,7 +49,9 @@
 // The writer lays the stream out one row to a line, each with a comment
 // that spells it: its number, its constructor's and fields' names, its
 // scalars and strings as literals.  Strings are C++ string literals, words
-// decimal.  Past [annotated_rows] rows, rows are filled into lines bare.
+// decimal.  Past [annotated_rows] rows, rows are filled into lines bare.  The
+// text is cut into character arrays of at most [text_chunk] bytes, a string
+// split across two where it falls on a cut.
 //
 // Writing walks the value with an explicit stack and reading is a loop over
 // the rows, so a list or a tree as deep as memory allows is baked and read
@@ -118,8 +120,11 @@ struct image {
   std::size_t size;
   const void *const *blocks;
   std::size_t block_count;
-  const char *text;
-  std::size_t text_size;
+  // The strings' bytes, in the order they are written, as consecutive
+  // chunks: each is one string literal, which C++ compilers need only
+  // support up to 65536 bytes long ([-Woverlength-strings]).
+  const std::string_view *text;
+  std::size_t text_chunks;
 };
 
 // The widths of the scalar types an image may hold, which the bake host and
@@ -582,9 +587,9 @@ private:
   std::size_t node_count_ = 0;
   // The run being written: its type, and the line of its header.
   std::size_t run_type_ = std::size_t(-1), run_line_ = 0, run_first_ = 0;
-  // The strings' bytes, and their literals.
+  // The strings' bytes, and where each string ends in them.
   std::string text_;
-  std::vector<std::string> text_literals_;
+  std::vector<std::size_t> text_ends_;
   // The arrays written, per type, by address.
   std::unordered_map<std::type_index, std::unordered_map<const void *, std::size_t>> arrays_;
   // Static blocks: their declarations, by address; the ones the stream names.
@@ -792,9 +797,8 @@ private:
   void put_text(const char *p, std::size_t n, std::string &note) {
     words_.push_back(n);
     text_.append(p, n);
-    std::string lit = detail::quoted(p, n);
-    note += lit;
-    text_literals_.push_back(std::move(lit));
+    text_ends_.push_back(text_.size());
+    note += detail::quoted(p, n);
   }
 
   template <class E> static std::string type_spelling() {
@@ -854,6 +858,53 @@ private:
       col += width;
     }
     return out + "\n";
+  }
+
+  // The longest string literal the image declares: what C++ compilers are
+  // required to support, less the terminating null.
+  static constexpr std::size_t text_chunk = 65535;
+
+  // The text's bytes [begin, end) as one character array: each string's
+  // bytes in it as literals filled into lines of 80 columns, a string too
+  // long for a line split across literals.
+  std::string text_declaration(const std::string &name, std::size_t begin, std::size_t end) const {
+    constexpr std::size_t limit = 80, room = limit - 6;
+    std::string out = "constinit const char " + name + "[] =";
+    std::size_t col = out.size();
+    auto add = [&](const std::string &lit, bool last) {
+      if (col + 1 + lit.size() + (last ? 1 : 0) > limit) {
+        out += "\n   ";
+        col = 3;
+      }
+      out += " " + lit;
+      col += 1 + lit.size();
+    };
+    // The first string ending past [begin].
+    auto it = std::upper_bound(text_ends_.begin(), text_ends_.end(), begin);
+    std::size_t pos = begin;
+    std::vector<std::string> lits;
+    while (pos < end) {
+      std::size_t stop = std::min(end, it == text_ends_.end() ? end : *it);
+      if (stop == pos) {  // an empty string
+        ++it;
+        continue;
+      }
+      // A piece whose literal fits a line, however each byte is escaped (at
+      // most [\x00" "], 7 columns).
+      std::size_t piece = pos, width = 2;
+      while (piece < stop) {
+        unsigned char c = static_cast<unsigned char>(text_[piece]);
+        std::size_t w = c >= 0x20 && c < 0x7f ? (c == '"' || c == '\\' || c == '?' ? 2 : 1) : 7;
+        if (width + w > room && piece > pos) break;
+        width += w;
+        ++piece;
+      }
+      lits.push_back(detail::quoted(text_.data() + pos, piece - pos));
+      pos = piece;
+      if (pos == stop && it != text_ends_.end()) ++it;
+    }
+    for (std::size_t i = 0; i < lits.size(); ++i) add(lits[i], i + 1 == lits.size());
+    return out + ";\n";
   }
 
   // The stream's words, a line each with its comment aligned after it; a
@@ -1119,25 +1170,23 @@ public:
       blocks = prefix_ + "blocks";
       out += declaration("constinit const void *const " + blocks + "[] = ", bs);
     }
+    std::size_t text_chunks = 0;
     if (!text_.empty()) {
       text = prefix_ + "text";
-      std::string decl = "constinit const char " + text + "[] =";
-      std::size_t col = decl.size();
-      for (const auto &l : text_literals_) {
-        if (l == "\"\"") continue;
-        if (col + 1 + l.size() + 1 > 80) {
-          decl += "\n   ";
-          col = 3;
-        }
-        decl += " " + l;
-        col += 1 + l.size();
+      std::vector<std::string> chunks;
+      text_chunks = (text_.size() + text_chunk - 1) / text_chunk;
+      for (std::size_t c = 0; c < text_chunks; ++c) {
+        std::string name = text + std::to_string(c);
+        std::size_t size = std::min(text_chunk, text_.size() - c * text_chunk);
+        out += text_declaration(name, c * text_chunk, c * text_chunk + size);
+        chunks.push_back("std::string_view(" + name + ", " + std::to_string(size) + ")");
       }
-      out += decl + ";\n";
+      out += declaration("constinit const std::string_view " + text + "[] = ", chunks);
     }
     out += "constinit const std::uint64_t " + prefix_ + "words[] = {\n" + stream_lines() + "};\n";
     out += declaration("constinit const crane::bake::image " + symbol,
                        {prefix_ + "words", std::to_string(words_.size()), blocks,
-                        std::to_string(stream_blocks_.size()), text, std::to_string(text_.size())});
+                        std::to_string(stream_blocks_.size()), text, std::to_string(text_chunks)});
     return out;
   }
 };
@@ -1145,7 +1194,9 @@ public:
 // Reads an image back.
 class reader {
   const image &img_;
-  std::size_t pos_ = 0, text_pos_ = 0;
+  std::size_t pos_ = 0;
+  // Where the next string starts: a chunk of the text, and a place in it.
+  std::size_t chunk_ = 0, chunk_pos_ = 0;
   // Per node type, numbered as [detail::walk_types] meets them, the function
   // that reads a run of its rows.
   struct types {
@@ -1181,10 +1232,19 @@ class reader {
 
   std::string get_text() {
     std::size_t n = word();
-    if (n == 0) return {};
-    if (n > img_.text_size - text_pos_) corrupt("a string");
-    std::string s(img_.text + text_pos_, n);
-    text_pos_ += n;
+    std::string s;
+    s.reserve(n);
+    while (s.size() < n) {
+      if (chunk_ >= img_.text_chunks) corrupt("a string");
+      std::string_view c = img_.text[chunk_].substr(chunk_pos_);
+      std::size_t take = std::min(c.size(), n - s.size());
+      s.append(c.data(), take);
+      chunk_pos_ += take;
+      if (chunk_pos_ == img_.text[chunk_].size()) {
+        ++chunk_;
+        chunk_pos_ = 0;
+      }
+    }
     return s;
   }
 
@@ -1251,7 +1311,7 @@ class reader {
 
 public:
   explicit reader(const image &img) : img_(img) {}
-  bool done() const { return pos_ == img_.size && text_pos_ == img_.text_size; }
+  bool done() const { return pos_ == img_.size && chunk_ == img_.text_chunks; }
 
   // The value of type [T]: its nodes, then it.
   template <class T> T get_root() {

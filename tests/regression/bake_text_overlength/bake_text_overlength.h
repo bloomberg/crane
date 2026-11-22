@@ -14,7 +14,7 @@
 #include <variant>
 
 #include "crane_bake.h"
-extern const crane::bake::image crane_baked_words_88718ba70fdd;
+extern const crane::bake::image crane_baked_words_0a128e356994;
 
 template <typename A> struct List;
 struct Positive;
@@ -315,7 +315,7 @@ struct Uint63Axioms {
 struct BakeTextOverlength {
   static int64_t n2i(uint64_t n);
   static inline const List<std::string> words =
-      crane::bake::read<List<std::string>>(crane_baked_words_88718ba70fdd);
+      crane::bake::read<List<std::string>>(crane_baked_words_0a128e356994);
   static inline const uint64_t total =
       words.template fold_left<uint64_t>([](uint64_t a,
                                             const std::string &s) {

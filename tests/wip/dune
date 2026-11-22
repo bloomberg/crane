@@ -334,16 +334,6 @@
   (deps capture_move_then_alias.t.exe)
   (action (run ./capture_move_then_alias.t.exe))))
 
-(subdir bake_text_overlength
- (rule
-  (targets bake_text_overlength.t.exe)
-  (deps BakeTextOverlength.vo bake_text_overlength.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_text_overlength.t.exe bake_text_overlength.t.cpp bake_text_overlength.cpp)))
- (rule
-  (alias runtest)
-  (deps bake_text_overlength.t.exe)
-  (action (run ./bake_text_overlength.t.exe))))
 
 (subdir bde_concept_declval_include
  (rule

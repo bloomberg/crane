@@ -85,8 +85,10 @@ Z Uint63Axioms::to_Z(int64_t x0_) {
 // Baked by crane::bake: the value of crane_baked_words_73eb7cade1a4.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const char crane_baked_words_73eb7cade1a4_text[] = "?=" "?" "a\\b"
+constinit const char crane_baked_words_73eb7cade1a4_text0[] = "?=" "?" "a\\b"
     "?\?)" "?\"?" "?\?\?" "?\?/" "?\?" "a" "?\?=";
+constinit const std::string_view crane_baked_words_73eb7cade1a4_text[] = {
+    std::string_view(crane_baked_words_73eb7cade1a4_text0, 24)};
 constinit const std::uint64_t crane_baked_words_73eb7cade1a4_words[] = {
     1, 11,    // List<std::string>: #0 to #10
     0,        // #0 Nil
@@ -105,4 +107,4 @@ constinit const std::uint64_t crane_baked_words_73eb7cade1a4_words[] = {
 };
 constinit const crane::bake::image crane_baked_words_73eb7cade1a4{
     crane_baked_words_73eb7cade1a4_words, 35, nullptr, 0,
-    crane_baked_words_73eb7cade1a4_text, 24};
+    crane_baked_words_73eb7cade1a4_text, 1};

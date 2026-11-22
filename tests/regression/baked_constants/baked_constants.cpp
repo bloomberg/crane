@@ -163,7 +163,9 @@ constinit const crane::bake::image crane_baked_big_43cf8fb6d90e{
 // Baked by crane::bake: the value of crane_baked_entries_a4d00e69f151.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const char crane_baked_entries_a4d00e69f151_text[] = "first";
+constinit const char crane_baked_entries_a4d00e69f151_text0[] = "first";
+constinit const std::string_view crane_baked_entries_a4d00e69f151_text[] = {
+    std::string_view(crane_baked_entries_a4d00e69f151_text0, 5)};
 constinit const std::uint64_t crane_baked_entries_a4d00e69f151_words[] = {
     2, 3,              // BakedConstants::tree: #0 to #2
     0,                 // #0 Leaf
@@ -180,4 +182,4 @@ constinit const std::uint64_t crane_baked_entries_a4d00e69f151_words[] = {
 };
 constinit const crane::bake::image crane_baked_entries_a4d00e69f151{
     crane_baked_entries_a4d00e69f151_words, 27, nullptr, 0,
-    crane_baked_entries_a4d00e69f151_text, 5};
+    crane_baked_entries_a4d00e69f151_text, 1};

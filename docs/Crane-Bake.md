@@ -148,7 +148,12 @@ A comment names a node by its number (`#4`), a constructor and its fields
 by their C++ names, a scoped enumerator by its name, a string or char as a
 literal, a float by its shortest decimal, a static block by its name (`b2`
 for `<prefix>_b2`). The text holds `"first"`; a static block's elements are
-decimal literals of its element type.
+decimal literals of its element type. The text is a table of character
+arrays (`<prefix>text0`, `<prefix>text1`, ...) of at most 65535 bytes each,
+the longest string literal C++ compilers must support
+(`-Woverlength-strings`), a string split across two where it falls on a cut,
+and long strings are split into literals that fit a line. A `?` after a `?`
+is written `\?`, so no literal spells a trigraph.
 Names come from the compiler: a type's from `__PRETTY_FUNCTION__`, a
 struct's fields from clang's `__builtin_dump_struct` (`_0`, `_1`, ...
 without it). Past `writer::annotated_rows` (1000) rows, rows are filled into

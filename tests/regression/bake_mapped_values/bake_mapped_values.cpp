@@ -42,14 +42,16 @@ uint64_t BakeMappedValues::weight(const BakeMappedValues::spine &s) {
 // Baked by crane::bake: the value of crane_baked_labelled_ebb90243a587.
 static_assert(crane::bake::data_model == 0x80408080402u,
               "crane::bake: baked on a host with other scalar widths");
-constinit const char crane_baked_labelled_ebb90243a587_text[] = "label";
+constinit const char crane_baked_labelled_ebb90243a587_text0[] = "label";
+constinit const std::string_view crane_baked_labelled_ebb90243a587_text[] = {
+    std::string_view(crane_baked_labelled_ebb90243a587_text0, 5)};
 constinit const std::uint64_t crane_baked_labelled_ebb90243a587_words[] = {
     0,        // no nodes
     1, 5, 3,  // the value: {"label", 3}
 };
 constinit const crane::bake::image crane_baked_labelled_ebb90243a587{
     crane_baked_labelled_ebb90243a587_words, 4, nullptr, 0,
-    crane_baked_labelled_ebb90243a587_text, 5};
+    crane_baked_labelled_ebb90243a587_text, 1};
 
 // Baked by crane::bake: the value of crane_baked_digits_c080c1cf345d.
 static_assert(crane::bake::data_model == 0x80408080402u,
