@@ -330,3 +330,14 @@
   (alias runtest)
   (deps self_comparison_global_werror.t.exe)
   (action (run ./self_comparison_global_werror.t.exe))))
+
+(subdir unread_param_captured
+ (rule
+  (targets unread_param_captured.t.exe)
+  (deps UnreadParamCaptured.vo unread_param_captured.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unread_param_captured.t.exe unread_param_captured.t.cpp unread_param_captured.cpp)))
+ (rule
+  (alias runtest)
+  (deps unread_param_captured.t.exe)
+  (action (run ./unread_param_captured.t.exe))))
