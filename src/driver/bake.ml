@@ -81,11 +81,39 @@ let check_type env sigma r ty =
   if is_proof env ty then refuse r "is a proof, which extraction erases";
   value env ~what:"is" ty
 
+(** The functor application ([Module FN := F N]) that [mp] or a module
+    enclosing it is, or aliases ([Module M := FN]).  Its constants
+    are extracted as members of the functor's template ([using FN = F<N>;]),
+    which an image cannot initialise for one instantiation. *)
+let rec applied_module env mp =
+  match mp with
+  | ModPath.MPdot (parent, _) -> (
+    let applied =
+      match Mod_declarations.mod_expr (Environ.lookup_module mp env) with
+      | Algebraic (MENoFunctor me) -> application env mp me
+      | _ -> None
+    in
+    match applied with Some _ -> applied | None -> applied_module env parent )
+  | ModPath.MPfile _ | ModPath.MPbound _ -> None
+
+(* The functor application [mp], defined by [me], is or aliases. *)
+and application env mp : _ Declarations.module_alg_expr -> _ = function
+  | MEapply _ -> Some mp
+  | MEident target -> applied_module env target
+  | MEwith (me, _) -> application env mp me
+
 let check r =
   match r with
   | GlobRef.ConstRef c ->
     if has_bound_path (Constant.modpath c) then
       refuse r "is declared inside a functor or a module type, so it is not closed";
+    ( match applied_module (Global.env ()) (Constant.modpath c) with
+    | Some mp ->
+      refuse r
+        ( "is declared in " ^ ModPath.to_string mp
+        ^ ", a functor application, so it is a member of the functor's C++ template, not a declaration of \
+           its own" )
+    | None -> () );
     let env = Global.env () in
     let cb = Environ.lookup_constant c env in
     ( match cb.Declarations.const_body with

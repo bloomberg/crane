@@ -24,7 +24,10 @@ Running the generated C++ once and emitting the value as data does work.
 ## How it runs
 
 1. **Check** (`src/driver/bake.ml`, `check`). The constant must be a
-   transparent constant outside any functor or module type, and its type must
+   transparent constant outside any functor or module type and outside any
+   functor application (`Module FN := F N`, or an alias of one: its constants
+   are members of the functor's C++ template, `using FN = F<N>;`, which an
+   image cannot initialise for one instantiation), and its type must
    hold only data: no function, type, proof (at the top), coinductive (lazy or
    effectful, `itree` included) or opaque axiom type unless it is mapped (a
    typed `TypeMapping` or a legacy custom extraction) or primitive. The check

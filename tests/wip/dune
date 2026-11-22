@@ -269,16 +269,6 @@
 
 
 
-(subdir bake_functor_application_constant
- (rule
-  (targets bake_functor_application_constant.t.exe)
-  (deps BakeFunctorApplicationConstant.vo bake_functor_application_constant.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_functor_application_constant.t.exe bake_functor_application_constant.t.cpp bake_functor_application_constant.cpp)))
- (rule
-  (alias runtest)
-  (deps bake_functor_application_constant.t.exe)
-  (action (run ./bake_functor_application_constant.t.exe))))
 
 (subdir loop_acc_curried_partial_app
  (rule
