@@ -425,7 +425,7 @@ callable_crossing_matrix.
 ## 7. Progress
 
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
-- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix done; see 8)
+- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints done; typed-fit not yet fatal, goal 4 not started; see 8)
 - [ ] Phase B2
 - [ ] Phase C
 - [ ] Phase D
@@ -749,3 +749,99 @@ Next, in order: (1) goal 3 as above; (2) the unchecked categories (argument
 slots for every parameter, typed local-fixpoint values); (3) the
 `unrelated` causes listed; (4) `typed-fit` fatal, filing any genuine miss
 in `tests/wip`; (5) goal 4.
+
+### Phase B1, second session (2026-11-22)
+
+Done (next-steps 1 and 2 of the first session, and part of 3):
+- **Goal 3: a global call is typed at its written codomain.**
+  `Application.eta_fun` returns `Typed.t`; a saturated call (no excess
+  arguments, one argument per domain of `written_fn_ty`) is typed at the
+  callee's declared C++ codomain substituted with the template arguments
+  the call writes (`written_fn_ty`, which the `regroup_crossing` of the
+  result already computed), a regrouped result at its `Convert`.
+  `Call.signature.yields` is filled from it (`Calls.record_call_sig
+  ?written`), so `Tmc` and `Erasure`'s `%ret` read the written type; no
+  output changed.
+  `gen_application` returns `Typed.t`: the call's type where nothing
+  recovered it from a box afterwards and the term is no action of a
+  sequential monad (`Typed_checks.sequential_action`, split out of
+  `of_built`), else `of_built`.  A kept closed instance call
+  (`Runtime (Constant ...)`) is the value it builds.  Planned `unbox` at
+  arguments: 412 -> 32.
+- **Every regular argument has a slot** (`Calls.argument_slot`): the
+  callee's declared parameter (Core type at the *unsubstituted* position)
+  converted and substituted with the written template arguments; a slot
+  in which a variable the call leaves to C++ remains is
+  `Template_parameter` (honestly deduced), as is every parameter of a
+  mapping (inline: its text takes the argument as it comes; a non-inline
+  custom has no declaration of ours).  A deduced callable is `Forwarded`.
+  This replaced `argument_position.expected` as the slot, which is the
+  type the argument is *generated against* and was `None` for 125559
+  arguments.  Deviation: `expected` stays what is passed down as
+  `?expected_ty` (changing it changes output; phase C).
+- **Typed local fixpoints.**  `Local_functions.gen_applied_fix` types the
+  lifted call, the in-place call and the partial application from the
+  member's Core type after the arguments given (`applied_type`); the
+  standalone wrapper is a closure over the member's arrows;
+  `Destination.finish_inlined` types an inlined lambda's returns at the
+  lambda's type where their node says nothing.  Untyped values at
+  destinations: 27746 -> 112.
+- **`decide` reads a variable by index as the scope names it**
+  (`Coerce.aliases_in`): `Index (1, None)` is `Index (1, Some A)` where
+  the scope's first variable is `A`.  No shadow disagreement appeared.
+- **Census detail.**  A slot at type variables reports the verdict
+  `decide` gives inside it (`unchecked (slot at type variables: fits)`),
+  since after substitution most such slots are the caller's own
+  variables and comparable.
+
+`typed-fit` census after `b4a9abdfa` (whole-suite extraction):
+
+| site | fits | implicit | deduced/forwarded | tvar slot (fits / other) | no type | untyped | unrelated | planned |
+|---|---|---|---|---|---|---|---|---|
+| destination | 143024 | 720 | - | 48513 / 2436 | 2304 | 112 | 627 | 128: erase 84, unbox 16, eta 16, box 8, regroup 4 |
+| argument | 84258 | 694 | 71910 / 19772 | 15088 / 234 | 0 | 221 | 611 | 60: unbox 32, convert 12, erase 12, eta 4 |
+
+Remaining causes, measured (all synthesis or slot inaccuracies; none is
+missing output, the suite compiles under `CRANE_STRICT_ARITY`):
+- Slots at type variables, `unrelated` 2412 at destinations: the value
+  typed in a different numbering than the slot (`T2` into `N:T1`: a
+  lifted fixpoint's or lambda's own variables renamed; `list<T1>` into
+  `list<T1:A>` where both are named), and HKT carriers spelled two ways
+  (`app(T1)<T3>` against `app(_tcI0::m)<T3>`).  To fix: type values in the
+  scope's numbering (`Lowering_state.with_type_vars` at the lifted
+  fixpoint and eta-lambda), then drop the "slot at type variables"
+  exemption.
+- Module-level type aliases `decide` cannot unfold: `uf<>` (a
+  `Definition` over `NatMap.t`), `NatMap.value<>`/`key<>` (a functor
+  argument's type member); `Types.unfold_cpp_typedef` reads only
+  `Base.Table.lookup_typedef_unchecked`.
+- Indexed events applied: `app(getE)<nat>` against `getE` (a family with
+  an erased index is its constructor; normalise `Apply` of a
+  non-template head).
+- Constructor values at their Core result: `itreeF<>` for an itree
+  constructor (`RetF`/`VisF` through the coinductive), `prod<>` against
+  `prod<any,any>`, `nat` into a record (a projected field).
+- Lambdas returning an alias of a function (`st<Z>`,
+  `State<nat,nat>`): `unrelated` although both sides print alike;
+  `Coerce.unrelated`'s `curried_agree` flattens the alias on one side
+  only.
+- Effect primitives' parameter slots at the wrong instantiation
+  (`TVar<fn>` into `TVar<nat>`, `future<nat>` into `future<prod>`):
+  their written arguments are recovered from the expected result.
+
+Commits: `de7931527` (written call types, argument slots, typed local
+fixpoints), `b4a9abdfa` (mapping arguments deduced, variables by index),
+`530d956cf` (yields from the written codomain).  Extraction byte-identical
+after each; full `make test` from clean after `530d956cf`: 1526 passed,
+16 failed (all `tests/wip`, as at the base), `git status --short tests`
+empty; `dune build @unit_tests/runtest` and `scripts/check-module-deps.sh`
+pass; no `CRANE_CHECK_IR` violation, `typed-shadow` 2485 agree / 0
+disagree.
+
+Next, in order: (1) type values in the scope's numbering (lifted
+fixpoints, eta-lambdas) and drop the "slot at type variables" exemption;
+(2) the remaining `unrelated` causes above (module aliases, applied
+indexed events, constructor values, function-alias closure results,
+effect-primitive slots), and destinations built from the ambient taking
+their slot from the caller; (3) `typed-fit` fatal, filing any genuine
+miss in `tests/wip`; (4) goal 4.
