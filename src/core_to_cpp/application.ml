@@ -2372,7 +2372,8 @@ let gen_application cx ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Exp
     | _ -> call
   in
   let built : Cpp_ir.Lowered.Expr.t =
-    match Calls.record_call_sig cx env callee_ty_inst recovered with
+    let written = match (call.ty, recovered == result) with Typed t, true -> Some t | _ -> None in
+    match Calls.record_call_sig ?written cx env callee_ty_inst recovered with
     | Any_cast (ty, call) -> Any_cast (ty, made_of_application call)
     | result -> made_of_application result
   in

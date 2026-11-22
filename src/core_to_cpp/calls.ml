@@ -1753,11 +1753,12 @@ let deduce_erased_domains : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = fun
     argument -- {!Cpp_ir.Build.signature} enforces that -- since a partial
     application, or a callee whose arrows an eta-expansion has rearranged,
     would otherwise hand the printer a misaligned list. *)
-let record_call_sig cx env callee_ty (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (e : Cpp_ir.Lowered.Expr.t) :
+    Cpp_ir.Lowered.Expr.t =
   match (e, callee_ty) with
   | Call ({yields = Untyped; params = Unknown; _}, f, args), Some core_ty ->
     let cpp_of ml = Types.cpp_ir_of_core_type cx env [] ml in
-    ( match cpp_of (core_codomain core_ty) with
+    ( match match written with Some t -> t | None -> cpp_of (core_codomain core_ty) with
     | exception e' when CErrors.noncritical e' -> e
     | ty ->
       let params =
