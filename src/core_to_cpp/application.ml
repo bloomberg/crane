@@ -1973,13 +1973,6 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
           Monadic.wrap_void_call_as_value (gen_expr cx ~slot:arg_slot env x)
         | Core.Expr.Lambda _ ->
           gen_expr cx ?expected_ty:(declared_dom i) ~slot:arg_slot env x
-        (* A value built here is spelled here for the first time, and its
-           annotation may say less than the parameter it is passed to: a
-           [None] whose payload type extraction left open prints as
-           [std::optional<crane::obj>].  The parameter's Core type says,
-           and the slot refines the erased parts by it. *)
-        | Core.Expr.Construct _ ->
-          gen_expr cx ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} env x
         | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ ->
           let expected = Types.param_expected_cpp_ty cx env callee_param_tys i in
           gen_expr cx ?expected_ty:expected ~slot:arg_slot env x
@@ -1992,7 +1985,15 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
             | None ->
               has_unresolved_boxed_arg := true;
               inner )
-        | _ -> gen_expr cx ~slot:arg_slot env x
+        (* A value built anywhere in the argument -- at its top, in a
+           branch of a match or a let's body, under another constructor --
+           is spelled there for the first time, and its annotation may say
+           less than the parameter it is passed to: a [None] whose payload
+           type extraction left open prints as [std::optional<crane::obj>].
+           The parameter's Core type says, and the slot, which every form
+           hands on to the positions whose value is the argument's, refines
+           the erased parts by it. *)
+        | _ -> gen_expr cx ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} env x
       in
       match List.nth_opt callee_param_tys i with
       | Some param_ty when erased_callee -> adapt_to_erased_param cx env param_ty x expr

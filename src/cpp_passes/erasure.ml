@@ -1278,7 +1278,11 @@ let capture_scrutinees (d : settled) : settled =
 (** {2 Captures} *)
 
 (* Inner lambdas first: what an outer body names is read off the inner
-   lambdas' bodies, which deciding leaves as they are.  A suspension's thunk
+   lambdas' bodies, which deciding leaves as they are.  A variable the
+   lambda was planned to take by move is taken only where its body still
+   reads it: a pass after the plan may have dropped the read (Loopify an
+   accumulator nothing reads), and a parameter nothing reads is written
+   without a name, so a capture of it would name nothing.  A suspension's thunk
    runs once, when the suspension is first forced, and is let go of then:
    its capture is written [once].  The suspension is then its type's
    [lazy_] factory applied to the thunk. *)
@@ -1289,7 +1293,13 @@ let rec decide_captures (d : settled) : settled =
       let names_scope, this = lambda_needs_capture l.params l.body in
       let written : Written_capture.t =
         if not names_scope then Nothing
-        else match how with Runs_in_place -> By_reference | _ -> By_copy {this; moved = l.moved; copied = []; once}
+        else
+          match how with
+          | Runs_in_place -> By_reference
+          | _ ->
+            let read = Cpp_ir.Variables.free_in_expr (Lambda l) in
+            let moved = List.filter (fun x -> Cpp_ir.Variables.mem x read) l.moved in
+            By_copy {this; moved; copied = []; once}
       in
       Lambda {l with capture = Written written}
     | Written _ -> Lambda l

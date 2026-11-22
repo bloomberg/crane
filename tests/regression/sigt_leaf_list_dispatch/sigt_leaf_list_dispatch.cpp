@@ -9,7 +9,7 @@
 /// domty (projT1 e) depends on the runtime witness e, so its call sites
 /// only see std::any; the erased list is boxed as List<std::any>, while
 /// wrap_list expects the concrete List<uint64_t>.
-bool wrap_list(const List<uint64_t> &xs) { return xs.length() == xs.length(); }
+bool wrap_list(const List<uint64_t> &) { return true; }
 
 domty run(const SigT<uint64_t, crane::fn<crane::obj(std::monostate)>> &e) {
   return e.projT2()(std::monostate{});

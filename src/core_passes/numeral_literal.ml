@@ -209,13 +209,13 @@ let self_subtractions =
     [ (nat "sub", ("num.nat.type", "num.nat.O")); (n "sub", ("num.N.type", "num.N.N0"));
       (pos "sub", ("num.pos.type", "num.pos.xH")); (z "sub", ("num.Z.type", "num.Z.Z0")) ]
 
-(* A subtraction of one read of storage from itself
-   ({!Base.Core_util.same_storage}), as the value it computes, a literal
+(* A subtraction of one value from itself
+   ({!Base.Core_util.same_value}), as the value it computes, a literal
    where its number type is a numeral mapping's: a mapping's guard would
    compare the read with itself. *)
 let self_subtraction = function
   | Core.Expr.Apply {callee = Core.Expr.Global {callee = GlobRef.ConstRef c; _}; arguments = [a; b]} as e
-    when Base.Core_util.same_storage a b -> (
+    when Base.Core_util.same_value a b -> (
     match Cmap.find_opt c self_subtractions with
     | Some (ind, ctor) when Rocqlib.has_ref ind && Rocqlib.has_ref ctor ->
       let value =

@@ -4,9 +4,12 @@
 
     Expected: compiles with the suite's flags; [result = 2].
 
-    Actual: printed as [f1 == f1] and [k <= k], which clang's
+    Fixed: printed as [f1 == f1] and [k <= k], which clang's
     [-Wtautological-compare] rejects under [-Werror] ("self-comparison
-    always evaluates to true"). Also on main. *)
+    always evaluates to true").  The self-comparison fold recognised only
+    one variable or one projection of it; it now folds any two identical
+    pure operands: variables, globals no mapping spells, literals, and
+    constructors and calls over them. *)
 From Crane Require Import Mapping.NatIntStd Mapping.ZInt Mapping.NInt.
 From Crane Require Extraction.
 From Stdlib Require Import List NArith.

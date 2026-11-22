@@ -15754,3 +15754,35 @@
   (alias runtest)
   (deps bake_bde.t.exe)
   (action (run ./bake_bde.t.exe))))
+(subdir self_comparison_global_werror
+ (rule
+  (targets self_comparison_global_werror.t.exe)
+  (deps SelfComparisonGlobalWerror.vo self_comparison_global_werror.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} self_comparison_global_werror.t.exe self_comparison_global_werror.t.cpp self_comparison_global_werror.cpp)))
+ (rule
+  (alias runtest)
+  (deps self_comparison_global_werror.t.exe)
+  (action (run ./self_comparison_global_werror.t.exe))))
+
+(subdir fix_acc_match_none_erased
+ (rule
+  (targets fix_acc_match_none_erased.t.exe)
+  (deps FixAccMatchNoneErased.vo fix_acc_match_none_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_acc_match_none_erased.t.exe fix_acc_match_none_erased.t.cpp fix_acc_match_none_erased.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_acc_match_none_erased.t.exe)
+  (action (run ./fix_acc_match_none_erased.t.exe))))
+
+(subdir unread_param_captured
+ (rule
+  (targets unread_param_captured.t.exe)
+  (deps UnreadParamCaptured.vo unread_param_captured.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unread_param_captured.t.exe unread_param_captured.t.cpp unread_param_captured.cpp)))
+ (rule
+  (alias runtest)
+  (deps unread_param_captured.t.exe)
+  (action (run ./unread_param_captured.t.exe))))
