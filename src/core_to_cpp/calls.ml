@@ -1757,6 +1757,9 @@ let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (
     Cpp_ir.Lowered.Expr.t =
   match (e, callee_ty) with
   | Call ({yields = Untyped; params = Unknown; _}, f, args), Some core_ty ->
+    (* A callee typed by a function alias ([Id_ obj c]) takes the
+       arguments the alias's arrows do. *)
+    let core_ty = if args = [] then core_ty else expand_core_fun_alias core_ty in
     let cpp_of ml = Types.cpp_ir_of_core_type cx env [] ml in
     ( match match written with Some t -> t | None -> cpp_of (core_codomain core_ty) with
     | exception e' when CErrors.noncritical e' -> e

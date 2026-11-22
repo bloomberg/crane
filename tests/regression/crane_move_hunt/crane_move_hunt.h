@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <toy_helpers.h>
 #include <utility>
-#include <variant>
 
 struct CraneMoveHunt {
   struct box {

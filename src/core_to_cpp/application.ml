@@ -162,7 +162,7 @@ let project_through_instance cx env (use : Core.Global_use.t) args (projection :
     the call of the global [id] that [plan] describes, each generated against
     the parameter it is passed at.  The dictionaries' promoted variables are in scope for them. *)
 let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~written_by_var env id plan :
-    Cpp_ir.Lowered.Expr.t list =
+    Typed.t list =
   let {
     Calls.instantiated =
       {
@@ -182,9 +182,9 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
     _
   } = plan in
   let leading_params = Core_plan.Elaborated_call.leading_params call in
-  List.mapi (fun i core_arg : Cpp_ir.Lowered.Expr.t ->
+  List.mapi (fun i core_arg : Typed.t ->
     match strip_magic core_arg with
-    | Core.Expr.Erased_value _ -> (
+    | Core.Expr.Erased_value _ -> Typed.of_node @@ (
       (* An erased value, boxed.  At a function-typed parameter it is an
          erased function -- [bif : obj -> obj -> obj] is [sum1] once [obj]
          is [Type -> Type] -- which is called, so it is a callable of the
@@ -661,7 +661,8 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
       Cpp_ir.Build.lambda params None body ~capture:Runs_in_place
     | _ -> as_value ()
     in
-    Typed_checks.fit cx ~site:"argument" (Typed_checks.adapted ~before:arg_typed arg_expected_ty passed) arg_slot;
+    let passed = Typed_checks.adapted ~before:arg_typed arg_expected_ty passed in
+    Typed_checks.fit cx ~site:"argument" passed arg_slot;
     passed
   ) regular_core_args
 
@@ -741,11 +742,12 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
       (not slot.Slot.building_constant)
         && Core_plan.Elaborate.closed_head_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args
     in
-    let args =
+    let typed_args =
       let slot = if closed_head then {slot with Slot.building_constant = true} else slot in
       with_promoted_var_map cx (instance_promoted_map @ cx.ctx.lexical.promoted_var_map)
         (fun () -> gen_call_args cx ~slot ?expected_ty ~written_by_var:lowered.Calls.written_by_var env id plan)
     in
+    let args = List.map (fun (a : Typed.t) -> a.expr) typed_args in
     let ty = lowered.Calls.callee_type
     and tys = lowered.Calls.written
     and all_type_args = Core_plan.Template_application.to_list lowered.Calls.application
@@ -754,18 +756,51 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
        C++ checks the arguments against and returns.  A type argument standing
        for a function type is spelled curried ([Through_tvar]), where the
        value passed was spelled where it was declared. *)
+    let live_fn_ty =
+      lazy
+        (Option.map
+           (fun t ->
+             let live = Types.cpp_of_core cx env t in
+             if Base.Probe.checking () then Calls.check_installed_arity cx id live;
+             live )
+           (callee_core_type cx id))
+    in
     let written_fn_ty =
       let subst i = Core.Scheme.Var.assoc_tvar i written_tvar_args in
       (* An inline custom has no signature its type arguments instantiate:
          its text reads the values as they are ({!Calls.call_result_site}). *)
       if written_tvar_args = [] || is_inline_custom id then None
-      else
-        Option.map
-          (fun t ->
-            let live = Types.cpp_of_core cx env t in
-            if Base.Probe.checking () then Calls.check_installed_arity cx id live;
-            Cpp_ir.Types.substitute subst live)
-          (callee_core_type cx id)
+      else Option.map (Cpp_ir.Types.substitute subst) (Lazy.force live_fn_ty)
+    in
+    (* The same type with the variables the call leaves to C++ deduced from
+       the arguments' types, as C++ deduces them
+       ({!Cpp_ir.Types.deduce}): what the call yields, where every variable
+       its codomain mentions is written or deduced.  Only typing reads it. *)
+    let deduced_fn_ty =
+      match Lazy.force live_fn_ty with
+      | Some (Cpp_ir.Type.Function (doms, cod) as live)
+        when (not (is_inline_custom id)) && List.compare_lengths doms typed_args = 0 ->
+        let written i = Core.Scheme.Var.assoc_tvar i written_tvar_args in
+        let unknown i = written i = None in
+        let deduced =
+          List.concat
+            (List.map2
+               (fun d (a : Typed.t) ->
+                 match Cpp_ir.Value_type.arrows a.ty with
+                 | Some ar -> Cpp_ir.Types.deduce ~unknown d (Cpp_ir.Arrows.to_type ar)
+                 | None -> ( match a.ty with Typed t -> Cpp_ir.Types.deduce ~unknown d t | _ -> [] ) )
+               doms typed_args )
+        in
+        let subst i = match written i with Some t -> Some t | None -> List.assoc_opt i deduced in
+        let resolved =
+          not
+            (Cpp_ir.Types.exists
+               (fun (t : Cpp_ir.Lowered.Type.t) ->
+                 match t with Variable (Index (i, _)) -> subst i = None | _ -> false )
+               cod )
+        in
+        if resolved then Some (Cpp_ir.Types.substitute subst live) else None
+      | _ -> None
     in
     (* Each argument read at its parameter as the call writes it
        ({!Coerce.regroup_crossing}): [pf : pair<fn<R(A, B)>, nat>] passed to
@@ -1756,11 +1791,16 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
           | _ -> None )
         | None -> None
       in
+      let cod = match deduced_fn_ty with Some (Function (_, cod)) -> cod | _ -> written_cod in
       match (crossed, result) with
       | Some c, _ -> Typed.of_node c
-      | None, Call _ -> Typed.typed written_cod result
+      | None, Call _ -> Typed.typed cod result
       | None, _ -> Typed.untyped result )
-    | _ -> Typed.untyped result )
+    | _ -> (
+      match (deduced_fn_ty, result) with
+      | Some (Function (doms, cod)), Call _ when excess_args = [] && List.length doms = List.length args ->
+        Typed.typed cod result
+      | _ -> Typed.untyped result ) )
   | _ -> Typed.untyped @@
     (* Non-global callee (e.g., a local variable from Core.Expr.Bound_variable). Filter out Core.Expr.Erased_value
        args — these are erased type/prop parameters that have no runtime

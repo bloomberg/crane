@@ -252,3 +252,34 @@ let variable_names t =
 let rec strip_param_spelling : type p. p Type.t -> p Type.t = function
   | Non_deduced t | Const t | Reference (_, t) -> strip_param_spelling t
   | t -> t
+
+(** [deduce ~unknown pattern actual]: C++'s template argument deduction of
+    the variables [unknown] holds of, by matching [pattern] (a parameter as
+    its callee declares it, its variables by index) against [actual] (the
+    type of the argument passed): each variable at its first binding.  A
+    position the two spell differently binds nothing, and a variable under
+    [Non_deduced] or only in a result is not deduced, as in C++.  Arrows are
+    compared curried, as a type variable spells them. *)
+let deduce : type p. unknown:(int -> bool) -> p Type.t -> p Type.t -> (int * p Type.t) list =
+ fun ~unknown pattern actual ->
+  let found = ref [] in
+  let rec go (p : p Type.t) (a : p Type.t) =
+    let strip : p Type.t -> p Type.t = function Const t | Reference (_, t) -> t | t -> t in
+    match (strip p, strip a) with
+    | Variable (Index (i, _)), a when unknown i -> if not (List.mem_assoc i !found) then found := !found @ [(i, a)]
+    | (Const _ | Reference _), _ | _, (Const _ | Reference _) -> go (strip (strip p)) (strip (strip a))
+    | In_namespace (_, p), a | p, In_namespace (_, a) -> go p a
+    | Entity_application (r, ps, _), Entity_application (r', xs, _) when Names.GlobRef.CanOrd.equal r r' -> all ps xs
+    | Named (n, ps), Named (n', xs) when Names.Id.equal n n' -> all ps xs
+    | External (n, ps), External (n', xs) when String.equal n n' -> all ps xs
+    | Variant (k, ps), Variant (k', xs) when k = k' -> all ps xs
+    | (Shared_pointer p, Shared_pointer a | Pointer p, Pointer a) -> go p a
+    | Apply (h, ps), Apply (h', xs) -> go h h'; all ps xs
+    | (Function _ as p), (Function _ as a) -> (
+      match (spell_arrows Through_tvar p, spell_arrows Through_tvar a) with
+      | Function ([d], c), Function ([d'], c') -> go d d'; go c c'
+      | _ -> () )
+    | _ -> ()
+  and all ps xs = if List.compare_lengths ps xs = 0 then List.iter2 go ps xs in
+  go pattern actual;
+  !found
