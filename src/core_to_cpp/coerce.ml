@@ -192,7 +192,7 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
       | Some (_, shape) -> Some (Unbox (List (into, shape)))
       | None -> Some (Unbox (To into)) )
     | _, `Opaque -> None
-    | _ when is_boxed_type into -> Some (Box (if function_value then Some Boxed_whole else None))
+    | _ when is_boxed_type into || ((not undecided) && al.spells_as_any written) -> Some (Box (if function_value then Some Boxed_whole else None))
     | _ when function_value && erased_domain_fun_ty into -> (
       match into with Function (_, cod) -> Some (Erase (At_signature cod)) | _ -> None )
     | _ -> (
@@ -225,6 +225,15 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
         | Some t when Cpp_ir.Types.same_arrows t into -> Some (Convert into)
         | Some (Shared_pointer t) when cpp_ty_eq t into -> Some (Convert into)
         | Some t when (match into with Shared_pointer t' -> cpp_ty_eq t t' | _ -> false) -> Some (Convert into)
+        (* A carrier reaching one at an erased element: converted element by
+           element ({!convert_carrier_arg}). *)
+        | Some (Apply (h, xs))
+          when (match into with
+                | Apply (h', ys) ->
+                  h = h' && List.compare_lengths xs ys = 0 && List.exists Cpp_ir.Types.prints_as_any ys
+                  && not (List.for_all Cpp_ir.Types.prints_as_any xs)
+                | _ -> false) ->
+          Some (Convert into)
         | Some _ | None -> None ) ) )
 
 (** Whether C++ performs [p] on a value of type [from] by itself, so that
@@ -934,6 +943,109 @@ let curry_value_to_expected_built cx env ?(expected_ty : Cpp_ir.Lowered.Type.t o
     in
     nest ~moved:[] params (if n_outer < List.length params then expected_ty else None)
 
+(** The mirror of {!recover_carrier_result}: a value reaching a parameter the
+    callee declared as a carrier applied to a type variable -- [M A], a
+    {!Core.Type.Variable_app} -- arrives at whatever element the caller had, while a
+    dictionary stores its methods at the erased one.
+
+    Letting C++ convert implicitly is not enough.  A Crane carrier has a
+    generated converting constructor and crosses on its own, but a custom one
+    need not: [std::optional<std::any>] accepts {e anything}, so the whole
+    [std::optional<Nat>] goes into the box and the consumer's [any_cast<Nat>]
+    throws.  Asking the helper is the same question the result side asks, and
+    it is the identity where the two instantiations already agree.
+
+    Only for a value.  A function reaching such a slot is the erasure question
+    above, already answered there; a carrier's element walk applied to a
+    closure is not a conversion but a compile error.
+
+    And only where the element is erased, which is the whole of the mismatch:
+    a carrier written at a concrete element is already the caller's own type,
+    and naming it again buys nothing while asking the head to be spelled as a
+    template -- which a declaration that kept it a phantom [typename] will not
+    accept. *)
+let convert_carrier_arg cx param_core_ty (param_cpp_ty : Cpp_ir.Lowered.Type.t) e (expr : Cpp_ir.Lowered.Expr.t) :
+    Cpp_ir.Lowered.Expr.t =
+  let elem_is_erased =
+    match param_cpp_ty with
+    | Apply (_, args) -> List.exists Cpp_ir.Types.prints_as_any args
+    | _ -> false
+  in
+  match resolve_meta param_core_ty with
+  | Core.Type.Variable_app _
+    when (not (Cpp_ir.Types.prints_as_any param_cpp_ty))
+         && elem_is_erased
+         && (not (Erasure.core_expr_is_function_value cx e))
+         && (match param_cpp_ty with Function _ -> false | _ -> true) ->
+    Cpp_ir.Expr.Convert (param_cpp_ty, expr)
+  | _ -> expr
+
+(** [erase_fn_arg_for_param env param_ty e expr] wraps a function-valued
+    argument when the callee's parameter type is the canonical erased
+    [std::function<std::any(std::any...)>] adapter (e.g. a class method
+    polymorphic in its own type argument, [forall A, (A -> A) -> A -> A]):
+    a concrete closure does not convert to the erased signature. *)
+let erased_param cx env param_core_ty =
+  let open Cpp_ir.Expr.Erase_shape in
+  (* The callee has already written this parameter down, so any opaque type in
+     it has been spelled [std::any] in the header and the slot really is
+     boxed. *)
+  let param_cpp_ty = materialise_opaque (Types.cpp_of_core cx env param_core_ty) in
+  let erased_fn_param =
+    match param_cpp_ty with
+    (* An erased domain takes the adapter, at whatever result the signature
+       kept: a parameter that erases only its ARGUMENTS (e.g.
+       [std::function<typename I::M(std::any)>] for a higher-kinded class
+       method) keeps that result type, since erasing it too would box the
+       result twice. *)
+    | Function (dom, cod)
+      when List.exists (fun t -> Cpp_ir.Types.prints_as_any t || names_erased_alias t) dom ->
+      Some (At_signature (if Cpp_ir.Types.prints_as_any cod then Any else cod))
+    | Function (_, Any) -> Some (At_signature Any)
+    (* The whole parameter is boxed -- a type-level [Fixpoint] landing on
+       [using sem = std::any], say.  A callee that applies such a value goes
+       through the canonical [std::function<std::any(std::any)>] adapter,
+       so a raw closure dropped into the [std::any] would not match the cast
+       that reads it back out. *)
+    | ty when Types.resolves_to_any_type cx ty -> Some Boxed_whole
+    | _ -> None
+  in
+  (* The instantiation this call sees may still hide an erasure the callee's
+     declaration made: a functor's [S.sem a] -- a type family applied to a
+     value -- is erased in [Make]'s body, and [Make<Inst>]'s call site reads it
+     as [Inst::sem].  The parameter is declared at the erased domain. *)
+  let erased_fn_param =
+    match erased_fn_param with
+    | Some _ -> erased_fn_param
+    | None -> (
+      let rec mentions_family t =
+        match resolve_meta t with
+        | Core.Type.Global_app {head = r; type_arguments = args; _} ->
+          Erasure.value_indexed_family r || List.exists mentions_family args
+        | Core.Type.Arrow {parameter = a; result = b} -> mentions_family a || mentions_family b
+        | Core.Type.Variable_app {arguments = args; _} -> List.exists mentions_family args
+        | _ -> false
+      in
+      match expand_core_fun_alias param_core_ty with
+      | Core.Type.Arrow _ as t
+        when List.exists mentions_family (core_domains t) ->
+        let cod = core_codomain t in
+        if mentions_family cod then Some (At_signature Any)
+        else Some (At_signature (Types.cpp_of_core cx env cod))
+      | _ -> None )
+  in
+  (param_cpp_ty, erased_fn_param)
+
+(** [erase_fn_arg_built env param_ty e expr]: the argument [e], lowered as
+    [expr], adapted to the parameter the callee declared at [param_ty]
+    ({!erased_param}): a callable through [crane_erase_fn] where the
+    parameter is erased, a carrier converted ({!convert_carrier_arg}). *)
+let erase_fn_arg_built cx env param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  let param_cpp_ty, erased_fn_param = erased_param cx env param_core_ty in
+  match erased_fn_param with
+  | Some shape when Erasure.core_expr_is_function_value cx e -> Cpp_ir.Expr.Erase_callable (shape, expr)
+  | _ -> convert_carrier_arg cx param_core_ty param_cpp_ty e expr
+
 (** The adapters of section 0 of the typed CppIR design that go through
     {!into_slot}, each by the name its parameters are prefixed with (B1's
     origin tag), carrying what its expansion reads beyond the value and
@@ -955,6 +1067,12 @@ type origin =
       term : Core.Expr.t option;
       from : Cpp_ir.Lowered.Type.t option;
     }  (** {!coerce}: box, unbox, erase, recover ([_ue]), convert *)
+  | Param of {
+      cx : Lowering_state.t;
+      env : env;
+      param_core_ty : Core.Type.t;
+      term : Core.Expr.t;
+    }  (** {!erase_fn_arg_for_param}: erase a callable, convert a carrier *)
 
 (** The adapter an origin names, for the census. *)
 let origin_name = function
@@ -964,6 +1082,7 @@ let origin_name = function
   | Crossing -> "regroup_crossing"
   | Tvar_name _ -> "name_fn_arg_for_tvar_param"
   | Ue _ -> "coerce"
+  | Param _ -> "erase_fn_arg_for_param"
 
 (** The plans an origin's expansion builds, by {!Cpp_ir.Coercion.plan_name}. *)
 let builds = function
@@ -972,6 +1091,7 @@ let builds = function
   | Crossing -> ["convert"]
   | Tvar_name _ -> ["name"]
   | Ue _ -> ["box"; "deep box"; "unbox"; "erase"; "recover"; "convert"; "container cast"]
+  | Param _ -> ["erase"; "box"; "convert"]
 
 (** Whether {!decide} answers for a value of type [from] at [into]: a typed
     value and a slot that states a type, neither mentioning a type variable
@@ -1010,6 +1130,7 @@ let expand origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   | Tvar_name t, _, _ -> name_fn_arg_built t x.expr
   | Ue {cx; term; from}, _, Some into -> coerce_built cx ?term ?from ~into x.expr
   | Ue _, _, None -> x.expr
+  | Param {cx; env; param_core_ty; term}, _, _ -> erase_fn_arg_built cx env param_core_ty term x.expr
   | (Rg | Crossing), _, _ -> x.expr
 
 (** [into_slot ~origin x into]: [x] put in the slot [into] through the
@@ -1037,6 +1158,12 @@ let into_slot ?(al = as_written) ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Low
   let kind =
     match origin with
     | Ue _ -> ( match coerced_kind built with "box" when box_of_box -> ["box"; "none"] | k -> [k] )
+    | Param _ -> (
+      match built with
+      | Erase_callable (Boxed_whole, _) -> ["box"]
+      | Erase_callable _ -> ["erase"]
+      | Convert _ -> ["convert"]
+      | _ -> ["other"] )
     | _ -> builds origin
   in
   shadow ~al ~adapter:(origin_name origin) ~kind x.ty into ~before:x.expr built
@@ -1123,97 +1250,18 @@ let unbox_into cx into e =
   | Some into when states_unboxed_target into -> coerce cx ~from:Any ~into e
   | _ -> e
 
-(** The mirror of {!recover_carrier_result}: a value reaching a parameter the
-    callee declared as a carrier applied to a type variable -- [M A], a
-    {!Core.Type.Variable_app} -- arrives at whatever element the caller had, while a
-    dictionary stores its methods at the erased one.
-
-    Letting C++ convert implicitly is not enough.  A Crane carrier has a
-    generated converting constructor and crosses on its own, but a custom one
-    need not: [std::optional<std::any>] accepts {e anything}, so the whole
-    [std::optional<Nat>] goes into the box and the consumer's [any_cast<Nat>]
-    throws.  Asking the helper is the same question the result side asks, and
-    it is the identity where the two instantiations already agree.
-
-    Only for a value.  A function reaching such a slot is the erasure question
-    above, already answered there; a carrier's element walk applied to a
-    closure is not a conversion but a compile error.
-
-    And only where the element is erased, which is the whole of the mismatch:
-    a carrier written at a concrete element is already the caller's own type,
-    and naming it again buys nothing while asking the head to be spelled as a
-    template -- which a declaration that kept it a phantom [typename] will not
-    accept. *)
-let convert_carrier_arg cx param_core_ty (param_cpp_ty : Cpp_ir.Lowered.Type.t) e (expr : Cpp_ir.Lowered.Expr.t) :
-    Cpp_ir.Lowered.Expr.t =
-  let elem_is_erased =
-    match param_cpp_ty with
-    | Apply (_, args) -> List.exists Cpp_ir.Types.prints_as_any args
-    | _ -> false
-  in
-  match resolve_meta param_core_ty with
-  | Core.Type.Variable_app _
-    when (not (Cpp_ir.Types.prints_as_any param_cpp_ty))
-         && elem_is_erased
-         && (not (Erasure.core_expr_is_function_value cx e))
-         && (match param_cpp_ty with Function _ -> false | _ -> true) ->
-    Cpp_ir.Expr.Convert (param_cpp_ty, expr)
-  | _ -> expr
-
-(** [erase_fn_arg_for_param env param_ty e expr] wraps a function-valued
-    argument when the callee's parameter type is the canonical erased
-    [std::function<std::any(std::any...)>] adapter (e.g. a class method
-    polymorphic in its own type argument, [forall A, (A -> A) -> A -> A]):
-    a concrete closure does not convert to the erased signature. *)
+(** {!erase_fn_arg_built} through {!into_slot}: the argument [e] lowered
+    as [expr], at the parameter the callee declares at [param_core_ty]. *)
 let erase_fn_arg_for_param cx env param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  let open Cpp_ir.Expr.Erase_shape in
-  (* The callee has already written this parameter down, so any opaque type in
-     it has been spelled [std::any] in the header and the slot really is
-     boxed. *)
-  let param_cpp_ty = materialise_opaque (Types.cpp_of_core cx env param_core_ty) in
-  let erased_fn_param =
-    match param_cpp_ty with
-    (* An erased domain takes the adapter, at whatever result the signature
-       kept: a parameter that erases only its ARGUMENTS (e.g.
-       [std::function<typename I::M(std::any)>] for a higher-kinded class
-       method) keeps that result type, since erasing it too would box the
-       result twice. *)
-    | Function (dom, cod)
-      when List.exists (fun t -> Cpp_ir.Types.prints_as_any t || names_erased_alias t) dom ->
-      Some (At_signature (if Cpp_ir.Types.prints_as_any cod then Any else cod))
-    | Function (_, Any) -> Some (At_signature Any)
-    (* The whole parameter is boxed -- a type-level [Fixpoint] landing on
-       [using sem = std::any], say.  A callee that applies such a value goes
-       through the canonical [std::function<std::any(std::any)>] adapter,
-       so a raw closure dropped into the [std::any] would not match the cast
-       that reads it back out. *)
-    | ty when Types.resolves_to_any_type cx ty -> Some Boxed_whole
-    | _ -> None
+  (* The parameter as the callee declares it: erased where only the Core
+     type says so, a value-indexed family the C++ type in this scope does
+     not show ([fn(Inst::sem)->bool], [sem] erased in the functor's
+     body). *)
+  let slot : Cpp_ir.Lowered.Slot_type.t =
+    match erased_param cx env param_core_ty with
+    | Function (dom, _), Some (At_signature cod) -> Exactly (Function (List.map (fun _ -> Cpp_ir.Type.Any) dom, cod))
+    | _, Some Boxed_whole -> Exactly Any
+    | t, _ -> Exactly t
+    | exception e when CErrors.noncritical e -> Free
   in
-  (* The instantiation this call sees may still hide an erasure the callee's
-     declaration made: a functor's [S.sem a] -- a type family applied to a
-     value -- is erased in [Make]'s body, and [Make<Inst>]'s call site reads it
-     as [Inst::sem].  The parameter is declared at the erased domain. *)
-  let erased_fn_param =
-    match erased_fn_param with
-    | Some _ -> erased_fn_param
-    | None -> (
-      let rec mentions_family t =
-        match resolve_meta t with
-        | Core.Type.Global_app {head = r; type_arguments = args; _} ->
-          Erasure.value_indexed_family r || List.exists mentions_family args
-        | Core.Type.Arrow {parameter = a; result = b} -> mentions_family a || mentions_family b
-        | Core.Type.Variable_app {arguments = args; _} -> List.exists mentions_family args
-        | _ -> false
-      in
-      match expand_core_fun_alias param_core_ty with
-      | Core.Type.Arrow _ as t
-        when List.exists mentions_family (core_domains t) ->
-        let cod = core_codomain t in
-        if mentions_family cod then Some (At_signature Any)
-        else Some (At_signature (Types.cpp_of_core cx env cod))
-      | _ -> None )
-  in
-  match erased_fn_param with
-  | Some shape when Erasure.core_expr_is_function_value cx e -> Cpp_ir.Expr.Erase_callable (shape, expr)
-  | _ -> convert_carrier_arg cx param_core_ty param_cpp_ty e expr
+  into_slot ~al:(aliases_in cx) ~origin:(Param {cx; env; param_core_ty; term = e}) (Cpp_ir.Typed.of_node expr) slot
