@@ -277,3 +277,14 @@
   (alias runtest)
   (deps bake_text_trigraph.t.exe)
   (action (run ./bake_text_trigraph.t.exe))))
+
+(subdir bake_array_of_nodes
+ (rule
+  (targets bake_array_of_nodes.t.exe)
+  (deps BakeArrayOfNodes.vo bake_array_of_nodes.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_array_of_nodes.t.exe bake_array_of_nodes.t.cpp bake_array_of_nodes.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_array_of_nodes.t.exe)
+  (action (run ./bake_array_of_nodes.t.exe))))
