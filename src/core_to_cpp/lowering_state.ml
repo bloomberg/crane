@@ -189,10 +189,10 @@ type input = {
      ({!Core.Binder}).  [None] outside a body, where {!with_region} plans
      no representation or positions. *)
   body_owner : GlobRef.t option;
-  (** Whether that body is a function's, generated as one, rather than a
-     constant's initialiser or a member's: Loopify lowers every local
-     fixpoint of a function's body, and only the tail loops of others. *)
-  body_function : bool;
+  (** Whether that body is a function's, generated as one, or a constant's
+     initialiser, rather than a member's: Loopify lowers every local
+     fixpoint of those, and only the tail loops of others. *)
+  body_all_locals : bool;
   (** The local fixpoint groups, by occurrence, standing in the tail of that
      body where it is suspended whole ({!Core_plan.Closures.suspended_tail}):
      what the value they hand on names runs in the thunk, after the scope has
@@ -380,7 +380,7 @@ let create ~pp_cpp_type () =
         { current_template_head = [];
           current_parameters = [];
           body_owner = None;
-          body_function = false;
+          body_all_locals = false;
           suspended_tail = [];
           itree_mode = Sequential;
           method_self_ns = Core.Ref.User.Set.empty;

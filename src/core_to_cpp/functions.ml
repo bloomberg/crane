@@ -1453,7 +1453,7 @@ let gen_dfun cx ~minted n b cty ty temps =
             | Base.Table.AssertComment comment -> Some (Assert (Stated comment)) )
         assertions
   in
-  begin_body cx ~owner:n ~function_:true
+  begin_body cx ~owner:n ~all_locals:true
     ~suspended_tail:
       (if is_cofix_return then Core_plan.Closures.suspended_tail ~effects:cx.ctx.input.unit.effects b else [])
     ();
@@ -1809,7 +1809,7 @@ let gen_decl__inner cx n b ty =
       let body_expr = with_region cx b (fun () -> gen_expr cx (empty_env ()) b) in
       (templated (thunk n cty_ir body_expr), empty_env (), tvars)
     | _ ->
-      begin_body cx ~owner:n ();
+      begin_body cx ~owner:n ~all_locals:true ();
       let body_expr =
         with_cpp_return_type cx (Some cty_ir) (fun () -> with_region cx b (fun () -> gen_constant_value cx b))
       in
@@ -2022,7 +2022,7 @@ let gen_spec__inner cx n b ty =
           (Base.Type_util.expand_core_fun_alias core_ty)
           inner_body
       in
-      begin_body cx ~owner:n ();
+      begin_body cx ~owner:n ~all_locals:true ();
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)

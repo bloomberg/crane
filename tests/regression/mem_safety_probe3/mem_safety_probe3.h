@@ -508,18 +508,42 @@ struct MemSafetyProbe3 {
   /// TEST 1: Local fixpoint capturing a tree value.
   /// The fixpoint accesses the captured tree on each recursive call.
   static inline const uint64_t local_fix_capture = []() {
-    return []() {
+    return [&]() {
       tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
-      auto helper_impl = [&](auto &_self_helper, uint64_t n) -> uint64_t {
-        if (n <= 0) {
-          return t.sum_values(UINT64_C(0));
-        } else {
-          uint64_t n_ = n - 1;
-          return (t.sum_values(UINT64_C(1)) + _self_helper(_self_helper, n_));
+      auto helper = [&](uint64_t n) -> uint64_t {
+        // Explicit stack replaces the non-tail recursion of helper: _call
+        // frames are pending calls, _after frames resume a caller.
+        struct _call {
+          uint64_t n;
+        };
+
+        struct _after_helper_in_S {};
+
+        using _frame = std::variant<_call, _after_helper_in_S>;
+        uint64_t _result{};
+        crane::small_vector<_frame> _stack;
+        _stack.emplace_back(_call{n});
+        while (!_stack.empty()) {
+          _frame &_popped = _stack.back();
+          if (std::holds_alternative<_call>(_popped)) {
+            auto _f = std::move(std::get<_call>(_popped));
+            _stack.pop_back();
+            uint64_t n = _f.n;
+            if (n <= 0) {
+              _result = t.sum_values(UINT64_C(0));
+            } else {
+              uint64_t n_ = n - 1;
+              _stack.emplace_back(_after_helper_in_S{});
+              _stack.emplace_back(_call{n_});
+            }
+          } else {
+            auto _f = std::move(std::get<_after_helper_in_S>(_popped));
+            _stack.pop_back();
+            _result = (t.sum_values(UINT64_C(1)) + std::move(_result));
+          }
         }
+        return _result;
       };
-      auto helper =
-          [&](uint64_t n) -> uint64_t { return helper_impl(helper_impl, n); };
       return helper(UINT64_C(3));
     }();
   }();

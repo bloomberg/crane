@@ -34,12 +34,12 @@ let body_generation_counts () =
     moves -- a body with parameters sets that tracking after this.
 
     [owner] is the declaration the body belongs to, which
-    [CRANE_TRACE_PIPELINE] reports with the phase.  [function_] says the body
-    is a function's, generated as one, rather than a constant's initialiser
-    or a member's (see [body_function] in {!Lowering_state}).
+    [CRANE_TRACE_PIPELINE] reports with the phase.  [all_locals] says the body
+    is a function's, generated as one, or a constant's initialiser, rather
+    than a member's (see [body_all_locals] in {!Lowering_state}).
     [suspended_tail] are the local fixpoint groups in the tail of a body
     suspended whole (see [suspended_tail] in {!Lowering_state}). *)
-let begin_body cx ~owner ?(function_ = false) ?(suspended_tail = []) () =
+let begin_body cx ~owner ?(all_locals = false) ?(suspended_tail = []) () =
   let phase = get_phase () in
   Hashtbl.replace body_generations phase
     (1 + Option.default 0 (Hashtbl.find_opt body_generations phase));
@@ -47,7 +47,7 @@ let begin_body cx ~owner ?(function_ = false) ?(suspended_tail = []) () =
     Base.Pipeline_trace.event "body"
       (phase_name phase ^ " " ^ Pp.string_of_ppcmds (Base.Table.safe_pr_global owner));
   cx.ctx <-
-    { input = { cx.ctx.input with body_owner = Some owner; body_function = function_; suspended_tail };
+    { input = { cx.ctx.input with body_owner = Some owner; body_all_locals = all_locals; suspended_tail };
       lexical = { cx.ctx.lexical with move_plan = Ownership_ir.Region.empty; representation = []; planned_reads = [] };
       threaded = { match_param_counter = 0; cs_counter = 0 } }
 

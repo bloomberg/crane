@@ -245,17 +245,6 @@
 
 
 
-(subdir loopify_constant_local_fix
- (rule
-  (targets loopify_constant_local_fix.t.exe)
-  (deps LoopifyConstantLocalFix.vo loopify_constant_local_fix.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_constant_local_fix.t.exe loopify_constant_local_fix.t.cpp loopify_constant_local_fix.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_constant_local_fix.t.exe)
-  (action (run ./loopify_constant_local_fix.t.exe))))
-
 (subdir boxed_fields_match_arg_obj
  (rule
   (targets boxed_fields_match_arg_obj.t.exe)

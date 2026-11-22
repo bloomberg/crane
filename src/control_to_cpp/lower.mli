@@ -103,7 +103,7 @@ val method_resumes :
   depth:int ->
   (Ownership_ir.Region.resumes * bool) option
 
-(** [local_resumes ~owner ~function_ ~lifted ~member ~depth ~arity]: the
+(** [local_resumes ~owner ~all_locals ~lifted ~member ~depth ~arity]: the
     points the local fixpoint [member] resumes at, generated in the body of
     [owner] as {!local_loop} takes it, where it is lowered as a machine with
     a stack of frames -- its body standing under [depth] of [owner]'s
@@ -115,7 +115,7 @@ val method_resumes :
 val local_resumes :
   unit:Unit_plan.Context.t ->
   owner:Names.GlobRef.t option ->
-  function_:bool ->
+  all_locals:bool ->
   lifted:Core.Occurrence.t list ->
   member:Core.Occurrence.t * int ->
   depth:int ->
@@ -131,15 +131,17 @@ val lifted_resumes :
   unit:Unit_plan.Context.t ->
   Names.GlobRef.t -> owner:Names.GlobRef.t option -> depth:int -> arity:int -> Ownership_ir.Region.resumes option
 
-(** [local_loop ~owner ~function_ ~lifted ~member ~tparams ~name l]
+(** [local_loop ~owner ~all_locals ~lifted ~member ~tparams ~name l]
     is the statement declaring the local fixpoint [name], the function
     [member] of a Core fixpoint of one member, generated in the body of the
-    definition [owner], a function's where [function_], inside the helpers
+    definition [owner], a function's or a constant's initialiser where
+    [all_locals], inside the helpers
     lifted for the fixpoints [lifted], as the loop of its ControlIR, where the
     recursion plan lowers it so and Loopify would: [l] its lambda, its body
     calling the fixpoint by [name] and its type parameters [tparams], with the
     loop as its body.  A tail loop is lowered so in any body; a machine with a
-    stack of frames in the body of a function Loopify loopifies, as Loopify
+    stack of frames in the body of a function or the initialiser of a
+    constant Loopify loopifies, as Loopify
     lowers it ({!Loopify.local_frame_machine}), even where that function is a
     machine itself, whose transform takes the local machine as the closure it
     is.  [None] where it is not one: a fixpoint that may be adopted into a
@@ -152,7 +154,7 @@ val lifted_resumes :
 val local_loop :
   unit:Unit_plan.Context.t ->
   owner:Names.GlobRef.t option ->
-  function_:bool ->
+  all_locals:bool ->
   lifted:Core.Occurrence.t list ->
   member:Core.Occurrence.t * int ->
   tparams:Cpp_ir.Lowered.phase Cpp_ir.Template.parameters ->

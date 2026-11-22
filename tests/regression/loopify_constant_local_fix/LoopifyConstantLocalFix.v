@@ -1,10 +1,15 @@
-(** Found by Ephyra round 23. Under [Set Crane Loopify], a local fixpoint
-    inside a top-level constant is not loopified: the constant's static
-    initialiser keeps the recursive [go_impl] lambda, while the same local
-    fixpoint inside a function ([from_n]) gets an explicit stack.
+(** Found by Ephyra (round 23). Under [Set Crane Loopify], a non-tail
+    local fixpoint inside a top-level constant and the same one inside a
+    function ([from_n]).
+
     Expected: [million = 1000000] and [from_n 1000000 = 1000000].
-    Actual: [million] overflows the stack during static initialisation
-    (segfault before [main]). *)
+
+    Fixed: [million] overflowed the stack during static initialisation
+    (segfault before [main]).  Translation lowered a local fixpoint's
+    frame machine only in a function's body, as the C++-level Loopify
+    once did, so the constant's initialiser kept the recursive [go_impl]
+    lambda.  A constant's initialiser now lowers its local machines as a
+    function's body does. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.

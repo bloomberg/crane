@@ -552,17 +552,19 @@ let machine ~unit r =
   | Some (No_loop | Tail_loop | Suspended _) | None -> false
 
 (* Whether Loopify lowers every local fixpoint in the body of the
-   definition [r], machines included, [function_] saying whether that body
-   is a function's: a function it loopifies, with its loop
-   ({!Loopify.after_tail_loop}) or, where none is made, alone
-   ({!lower_locals}), not a helper lifted out of another definition.  Of any other body it lowers the local tail
-   loops alone. *)
-let lowers_local_machines ~function_ r = function_ && Base.Table.should_loopify r && not (Option.has_some (Base.Lifted.of_ref r))
+   definition [r], machines included, [all_locals] saying whether that body
+   is a function's or a constant's initialiser: a function it loopifies,
+   with its loop ({!Loopify.after_tail_loop}) or, where none is made, alone
+   ({!lower_locals}), or a constant it loopifies, whose initialiser runs
+   its local fixpoints as a function's body does; not a helper lifted out
+   of another definition.  Of any other body, a member's, it lowers the
+   local tail loops alone. *)
+let lowers_local_machines ~all_locals r = all_locals && Base.Table.should_loopify r && not (Option.has_some (Base.Lifted.of_ref r))
 
 (* How {!local_loop} lowers the local fixpoint [member], if at all.  The
    function a fixpoint is in the flow of adopts it only where it is a
    machine itself, which a local tail loop is never lowered inside. *)
-let local_lowering ~unit ~owner ~function_ ~lifted ~member:((occurrence, _) as member) =
+let local_lowering ~unit ~owner ~all_locals ~lifted ~member:((occurrence, _) as member) =
   match (Core_plan.Recursion.strategy_at (Unit_plan.Context.recursion unit))
     ~pointer_fields:(Analysis.constructor_pointer_fields unit) member with
   | Some Tail_loop ->
@@ -571,11 +573,11 @@ let local_lowering ~unit ~owner ~function_ ~lifted ~member:((occurrence, _) as m
     else Some Tail
   | Some (Modulo_cons _ | Frame_stack)
     when (not ((Core_plan.Recursion.adoptable_somewhere (Unit_plan.Context.recursion unit)) ~lifted occurrence))
-         && Option.cata (lowers_local_machines ~function_) false owner ->
+         && Option.cata (lowers_local_machines ~all_locals) false owner ->
     Some Frames
   | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
 
-let local_resumes ~unit ~owner ~function_ ~lifted ~member ~depth ~arity =
+let local_resumes ~unit ~owner ~all_locals ~lifted ~member ~depth ~arity =
   (* The machine of the function [owner] adopting the fixpoint as its
      entry re-enters it with every parameter it takes, its captures among
      them: a frame of the entry's keeps whatever what follows reads. *)
@@ -591,7 +593,7 @@ let local_resumes ~unit ~owner ~function_ ~lifted ~member ~depth ~arity =
      plan lowers so that it does not take, perhaps one Loopify makes of the
      Y-combinator it is then generated as, in a body it loopifies. *)
   let own =
-    match local_lowering ~unit ~owner ~function_ ~lifted ~member with
+    match local_lowering ~unit ~owner ~all_locals ~lifted ~member with
     | Some Frames -> Some true
     | Some (Tail | Modulo_cons) -> None
     | None -> (
@@ -619,8 +621,8 @@ let local_resumes ~unit ~owner ~function_ ~lifted ~member ~depth ~arity =
     | Some _ | None -> None )
   | _ -> None
 
-let local_loop ~unit ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lambda) : stmt option =
-  let lowering = local_lowering ~unit ~owner ~function_ ~lifted ~member in
+let local_loop ~unit ~owner ~all_locals ~lifted ~member ~tparams ~name (lam : lambda) : stmt option =
+  let lowering = local_lowering ~unit ~owner ~all_locals ~lifted ~member in
   let member_loop = Control_ir.Loop.Member (fst member, snd member) in
   let unlowered why =
     Verdicts.record member_loop (Unlowered why);

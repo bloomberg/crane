@@ -90,7 +90,7 @@ let local_fix_stmts cx selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowere
     in
     match
       Control_to_cpp.Lower.local_loop ~unit:(Lowering_state.unit_context cx) ~owner:cx.ctx.input.body_owner
-        ~function_:cx.ctx.input.body_function
+        ~all_locals:cx.ctx.input.body_all_locals
         ~lifted:cx.ctx.lexical.lifted_fixpoints ~member
         ~tparams:(get_current_template_head cx) ~name:fix_id lam
     with
@@ -562,7 +562,7 @@ let gen_fix cx env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_i
     | Some occ, _ when n_fix_funs = 1 -> (
       match
         Control_to_cpp.Lower.local_resumes ~unit:(Lowering_state.unit_context cx) ~owner:cx.ctx.input.body_owner
-          ~function_:cx.ctx.input.body_function
+          ~all_locals:cx.ctx.input.body_all_locals
           ~lifted:cx.ctx.lexical.lifted_fixpoints ~member:(occ, fix_idx)
             ~depth:(List.length (fst env)) ~arity:n_lam_params
       with

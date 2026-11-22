@@ -143,21 +143,45 @@ struct ListDef {
 struct LoopifyConstantLocalFix {
   static uint64_t from_n(uint64_t n);
   static inline const uint64_t million = []() {
-    return []() {
-      auto go_impl =
-          [](auto &_self_go, const List<uint64_t> &l) -> List<uint64_t> {
+    return [&]() {
+      auto go = [&](const List<uint64_t> &l) -> List<uint64_t> {
+        // Explicit stack replaces the non-tail recursion of go: _call frames
+        // are pending calls, _after frames resume a caller.
+        struct _call {
+          const List<uint64_t> *l;
+        };
+
+        struct _after_go_in_Cons {
+          uint64_t a0;
+        };
+
+        using _frame = std::variant<_call, _after_go_in_Cons>;
+        List<uint64_t> _result{};
+        crane::small_vector<_frame> _stack;
+        _stack.emplace_back(_call{&l});
+        while (!_stack.empty()) {
+          _frame &_popped = _stack.back();
+          if (std::holds_alternative<_call>(_popped)) {
+            auto _f = std::move(std::get<_call>(_popped));
+            _stack.pop_back();
+            const List<uint64_t> &l = *_f.l;
             if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-              return List<uint64_t>::nil();
+              _result = List<uint64_t>::nil();
             } else {
               const auto &[a0, a1] =
                   std::get<typename List<uint64_t>::Cons>(l.v());
-              return List<uint64_t>::cons(a0, _self_go(_self_go, *a1));
+              _stack.emplace_back(_after_go_in_Cons{a0});
+              _stack.emplace_back(_call{crane_raw(a1)});
             }
-          };
-      auto go =
-          [&](const List<uint64_t> &l) -> List<uint64_t> {
-            return go_impl(go_impl, l);
-          };
+          } else {
+            auto _f = std::move(std::get<_after_go_in_Cons>(_popped));
+            _stack.pop_back();
+            uint64_t a0 = _f.a0;
+            _result = List<uint64_t>::cons(a0, std::move(_result));
+          }
+        }
+        return _result;
+      };
       return go(ListDef::template repeat<uint64_t>(
           UINT64_C(1), Nat::pow(UINT64_C(10), UINT64_C(6))));
     }().length();
