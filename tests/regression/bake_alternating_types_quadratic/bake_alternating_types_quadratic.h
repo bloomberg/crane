@@ -12,7 +12,7 @@
 #include <variant>
 
 #include "crane_bake.h"
-extern const crane::bake::image crane_baked_big_575c5499afbb;
+extern const crane::bake::image crane_baked_big_4b4779b0641d;
 
 struct BakeAlternatingTypesQuadratic {
   struct mterm;
@@ -280,7 +280,7 @@ struct BakeAlternatingTypesQuadratic {
 
   static mterm alt(uint64_t n);
   static inline const mterm big =
-      crane::bake::read<mterm>(crane_baked_big_575c5499afbb);
+      crane::bake::read<mterm>(crane_baked_big_4b4779b0641d);
   static inline const uint64_t result = []() {
     auto &&_sv = big;
     if (std::holds_alternative<typename mterm::MLit>(_sv.v())) {

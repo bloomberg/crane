@@ -312,16 +312,6 @@
   (deps bde_loop_acc_fn_std_string.t.exe)
   (action (run ./bde_loop_acc_fn_std_string.t.exe))))
 
-(subdir bake_alternating_types_quadratic
- (rule
-  (targets bake_alternating_types_quadratic.t.exe)
-  (deps BakeAlternatingTypesQuadratic.vo bake_alternating_types_quadratic.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_alternating_types_quadratic.t.exe bake_alternating_types_quadratic.t.cpp bake_alternating_types_quadratic.cpp)))
- (rule
-  (alias runtest)
-  (deps bake_alternating_types_quadratic.t.exe)
-  (action (run ./bake_alternating_types_quadratic.t.exe))))
 
 (subdir capture_move_then_alias
  (rule

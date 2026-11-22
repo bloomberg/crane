@@ -156,8 +156,11 @@ and long strings are split into literals that fit a line. A `?` after a `?`
 is written `\?`, so no literal spells a trigraph.
 Names come from the compiler: a type's from `__PRETTY_FUNCTION__`, a
 struct's fields from clang's `__builtin_dump_struct` (`_0`, `_1`, ...
-without it). Past `writer::annotated_rows` (1000) rows, rows are filled into
-lines bare (`bake_long_list`). The image is not handed to `Emit.Layout`,
+without it). Past `writer::annotated_rows` (1000) rows, rows and run
+headers are filled into lines bare (`bake_long_list`;
+`bake_alternating_types_quadratic`, where every run is one row long). The
+reader's per-type tables grow as vectors do, so reading alternating types
+stays linear. The image is not handed to `Emit.Layout`,
 which gives every element of a braced list too long for one line a line of
 its own. Routing it through CppIR would mean the driver emitting a
 structured image for OCaml to rebuild as declarations (`constinit`,

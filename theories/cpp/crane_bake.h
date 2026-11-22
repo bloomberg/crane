@@ -564,12 +564,14 @@ public:
 
 private:
   std::vector<std::uint64_t> words_;
-  // The stream's lines: the words [begin, end), and the comment that spells
-  // them ([row]: a node, which past [annotated_rows] goes uncommented).
+  // The stream's lines: the words [begin, end), the comment that spells
+  // them, and what they are: a node's row, or a run's header, which past
+  // [annotated_rows] rows go uncommented, or the table's end or the value.
+  enum class kind { row, run, other };
   struct line {
     std::size_t begin, end;
     std::string note;
-    bool row;
+    kind what;
   };
   std::vector<line> lines_;
   // The node types, numbered as [detail::walk_types] meets them.
@@ -653,13 +655,13 @@ private:
       run_type_ = type;
       run_first_ = node_count_;
       run_line_ = lines_.size();
-      lines_.push_back({words_.size(), words_.size() + 2, "", false});
+      lines_.push_back({words_.size(), words_.size() + 2, "", kind::run});
       words_.push_back(type + 1);
       words_.push_back(0);
     }
     ++words_[lines_[run_line_].begin + 1];
     lines_[run_line_].note = types_.names[type] + ": " + node_range(run_first_, node_count_ + 1);
-    lines_.push_back({words_.size(), 0, "#" + std::to_string(node_count_) + " ", true});
+    lines_.push_back({words_.size(), 0, "#" + std::to_string(node_count_) + " ", kind::row});
     nodes_[typeid(T)].emplace(key, node_count_);
     return node_count_++;
   }
@@ -962,10 +964,14 @@ private:
       }
       return out;
     };
+    // Whether a line has a comment, [rows] the rows before it.
+    auto annotated = [](const line &l, std::size_t rows) { return l.what == kind::other || rows < annotated_rows; };
     // The comment column: past the widest annotated line that fits.
     std::size_t column = 0, rows = 0;
     for (const auto &l : lines_) {
-      if (l.row && rows++ >= annotated_rows) continue;
+      bool annotate = annotated(l, rows);
+      if (l.what == kind::row) ++rows;
+      if (!annotate) continue;
       std::size_t w = 4 + words_of(l).size();
       if (w <= max_column && w > column) column = w;
     }
@@ -974,11 +980,11 @@ private:
     std::vector<std::string> bare;
     rows = 0;
     for (const auto &l : lines_) {
-      bool annotate = !l.row || rows < annotated_rows;
-      if (l.row) ++rows;
+      bool annotate = annotated(l, rows);
+      if (!annotate && bare.empty())
+        out += "    // " + std::to_string(rows) + " rows above have comments; these have none.\n";
+      if (l.what == kind::row) ++rows;
       if (!annotate) {
-        if (bare.empty())
-          out += "    // " + std::to_string(rows - 1) + " rows above have comments; these have none.\n";
         auto ws = words_list(l);
         bare.insert(bare.end(), ws.begin(), ws.end());
         continue;
@@ -1024,9 +1030,9 @@ public:
       tasks_.pop_back();
       emit();
     }
-    lines_.push_back({words_.size(), words_.size() + 1, node_count_ ? "end of the nodes" : "no nodes", false});
+    lines_.push_back({words_.size(), words_.size() + 1, node_count_ ? "end of the nodes" : "no nodes", kind::other});
     words_.push_back(0);
-    lines_.push_back({words_.size(), 0, "the value: ", false});
+    lines_.push_back({words_.size(), 0, "the value: ", kind::other});
     put(root, lines_.back().note);
     end_row();
   }
@@ -1267,10 +1273,11 @@ class reader {
 
   void add_node(const void *tab, std::size_t index) { nodes_.emplace_back(tab, index); }
 
-  // A run of [n] rows of the node type [T].
+  // A run of [n] rows of the node type [T].  The table grows as a vector
+  // does, not to the run's end: where node types alternate a run is one row
+  // long, and reserving each run's rows would copy the table every row.
   template <class T> void run(std::size_t n) {
     auto &tab = table<T>();
-    tab.reserve(tab.size() + n);
     for (std::size_t r = 0; r < n; ++r) {
       std::uint64_t idx = word();
       if constexpr (detail::is_list<T>::value) {
