@@ -6,12 +6,15 @@
     Expected: compiles; [result = 2]: over the one-string list both calls
     return [(None, 1)].
 
-    Actual: compile error "no matching function for call to object of type
+    Fixed: compile error "no matching function for call to object of type
     'crane::fn<std::pair<std::optional<std::string>, uint64_t>
     (List<std::string>, std::pair<std::optional<std::string>, uint64_t>)>'":
-    the match becomes a conditional expression whose [None]s are built as
-    [std::optional<crane::obj>()], so the pair does not convert. Also on
-    main. *)
+    the match became a conditional expression whose [None]s were built as
+    [std::optional<crane::obj>()], so the pair did not convert.  Only an
+    argument that was itself a constructor took the callee parameter's Core
+    type as its slot; now every argument does, and the forms that hand
+    their slot on (match branches, let bodies, constructor fields) carry it
+    to the value built inside. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.
