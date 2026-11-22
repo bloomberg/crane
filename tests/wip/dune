@@ -244,17 +244,6 @@
 
 
 
-(subdir deque_fold_fix_init
- (rule
-  (targets deque_fold_fix_init.t.exe)
-  (deps DequeFoldFixInit.vo deque_fold_fix_init.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_fix_init.t.exe deque_fold_fix_init.t.cpp deque_fold_fix_init.cpp)))
- (rule
-  (alias runtest)
-  (deps deque_fold_fix_init.t.exe)
-  (action (run ./deque_fold_fix_init.t.exe))))
-
 (subdir nested_fix_alias_result
  (rule
   (targets nested_fix_alias_result.t.exe)

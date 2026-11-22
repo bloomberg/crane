@@ -15797,3 +15797,14 @@
   (alias runtest)
   (deps scrutinee_list_return_type.t.exe)
   (action (run ./scrutinee_list_return_type.t.exe))))
+
+(subdir deque_fold_fix_init
+ (rule
+  (targets deque_fold_fix_init.t.exe)
+  (deps DequeFoldFixInit.vo deque_fold_fix_init.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_fix_init.t.exe deque_fold_fix_init.t.cpp deque_fold_fix_init.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_fold_fix_init.t.exe)
+  (action (run ./deque_fold_fix_init.t.exe))))

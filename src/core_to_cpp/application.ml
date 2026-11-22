@@ -331,17 +331,21 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
       | _ -> expr
     in
     (* A mapping's text takes each argument as it comes, deducing [auto]
-       from it: a closure handed for a parameter declared at a type variable
-       is the type of whatever the text keeps it in -- a fold's
-       accumulator, assigned each step's result, a different closure.  So
-       is a function's name, decaying to a pointer no closure that captures
-       converts to.  Either arrives named, at the [crane::fn] every callable
-       of its type converts to ({!Cpp_ir.Expr.Function_value}). *)
+       from it: a callable handed for a parameter declared at a type
+       variable is the type of whatever the text keeps it in -- a fold's
+       accumulator, assigned each step's result, a different closure.
+       Whatever the argument is written as -- a lambda, a function's name
+       decaying to a pointer, an immediately invoked lambda returning a
+       closure, a let-bound one -- its type is the function type the
+       variable is instantiated at, and it arrives named, at the
+       [crane::fn] every callable of that type converts to
+       ({!Cpp_ir.Expr.Function_value}). *)
     let expr : Cpp_ir.Lowered.Expr.t =
       if not (Base.Table.is_inline_custom id) then expr
       else
         match (Option.map resolve_meta (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index), expr) with
-        | Some (Core.Type.Variable _), (Lambda _ | Entity _)
+        | _, Function_value _ -> expr
+        | Some (Core.Type.Variable _), _
           when (match param_core_ty with
                 | Some t -> (match resolve_meta t with Core.Type.Arrow _ -> true | _ -> false)
                 | None -> false) ->
