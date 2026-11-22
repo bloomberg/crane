@@ -133,6 +133,7 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
   | (Typed _ | Deduced _), Template_parameter _ -> None
   | _, Exactly into -> (
     let undecided = has_obligation into in
+    let written = strip_cpp_ref_const into in
     let into = normal al into in
     let source = match from with Typed t -> Some (normal al t) | _ -> None in
     let classified =
@@ -154,7 +155,7 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
     in
     match (source, classified) with
     | Some t, _ when cpp_ty_eq t into || t = into -> None
-    | _, `Boxed when al.spells_as_any into -> None
+    | _, `Boxed when al.spells_as_any written -> None
     (* A type an alias resolves to a box is a box only by that alias; one
        the slot leaves undecided is not read out of it. *)
     | Some t, `Boxed when undecided && not (is_boxed_type t) -> None
@@ -174,6 +175,10 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
              && (not (has_obligation a.result))
              && not (Cpp_ir.Types.prints_as_any b.result) ->
         Some (Recover (a, b))
+      (* A template's name is no value: one whose signature keeps a part
+         only its instantiation decides is named through an adapter. *)
+      | Some a, Some _ when (match from with Function_name _ -> has_obligation (Cpp_ir.Arrows.to_type a) | _ -> false) ->
+        Option.map (fun b -> Cpp_ir.Coercion.Eta {declared = a; into = b}) (Cpp_ir.Arrows.of_type into)
       | Some a, Some b when Cpp_ir.Arrows.equal a b || (same_domain && Cpp_ir.Arrows.same_function a b && List.length a.groups = List.length b.groups) -> None
       | Some a, Some b when Cpp_ir.Arrows.same_function a b -> (
         match from with
@@ -254,26 +259,40 @@ let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slo
 let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t)
     ~(before : Cpp_ir.Lowered.Expr.t) (after : Cpp_ir.Lowered.Expr.t) =
   (* An adapter may rebuild what it was given unchanged. *)
-  if Base.Probe.enabled () && after != before && after <> before then begin
+  if (Base.Probe.enabled () || Base.Probe.checking ()) && after != before && after <> before then begin
     let planned = Option.map Cpp_ir.Coercion.plan_name (decide_with al from into) in
-    let agrees = match planned with Some p -> List.mem p kind | None -> false in
+    let agrees = match planned with Some p -> List.mem p kind | None -> List.mem "none" kind in
     let variables = function
       | Cpp_ir.Grammar.Slot_type.Exactly t -> contains_tvar t
       | _ -> false
     in
-    Base.Probe.hit "typed-shadow" (fun () ->
-        adapter
-        ^
+    let verdict =
         if agrees then " agree"
         else if into = Free then " unchecked (no slot type)"
         else if Cpp_ir.Value_type.not_yet_typed from then " unchecked (untyped value)"
         else if (match into with Exactly t -> Cpp_ir.Types.exists (fun t -> t = Auto) t | _ -> false) then
           " unchecked (generic slot)"
         else if planned = None && variables into then " unchecked (slot at type variables)"
+        else if
+          (* A callable said to fill a slot no callable fills: the position
+             described the aggregate the value goes into, not the value's
+             own slot (typed CppIR B1 gives every position its slot). *)
+          planned = None
+          && Option.has_some (Cpp_ir.Value_type.arrows from)
+          && match into with
+             | Exactly t ->
+               let t = normal al t in
+               Cpp_ir.Arrows.of_type t = None && not (al.boxed_source t || al.spells_as_any t)
+             | _ -> false
+        then " unchecked (slot is no callable's)"
         else
           " disagree decide " ^ Option.default "none" planned ^ " in " ^ Base.Probe.library () ^ " built " ^ String.concat "/" kind ^ " from "
           ^ Binders.show_value_type from ^ " into "
-          ^ match into with Exactly t -> Binders.type_shape t | _ -> "?" )
+          ^ match into with Exactly t -> Binders.type_shape t | _ -> "?"
+    in
+    Base.Probe.hit "typed-shadow" (fun () -> adapter ^ verdict);
+    if String.starts_with ~prefix:" disagree" verdict then
+      Base.Probe.violation "coercion shadow" Pp.(str adapter ++ str verdict)
   end;
   after
 
@@ -618,7 +637,16 @@ let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lower
     | _, Lambda _ | None, _ -> Cpp_ir.Typed.node_type expr
     | Some t, _ -> Typed t
   in
-  shadow ~al:(aliases_in cx) ~adapter:"coerce" ~kind:[coerced_kind after] from_ty (Exactly into) ~before:expr after
+  (* [std::any] built from what is a [std::any] already, once aliases are
+     followed, is the box itself: C++'s converting constructor excludes the
+     box's own type. *)
+  let al = aliases_in cx in
+  let kind =
+    match (coerced_kind after, from_ty) with
+    | "box", Typed t when al.spells_as_any (normal al t) || Cpp_ir.Types.prints_as_any (normal al t) -> ["box"; "none"]
+    | k, _ -> [k]
+  in
+  shadow ~al ~adapter:"coerce" ~kind from_ty (Exactly into) ~before:expr after
 
 (** [regroup_crossing ~from ~into expr]: [expr], whose C++ type is [from],
     read at [into] where the two differ only in how their arrows are grouped

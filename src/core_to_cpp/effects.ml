@@ -82,6 +82,20 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
     (* Sequential mode: desugar bind into sequential statements. *)
     let a_core, f = Base.Common.last_two (a1 :: a2 :: l) in
     let action = Knot.gen_expr_typed cx env a_core in
+    (* Run in place, the action yields its result: the monad's last type
+       argument. *)
+    let rec value_type (t : Core.Type.t) =
+      (* An action is no function: an arrow left is a type binder. *)
+      match Base.Type_util.resolve_meta t with
+      | Arrow {parameter; result} when Base.Core_util.is_erased_type parameter -> value_type result
+      | t -> t
+    in
+    let action =
+      match Option.map value_type (Typed_checks.core_type_of cx a_core) with
+      | Some (Global_app {type_arguments = _ :: _ as args; _}) ->
+        Cpp_ir.Typed.v ~ty:(Typed_checks.core_value_type cx env (Some (List.hd (List.rev args)))) action.expr
+      | _ -> action
+    in
     let a = action.expr in
     let ids', f = collect_lams f in
   let ids, env =

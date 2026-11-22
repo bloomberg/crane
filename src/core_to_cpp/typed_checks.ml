@@ -201,6 +201,12 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
           | v -> v
         in
         applied callee (Base.Type_util.count_real_core_args arguments)
+      (* [tt] applied: only an impossible branch of a dependent match
+         writes it, and the crossing it stands under is an abort
+         ({!Coerce.absurd_coercion}). *)
+      | Deduced Not_yet_typed, Apply {callee; _}
+        when (match core_type_of cx callee with Some t -> Base.Type_util.core_type_is_unit t | None -> false) ->
+        Never
       | v, _ -> v
     in
     Base.Probe.hit "typed-derived" (fun () -> form_name e ^ " " ^ kind_name derived);
@@ -262,6 +268,10 @@ let rec node_name : Cpp_ir.Lowered.Expr.t -> string = function
     [e]'s form and the kind of type [x] has, and where the position stated
     a type, by whether {!Coerce.decide} finds [x] fits it. *)
 let census cx ?expected_ty e (x : Typed.t) =
+  if Base.Probe.checking () && Cpp_ir.Value_type.not_yet_typed x.ty then
+    Base.Probe.violation "typed lowering"
+      Pp.(str "a " ++ str (form_name e) ++ str " lowered without a type, in " ++ str (site cx) ++ str ": "
+          ++ str (describe e));
   if Base.Probe.enabled () then begin
     Base.Probe.hit "typed" (fun () -> form_name e ^ " " ^ kind_name x.ty);
     if Cpp_ir.Value_type.not_yet_typed x.ty then
@@ -282,11 +292,24 @@ let census cx ?expected_ty e (x : Typed.t) =
   end;
   x
 
-(** Under [CRANE_PROBE], the declaration agreement check: [x], put as it is
+(** The declaration agreement check, fatal under [CRANE_CHECK_IR] and
+    counted under [CRANE_PROBE]: [x], put as it is
     in a slot of type [into] -- a variable declared at a type, a parameter
     -- needs no adapter by {!Coerce.decide}.  One that does is a latent
     bug, or a type synthesised wrong. *)
 let agreement cx ~site (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  if Base.Probe.checking () then (
+    let slot = match into with Exactly t -> Binders.type_shape t | _ -> "?" in
+    match Coerce.decide cx x.ty into with
+    | None when Coerce.unrelated cx x.ty into ->
+      Base.Probe.violation "binder agreement"
+        Pp.(str site ++ str ": a value of type " ++ str (Binders.show_value_type x.ty) ++ str " declared at "
+            ++ str slot)
+    | Some p when not (Coerce.implicit x.ty p) ->
+      Base.Probe.violation "binder agreement"
+        Pp.(str site ++ str ": a value of type " ++ str (Binders.show_value_type x.ty) ++ str " declared at "
+            ++ str slot ++ str " without the " ++ str (Cpp_ir.Coercion.plan_name p) ++ str " it needs")
+    | _ -> () );
   if Base.Probe.enabled () then
     let verdict =
       match Coerce.decide cx x.ty into with
