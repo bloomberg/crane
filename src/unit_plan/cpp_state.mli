@@ -545,6 +545,10 @@ type std_names = Context.std_names = {
       (** what a switch over every constructor ends in: [std::unreachable], or
           [crane::unreachable] where the build predates C++23 (BDE) *)
   unreachable_header : Base.Table.header;  (** the header [unreachable] is declared in *)
+  placeholder : bool;
+      (** whether an unread structured binding is written as the placeholder
+          [_], which may repeat only from C++26; a build that predates it
+          (BDE) writes the binding's own name *)
 }
 
 (** The plain [std::] flavor of {!std_names}. *)

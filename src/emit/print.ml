@@ -1619,7 +1619,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
           if scrut.owned then "auto& [" else "const auto& ["
         in
         let pp_field_binding (fb : _ I.Stmt.Match.field_binding) =
-          if fb.used then Id.print fb.name else str "_"
+          if fb.used || not (sn ctx.unit).placeholder then Id.print fb.name else str "_"
         in
         if scrut.flat then
           str binding_qual

@@ -623,7 +623,8 @@ and Match : sig
     type_ : 'p Type.t;
     used : bool;
         (** whether the branch body reads the binding; one it does not is
-            written as the placeholder [_] *)
+            written as the placeholder [_] where the target standard has
+            one *)
     binder : Core.Binder.t option;
   }
 

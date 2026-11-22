@@ -853,6 +853,7 @@ type std_names = Context.std_names = {
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
   unreachable : string; (* "std::unreachable" (C++23), or "crane::unreachable" where the build is older *)
   unreachable_header : Base.Table.header; (* the header [unreachable] is declared in *)
+  placeholder : bool; (* an unread binding written [_] (C++26), or by its own name where the build is older *)
 }
 
 let default_std_names = Context.default_std_names
@@ -872,9 +873,11 @@ let mk_std_names prefix =
       get_if = p ^ "get_if"; get = p ^ "get";
       variant = p ^ "variant"; variant_header = Base.Table.Standard "variant";
       enable_from_this = p ^ "enable_shared_from_this";
-      (* BDE builds as C++20, which has no [std::unreachable]. *)
+      (* BDE builds as C++20, which has no [std::unreachable]... *)
       unreachable = "crane::unreachable";
-      unreachable_header = Base.Table.Runtime Cpp_ir.Crane_rt.unreachable_header }
+      unreachable_header = Base.Table.Runtime Cpp_ir.Crane_rt.unreachable_header;
+      (* Nor placeholder variables: two [_] in one binding are C++26. *)
+      placeholder = false }
   | _ -> default_std_names
 
 let std_namespace () = if Base.Table.std_lib () = "BDE" then "bsl" else "std"

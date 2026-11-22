@@ -4,11 +4,11 @@
 
     Expected: compiles; [result = 7].
 
-    Actual: compile error "placeholder variables are a C++2c extension
-    [-Werror,-Wc++26-extensions]": the unread fields are both printed [_] in
-    one structured binding ([const auto &[_, x, _] = ...]), and a repeated
-    [_] is a C++26 placeholder. The BDE flavour needs distinct names (or
-    [[maybe_unused]] ones). Also on main. *)
+    Fixed: the unread fields were both printed [_] in one structured
+    binding ([const auto &[_, x, _] = ...]), and a repeated [_] is a C++26
+    placeholder ("placeholder variables are a C++2c extension").  A flavour
+    whose build predates C++26 (BDE) writes an unread binding by its own
+    name ([const auto &[d_l, d_x, d_r] = ...]). *)
 From Crane Require Import Mapping.NatIntBDE Mapping.BDE.
 From Crane Require Extraction.
 Module PlaceholderBindingBde.

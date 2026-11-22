@@ -22,6 +22,7 @@ type std_names = {
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
   unreachable : string; (* "std::unreachable" (C++23), or "crane::unreachable" where the build is older *)
   unreachable_header : Base.Table.header; (* the header [unreachable] is declared in *)
+  placeholder : bool; (* an unread binding written [_] (C++26), or by its own name where the build is older *)
 }
 
 let default_std_names =
@@ -44,6 +45,7 @@ let default_std_names =
     enable_from_this = "std::enable_shared_from_this";
     unreachable = "std::unreachable";
     unreachable_header = Base.Table.Standard "utility";
+    placeholder = true;
   }
 
 type t = {
