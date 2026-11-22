@@ -104,6 +104,7 @@ let normal al t =
       match t with
       | Variable (Index (_, Some n)) -> Variable (Named n)
       | Variable (Index (i, None)) -> Variable (Named (Cpp_ir.Type.positional_id i))
+      | Const t -> t
       | In_namespace (g, (Entity_application (g', _, _) as t')) when GlobRef.CanOrd.equal g g' -> t'
       | t -> t )
     (al.unfold t)
@@ -126,6 +127,7 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
   | (Closure _ | Function_name _), Template_parameter t -> Some (Name t)
   | (Typed _ | Deduced _), Template_parameter _ -> None
   | _, Exactly into -> (
+    let undecided = has_obligation into in
     let into = normal al into in
     let source = match from with Typed t -> Some (normal al t) | _ -> None in
     let classified =
@@ -135,9 +137,22 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
       | Some f when Cpp_ir.Types.prints_as_any f -> `Opaque
       | Some f -> `Concrete f
     in
+    (* Erased on both sides, a domain needs no adapter between them. *)
+    let same_domain =
+      match (callable from, Cpp_ir.Arrows.of_type into) with
+      | Some {groups = d :: _; _}, Some {groups = d' :: _; _} ->
+        List.compare_lengths d d' = 0
+        && List.for_all2
+             (fun a b -> cpp_ty_eq a b || a = b || (Cpp_ir.Types.prints_as_any a && Cpp_ir.Types.prints_as_any b))
+             d d'
+      | _ -> false
+    in
     match (source, classified) with
-    | Some t, _ when cpp_ty_eq t into -> None
+    | Some t, _ when cpp_ty_eq t into || t = into -> None
     | _, `Boxed when al.spells_as_any into -> None
+    (* A type an alias resolves to a box is a box only by that alias; one
+       the slot leaves undecided is not read out of it. *)
+    | Some t, `Boxed when undecided && not (is_boxed_type t) -> None
     | _, `Boxed -> (
       match Cpp_passes.Erasure.erased_list_shape into with
       | Some (g, shape) when Base.Table.is_custom g -> Some (Unbox (To shape))
@@ -149,9 +164,12 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
       match into with Function (_, cod) -> Some (Erase (At_signature cod)) | _ -> None )
     | _ -> (
       match (callable from, Cpp_ir.Arrows.of_type into) with
-      | Some a, Some b when Cpp_ir.Types.prints_as_any a.result && not (Cpp_ir.Types.prints_as_any b.result) ->
+      | Some a, Some b
+        when Cpp_ir.Types.prints_as_any a.result
+             && (not (has_obligation a.result))
+             && not (Cpp_ir.Types.prints_as_any b.result) ->
         Some (Recover (a, b))
-      | Some a, Some b when Cpp_ir.Arrows.equal a b -> None
+      | Some a, Some b when Cpp_ir.Arrows.equal a b || (same_domain && Cpp_ir.Arrows.same_function a b && List.length a.groups = List.length b.groups) -> None
       | Some a, Some b when Cpp_ir.Arrows.same_function a b -> (
         match from with
         | Function_name _ -> Some (Eta {declared = a; into = b})
@@ -165,6 +183,24 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
         | Some t when (match into with Shared_pointer t' -> cpp_ty_eq t t' | _ -> false) -> Some (Convert into)
         | Some _ | None -> None ) ) )
 
+(** Whether C++ performs [p] on a value of type [from] by itself, so that
+    a value left without it is still well-formed: a box of a value that is
+    no callable (the box's converting constructor), and the erasure of a
+    callable whose domain is erased already or which is generic (the
+    [crane::fn] at the erased signature takes it as it is). *)
+let implicit (from : Cpp_ir.Lowered.Value_type.t) : Cpp_ir.Lowered.Coercion.plan -> bool = function
+  | Box None -> true
+  | Erase _ -> (
+    match from with
+    | Deduced Generic_lambda -> true
+    | Typed t -> (
+      match Cpp_ir.Arrows.of_type (strip_cpp_ref_const t) with
+      | Some {groups = d :: _; _} -> List.for_all Cpp_ir.Types.prints_as_any d
+      | _ -> false )
+    | Closure {groups = d :: _; _} | Function_name (_, {groups = d :: _; _}) -> List.for_all Cpp_ir.Types.prints_as_any d
+    | _ -> false )
+  | _ -> false
+
 (** {!decide_with} the aliases of the unit being lowered. *)
 let decide cx from into = decide_with (aliases_in cx) from into
 
@@ -173,6 +209,7 @@ let decide cx from into = decide_with (aliases_in cx) from into
     one callable grouped otherwise.  For diagnostics: such a pair is a type
     synthesised wrong, or a value C++ converts by itself. *)
 let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  let cpp_ty_eq a b = cpp_ty_eq a b || a = b in
   let al = aliases_in cx in
   let plain t = not (has_obligation t || Cpp_ir.Types.prints_as_any t || al.boxed_source t) in
   match (from, into) with
@@ -192,23 +229,25 @@ let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slo
     value otherwise. *)
 let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t)
     ~(before : Cpp_ir.Lowered.Expr.t) (after : Cpp_ir.Lowered.Expr.t) =
-  if Base.Probe.enabled () && after != before then begin
+  (* An adapter may rebuild what it was given unchanged. *)
+  if Base.Probe.enabled () && after != before && after <> before then begin
     let planned = Option.map Cpp_ir.Coercion.plan_name (decide_with al from into) in
     let agrees = match planned with Some p -> List.mem p kind | None -> false in
     let variables = function
       | Cpp_ir.Grammar.Slot_type.Exactly t -> contains_tvar t
       | _ -> false
     in
-    let from_variables = match Cpp_ir.Value_type.as_function_type from with Some t -> contains_tvar t | None -> false in
     Base.Probe.hit "typed-shadow" (fun () ->
         adapter
         ^
         if agrees then " agree"
         else if into = Free then " unchecked (no slot type)"
-        else if planned = None && variables into && not from_variables then
-          " unchecked (slot at the callee's own variables)"
+        else if Cpp_ir.Value_type.not_yet_typed from then " unchecked (untyped value)"
+        else if (match into with Exactly t -> Cpp_ir.Types.exists (fun t -> t = Auto) t | _ -> false) then
+          " unchecked (generic slot)"
+        else if planned = None && variables into then " unchecked (slot at type variables)"
         else
-          " disagree decide " ^ Option.default "none" planned ^ " built " ^ String.concat "/" kind ^ " from "
+          " disagree decide " ^ Option.default "none" planned ^ " in " ^ Base.Probe.library () ^ " built " ^ String.concat "/" kind ^ " from "
           ^ Binders.show_value_type from ^ " into "
           ^ match into with Exactly t -> Binders.type_shape t | _ -> "?" )
   end;

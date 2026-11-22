@@ -95,6 +95,20 @@ let sequential_result (t : Core.Type.t) : Core.Type.t =
     match List.rev type_arguments with r :: _ -> r | [] -> t )
   | _ -> t
 
+(** The Core type of [e], read off the term where it says
+    ({!Core_plan.Query.infer_core_body_type}), off the binder environment
+    for a variable and a local function's application, off the target of a
+    coercion, and off the value a boundary holds. *)
+let rec core_type_of cx (e : Core.Expr.t) : Core.Type.t option =
+  match e with
+  | Coerce {target_type; _} -> Some target_type
+  | Bound_variable {index; _} -> Lowering_state.get_env_type_opt cx index
+  | Apply {callee = Bound_variable {index; _}; arguments} ->
+    Option.bind (Lowering_state.get_env_type_opt cx index)
+      (Base.Type_util.strip_arrows_n (Base.Type_util.count_real_core_args arguments))
+  | Boxed_value {value; _} | Lambda_group_barrier {value; _} -> core_type_of cx value
+  | _ -> Core_plan.Query.infer_core_body_type e
+
 (** [of_built e x]: [x], lowered from [e] by a form module that does not
     type its result yet, at the type its outermost node carries, and failing
     that at the conversion of [e]'s Core type -- a closure grouped as the
@@ -113,12 +127,7 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
   match (Typed.of_node x, action) with
   | _, Some result -> Typed.v ~ty:(core_value_type cx env (Some result)) x
   | {ty = Deduced Not_yet_typed; _}, None -> (
-    let core_ty =
-      match e with
-      | Coerce {target_type; _} -> Some target_type
-      | _ -> Core_plan.Query.infer_core_body_type e
-    in
-    let derived = core_value_type cx env core_ty in
+    let derived = core_value_type cx env (core_type_of cx e) in
     Base.Probe.hit "typed-derived" (fun () -> form_name e ^ " " ^ kind_name derived);
     match (x, derived) with
     | Lambda l, Typed t -> (
@@ -144,19 +153,13 @@ let census cx ?expected_ty e (x : Typed.t) =
     Option.iter
       (fun t ->
         let verdict =
-          let from_variables =
-            match x.ty with
-            | Typed f -> Base.Type_util.contains_tvar f
-            | Closure a | Function_name (_, a) -> Base.Type_util.contains_tvar (Cpp_ir.Arrows.to_type a)
-            | Never | Deduced _ -> false
-          in
           match Coerce.decide cx x.ty (Exactly t) with
-          | None when Coerce.unrelated cx x.ty (Exactly t) && Base.Type_util.contains_tvar t && not from_variables ->
-            "uninstantiated-slot"
+          | _ when Base.Type_util.contains_tvar t -> "unchecked (slot at type variables)"
           | None when Coerce.unrelated cx x.ty (Exactly t) ->
             "unrelated from " ^ Binders.show_value_type x.ty ^ " into " ^ Binders.type_shape t
           | None -> "fits"
-          | Some p -> Cpp_ir.Coercion.plan_name p ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ Binders.type_shape t
+          | Some p when Coerce.implicit x.ty p -> "fits-implicitly"
+          | Some p -> Cpp_ir.Coercion.plan_name p ^ " in " ^ Base.Probe.library () ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ Binders.type_shape t
         in
         Base.Probe.hit "typed-fit" (fun () -> form_name e ^ " " ^ verdict) )
       expected_ty
@@ -173,8 +176,10 @@ let agreement cx ~site (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
       match Coerce.decide cx x.ty into with
       | None when Coerce.unrelated cx x.ty into -> "unrelated from " ^ Binders.show_value_type x.ty
       | None -> "fits"
+      | Some p when Coerce.implicit x.ty p -> "fits-implicitly"
       | Some p ->
         let slot = match into with Exactly t -> Binders.type_shape t | _ -> "?" in
-        Cpp_ir.Coercion.plan_name p ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ slot
+        Cpp_ir.Coercion.plan_name p ^ " in " ^ Base.Probe.library () ^ " from " ^ Binders.show_value_type x.ty
+        ^ " into " ^ slot
     in
     Base.Probe.hit "typed-agree" (fun () -> site ^ " " ^ verdict)

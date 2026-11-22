@@ -424,7 +424,7 @@ callable_crossing_matrix.
 
 ## 7. Progress
 
-- [ ] Phase A
+- [ ] Phase A (in progress: see 8, Phase A status)
 - [ ] Phase B1
 - [ ] Phase B2
 - [ ] Phase C
@@ -479,9 +479,87 @@ Where the implementation departs from sections 1-4, and why.
   structural ones, so the adapters that take no context
   (`regroup_value`, `regroup_crossing`, `eta_expand_to_expected`,
   `name_fn_arg_for_tvar_param`) are shadow-checked too.
+- **`decide` follows `coerce`, not the 3.3 table, where the two differ.**
+  Measured against what the adapters build (the shadow check), four rows
+  of 3.3 were wrong:
+  - a boxed value is unboxed into any slot not spelled as a box, a type
+    variable included (`coerce` does; `states_unboxed_target` is
+    `unbox_into`'s narrower question);
+  - a value of unknown type (`Deduced`) is boxed into an erased slot, a
+    generic lambda as a callable (`Box (Some Boxed_whole)`) and erased into
+    a slot with an erased domain, as `coerce` does for a term it cannot
+    type;
+  - "opaque on either side" is opaque *source* only: `coerce` unboxes into
+    and erases into slots with undecided parts.  A slot with an undecided
+    part takes nothing out of a type boxed only by an alias (a class
+    instance type such as `ReSum<erased, erased>`);
+  - the pointer row is only a `Shared_pointer` on exactly one side; types
+    that are otherwise unrelated get no plan (`Coerce.unrelated` reports
+    them, for diagnostics).
+  Types compare after `Coerce.normal`: aliases unfolded, `const` dropped, a
+  type variable by the name C++ spells it under (`Index (2, Some T1)`,
+  `Index (1, None)` and `Named T1` are one type), an inductive without its
+  namespace wrapper, then `cpp_ty_eq` or structural equality.
+- **Implicit plans.** `Coerce.implicit from plan`: C++ performs `Box None`
+  (the box's converting constructor) and the erasure of a callable whose
+  domain is already erased or which is generic (`crane::fn` at the erased
+  signature takes it).  A value left without such a plan is well-formed;
+  the checks count it as `fits-implicitly`.
 - **Checks.** Under `CRANE_PROBE`: `typed` (form x kind of type, the
   `Not_yet_typed` census), `typed-derived` (fallbacks to the Core type),
   `typed-fit` (at every `gen_expr_typed` exit with an `expected_ty`, whether
-  `decide` finds the value fits), `typed-shadow` (each inventory adapter
-  that built something, against `decide`'s plan kind; `coerce` classified
-  by the shape it built, `Coerce.coerced_kind`).
+  `decide` finds the value fits), `typed-agree` (declaration agreement at
+  the two bind declarations of `Effects.gen_bind_stmts`), `typed-shadow`
+  (each inventory adapter that built something different from its input,
+  against `decide`'s plan kind; `coerce` classified by the shape it built,
+  `Coerce.coerced_kind`, a lambda's own type read from its node).  A slot
+  mentioning type variables, a slot with no type, a generic slot, and an
+  untyped value are counted `unchecked`: the slot is the callee's own
+  variables (`Template_parameter` in B1), not comparable to a value typed in
+  the caller's scope.
+- **Binder agreement is at the declarations lowering builds from a typed
+  value.** A let's right-hand side reaches its `Declare` through `gen_stmts`'
+  continuation as a bare expression, so it cannot be checked before B1's
+  `Destination.Bind`; the bind declarations can, and are.
+- **No latent bug found yet.** Every remaining `typed-fit` plan was traced
+  to a synthesis inaccuracy, not to missing output: a `Call.yields`
+  recorded at the flat spelling where the call is instantiated curried
+  (`hkt_curried_pure_arity`: `pure<crane::fn<crane::fn<Nat(Nat)>(Nat)>>`),
+  a Core-derived `erased` for a call C++ instantiates concretely
+  (`interp_state_case_handler`, `interp_state_after_interp`), a generic
+  lambda the caller wraps in `crane_erase_fn` after `gen_expr` returns
+  (`erased_index_fun_type`).  The suite compiles under
+  `CRANE_STRICT_ARITY`, so a missing regrouping in a passing test is a
+  compile error, not a latent bug: latent bugs can only hide behind
+  implicit conversions, and none has turned up.  No wip test was filed.
+
+### Phase A status (2026-11-22, end of first session)
+
+Commits: grammar families (`38b874e49`), typed lowering + `decide` +
+probes (`d42a8e8dd`), and the census-driven refinement commit after it.
+Extraction is byte-identical (`git status --short tests` empty, the same 4
+wip extraction errors as the base).
+
+Census over the whole suite (`CRANE_PROBE`, every test folder, wip
+included; counts are lowering calls, speculative ones included):
+
+| probe | result |
+|---|---|
+| `typed` | 2.53M typed values; 1903 `Not_yet_typed` (lambda 919, apply 698, global 226, let 44, barrier 12, array 4) |
+| `typed-fit` | 599859 fit, 1211 fit implicitly, 84219 unchecked (slot at type variables), 4437 unrelated (synthesis), 1011 with a plan (unbox 676, erase 276, recover 43, convert 8, box 8) |
+| `typed-shadow` | 2236 `coerce` agree, 16 `regroup_crossing`, 16 `curry_value_to_expected`, 8 `name_fn_arg_for_tvar_param` agree; 112 unchecked; 13 distinct disagreeing sites (10 `coerce` re-boxing `any`/alias-boxed values, 1 unbox into an instance-member type, 2 `curry_value_to_expected` at rank-2 slots) |
+| `typed-agree` | 2500 fit, 36 unrelated |
+
+Not done, in order:
+1. Type the remaining `Not_yet_typed`: a lambda whose returns are
+   variables (needs the binder types of its body; moving typing into
+   `Lambda.gen_lambda`, where they are in scope, is the fix), a call of a
+   local whose Core type is unknown, an inline mapping global whose
+   `callee_core_type` is absent.
+2. Fix the synthesis inaccuracies `typed-fit` reports: fill
+   `Call.signature.yields` from the explicit instantiation (design 2.4),
+   and replace Core-derived fallbacks with the form module's own type.
+3. Classify the 13 disagreeing shadow sites (likely `coerce` rebuilding a box
+   with `Erasure.converting_ctor`, a no-op the shadow cannot see through).
+4. Once 1-3 are clean, turn the probes into `Base.Probe.violation`
+   (fatal under `CRANE_CHECK_IR`).
