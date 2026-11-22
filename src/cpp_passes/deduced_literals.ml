@@ -6,16 +6,8 @@
 type expr = Cpp_ir.Lowered.Expr.t
 type stmt = Cpp_ir.Lowered.Stmt.t
 
-(* Rocq's primitive string, where a typed mapping maps it. *)
-let mapped_string () =
-  let name = "strings.pstring.type" in
-  if Rocqlib.has_ref name then
-    let g = Rocqlib.lib_ref name in
-    if Base.Mapping_plan.is_type_head g then Some g else None
-  else None
-
 let transform_decl (d : Cpp_ir.Lowered.Decl.t) : Cpp_ir.Lowered.Decl.t =
-  match mapped_string () with
+  match Base.Mapping_plan.mapped_prim_string () with
   | None -> d
   | Some g ->
     (* The string object, constructed from the characters, and from their

@@ -26,8 +26,8 @@ BdeLoopAccFnStdString::last_fn(
     const List<unsigned int> &d_a1_value = *d_a1;
     return last_fn(
         b, d_a1_value,
-        (b ? bsl::make_optional<crane::fn<std::string(unsigned int)>>(
-                 crane::fn<std::string(unsigned int)>(
+        (b ? bsl::make_optional<crane::fn<bsl::string(unsigned int)>>(
+                 crane::fn<bsl::string(unsigned int)>(
                      [](unsigned int) { return bsl::string("a"); }))
            : z));
   }

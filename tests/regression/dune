@@ -15907,3 +15907,14 @@
   (alias runtest)
   (deps bde_concept_declval_include.t.exe)
   (action (run ./bde_concept_declval_include.t.exe))))
+
+(subdir bde_loop_acc_fn_std_string
+ (rule
+  (targets bde_loop_acc_fn_std_string.t.exe)
+  (deps BdeLoopAccFnStdString.vo bde_loop_acc_fn_std_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} bde_loop_acc_fn_std_string.t.exe bde_loop_acc_fn_std_string.t.cpp bde_loop_acc_fn_std_string.cpp)))
+ (rule
+  (alias runtest)
+  (deps bde_loop_acc_fn_std_string.t.exe)
+  (action (run ./bde_loop_acc_fn_std_string.t.exe))))

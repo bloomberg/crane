@@ -70,6 +70,13 @@ type t = {
 
 let is_type_head g = Mapping_discovery.has_type_mapping g
 
+let mapped_prim_string () =
+  let name = "strings.pstring.type" in
+  if Rocqlib.has_ref name then
+    let g = Rocqlib.lib_ref name in
+    if is_type_head g then Some g else None
+  else None
+
 let inductive_of = function
   | GlobRef.ConstructRef (ip, _) -> Some (GlobRef.IndRef ip)
   | _ -> None

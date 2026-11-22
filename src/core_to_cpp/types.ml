@@ -378,8 +378,12 @@ let rec cpp_ir_of_core_type cx
   | Core.Type.Erased Core.Erasure_reason.Type_argument -> Erased Type
   | Core.Type.Erased Core.Erasure_reason.Proof -> Erased Proof
   | Core.Type.Erased (Core.Erasure_reason.Configured_implicit _) -> Erased Implicit
-  | Core.Type.String ->
-    External ("std::string", [])
+  (* A string literal's type is Rocq's primitive string: the type its
+     mapping spells, where one maps it. *)
+  | Core.Type.String -> (
+    match Base.Mapping_plan.mapped_prim_string () with
+    | Some g -> Entity_application (g, [], [])
+    | None -> External ("std::string", []) )
   (* Extraction gave up naming this type.  It prints as [std::any], but we
      know nothing about how the value is actually represented. *)
   | Core.Type.Unknown -> Obligation Opaque_type

@@ -107,6 +107,9 @@ type t = {
 (** Whether [g] heads a type with a [TypeMapping] instance. *)
 val is_type_head : Names.GlobRef.t -> bool
 
+(** Rocq's primitive string type, where a typed mapping maps it. *)
+val mapped_prim_string : unit -> Names.GlobRef.t option
+
 (** Whether [g] is a mapped head or a constructor of one: what the legacy
     tables would call custom. *)
 val is_mapped : Names.GlobRef.t -> bool
