@@ -341,16 +341,10 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
         Coerce.erase_fn_arg_for_param cx env param_ty core_arg expr
       | _ -> expr
     in
-    (* A mapping's text takes each argument as it comes, deducing [auto]
-       from it: a callable handed for a parameter declared at a type
-       variable is the type of whatever the text keeps it in -- a fold's
-       accumulator, assigned each step's result, a different closure.
-       Whatever the argument is written as -- a lambda, a function's name
-       decaying to a pointer, an immediately invoked lambda returning a
-       closure, a let-bound one -- its type is the function type the
-       variable is instantiated at, and it arrives named, at the
-       [crane::fn] every callable of that type converts to
-       ({!Cpp_ir.Expr.Function_value}). *)
+    (* A callable at an inline mapping's parameter declared at a type
+       variable arrives named ({!Coerce.mapping_name_built}), at the
+       instantiation where it can be spelled here, as a type argument
+       spells it. *)
     let expr : Cpp_ir.Lowered.Expr.t =
       if not (Base.Table.is_inline_custom id) then expr
       else
@@ -358,16 +352,16 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
         | _, Function_value _ -> expr
         | Some (Core.Type.Variable _), _ -> (
           match Option.map resolve_meta param_core_ty with
-          | Some (Core.Type.Arrow _ as t) -> (
-            (* Named at the instantiation itself where it can be spelled
-               here, as a type argument spells it: deduced from a closure
-               returning a closure, [crane::fn]'s result would be the inner
-               closure's own type, which no later step's result is. *)
-            match Types.template_params_of_core cx ~site:Cpp_ir.Types.Through_tvar env [t] with
-            | [(Function _ as f)]
-              when Types.names_only_scoped_tvars cx f && not (Base.Type_util.has_tany_written f) ->
-              Converting_construct (f, [expr])
-            | _ -> Function_value expr )
+          | Some (Core.Type.Arrow _ as t) ->
+            let spelled =
+              match Types.template_params_of_core cx ~site:Cpp_ir.Types.Through_tvar env [t] with
+              | [(Function _ as f)]
+                when Types.names_only_scoped_tvars cx f && not (Base.Type_util.has_tany_written f) ->
+                Some f
+              | _ -> None
+            in
+            let value = if expr == arg_typed.expr then arg_typed else Typed.of_node expr in
+            Coerce.into_slot ~origin:Mapping_name value (Template_parameter spelled)
           | _ -> expr )
         | _ -> expr
     in

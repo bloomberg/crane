@@ -1006,6 +1006,20 @@ let erase_fn_arg_built cx env param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : C
   | Some shape when Erasure.core_expr_is_function_value cx e -> Cpp_ir.Expr.Erase_callable (shape, expr)
   | _ -> convert_carrier_arg cx param_core_ty param_cpp_ty e expr
 
+(** A mapping's text takes each argument as it comes, deducing [auto] from
+    it: a callable handed for a parameter declared at a type variable is the
+    type of whatever the text keeps it in -- a fold's accumulator, assigned
+    each step's result, a different closure.  So it arrives named: at the
+    instantiation [spelled] where this scope can spell it (a closure
+    returning a closure deduced through [crane::fn] would have the inner
+    closure's own type as its result, which no later step's result is),
+    else at the [crane::fn] it deduces ({!Cpp_ir.Expr.Function_value}). *)
+let mapping_name_built (spelled : Cpp_ir.Lowered.Type.t option) (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  match (expr, spelled) with
+  | Function_value _, _ -> expr
+  | _, Some f -> Converting_construct (f, [expr])
+  | _, None -> Function_value expr
+
 (** The adapters of section 0 of the typed CppIR design that go through
     {!into_slot}, each by the name its parameters are prefixed with (B1's
     origin tag), carrying what its expansion reads beyond the value and
@@ -1033,6 +1047,9 @@ type origin =
       param_core_ty : Core.Type.t;
       term : Core.Expr.t;
     }  (** {!erase_fn_arg_for_param}: erase a callable, convert a carrier *)
+  | Mapping_name
+      (** {!mapping_name_built}: a callable at an inline mapping's parameter
+          declared at a type variable, named *)
   | Pa
       (** {!grouped_lambda}: the closure a partial application leaves
           ({!Cpp_ir.Typed.apply}), regrouped by nesting its own
@@ -1048,13 +1065,14 @@ let origin_name = function
   | Ue _ -> "coerce"
   | Param _ -> "erase_fn_arg_for_param"
   | Pa -> "grouped_lambda"
+  | Mapping_name -> "mapping_name"
 
 (** The plans an origin's expansion builds, by {!Cpp_ir.Coercion.plan_name}. *)
 let builds = function
   | Rg | Ee _ | Pa -> ["regroup"]
   | Ec _ -> ["eta"; "regroup"]
   | Crossing -> ["convert"]
-  | Tvar_name _ -> ["name"]
+  | Tvar_name _ | Mapping_name -> ["name"]
   | Ue _ -> ["box"; "deep box"; "unbox"; "erase"; "recover"; "convert"; "container cast"]
   | Param _ -> ["erase"; "box"; "convert"]
 
@@ -1096,6 +1114,8 @@ let expand origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   | Ue {cx; term; from}, _, Some into -> coerce_built cx ?term ?from ~into x.expr
   | Ue _, _, None -> x.expr
   | Param {cx; env; param_core_ty; term}, _, _ -> erase_fn_arg_built cx env param_core_ty term x.expr
+  | Mapping_name, _, _ -> (
+    match into with Template_parameter spelled -> mapping_name_built spelled x.expr | _ -> x.expr )
   | Pa, _, into -> (
     match x.expr with
     | Lambda {params; body = [Return (Some body)]; _} -> grouped_lambda ?into params body
@@ -1133,6 +1153,11 @@ let into_slot ?(al = as_written) ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Low
       | Erase_callable _ -> ["erase"]
       | Convert _ -> ["convert"]
       | _ -> ["other"] )
+    (* A value already of a nameable type, or one only C++ knows the type
+       of, is named all the same: the text keeps it in an [auto], and the
+       copy is an identity C++ performs, kept until phase C so that output
+       does not change. *)
+    | Mapping_name -> ( match x.ty with Typed _ | Deduced _ -> ["name"; "none"] | _ -> builds origin )
     | _ -> builds origin
   in
   shadow ~al ~adapter:(origin_name origin) ~kind x.ty into ~before:x.expr built
