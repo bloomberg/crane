@@ -43,7 +43,3 @@ val run :
   subject list ->
   configuration list ->
   unit
-
-(** Crane's C++ runtime header directory ([theories/cpp]), found from the
-    loaded [Crane] theory. *)
-val crane_runtime_include : unit -> string option

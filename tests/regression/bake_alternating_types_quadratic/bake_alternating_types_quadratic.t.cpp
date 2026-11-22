@@ -14,7 +14,7 @@ int main() {
   auto r = BakeAlternatingTypesQuadratic::result;
   std::cout << "result = " << r << ", user CPU before main = " << user << " s"
             << std::endl;
-  assert(r == 5000);
-  assert(user < 2.0);
+  assert(r == 50000);
+  assert(user < 1.0);
   return 0;
 }

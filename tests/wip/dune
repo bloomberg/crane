@@ -235,59 +235,9 @@
 
 
 
-(subdir bake_text_trigraph
- (rule
-  (targets bake_text_trigraph.t.exe)
-  (deps BakeTextTrigraph.vo bake_text_trigraph.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_text_trigraph.t.exe bake_text_trigraph.t.cpp bake_text_trigraph.cpp)))
- (rule
-  (alias runtest)
-  (deps bake_text_trigraph.t.exe)
-  (action (run ./bake_text_trigraph.t.exe))))
-
-(subdir bake_array_of_nodes
- (rule
-  (targets bake_array_of_nodes.t.exe)
-  (deps BakeArrayOfNodes.vo bake_array_of_nodes.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_array_of_nodes.t.exe bake_array_of_nodes.t.cpp bake_array_of_nodes.cpp)))
- (rule
-  (alias runtest)
-  (deps bake_array_of_nodes.t.exe)
-  (action (run ./bake_array_of_nodes.t.exe))))
-
-(subdir bake_functor_application_constant
- (rule
-  (targets bake_functor_application_constant.t.exe)
-  (deps BakeFunctorApplicationConstant.vo bake_functor_application_constant.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_functor_application_constant.t.exe bake_functor_application_constant.t.cpp bake_functor_application_constant.cpp)))
- (rule
-  (alias runtest)
-  (deps bake_functor_application_constant.t.exe)
-  (action (run ./bake_functor_application_constant.t.exe))))
 
 
-(subdir bake_alternating_types_quadratic
- (rule
-  (targets bake_alternating_types_quadratic.t.exe)
-  (deps BakeAlternatingTypesQuadratic.vo bake_alternating_types_quadratic.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_alternating_types_quadratic.t.exe bake_alternating_types_quadratic.t.cpp bake_alternating_types_quadratic.cpp)))
- (rule
-  (alias runtest)
-  (deps bake_alternating_types_quadratic.t.exe)
-  (action (run ./bake_alternating_types_quadratic.t.exe))))
 
-(subdir bake_text_overlength
- (rule
-  (targets bake_text_overlength.t.exe)
-  (deps BakeTextOverlength.vo bake_text_overlength.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_text_overlength.t.exe bake_text_overlength.t.cpp bake_text_overlength.cpp)))
- (rule
-  (alias runtest)
-  (deps bake_text_overlength.t.exe)
-  (action (run ./bake_text_overlength.t.exe))))
+
+
 

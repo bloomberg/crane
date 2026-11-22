@@ -49,7 +49,9 @@
 // The writer lays the stream out one row to a line, each with a comment
 // that spells it: its number, its constructor's and fields' names, its
 // scalars and strings as literals.  Strings are C++ string literals, words
-// decimal.  Past [annotated_rows] rows, rows are filled into lines bare.
+// decimal.  Past [annotated_rows] rows, rows are filled into lines bare.  The
+// text is cut into character arrays of at most [text_chunk] bytes, a string
+// split across two where it falls on a cut.
 //
 // Writing walks the value with an explicit stack and reading is a loop over
 // the rows, so a list or a tree as deep as memory allows is baked and read
@@ -118,8 +120,11 @@ struct image {
   std::size_t size;
   const void *const *blocks;
   std::size_t block_count;
-  const char *text;
-  std::size_t text_size;
+  // The strings' bytes, in the order they are written, as consecutive
+  // chunks: each is one string literal, which C++ compilers need only
+  // support up to 65536 bytes long ([-Woverlength-strings]).
+  const std::string_view *text;
+  std::size_t text_chunks;
 };
 
 // The widths of the scalar types an image may hold, which the bake host and
@@ -480,12 +485,15 @@ template <class E> std::string enumerator_name(std::uint64_t w) {
 
 // A C++ string literal of [n] bytes at [p]: printable ASCII as itself,
 // anything else escaped (a hex escape ends its literal, so a hex digit after
-// it does not join it).
+// it does not join it), and a [?] after a [?] as [\?], so no trigraph
+// ([??=]) is spelled, as Crane's printer writes string literals
+// (emit/print.ml, [escape_cpp_string]).
 inline std::string quoted(const char *p, std::size_t n) {
   std::string out = "\"";
   for (std::size_t i = 0; i < n; ++i) {
     unsigned char c = static_cast<unsigned char>(p[i]);
     switch (c) {
+    case '?': out += i > 0 && p[i - 1] == '?' ? "\\?" : "?"; break;
     case '"': out += "\\\""; break;
     case '\\': out += "\\\\"; break;
     case '\n': out += "\\n"; break;
@@ -556,12 +564,14 @@ public:
 
 private:
   std::vector<std::uint64_t> words_;
-  // The stream's lines: the words [begin, end), and the comment that spells
-  // them ([row]: a node, which past [annotated_rows] goes uncommented).
+  // The stream's lines: the words [begin, end), the comment that spells
+  // them, and what they are: a node's row, or a run's header, which past
+  // [annotated_rows] rows go uncommented, or the table's end or the value.
+  enum class kind { row, run, other };
   struct line {
     std::size_t begin, end;
     std::string note;
-    bool row;
+    kind what;
   };
   std::vector<line> lines_;
   // The node types, numbered as [detail::walk_types] meets them.
@@ -579,9 +589,9 @@ private:
   std::size_t node_count_ = 0;
   // The run being written: its type, and the line of its header.
   std::size_t run_type_ = std::size_t(-1), run_line_ = 0, run_first_ = 0;
-  // The strings' bytes, and their literals.
+  // The strings' bytes, and where each string ends in them.
   std::string text_;
-  std::vector<std::string> text_literals_;
+  std::vector<std::size_t> text_ends_;
   // The arrays written, per type, by address.
   std::unordered_map<std::type_index, std::unordered_map<const void *, std::size_t>> arrays_;
   // Static blocks: their declarations, by address; the ones the stream names.
@@ -645,13 +655,13 @@ private:
       run_type_ = type;
       run_first_ = node_count_;
       run_line_ = lines_.size();
-      lines_.push_back({words_.size(), words_.size() + 2, "", false});
+      lines_.push_back({words_.size(), words_.size() + 2, "", kind::run});
       words_.push_back(type + 1);
       words_.push_back(0);
     }
     ++words_[lines_[run_line_].begin + 1];
     lines_[run_line_].note = types_.names[type] + ": " + node_range(run_first_, node_count_ + 1);
-    lines_.push_back({words_.size(), 0, "#" + std::to_string(node_count_) + " ", true});
+    lines_.push_back({words_.size(), 0, "#" + std::to_string(node_count_) + " ", kind::row});
     nodes_[typeid(T)].emplace(key, node_count_);
     return node_count_++;
   }
@@ -673,7 +683,10 @@ private:
     return it != nodes_.end() && it->second.count(key);
   }
 
-  // The nodes [x] holds, outside other nodes: stacked to be written.
+  // The nodes [x] holds, outside other nodes: stacked to be written.  [x]
+  // is in place in the value, never a copy: a node is known by its address,
+  // and its task keeps a pointer to it.  So every container is walked by
+  // reference ([persistent_array::ref], not [get], which copies).
   template <class T> void deps(const T &x) {
     using namespace detail;
     if constexpr (std::is_enum_v<T> || std::is_arithmetic_v<T> || string_like<T>) {
@@ -694,8 +707,8 @@ private:
         for (const auto &e : x) deps(e);
     } else if constexpr (is_persistent_array<T>::value) {
       std::int64_t n = x.length();
-      deps(x.get(n));
-      for (std::int64_t i = 0; i < n; ++i) deps(x.get(i));
+      deps(x.ref(n));  // out of bounds: the default element
+      for (std::int64_t i = 0; i < n; ++i) deps(x.ref(i));
     } else if constexpr (inductive<T>) {
       if constexpr (is_node<T>()) push_node(x);
     } else if constexpr (std::is_empty_v<T> || textual_number<T>) {
@@ -789,9 +802,8 @@ private:
   void put_text(const char *p, std::size_t n, std::string &note) {
     words_.push_back(n);
     text_.append(p, n);
-    std::string lit = detail::quoted(p, n);
-    note += lit;
-    text_literals_.push_back(std::move(lit));
+    text_ends_.push_back(text_.size());
+    note += detail::quoted(p, n);
   }
 
   template <class E> static std::string type_spelling() {
@@ -853,6 +865,53 @@ private:
     return out + "\n";
   }
 
+  // The longest string literal the image declares: what C++ compilers are
+  // required to support, less the terminating null.
+  static constexpr std::size_t text_chunk = 65535;
+
+  // The text's bytes [begin, end) as one character array: each string's
+  // bytes in it as literals filled into lines of 80 columns, a string too
+  // long for a line split across literals.
+  std::string text_declaration(const std::string &name, std::size_t begin, std::size_t end) const {
+    constexpr std::size_t limit = 80, room = limit - 6;
+    std::string out = "constinit const char " + name + "[] =";
+    std::size_t col = out.size();
+    auto add = [&](const std::string &lit, bool last) {
+      if (col + 1 + lit.size() + (last ? 1 : 0) > limit) {
+        out += "\n   ";
+        col = 3;
+      }
+      out += " " + lit;
+      col += 1 + lit.size();
+    };
+    // The first string ending past [begin].
+    auto it = std::upper_bound(text_ends_.begin(), text_ends_.end(), begin);
+    std::size_t pos = begin;
+    std::vector<std::string> lits;
+    while (pos < end) {
+      std::size_t stop = std::min(end, it == text_ends_.end() ? end : *it);
+      if (stop == pos) {  // an empty string
+        ++it;
+        continue;
+      }
+      // A piece whose literal fits a line, however each byte is escaped (at
+      // most [\x00" "], 7 columns).
+      std::size_t piece = pos, width = 2;
+      while (piece < stop) {
+        unsigned char c = static_cast<unsigned char>(text_[piece]);
+        std::size_t w = c >= 0x20 && c < 0x7f ? (c == '"' || c == '\\' || c == '?' ? 2 : 1) : 7;
+        if (width + w > room && piece > pos) break;
+        width += w;
+        ++piece;
+      }
+      lits.push_back(detail::quoted(text_.data() + pos, piece - pos));
+      pos = piece;
+      if (pos == stop && it != text_ends_.end()) ++it;
+    }
+    for (std::size_t i = 0; i < lits.size(); ++i) add(lits[i], i + 1 == lits.size());
+    return out + ";\n";
+  }
+
   // The stream's words, a line each with its comment aligned after it; a
   // line too wide for its comment takes it on a line of its own above.  Past
   // [annotated_rows] rows, rows are filled into lines bare.
@@ -908,10 +967,14 @@ private:
       }
       return out;
     };
+    // Whether a line has a comment, [rows] the rows before it.
+    auto annotated = [](const line &l, std::size_t rows) { return l.what == kind::other || rows < annotated_rows; };
     // The comment column: past the widest annotated line that fits.
     std::size_t column = 0, rows = 0;
     for (const auto &l : lines_) {
-      if (l.row && rows++ >= annotated_rows) continue;
+      bool annotate = annotated(l, rows);
+      if (l.what == kind::row) ++rows;
+      if (!annotate) continue;
       std::size_t w = 4 + words_of(l).size();
       if (w <= max_column && w > column) column = w;
     }
@@ -920,11 +983,11 @@ private:
     std::vector<std::string> bare;
     rows = 0;
     for (const auto &l : lines_) {
-      bool annotate = !l.row || rows < annotated_rows;
-      if (l.row) ++rows;
+      bool annotate = annotated(l, rows);
+      if (!annotate && bare.empty())
+        out += "    // " + std::to_string(rows) + " rows above have comments; these have none.\n";
+      if (l.what == kind::row) ++rows;
       if (!annotate) {
-        if (bare.empty())
-          out += "    // " + std::to_string(rows - 1) + " rows above have comments; these have none.\n";
         auto ws = words_list(l);
         bare.insert(bare.end(), ws.begin(), ws.end());
         continue;
@@ -970,9 +1033,9 @@ public:
       tasks_.pop_back();
       emit();
     }
-    lines_.push_back({words_.size(), words_.size() + 1, node_count_ ? "end of the nodes" : "no nodes", false});
+    lines_.push_back({words_.size(), words_.size() + 1, node_count_ ? "end of the nodes" : "no nodes", kind::other});
     words_.push_back(0);
-    lines_.push_back({words_.size(), 0, "the value: ", false});
+    lines_.push_back({words_.size(), 0, "the value: ", kind::other});
     put(root, lines_.back().note);
     end_row();
   }
@@ -1020,10 +1083,10 @@ public:
       std::int64_t n = x.length();
       words_.push_back(static_cast<std::uint64_t>(n));
       note += "[default ";
-      put(x.get(n), note);  // out of bounds: the default element
+      put(x.ref(n), note);  // out of bounds: the default element
       for (std::int64_t i = 0; i < n; ++i) {
         note += ", ";
-        put(x.get(i), note);
+        put(x.ref(i), note);
       }
       note += "]";
     } else if constexpr (inductive<T>) {
@@ -1116,25 +1179,23 @@ public:
       blocks = prefix_ + "blocks";
       out += declaration("constinit const void *const " + blocks + "[] = ", bs);
     }
+    std::size_t text_chunks = 0;
     if (!text_.empty()) {
       text = prefix_ + "text";
-      std::string decl = "constinit const char " + text + "[] =";
-      std::size_t col = decl.size();
-      for (const auto &l : text_literals_) {
-        if (l == "\"\"") continue;
-        if (col + 1 + l.size() + 1 > 80) {
-          decl += "\n   ";
-          col = 3;
-        }
-        decl += " " + l;
-        col += 1 + l.size();
+      std::vector<std::string> chunks;
+      text_chunks = (text_.size() + text_chunk - 1) / text_chunk;
+      for (std::size_t c = 0; c < text_chunks; ++c) {
+        std::string name = text + std::to_string(c);
+        std::size_t size = std::min(text_chunk, text_.size() - c * text_chunk);
+        out += text_declaration(name, c * text_chunk, c * text_chunk + size);
+        chunks.push_back("std::string_view(" + name + ", " + std::to_string(size) + ")");
       }
-      out += decl + ";\n";
+      out += declaration("constinit const std::string_view " + text + "[] = ", chunks);
     }
     out += "constinit const std::uint64_t " + prefix_ + "words[] = {\n" + stream_lines() + "};\n";
     out += declaration("constinit const crane::bake::image " + symbol,
                        {prefix_ + "words", std::to_string(words_.size()), blocks,
-                        std::to_string(stream_blocks_.size()), text, std::to_string(text_.size())});
+                        std::to_string(stream_blocks_.size()), text, std::to_string(text_chunks)});
     return out;
   }
 };
@@ -1142,7 +1203,9 @@ public:
 // Reads an image back.
 class reader {
   const image &img_;
-  std::size_t pos_ = 0, text_pos_ = 0;
+  std::size_t pos_ = 0;
+  // Where the next string starts: a chunk of the text, and a place in it.
+  std::size_t chunk_ = 0, chunk_pos_ = 0;
   // Per node type, numbered as [detail::walk_types] meets them, the function
   // that reads a run of its rows.
   struct types {
@@ -1178,10 +1241,19 @@ class reader {
 
   std::string get_text() {
     std::size_t n = word();
-    if (n == 0) return {};
-    if (n > img_.text_size - text_pos_) corrupt("a string");
-    std::string s(img_.text + text_pos_, n);
-    text_pos_ += n;
+    std::string s;
+    s.reserve(n);
+    while (s.size() < n) {
+      if (chunk_ >= img_.text_chunks) corrupt("a string");
+      std::string_view c = img_.text[chunk_].substr(chunk_pos_);
+      std::size_t take = std::min(c.size(), n - s.size());
+      s.append(c.data(), take);
+      chunk_pos_ += take;
+      if (chunk_pos_ == img_.text[chunk_].size()) {
+        ++chunk_;
+        chunk_pos_ = 0;
+      }
+    }
     return s;
   }
 
@@ -1204,10 +1276,11 @@ class reader {
 
   void add_node(const void *tab, std::size_t index) { nodes_.emplace_back(tab, index); }
 
-  // A run of [n] rows of the node type [T].
+  // A run of [n] rows of the node type [T].  The table grows as a vector
+  // does, not to the run's end: where node types alternate a run is one row
+  // long, and reserving each run's rows would copy the table every row.
   template <class T> void run(std::size_t n) {
     auto &tab = table<T>();
-    tab.reserve(tab.size() + n);
     for (std::size_t r = 0; r < n; ++r) {
       std::uint64_t idx = word();
       if constexpr (detail::is_list<T>::value) {
@@ -1248,7 +1321,7 @@ class reader {
 
 public:
   explicit reader(const image &img) : img_(img) {}
-  bool done() const { return pos_ == img_.size && text_pos_ == img_.text_size; }
+  bool done() const { return pos_ == img_.size && chunk_ == img_.text_chunks; }
 
   // The value of type [T]: its nodes, then it.
   template <class T> T get_root() {

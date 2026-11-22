@@ -1774,10 +1774,14 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
      of the implementation file, as the bake driver wrote them. *)
   let baked_here =
     let declared = declares struc in
-    List.filter_map
-      (fun (r, (b : Base.Table.baked)) -> if declared r && not (Base.Table.is_bake_root r) then Some b else None)
+    List.filter
+      (fun (r, _) -> declared r && not (Base.Table.is_bake_root r))
       (Base.Table.baked_constants ())
   in
+  (* An image computed from other runtime headers, another compiler or other
+     [CRANE_BAKE_FLAGS] than these is refused, not emitted. *)
+  Bake_inputs.check baked_here;
+  let baked_here = List.map snd baked_here in
   let bake_decls =
     match baked_here with
     | [] -> mt ()
