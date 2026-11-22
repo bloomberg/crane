@@ -253,3 +253,14 @@
   (alias runtest)
   (deps coinductive_bde.t.exe)
   (action (run ./coinductive_bde.t.exe))))
+
+(subdir bake_bde
+ (rule
+  (targets bake_bde.t.exe)
+  (deps BakeBde.vo bake_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} bake_bde.t.exe bake_bde.t.cpp bake_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_bde.t.exe)
+  (action (run ./bake_bde.t.exe))))
