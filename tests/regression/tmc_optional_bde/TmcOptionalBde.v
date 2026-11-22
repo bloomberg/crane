@@ -3,11 +3,13 @@
 
     Expected: compiles; [total = 6].
 
-    Actual: compile error "no template named 'optional' in namespace 'bsl';
-    did you mean 'std::optional'?". [app] is lowered modulo cons (TMC): it
-    builds the result front to back from a [bsl::optional<List<A>> _root],
-    but the header never includes [<bsl_optional.h>]. Also on main (where a
-    second error follows: no matching [crane_raw]). *)
+    Fixed: [app] is lowered modulo cons (TMC) and builds the result front to
+    back from a [bsl::optional<List<A>> _root]; the demand for [optional]
+    was raised, but a BDE header included only a fixed list of standard
+    headers, so [<bsl_optional.h>] was never included ("no template named
+    'optional' in namespace 'bsl'").  A BDE header now includes every
+    standard header demanded, as [bsl_<h>.h] for what Crane writes in
+    [bsl::]. *)
 From Crane Require Import Mapping.NatIntBDE Mapping.BDE.
 From Crane Require Extraction.
 From Stdlib Require Import List.

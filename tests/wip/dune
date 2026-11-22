@@ -254,17 +254,6 @@
   (deps bake_bde.t.exe)
   (action (run ./bake_bde.t.exe))))
 
-(subdir tmc_optional_bde
- (rule
-  (targets tmc_optional_bde.t.exe)
-  (deps TmcOptionalBde.vo tmc_optional_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} tmc_optional_bde.t.exe tmc_optional_bde.t.cpp tmc_optional_bde.cpp)))
- (rule
-  (alias runtest)
-  (deps tmc_optional_bde.t.exe)
-  (action (run ./tmc_optional_bde.t.exe))))
-
 (subdir array_default_decl_bde
  (rule
   (targets array_default_decl_bde.t.exe)

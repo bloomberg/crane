@@ -15710,3 +15710,14 @@
   (alias runtest)
   (deps placeholder_binding_bde.t.exe)
   (action (run ./placeholder_binding_bde.t.exe))))
+
+(subdir tmc_optional_bde
+ (rule
+  (targets tmc_optional_bde.t.exe)
+  (deps TmcOptionalBde.vo tmc_optional_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} tmc_optional_bde.t.exe tmc_optional_bde.t.cpp tmc_optional_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps tmc_optional_bde.t.exe)
+  (action (run ./tmc_optional_bde.t.exe))))

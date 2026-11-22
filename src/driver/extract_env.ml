@@ -659,6 +659,16 @@ let header_imports_bsl =
     "bsl_vector.h";
   ]
 
+(** The standard headers whose names Crane writes in [bsl::] under BDE, and
+    so includes as [bsl_<h>.h]. *)
+let bsl_flavoured =
+  ["concepts"; "functional"; "iostream"; "memory"; "optional"; "stdexcept"; "string"; "type_traits"; "variant"; "vector"]
+
+(** The header a BDE build includes for the demanded standard header [h]:
+    [bsl_<h>.h] for a name written in [bsl::], and [h] itself for one written
+    in [std::] ([std::any], [std::atomic], [std::forward], ...). *)
+let bde_standard_header h = if List.mem h bsl_flavoured then "bsl_" ^ h ^ ".h" else h
+
 let mk_include s = str ("#include <" ^ s ^ ">")
 let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
 
@@ -716,12 +726,7 @@ let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
   let imps = List.map (fun u -> u ^ ".h") unit_includes @ get_custom_imports () in
   let himports =
     if is_bde () then
-      let needed = Base.Table.required_standard_headers () in
-      let extra_std =
-        List.filter (fun h -> List.mem h needed)
-          ["any"; "atomic"; "deque"; "utility"]
-      in
-      header_imports_bsl @ extra_std
+      header_imports_bsl @ List.map bde_standard_header (Base.Table.required_standard_headers ())
     else Base.Table.required_standard_headers ()
   in
   (* A standard header the code demands may be a mapping's import too: each
