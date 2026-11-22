@@ -24,4 +24,7 @@ struct DequeFoldFixInit {
         return _a1;
       }(UINT64_C(10), std::deque<uint64_t>{}),
       UINT64_C(100));
+  static std::deque<uint64_t> with_let(bool b, const std::deque<uint64_t> &x0_);
+  static inline const uint64_t t_2 =
+      static_cast<uint64_t>(with_let(false, std::deque<uint64_t>{}).size());
 };

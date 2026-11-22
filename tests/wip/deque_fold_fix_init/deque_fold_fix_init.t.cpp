@@ -4,6 +4,7 @@
 
 int main() {
   auto a = DequeFoldFixInit::t_1;
-  std::cout << a << std::endl;
-  return a == 116 ? 0 : 1;
+  auto b = DequeFoldFixInit::t_2;
+  std::cout << a << " " << b << std::endl;
+  return (a == 116 && b == 1) ? 0 : 1;
 }
