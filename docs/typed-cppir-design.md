@@ -424,7 +424,7 @@ callable_crossing_matrix.
 
 ## 7. Progress
 
-- [ ] Phase A (in progress: see 8, Phase A status)
+- [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
 - [ ] Phase B1
 - [ ] Phase B2
 - [ ] Phase C
@@ -533,33 +533,109 @@ Where the implementation departs from sections 1-4, and why.
   compile error, not a latent bug: latent bugs can only hide behind
   implicit conversions, and none has turned up.  No wip test was filed.
 
-### Phase A status (2026-11-22, end of first session)
+### Phase A, second session
 
-Commits: grammar families (`38b874e49`), typed lowering + `decide` +
-probes (`d42a8e8dd`), and the census-driven refinement commit after it.
-Extraction is byte-identical (`git status --short tests` empty, the same 4
-wip extraction errors as the base).
+- **Typing moved into the form modules where the information is.**
+  `Lambda.gen_lambda` returns `Typed.t`: the closure over its emitted
+  parameters, its result the type C++ deduces from its `return`s where
+  their nodes agree, else the body's type read *with the body's binders
+  in scope* (a variable at its binder's type, anything else at its Core
+  type; parameters folded in from a fixpoint body take their arrows off
+  it); a thunk call `[]{...}()` is its body's type.
+  `Application.gen_instance_projection` and
+  `gen_singleton_dictionary_call` return `Typed.t` at the member's
+  codomain: `Elaborated_call.static_projection` records `codomain`, from
+  the same instantiated type as `domains` (`Query.projection_type`), and a
+  singleton dictionary call substitutes the dictionary's carrier into the
+  method's declared type.  A custom constant without a Core type
+  (`Crane Extract Inlined Constant`) is `Deduced Foreign_text`; an inline
+  constant's value is typed by its `glob_yields`.  `Typed.node_type`:
+  `Erased_call` is `Typed Any`.
+- **`Typed_checks.core_type_of` reads more of the term.** Under a lambda
+  or a let it pushes the binder (`with_scope`, so nothing leaks); literals
+  at their registered primitive types; a persistent array at
+  `Corelib.Array.PrimArray.array` (which registers no name); a fixpoint at
+  its selected member's type; any application whose head is typed, by
+  stripping its arguments; a static projection at the recorded codomain.
+  A local's call that Core cannot type is typed from the binder's C++
+  type (aliases unfolded) by `Typed_checks.applied`, the grouping rule of
+  `Typed.apply` (groups consume arguments, a straddled group leaves a
+  function of the rest).  `[tt]` applied (only an impossible dependent
+  branch writes it; `Coerce.absurd_coercion` turns its crossing into an
+  abort) is `Never`.  A sequential bind's action yields the monad's last
+  type argument, once leading type-binder arrows are dropped
+  (`emptyVec int` keeps an erased `A ->` after its instance argument).
+- **`decide` and its comparisons.** `Coerce.normal` unfolds aliases at
+  every node (nested `key<>`, `priqueue<>`, `uf<>` used to compare
+  unrelated) and drops references, so a closure's `const T&` parameter
+  compares as `T` (`normal_arrows`).  A box is read through the slot *as
+  written* (`Erasure.spells_as_any` before unfolding), as `coerce` does:
+  unfolded with no environment, an alias over an instance member type
+  (`memM<_tcI0::mm_state::state>`) wrongly read as `std::any`.  New row: a
+  `Function_name` whose signature keeps an undecided part (a rank-2
+  template, `Rank3Handler`) is named through `Eta` even at the same
+  grouping, since a template's name is no value.  `Coerce.unrelated`
+  treats an erased or undecided part on either side as agreeing.
+- **The 13 shadow disagreements.** 10 were `coerce` wrapping a value that
+  is a `std::any` already (directly or through an alias such as
+  `SemVal<>`) in `std::any(...)`: C++'s converting constructor excludes the
+  box's own type, so that is the identity, and the shadow now reads it as
+  no coercion (`kind = ["box"; "none"]`).  1 (`hk_class_field_result_
+  cast_to_concept`) was `decide`'s unfolding, fixed above.  2 were
+  `curry_value_to_expected`: `Rank3Handler` is the template row above;
+  `PolyRank2RecordField` passes the *record* `mapper` as the slot of the
+  field's value, a slot no callable fills, which the shadow now counts as
+  `unchecked (slot is no callable's)`.  No output changed.
+- **Deviation: `typed-fit` is not a slot check, so it stays a census.**
+  Phase A's done criterion assumed `?expected_ty` at a `gen_expr_typed`
+  exit is the slot the value fills.  At many call sites it is not: a let's
+  right-hand-side lambda reached with the enclosing return type
+  (`mem_safety_probe14.two_closures`: `closure (nat)->nat` "into" `nat`),
+  a record field's value with the record type, a `Npos` constructor with
+  the `N` it builds.  The 2131 `unrelated` and 912 planned verdicts left
+  measure that as much as synthesis; driving them to zero means giving
+  every position a `Slot_type`, which is B1 (`Destination`, `of_param`).
+  The checks that are fatal under `CRANE_CHECK_IR` (`Base.Probe.violation`)
+  are the three whose slot is a real one: `typed lowering` (a value
+  without a type), `binder agreement` (the bind declarations of
+  `Effects.gen_bind_stmts`), and `coercion shadow` (an inventory adapter
+  that built something other than `decide`'s plan).
+- **Latent bugs.** None found: no fatal check fires on the suite, and the
+  remaining `typed-fit` plans trace to misdescribed positions or to a
+  call typed from Core where C++ instantiates concretely (next item).
 
-Census over the whole suite (`CRANE_PROBE`, every test folder, wip
-included; counts are lowering calls, speculative ones included):
+### Phase A status (2026-11-22, end of second session)
 
-| probe | result |
-|---|---|
-| `typed` | 2.53M typed values; 1903 `Not_yet_typed` (lambda 919, apply 698, global 226, let 44, barrier 12, array 4) |
-| `typed-fit` | 599859 fit, 1211 fit implicitly, 84219 unchecked (slot at type variables), 4437 unrelated (synthesis), 1011 with a plan (unbox 676, erase 276, recover 43, convert 8, box 8) |
-| `typed-shadow` | 2236 `coerce` agree, 16 `regroup_crossing`, 16 `curry_value_to_expected`, 8 `name_fn_arg_for_tvar_param` agree; 112 unchecked; 13 distinct disagreeing sites (10 `coerce` re-boxing `any`/alias-boxed values, 1 unbox into an instance-member type, 2 `curry_value_to_expected` at rank-2 slots) |
-| `typed-agree` | 2500 fit, 36 unrelated |
+First session: grammar families (`38b874e49`), typed lowering, `decide`
+and probes (`d42a8e8dd`), census refinement (`1510324a6`).  Second
+session: form-module typing (`aff6eb10e`), the fatal checks
+(`b52b07fab`).  Extraction byte-identical (`git status
+--short tests` empty; the same 2 wip extraction errors as the base,
+`rocq_bug_3287`, `fibst_cofix_repro`).  `make test` from clean: 1525
+passed, 16 failed, all in `tests/wip`; `dune build @unit_tests/runtest`
+and `scripts/check-module-deps.sh` pass.
 
-Not done, in order:
-1. Type the remaining `Not_yet_typed`: a lambda whose returns are
-   variables (needs the binder types of its body; moving typing into
-   `Lambda.gen_lambda`, where they are in scope, is the fix), a call of a
-   local whose Core type is unknown, an inline mapping global whose
-   `callee_core_type` is absent.
-2. Fix the synthesis inaccuracies `typed-fit` reports: fill
-   `Call.signature.yields` from the explicit instantiation (design 2.4),
-   and replace Core-derived fallbacks with the form module's own type.
-3. Classify the 13 disagreeing shadow sites (likely `coerce` rebuilding a box
-   with `Erasure.converting_ctor`, a no-op the shadow cannot see through).
-4. Once 1-3 are clean, turn the probes into `Base.Probe.violation`
-   (fatal under `CRANE_CHECK_IR`).
+| probe | first session | now |
+|---|---|---|
+| `typed` `Not_yet_typed` | 1903 | 0 (fatal) |
+| `typed-agree` | 2500 fit, 36 unrelated | 2536 fit (fatal) |
+| `typed-shadow` disagree | 13 sites | 0 (fatal); 2369 agree |
+| `typed-fit` unrelated | 4437 | 2131 (census) |
+| `typed-fit` planned | 1011 | 912: unbox 596, erase 284, eta 16, box 8, convert 8 (census) |
+
+Known synthesis gaps feeding `typed-fit` (to fix as B1 gives slots):
+- A call typed from Core where C++ instantiates it concretely: `ReSum_inl`
+  / `ReSum_id` / `subevent` / `interp` yield `ReSum<erased,erased>` or
+  `erased` by their Core type, while the call names concrete template
+  arguments.  Design 2.4's fix stands: take `yields` from the callee's
+  declared C++ result at the call's written template arguments
+  (`Calls.written_at_variables` gives them by variable).
+- Constructor values: `Construct` falls back to its Core result type,
+  which loses the instantiation a factory call writes (`prod<>` against
+  `prod<any,any>`), and a constructor a mapping rewrites (`Npos p` is `p`).
+
+Next: Phase B1 as designed, starting with `Destination.t` behind
+`gen_stmts` (so a let's right-hand side has its `Bind` slot) and
+`Slot_type.of_param` at call arguments; once every `gen_expr_typed` call
+passes a real slot, `typed-fit` becomes the fit check and can be made
+fatal.
