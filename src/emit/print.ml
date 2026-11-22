@@ -900,6 +900,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     writes_standard "utility";
     str (sn ctx.unit).move ++ str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | Forward (ty, e) ->
+    writes_standard "utility";
     str (sn ctx.unit).forward
     ++ str "<"
     ++ pp_cpp_type ctx false [] ty

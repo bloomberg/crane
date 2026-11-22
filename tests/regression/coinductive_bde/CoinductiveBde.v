@@ -4,15 +4,16 @@
 
     Expected: compiles; [total = 3 + 4 + 5 + 6 = 18].
 
-    Actual: two compile errors, both reached by any coinductive type:
-    - [theories/cpp/lazy.h] includes [word.h], which reads an aggregate's
+    Fixed: two compile errors, both reached by any coinductive type:
+    - [theories/cpp/lazy.h] includes [word.h], which read an aggregate's
       fields with a structured binding pack ([auto &[... fs] = x;]), a C++26
-      feature: "structured binding packs are a C++2c extension
-      [-Werror,-Wc++26-extensions]".
-    - the generated [lazy_] factory forwards its thunk with
-      [bsl::forward<F>(thunk)]: "no template named 'forward' in namespace
-      'bsl'".
-    Also on main. *)
+      feature.  The runtime now reads an aggregate's fields through
+      [aggregate.h], which binds them as a pack under C++26 and counts and
+      binds them by name under C++20 ([word.h], [shared_variant.h],
+      [shared_block.h] and [crane_bake.h] use it).
+    - the generated [lazy_] factory forwarded its thunk with
+      [bsl::forward<F>(thunk)], which BDE does not declare; both flavours
+      now write [std::forward]. *)
 From Crane Require Import Mapping.NatIntBDE Mapping.BDE.
 From Crane Require Extraction.
 From Stdlib Require Import List.

@@ -26,6 +26,7 @@
 #include <new>
 #include <type_traits>
 #include <utility>
+#include "aggregate.h"
 #include "pool.h"
 #include "stats.h"
 #ifndef CRANE_NON_ATOMIC_RC
@@ -213,18 +214,12 @@ inline constexpr std::size_t max_depth = 256;
 
 template <class T>
 concept tuple_like = requires { std::tuple_size<T>::value; };
-// A record: a plain aggregate whose fields bind as a pack.  Standard layout
-// says its fields are declared in one class, with one access, as a
-// structured binding needs.  Binding them as a pack is C++26: an older
-// standard (a BDE build) leaves a record's blocks counted.
-#if __cplusplus > 202302L
+// A record: a plain aggregate whose fields bind as a pack (aggregate.h).
+// Standard layout says its fields are declared in one class, with one
+// access, as a structured binding needs.
 template <class T>
 concept plain_record =
     std::is_class_v<T> && std::is_aggregate_v<T> && std::is_standard_layout_v<T> && !std::is_empty_v<T>;
-#else
-template <class T>
-concept plain_record = false;
-#endif
 template <class T>
 concept optional_like = requires(const T &x) {
   typename T::value_type;
@@ -278,13 +273,8 @@ template <class T> void immortal_detail::mark(const void *p) noexcept {
       using std::get;
       (crane::make_immortal(get<I>(x)), ...);
     }(std::make_index_sequence<std::tuple_size<T>::value>{});
-  }
-#if __cplusplus > 202302L
-  else {
-    const auto &[... fields] = x;
-    (crane::make_immortal(fields), ...);
-  }
-#endif
+  } else
+    aggregate::each(x, [](const auto &f) { crane::make_immortal(f); });
 }
 
 // [v], every block it holds made immortal: a constant -- a function's,

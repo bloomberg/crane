@@ -161,7 +161,7 @@ struct CoinductiveBde {
     }
 
     template <typename F> static stream lazy_(F &&thunk) {
-      return stream(crane::lazy<variant_t>::delegate(bsl::forward<F>(thunk)));
+      return stream(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
     }
 
     // ACCESSORS

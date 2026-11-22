@@ -838,7 +838,7 @@ type std_names = Context.std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
   move : string; (* "std::move" or "bsl::move" *)
-  forward : string; (* "std::forward" or "bsl::forward" *)
+  forward : string; (* "std::forward", in either flavour *)
   logic_error : string; (* "std::logic_error" or "bsl::logic_error" *)
   ns : string; (* "std" or "bsl": general prefix *)
   string : string; (* "std::string" or "bsl::string" *)
@@ -862,7 +862,8 @@ let mk_std_names prefix =
   | "bsl::" ->
     let p = prefix in
     { shared_ptr = p ^ "shared_ptr"; make_shared = p ^ "make_shared";
-      move = p ^ "move"; forward = p ^ "forward";
+      (* BDE has no [bsl::forward]. *)
+      move = p ^ "move"; forward = "std::forward";
       logic_error = p ^ "logic_error";
       ns = "bsl"; string = p ^ "string";
       same_as = "same_as"; declval = p ^ "declval";

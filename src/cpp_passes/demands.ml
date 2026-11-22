@@ -117,7 +117,7 @@ module Ir = struct
     and visitor = {Children.expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = (fun t -> ty t)}
     and expr (e : expr) =
       ( match e with
-      | Move _ | In_place | In_place_index _ | Declval _ -> std "utility"
+      | Move _ | Forward _ | In_place | In_place_index _ | Declval _ -> std "utility"
       | Lambda {capture = Written (By_copy {moved = _ :: _; _}); _} -> std "utility"
       | Allocate (Heap, _) -> std "memory"
       | Allocate (Arena_scoped, _) ->

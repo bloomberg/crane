@@ -243,17 +243,6 @@
 
 
 
-(subdir coinductive_bde
- (rule
-  (targets coinductive_bde.t.exe)
-  (deps CoinductiveBde.vo coinductive_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} coinductive_bde.t.exe coinductive_bde.t.cpp coinductive_bde.cpp)))
- (rule
-  (alias runtest)
-  (deps coinductive_bde.t.exe)
-  (action (run ./coinductive_bde.t.exe))))
-
 (subdir bake_bde
  (rule
   (targets bake_bde.t.exe)

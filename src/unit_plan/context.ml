@@ -7,7 +7,7 @@ type std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
   move : string; (* "std::move" or "bsl::move" *)
-  forward : string; (* "std::forward" or "bsl::forward" *)
+  forward : string; (* "std::forward", in either flavour: BDE has no [bsl::forward] *)
   logic_error : string; (* "std::logic_error" or "bsl::logic_error" *)
   ns : string; (* "std" or "bsl": general prefix *)
   string : string; (* "std::string" or "bsl::string" *)
