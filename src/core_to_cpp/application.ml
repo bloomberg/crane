@@ -203,7 +203,7 @@ let gen_call_args cx ~ret ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~w
     let ({Calls.index = param_index; param = param_core_ty; expected = arg_expected_ty;
            ret = ret; tvar_erased = param_tvar_erased; written_by_call = param_written_by_call;
            deduced_callable = deduced_callable; expected_subst} : Calls.argument_position) =
-      Calls.argument_position cx ~ret:(ret) ~local_callable:(Calls.local_callable cx env) env id
+      Calls.argument_position cx ~ret ~local_callable:(Calls.local_callable cx env) env id
         plan i core_arg
     in
     let param_expected_subst () = expected_subst in

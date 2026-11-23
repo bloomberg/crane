@@ -427,7 +427,7 @@ callable_crossing_matrix.
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
 - [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
 - [x] Phase B2 (see 8, B2: plans carry their expansion data; `coercions` pass; `Typed.head` is the look-through)
-- [ ] Phase C (in progress: step 1 done; step 2 done for planning and the shared Calls/Constructors/Ctor_args functions, 41 lowering readers left; step 3 blocked on step 2; see 8, C)
+- [ ] Phase C (in progress: steps 1 and 2 done, the ambient return type deleted (threaded `~ret`); step 3 not started; see 8, C second session)
 - [ ] Phase D
 - [ ] Phase E (optional)
 
@@ -1490,3 +1490,86 @@ tests` empty, no `CRANE_CHECK_IR` violation); unit tests and
 
 Next: phase C step 2 from (1) above (the bracket-tag probe, then the
 (b) brackets), then step 3.  Phase D not started.
+
+### Phase C, second session (2026-11-23)
+
+Done:
+- **Bracket-tag probe.**  Each `with_cpp_return_type` bracket (and the
+  three direct sets: the function body, the match scrutinee,
+  `with_escape_analysis`) tagged the ambient with its site; each read
+  recorded the innermost tag.  Every bracket reaches the main readers
+  (`Calls.lower_call`, `Calls.argument_position` through
+  `application.ml`, `Construction.gen_expr_custom_cons` /
+  `gen_construction`, `position_cpp_ty`, `with_escape_analysis`):
+  no bracket could be dropped with the readers left in place.  The
+  readers sit on the shared expression path, not at tails, so the
+  "(a) tail readers / (b) hidden expected type" split does not separate
+  them by site; it is a property of the value, not of the reader.
+- **Deviation: one threaded `ret` instead of the (a)/(b) split.**  The
+  knot's entry points take `~ret : Cpp_ir.Lowered.Type.t option` (the
+  result type of the function or lambda whose body is lowered) next to
+  `?expected_ty`, and so do the form functions on the path
+  (`Expr.gen_form`/`gen_crossing`, `Stmts.gen_stmts_scoped`,
+  `Application.eta_fun`/`gen_call_args`/..., `Construction`, `Match`,
+  `Local_functions`, `Effects`, `Lambda.gen_lambda`),
+  `Destination.return_`, `Lowering_state.with_region`,
+  `with_escape_analysis` (which hands its body the inner result type)
+  and `Calls.lower_call`.  A bracket became the `ret` its body is
+  lowered at (`gen_stmts ~ret:rhs_result`, `gen_expr ~ret:expected`,
+  `let ret = Some scope.cod in`).  Done in two commits: first threaded
+  with the ambient kept and compared at every entry point under
+  `CRANE_CHECK_IR` (`check_ret`, zero disagreements over the suite),
+  then the ambient deleted.  Splitting `ret` into a tail destination
+  field and an explicit slot is now a per-reader change on explicit
+  data rather than a hunt for which bracket a read sees.
+- **Deleted:** `lexical.current_cpp_return_type`, `lexical.own_return`,
+  `with_cpp_return_type`, `with_own_return`, `own_return`,
+  `current_cpp_return_type`, `returns_void` (now `ret = Some Void`),
+  the probe-only `Destination.check_ambient` (`dest-ambient`).
+  `Coerce.position_cpp_ty ~ret expected` stays as a pure function (the
+  precedence "the position's type, else the enclosing result").
+- **`own_return` was read in one place.**  A probe on
+  `Destination.return_` found it `Some` only inside
+  `Match_types.value_iife` callbacks (expr.ml let/fixpoint IIFEs,
+  effects.ml bind IIFE): `value_iife` now hands its slot to the body,
+  which returns at it (`Destination.Return into`), and
+  `Destination.return_ ~ret` is `Return (result_slot ret)`.  The two
+  other `with_own_return Join` sites (deduced lambda, lifted local
+  lambda) already passed `Return Join` and nothing under them read it.
+- `Types.type_term_arg` (a value lowered as a type argument) lowers at
+  `ret = None`; byte-identical.
+
+Finding: punning `~ret` at a call where a local `ret` of another meaning
+is in scope type-checks when the types agree.  The threading commit
+found one by type error (`gen_cpp_custom_body`'s branch type, renamed
+`branch_ty`) and relied on `check_ret` for the rest; local closures
+defined outside a bracket and called inside it
+(`gen_ctor_arg`, `gen_enum_branches`, `gen_default_stmts`, `gen_body`,
+`gen_body_stmts`, lambda's `with_lam_return_type` continuation) now
+take `~ret`.
+
+Not done (phase C step 3): `Types.let_value_result` (still the let RHS
+`ret`), `Calls.call_result_site`/`codomain_site`, `Match_types.joined_at`
+(one caller in `match.ml` custom-case IIFE) and `iife_closure_return_at`
+(`lambda.ml`, `value_iife`), `stmts.ml`'s lambda-derived binding type
+(needs the RHS typed value out of `gen_stmts`).  Probe-only `Custom`
+destinations are already gone: the one left (`local_functions.ml`,
+reified monadic let) builds a real `ret` statement.  Each replaces a decision on node shapes or Core with a
+`Value_type` the lowering has, so each needs the typed value to reach
+the site; `stmts.ml`'s binding type and `let_value_result` need
+`gen_stmts` at an `Assign` destination to hand back the `Typed.t` it
+assigned, which is phase D's "only `Typed.t` crosses lowering modules".
+
+Commits: `c4cc387c1` (threaded, checked against the ambient),
+`43bd0b82d` (ambient deleted), plus a tidy/doc commit.  Extraction
+byte-identical after each (`git status --short tests` empty, no
+`CRANE_CHECK_IR` violation); unit tests and
+`scripts/check-module-deps.sh` pass.  Full `make test` from clean at
+`43bd0b82d`: 1526 passed, 16 failed (all `tests/wip`, as at the base),
+`git status --short tests` empty.
+
+Next: phase C step 3 as listed above; then phase D.  A natural first
+move for D now that `ret` is explicit: fold `~ret` and `?expected_ty`
+into the non-optional slot, so each form states both where it builds
+the slot.
+

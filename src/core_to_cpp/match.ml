@@ -655,7 +655,7 @@ and gen_cpp_case_once cx ~ret ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_
       match void_ret with
       | Some _ -> Some Cpp_ir.Type.Void
       | None ->
-        Match_types.iife_closure_return ?ret:(ret) ~returned cx env typ pv body
+        Match_types.iife_closure_return ?ret ~returned cx env typ pv body
     in
     Cpp_ir.Build.iife iife_ret_opt body
   else
@@ -1564,7 +1564,7 @@ let gen_custom_match_expr cx ~ret ?slot env ~typ ~t ~pv ~case_occ : Cpp_ir.Lower
       (* The branches are written under the return type in force: where
          that is the annotation's function type grouped otherwise, the
          lambdas they return take their arguments as it groups them. *)
-      match Match_types.joined_at ~ret:(ret) r with Some t -> t | None -> r
+      match Match_types.joined_at ~ret r with Some t -> t | None -> r
   in
   let stmts =
     let ret =

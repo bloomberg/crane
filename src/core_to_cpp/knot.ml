@@ -17,7 +17,12 @@
     entry point, goes through this module, which {!Lower_expr} fills in once
     at load time ({!install}) with the real functions.  The two references
     are the only knot: a module that needs anything else from a later one is
-    in the wrong place. *)
+    in the wrong place.
+
+    Both take [~ret], the result type of the function or lambda whose body
+    is being lowered ([None] where C++ deduces it), next to the position's
+    own [?expected_ty]: a form passes on the [ret] it was given, or the
+    one its own body returns at. *)
 
 open Base.Common
 
