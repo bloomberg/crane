@@ -427,8 +427,8 @@ callable_crossing_matrix.
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
 - [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
 - [x] Phase B2 (see 8, B2: plans carry their expansion data; `coercions` pass; `Typed.head` is the look-through)
-- [ ] Phase C (in progress: steps 1 and 2 done, the ambient return type deleted (threaded `~ret`); step 3 not started; see 8, C second session)
-- [ ] Phase D
+- [ ] Phase C (in progress: steps 1 and 2 done, the ambient return type deleted (threaded `~ret`); step 3: let binding type, `let_value_result`, `joined_at`/`iife_closure_return_at` done, `call_result_site`/`codomain_site` left; see 8, C third session)
+- [ ] Phase D (in progress: the knot takes one non-optional slot; see 8, C third session)
 - [ ] Phase E (optional)
 
 ## 8. Findings
@@ -1573,3 +1573,82 @@ move for D now that `ret` is explicit: fold `~ret` and `?expected_ty`
 into the non-optional slot, so each form states both where it builds
 the slot.
 
+
+### Phase C, third session (2026-11-23)
+
+Done:
+- **One slot at the knot (phase D groundwork).**  `Slot.slot` carries
+  `ret` (the result type of the body the position is in) and `into : 
+  Slot_type.t` (what the position states: `Exactly t` or `Free`).
+  `Knot.lowering`'s entry points, `Expr.gen_expr_typed`/`gen_expr` and
+  `Stmts.gen_stmts` take `Slot.slot` non-optionally; `~ret` and
+  `?expected_ty` are gone from them.  Every call site builds its slot with
+  `Slot.at ~ret ?expected_ty ?slot ()`, which restates both fields: a
+  slot passed on (`{slot with in_ctor_arg = true}`) never carries its
+  parent's `into`, matching the old rule that `expected_ty` was never
+  inherited.  The rewrite was mechanical (a script turned each call's
+  label list into the `Slot.at` arguments), so byte-identity holds by
+  construction; the extraction confirmed it.  Form functions
+  (`Application`, `Construction`, `Match`, ...) still take `~ret`
+  and `?expected_ty` and unpack nothing yet: folding them is the next
+  mechanical step, one module at a time, with `Slot.expected` reading
+  `into` back.
+- **An assignment hands back its value.**  `Destination.Assign` is a
+  record whose `assigned` cell collects each typed value `finish`
+  assigns (`Destination.assign`, `Destination.assigned d e`, by
+  physical identity of the assigned node; through `Adapted` the node's
+  own type).  No change to `gen_stmts`' result type: the destination is
+  the caller's handle.
+- **Step 3, in part.**
+  - `stmts.ml`'s let binding type from a lambda: the `Closure
+    {groups = [params]; result}` of the assigned value replaces the
+    match on `Typed.head e`'s `Lambda {params; return_type = Some _}`.
+    A probe compared both over the suite: zero disagreements, and the
+    assigned value is a `Closure` exactly when the head is a lambda.
+  - `Types.let_value_result` deleted: `Destination.bind_let cx env x t`
+    builds the let's assignment at the binder's slot, and the right-hand
+    side's `ret` is `Destination.stated` of it (two sites: `stmts.ml`,
+    `local_functions.ml`'s let-lambda).
+  - `Match_types.joined_at`, `iife_closure_return`,
+    `iife_closure_return_at` deleted.  `declared_at ~own r` (the
+    function type a lambda standing in slot `own` is declared at) keys on
+    the lambda's own `Slot_type` and compares groupings with
+    `Arrows.same_function` instead of a local `uncurried`; `join` and
+    `join_branches` decide a lambda's annotation from its returned types.
+    `value_iife` passes its own slot; matches pass `slot_of ret`;
+    `Lambda.gen_lambda` passes `Free` (it passed no `ret` before).  A
+    probe comparing `same_function` with the old top-chain comparison
+    found no disagreement.
+
+Not done, and why:
+- `Calls.call_result_site`/`codomain_site`: the typed values do not say
+  it yet.  `Typed_checks.global_value_type` spells a callee's codomain
+  `Through_tvar` always, while `call_result_site` is `Declared` for a
+  codomain the declaration writes out, and `application.ml`'s
+  `excess_groups`/`filled_ty`/callee-arity code reads the latter.  The
+  replacement is a callee `Value_type` whose result is spelled at the
+  site its declaration gives it (curried only where the codomain is a
+  type variable, the inline-custom rule as in `call_result_site`), then
+  `excess_groups` reading `Arrows.of_type` of the call's result.  That
+  changes `global_value_type`, which the census and `decide` read, so it
+  needs its own probe round.
+- Phase D proper: `Deduction.Not_yet_typed` is still the "node does not
+  say" answer of `Typed.node_type`, later replaced by
+  `Typed_checks.of_built`'s Core-derived type (`typed-untyped` census:
+  zero values reach a census point untyped).  Deleting it means
+  `node_type : Expr.t -> Value_type.t option` and the eleven
+  `Typed.untyped`/`Deduced Not_yet_typed` producers (`application.ml`
+  4, `coerce.ml` 2, `lambda.ml` 3, `match.ml`, `binders.ml`,
+  `typed_checks.ml`) returning an option the form's `of_built` fills.
+  Then the `gen_expr` shim, `Declare_deduced`, `Call.result` reasons,
+  `Typed.expansion` and the layering rule, as in §4.
+
+Commits: `cec9a6df8`.  Extraction byte-identical (`git status --short
+tests` empty, `CRANE_CHECK_IR` on); unit tests and
+`scripts/check-module-deps.sh` pass.  Full `make test` from clean at
+`cec9a6df8`: 1526 passed, 16 failed (all `tests/wip`, as at the base),
+`git status --short tests` empty.
+
+Next: fold `~ret`/`?expected_ty` out of the form functions onto the
+slot; `call_result_site`/`codomain_site` via a declared-site callee
+type; then phase D from `Not_yet_typed`.
