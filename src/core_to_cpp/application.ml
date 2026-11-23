@@ -2072,6 +2072,34 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
             else n )
       | None -> List.length args
     in
+    (* The callee's Core type, from its binder: its first [k] value
+       domains, and what it returns past them. *)
+    let binder_core_type =
+      match f with
+      | Core.Expr.Bound_variable {index = i; _}
+      | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+      | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+      | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} ->
+        get_env_type_opt cx i
+      | _ -> None
+    in
+    let rec value_domains k : Core.Type.t -> Core.Type.t list * Core.Type.t = function
+      | Core.Type.Arrow {parameter = t; result = rest} when k > 0 -> (
+        match resolve_meta t with
+        | Core.Type.Erased _ -> value_domains k rest
+        | t ->
+          let ds, r = value_domains (k - 1) rest in
+          (t :: ds, r) )
+      | Core.Type.Meta {contents = Some t} -> value_domains k t
+      | ty -> ([], ty)
+    in
+    (* The callee typed from its binder: one group of its first [k] value
+       domains. *)
+    let callee_typed k core_ty =
+      let doms, rest = value_domains k core_ty in
+      let conv = Types.cpp_of_core cx env in
+      Cpp_ir.Typed.typed (Function (List.map conv doms, conv rest)) (gen_callee ())
+    in
     let n_args = List.length args in
     (* Lifting every argument onto the template list still leaves a call. *)
     if n_args = 0 && tc_args = [] then
@@ -2092,56 +2120,27 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
          forwards them along with fresh parameters for the remaining
          args.  E.g., [f2(n1)] where [f2 : (nat, T1) -> T1] becomes:
          [[&](T1 _pa0) { return f2(n1, _pa0); }]. *)
-      let remaining_core_tys =
-        match f with
-        | Core.Expr.Bound_variable {index = i; _} ->
-          ( try
-              let core_ty = get_env_type cx i in
-              (* Skip [n_args] non-dummy domain entries to find the
-                 remaining value-domain types. *)
-              let rec skip_and_collect n = function
-                | Core.Type.Arrow {parameter = t; result = rest} ->
-                  ( match resolve_meta t with
-                  | Core.Type.Erased _ -> skip_and_collect n rest
-                  | t ->
-                    if n > 0 then skip_and_collect (n - 1) rest
-                    else t :: skip_and_collect 0 rest )
-                | Core.Type.Meta {contents = Some t} -> skip_and_collect n t
-                | _ -> []
-              in
-              skip_and_collect n_args core_ty
-            with _ -> [] )
-        | _ -> []
-      in
-      if remaining_core_tys <> [] then
-        let callee = gen_callee () in
-        let pa_params = List.mapi (fun j core_ty ->
-          let cpp_ty = Types.cpp_of_core cx env core_ty in
-          (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
-          remaining_core_tys
-        in
-        let pa_exprs = List.map (fun (_, id_opt) : Cpp_ir.Lowered.Expr.t ->
-          Local (Option.get id_opt)) pa_params in
-        (* What the call reads, the function included, is read where the
-           closure is made, and taken by move there when the plan moves it. *)
-        ( match
-            Cpp_ir.Build.lambda pa_params None
-              [Return (Some (Cpp_ir.Build.call callee (args @ pa_exprs)))]
-              ~capture:Stored
-          with
+      match binder_core_type with
+      | Some core_ty when List.length (fst (value_domains max_int core_ty)) > n_args ->
+        (* The closure over the rest of the callee's group, its parameters
+           [_pa]; what the call reads, the function included, is read where
+           the closure is made, and taken by move there when the plan moves
+           it. *)
+        ( match (Cpp_ir.Typed.apply ~prefix:"_pa" (callee_typed max_int core_ty) (List.map Cpp_ir.Typed.of_node args)).expr with
           | Lambda l ->
             Lambda
               {l with moved = moved_names env (Ownership_ir.Region.eta_captures cx.ctx.lexical.move_plan (f :: core_args))}
           | e -> e )
-      else
-        Cpp_ir.Build.call (gen_callee ()) args
+      | _ -> Cpp_ir.Build.call (gen_callee ()) args
     else if n_args > n_value_dom && n_value_dom > 0 then
-      let primary = safe_firstn n_value_dom args in
-      let excess = List.skipn n_value_dom args in
-      Call
-        (Cpp_ir.Build.signature ~nargs:0 (),
-          Call (Cpp_ir.Build.signature ~nargs:0 (), gen_callee (), primary),
-          excess )
+      (* Over-application: the callee's declared group, then the excess
+         applied to its result. *)
+      let callee =
+        match binder_core_type with
+        | Some core_ty -> callee_typed n_value_dom core_ty
+        | None -> Cpp_ir.Typed.untyped (gen_callee ())
+      in
+      (Cpp_ir.Typed.apply callee (List.map Cpp_ir.Typed.of_node args)).expr
     else
       (* When the callee is a local variable whose Core type is a bare type
          variable (Core.Type.Variable/Core.Type.Unknown), its C++ type is std::any.  std::any
