@@ -428,7 +428,7 @@ callable_crossing_matrix.
 - [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
 - [x] Phase B2 (see 8, B2: plans carry their expansion data; `coercions` pass; `Typed.head` is the look-through)
 - [ ] Phase C (in progress: steps 1 and 2 done, the ambient return type deleted (threaded `~ret`); step 3 done except the shape-reading lowering sites listed in §4; the result site moved to `Coerce.result_site`, see 8, C/D fourth session)
-- [ ] Phase D (in progress: one non-optional slot at the knot and the form functions; coercion-builder ratchet; `Not_yet_typed` deleted (`Typed.carried`, `of_node ~fallback`); `gen_expr` shim deleted; `Call.yields` is a `Value_type` with `Deduced` reasons; `Declare_deduced`, the call's own result at the two `result_site` reads, `Typed.expansion`, ratchet to zero, typed-fit fatal not done; see 8, phase D fifth session)
+- [ ] Phase D (in progress: one non-optional slot at the knot and the form functions; `Not_yet_typed` deleted (`Typed.carried`, `of_node ~fallback`); `gen_expr` shim deleted; `Call.yields` is a `Value_type` with `Deduced` reasons; `Declare_deduced` with frame and view readers ported; coercion-builder ratchet 41 -> 1 (`Cast_box`, `Built` origin); the last ratchet site, real types for `Unannotated` operands, the call's own result at the two `result_site` reads, `Typed.expansion`, typed-fit fatal not done; see 8, phase D sixth session)
 - [ ] Phase E (optional)
 
 ## 8. Findings
@@ -1847,3 +1847,106 @@ Next: `Declare_deduced` (resolved away by `Resolve`, readers ported per
 file); then the ratchet sites, each with a plan whose expansion is what
 it builds today; then real types for the `Unannotated` adapter operands,
 origin by origin, with the shadow census as the gate.
+
+### Phase D, sixth session (2026-11-23)
+
+Done:
+- **`Declare_deduced`.**  `Binding.t` is a GADT with the lowered-only
+  `Declare_deduced : lowered Value_type.t * Core.Binder.t option -> lowered t`;
+  `Resolve` writes it `Declare (Auto, b)`, so the settled passes after the
+  seam still see it (finishing runs on the lowered phase up to the
+  printer) but the printer never does.  Builders: `Typed.bind_deduced x e`
+  (records `Typed.carried e`, else `Unannotated`) replaced the 25 literal
+  `Declare (Auto, _)` builders; `Typed.bind ?binder x t e` replaced 36
+  builders whose type is computed (`Bind_variable (x, Declare (t, b), e)`
+  with `t` a variable or a call): a probe on `Resolve` found 1978 lowered
+  `Declare (Auto, _)` left after the literal builders were converted, all
+  from computed types, and zero after `Typed.bind`.  Under
+  `CRANE_CHECK_IR`, `Pipeline.check_deduced_bindings` checks before and
+  after the lowered passes that no lowered declaration is `Declare (Auto,
+  _)`; the readers that matched `Declare (Auto, _)` now match only
+  `Declare_deduced` (frame 4, loopify 2, local_closures, view_args,
+  deduced_literals).  Readers that read a declared type uniformly
+  (`aliased_after`, `constraints`, `return_moves`, `in_place_args`,
+  `temporaries`, `simplify`'s `bind_by_reference` and constant tables,
+  `erasure`'s constants, `declared_binders`, ...) read a deduced one as
+  `auto`, as before; `Stmt.Binding.written` gives `(type, binder)` with
+  `Auto` for a deduced one where a reader needs both.
+  `Children` does not visit the recorded type (it is not written);
+  `Map` rewrites it.
+  Ported readers: `Frame.collect_type_env` and the resume handler's
+  environment read a local's type from the record
+  (`Frame.deduced_local_type`: a `Closure {groups = [ps]; result}` is
+  `Function (ps stripped, result)`, anything else `Auto`, read back by
+  `decltype_of_saved_local`) instead of matching the initialiser's
+  `Lambda`.  A probe comparing the two: 136 disagreements, all generic
+  lambdas with an `auto` parameter (local fixpoint `*_impl`s), which the
+  old code typed `Function ([auto], R)` and the record types `Deduced
+  Generic_lambda` (so `Auto`); no output changed (no frame keeps such a
+  local at its type).  `View_args.declared_holdings` reads a deduced
+  variable's canonical type from the record rather than from an
+  initialiser that is a call with `yields`: 28 more variables are known
+  canonical, no output changed.  `decltype_of_saved_local` itself is
+  unchanged: it is the fallback for `Auto`, which is now exactly the
+  deduced locals whose record is not a closure.
+- **Coercion-builder ratchet: 41 sites to 1.**  New plan
+  `Cast_box {into; tolerant}` (the cast a site makes of what it knows is
+  boxed), built by `Coerce.unbox ?tolerant into e` through `into_slot`
+  with the new origin `Built plan` (the site's own test stands, the census
+  holds it to `decide`: 1084 `typed-shadow site agree`, 59 unchecked, 0
+  disagree), and by `Cpp_ir.Coercion.cast_box` for control lowering
+  (`frame.ml`'s resumed-result cast), which builds below `Coerce`.
+  `Coerce.erase shape e` builds `Erase_as` (four `Erase_callable` sites in
+  `construction.ml`, `functions.ml`).  `Analysis.converting_ctor` is
+  `Erasure.converting_ctor` (it was a copy).  Rebuilding walkers
+  (`Functions.return_captures_by_value`, `Lambda_params`, the
+  `made_of_application` rewrite) map a cast or coercion's children with
+  `Cpp_ir.Map` rather than rebuilding the cast.  The rule: `empty_box`
+  is no longer counted (it builds an empty box, it adapts no value), and a
+  constructor after `_,` is a pattern.  Look-through added where a
+  lowering reader matched the cast a converted site now builds as a
+  coercion: `lifting.ml`'s replacement strip (`Typed.head repl`),
+  `match.ml`'s `should_strip` and `inductives.ml`'s phantom-cast strip
+  (both on `Cast_box` only: looking through every coercion there strips
+  `Ue` coercions the old code kept, changing `pair_indexed_inductive_any_cast`).
+  Finding: `Cast_box` expands with `Erasure.unbox`'s structural rules
+  only; whether `into` prints as a box is asked when the plan is made
+  (`Coerce.unbox`), because the answer can change before the coercions
+  pass runs.
+  Left: `match.ml`'s field substitution for a wholesale-erased field
+  (`gen_match_branch`, the `| _ -> unbox bare_ty (Local binding_name)`
+  arm), `COERCION_BUILDERS_PENDING="core_to_cpp/match.ml:1"`.  As a
+  coercion it changes four outputs (`mem_safety_probe12`, `free_monad`,
+  `existential_closure_probe`, `type_indexed_inductive_probe`):
+  `crane_call_erased(f, crane_any_cast<T2>(a0))` loses its inner cast.
+  A probe in `Erasure.resolve_expr` showed the raw cast reaching the
+  `casts` pass at `T2` (a named index variable) and the coerced one at a
+  type written as a box, so some type rewrite between lowering and the
+  `casts` pass reaches a coercion plan's types where it does not reach a
+  raw cast's (or the reverse); not found yet.
+
+Not done (steps 3-5 of this session's list), and why: the session went to
+the two steps above and the `Cast_box` investigation.
+- Real types for `Unannotated` operands: untouched.  The census numbers
+  of the fifth session stand (`typed-shadow` at an unstated value:
+  `erase_fn_arg_for_param` 88, `coerce` 40, `recover_carrier_result` 18).
+  Order to take them: the `coerce` (`Ue`) operands first, since
+  `Coerce.coerce` already receives `?from` from most callers; each origin
+  with a census round (`/tmp/tcppir/extract.sh <log>`, then
+  `grep '^typed-shadow' <log>`), no new `disagree`, byte-identical.
+- The two `Coerce.result_site` reads in `Application` (`cod_site`,
+  `filled_ty`): untouched; the fifth session's note stands (a probe
+  comparing `Typed.applied` of the name's `Function_name` type with
+  `spell_arrows (result_site id)` is the first step).
+- typed-fit fatal: no; categories unchanged from the fifth session.
+
+Commits: `3565d3dd3` (`Declare_deduced`), `c52816661` (ratchet).  Full `make test` from clean at `c52816661`: 1526 passed, 16 failed (all `tests/wip`, as at the base).  Extraction
+byte-identical after each (`git status --short tests` empty, 2 wip
+extraction errors as at the base); unit tests and
+`scripts/check-module-deps.sh` pass.
+
+Next: find the type rewrite that treats a `Cast_box` plan's type and a raw
+cast's differently (start from `tvar_subst_stmt` / the phantom handling in
+`Inductives` around the method body, and `Erasure.materialise`), convert
+the last site and make the rule strict (delete
+`COERCION_BUILDERS_PENDING`); then steps 3-5 as above.
