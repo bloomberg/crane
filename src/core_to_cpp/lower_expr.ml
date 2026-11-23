@@ -11,11 +11,11 @@
 
 open Names
 
-let gen_expr cx = Expr.gen_expr cx
-let gen_stmts cx = Stmts.gen_stmts cx
+let gen_expr_typed = Expr.gen_expr_typed
+let gen_stmts = Stmts.gen_stmts
 
-let () = Knot.install {expr = Expr.gen_expr; stmts = Stmts.gen_stmts}
-let () = Types.type_term_arg := fun cx env a -> gen_expr cx env a
+let () = Knot.install {expr_typed = Expr.gen_expr_typed; stmts = Stmts.gen_stmts}
+let () = Types.type_term_arg := fun cx env a -> (gen_expr_typed cx (Slot.at ~ret:None ()) env a).expr
 let () = Lowering_state.plan_representation := Representation_plan.region
 let () = Lowering_state.plan_positions := Position_plan.region
 

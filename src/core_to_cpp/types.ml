@@ -98,7 +98,7 @@ let mentions_unresolved_promoted cx (ty : Cpp_ir.Lowered.Type.t) =
       | _ -> false )
     ty
 
-(** How a term argument of a custom type is generated: by {!gen_expr}, which
+(** How a term argument of a custom type is generated: by {!gen_expr_typed}, which
     fills this in once it is defined.  The one place type conversion calls
     back into expression generation -- a mapped type applied to a term, as a
     fixed-size array is to its length -- so it is the edge the two are
@@ -447,19 +447,11 @@ let slot_repr_of_cpp_type cx t =
     passing the wrong scope. *)
 let cpp_of_core cx env t = cpp_ir_of_core_type cx env (get_current_type_vars cx) t
 
-(** The result a let's right-hand side, bound at the Core type [t], falls
-    back to where a position in it states nothing
-    ({!Coerce.position_cpp_ty}): the bound value is not the enclosing
-    function's result, so it is the binder's own type, its erased parts
-    spelled erased, where this scope can write it, and otherwise nothing.
-    Never the enclosing function's result: a value bound in its body has a
-    type of its own, and spelled at the result's it is a [List<pair<...>>]
-    holding [Sum]s.  A binder erasure took the whole type from --
-    [nt_semty x], a type computed from a value -- holds a box, and its
-    value is one. *)
-let let_value_result cx env t =
-  let c = cpp_of_core cx env t in
-  if Cpp_ir.Types.prints_as_any c then Some c else spell_in_scope cx c
+(** What a callee of the Core type [t] returns once given [n] value
+    arguments, converted; [auto] (C++ deduces it) where [t] has fewer
+    arrows. *)
+let codomain_after cx env n t : Cpp_ir.Lowered.Type.t =
+  match Base.Type_util.strip_arrows_n n t with Some c -> cpp_of_core cx env c | None -> Auto
 
 (** [template_arg_of_core_type ~site env tvars ty] converts [ty] for a template
     argument position, its arrows spelled as [site] says

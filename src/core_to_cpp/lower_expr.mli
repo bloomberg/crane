@@ -9,7 +9,7 @@ open Names
     The entry points of expression lowering, from the extracted {!Core} AST
     to the C++-oriented {!Cpp_ir} AST, for the declaration-level generators
     ({!Lower_decl} and the [Gen_*] modules), which lower each body through
-    {!gen_expr} and {!gen_stmts}.
+    {!gen_expr_typed} and {!gen_stmts}.
 
     Lowering itself is spread over modules that each own one form
     ({!Expr}, {!Stmts}, {!Lambda},
@@ -30,20 +30,20 @@ open Names
     {!Convert}, {!Naming},
     {!Cpp_build}). *)
 
-(** Generate a C++ expression from a Core expression
-    ({!Expr.gen_expr}).  [slot] describes the position; callers
-    outside lowering leave it at {!Slot.empty_slot}. *)
-val gen_expr :
-  Lowering_state.t -> ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:Slot.slot -> env ->
-    Core.Expr.t -> Cpp_ir.Lowered.Expr.t
+(** Generate a C++ expression and its type from a Core expression
+    ({!Expr.gen_expr_typed}) at the position [slot] describes ({!Slot.at}:
+    the result type of the function whose body it is in, the type the
+    position states). *)
+val gen_expr_typed : Lowering_state.t -> Slot.slot -> env -> Core.Expr.t -> Cpp_ir.Typed.t
 
 (** Generate C++ statements from a Core expression
-    ({!Stmts.gen_stmts}).  The continuation [k] turns the final
-    expression into a statement (a return, an assignment). *)
+    ({!Stmts.gen_stmts}).  The final value goes to the {!Destination}
+    (a return, an assignment); [slot]'s [ret] is the result type of the
+    function whose body they are in. *)
 val gen_stmts :
-  Lowering_state.t -> ?slot:Slot.slot ->
+  Lowering_state.t -> Slot.slot ->
   env ->
-  (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ->
+  Destination.t ->
   Core.Expr.t ->
   Cpp_ir.Lowered.Stmt.t list
 

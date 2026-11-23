@@ -157,7 +157,7 @@ let in_stmt fresh (s : stmt) : stmt list =
   let bound = ref [] in
   let bind ~by_value x a =
     let ty : Cpp_ir.Lowered.Type.t = if by_value then Auto else Reference (Forwarding, Auto) in
-    bound := (Bind_variable (x, Declare (ty, None), a) : stmt) :: !bound
+    bound := (Cpp_ir.Typed.bind (x) (ty) (a) : stmt) :: !bound
   in
   let discard a = bound := (Expression a : stmt) :: !bound in
   let e' e = name_args fresh bind discard e in

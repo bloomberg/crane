@@ -11,14 +11,14 @@ open Grammar
     with the arguments; a length mismatch is no knowledge at all, so it is
     dropped rather than stored misaligned. *)
 let signature ?yields ?params ~nargs () : 'p Call.signature =
-  { yields = (match yields with Some t -> Yields t | None -> Untyped);
+  { yields = (match yields with Some t -> Value_type.Typed t | None -> Value_type.Deduced Unannotated);
     params = (match params with Some ts when List.length ts = nargs -> Types ts | _ -> Unknown);
     constructs = None;
     occurrence = None }
 
 (** [call ?yields ?params fn args] is a call of [fn] on [args], in source
     order.  Omitting [yields] or [params] is a claim -- that the callee has
-    no Crane-level type there.  A call of an abort with no arguments is the
+    no Crane-level type there (the call yields [Deduced Unannotated]).  A call of an abort with no arguments is the
     abort, which already carries the type the call would have had. *)
 let call ?yields ?params (fn : 'p Expr.t) (args : 'p Expr.t list) : 'p Expr.t =
   match (fn, args) with

@@ -42,13 +42,13 @@ type field = phase Cpp_ir.Field.t
 type local_fixpoint = Cpp_ir.Expr.Local_fixpoint.t
 
 (** The signature of a call nothing is known about. *)
-let call_opaque : signature = {yields = Untyped; params = Unknown; constructs = None; occurrence = None}
+let call_opaque : signature = {yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence = None}
 
 (** [Core.Signature.t ?yields ?params ?constructs ~nargs ()] is what a builder knows
     about a call on [nargs] arguments; [params] is kept only where it is one
     type per argument. *)
 let signature ?yields ?params ?constructs ~nargs () : signature =
-  { yields = (match yields with Some t -> Yields t | None -> Untyped);
+  { yields = (match yields with Some t -> Typed t | None -> Deduced Unannotated);
     params = (match params with Some ts when List.length ts = nargs -> Types ts | _ -> Unknown);
     constructs;
     occurrence = None }
@@ -136,12 +136,7 @@ let named_tvar x : ty = Variable (Named x)
 
 (** [converting_ctor ty args]: [ty(args)], a box where [ty] is written
     [std::any] -- of what a box holds, where [args] is one. *)
-let converting_ctor (ty : ty) (args : expr list) : expr =
-  match args with
-  | [inner] when Cpp_ir.Types.prints_as_any ty ->
-    let inner = match inner with Box (_, x) -> x | x -> x in
-    Box (ty, inner)
-  | _ -> Converting_construct (ty, args)
+let converting_ctor : ty -> expr list -> expr = Cpp_passes.Erasure.converting_ctor
 
 (** {2 Named Constants}
 
@@ -748,11 +743,11 @@ and collect_stmts check ~in_visitor stmts =
      Pattern A — [Expression call; Return None]:
      In C++, a void function can end with [f(); return;] which is
      semantically [return f();] — the call is in tail position.
-     Translation ({!Core_to_cpp.Stmts.gen_stmts}) emits it when
-     current_cpp_return_type is Void.
+     Translation ({!Core_to_cpp.Stmts.gen_stmts}) emits it when the
+     enclosing function's return type is Void.
 
      Pattern B — [Expression call; Return (Some val)]:
-     Same situation but generated when current_cpp_return_type is a unit
+     Same situation but generated when the enclosing return type is a unit
      type (not Void), e.g. for ITree-unit-returning fixpoints whose
      return is threaded through the nat-match continuation [k].  The
      generated code is [f(); return Unit::e_TT;] which is semantically
@@ -870,6 +865,7 @@ let rec count_calls_expr (check : call_checker) expr =
   | Aggregate {values = args; _}
    |Local_aggregate {values = args; _} ->
     List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
+  | Coerce _ -> count_calls_expr check (Cpp_ir.Typed.head expr)
   | _ -> 0
 
 (** Count recursive calls in a statement list. *)

@@ -61,7 +61,7 @@ let return_captures_by_value (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lower
     | Member (e, id) -> Member (expr e, id)
     | Project (e, id, ty) -> Project (expr e, id, ty)
     | Access_call (Arrow, e, id, es) -> Access_call (Arrow, expr e, id, List.map expr es)
-    | Any_cast (ty, e) -> Any_cast (ty, expr e)
+    | (Any_cast _ | Coerce _) as e -> Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr ~stmt ~type_:Fun.id ()) e
     | e -> e
   and stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
     match s with
@@ -410,7 +410,7 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
          rather than erased -- nothing in the term says which -- so it
          deduces.  Committing to [std::monostate] rejects every call through
          an erased tree.  The slot is still emitted; see the parameter filter
-         in {!Expr.gen_expr}. *)
+         in {!Expr.gen_expr_typed}. *)
       lent Auto
     | None when Base.Type_util.has_tany_written bare_cpp_ty ->
       (* The type is spelled with erased positions (std::any).  Use

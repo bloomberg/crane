@@ -678,7 +678,7 @@ let local_loop ~unit ~owner ~all_locals ~lifted ~member ~tparams ~name (lam : la
           let loop = {lam with body = body; moved = []} in
           let moved = List.filter (fun x -> List.mem x (Analysis.free_vars_expr (Lambda loop))) lam.moved in
           Verdicts.record member_loop Lowered;
-          Some (Bind_variable (name, Declare (Auto, None), Lambda {loop with moved = moved}))
+          Some (Cpp_ir.Typed.bind_deduced name (Lambda {loop with moved = moved}))
         end )
   (* A loop no call continues is none: every call is where no loop takes
      it, and declines it, where Loopify reaches the fixpoint -- in a body it
@@ -923,7 +923,7 @@ let keeps_call taken (stmts : Ir.Stmt.t list) =
    occurrences [calls] as a whole statement or the value they return or
    bind: one a loop's transform takes where it is one of the loop's turns. *)
 let makes_statement_call calls (stmts : Ir.Stmt.t list) =
-  let rec bare : Ir.Expr.t -> Ir.Expr.t = function Any_cast (_, e) | Move e -> bare e | e -> e in
+  let rec bare : Ir.Expr.t -> Ir.Expr.t = function Any_cast (_, e) | Move e -> bare e | Coerce _ as e -> bare (Cpp_ir.Typed.head e) | e -> e in
   let made e =
     match bare e with
     | Call ({occurrence = Some o; _}, _, _) -> List.exists (Core.Occurrence.equal o) calls

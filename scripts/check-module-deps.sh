@@ -109,6 +109,27 @@ fi
 
 deps_of() { ocamlfind ocamldep -modules "$1" | cut -d: -f2; }
 
+# Lowering builds the coercion vocabulary (Function_value, Erase_callable,
+# Box, Any_cast, Tolerant_any_cast, and Erasure's box/unbox helpers) only in
+# Core_to_cpp.Coerce; Cpp_passes.Coercions expands the plans it makes.  A
+# constructor counts where it is applied outside a pattern (typed CppIR
+# design, phase D).
+coercion_builders() {
+  code_of "$1" | perl -0777 -ne '$n = 0;
+    while (/(\S+)\s*\b(?:(?:Cpp_ir\.)?(?:Lowered\.)?(?:Expr\.)?(?:Function_value|Erase_callable|Box|Any_cast|Tolerant_any_cast)\s*\(|Erasure\.(?:box|unbox|unbox_tolerant)\b)/g) {
+      $n++ unless $1 =~ /^(\||with|function|as|_,)$/ }
+    print $n'
+}
+for f in src/core_to_cpp/*.ml src/control_to_cpp/*.ml; do
+  case "$f" in src/core_to_cpp/coerce.ml) continue ;; esac
+  n=$(coercion_builders "$f")
+  if (( n > 0 )); then
+    echo "$f builds a coercion $n times: build it with Core_to_cpp.Coerce"
+    status=1
+  fi
+done
+
+
 # Every directory names only the directories below it.
 for i in "${!LAYERS[@]}"; do
   dir=${LAYERS[$i]}

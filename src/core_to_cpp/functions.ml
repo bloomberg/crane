@@ -262,7 +262,7 @@ let dead_unit_returns_to_abort cx (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.L
 
 (** Adapt closures returned from a function whose return type is the erased
     [std::any] (e.g. the [nat -> nat] branch of a dependent
-    [if b then nat else nat -> nat]).  Like {!box_for_any_slot} at
+    [if b then nat else nat -> nat]).  Like {!Coerce.any_slot_plan} at
     argument and value-declaration positions, the callable must be stored in
     the canonical [std::function<std::any(std::any...)>] form that the
     application site recovers with an [any_cast].  Nested lambda bodies are
@@ -272,7 +272,7 @@ let erase_returned_fn_values cx (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.
   else
     let rec fix_stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
       match s with
-      | Return (Some (Lambda _ as e)) -> Return (Some (Erase_callable (Boxed_whole, e)))
+      | Return (Some (Lambda _ as e)) -> Return (Some (Coerce.erase Boxed_whole e))
       | _ -> Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:Fun.id ~stmt:fix_stmt ~type_:Fun.id ()) s
     in
     List.map fix_stmt body
@@ -312,7 +312,7 @@ let return_captures_by_value (stmts : Cpp_ir.Lowered.Stmt.t list) =
     | Member (e, id) -> Member (expr e, id)
     | Project (e, id, ty) -> Project (expr e, id, ty)
     | Access_call (Arrow, e, id, args) -> Access_call (Arrow, expr e, id, List.map expr args)
-    | Any_cast (ty, e) -> Any_cast (ty, expr e)
+    | (Any_cast _ | Coerce _) as e -> Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr ~stmt ~type_:Fun.id ()) e
     | e -> e
   and stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
     match s with
@@ -509,7 +509,7 @@ module Body_scope = struct
         (** Under polymorphic recursion, the parameters a self-call has to
             write although the call is not at the declaration's own
             instantiation ({!self_call_reference}); [None] where it is. *)
-    gen_body_stmts : env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> Core.Expr.t ->
+    gen_body_stmts : ret:Cpp_ir.Lowered.Type.t option -> env -> Destination.t -> Core.Expr.t ->
       Cpp_ir.Lowered.Stmt.t list;
         (** Generates body statements with the signature's higher-kinded
             resolutions applied. *)
@@ -789,8 +789,9 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
   let hkt_tvar_resolutions = hkt_tvar_resolutions_of_type ty in
   (* Type annotations inside the body must name the same resolved types as the
      signature does. *)
-  let gen_body_stmts env cw e =
-    apply_hkt_resolutions_stmts hkt_tvar_resolutions (gen_stmts cx env cw e)
+  let gen_body_stmts ~ret env cw e =
+    apply_hkt_resolutions_stmts hkt_tvar_resolutions
+      (with_hkt_resolutions cx hkt_tvar_resolutions (fun () -> gen_stmts cx (Slot.at ~ret ()) env cw e))
   in
   (* Substitute promoted type var markers [Tpromoted name] with their
      qualified resolutions throughout a C++ type tree. *)
@@ -1388,15 +1389,16 @@ let gen_dfun cx ~minted n b cty ty temps =
      only up to unfolding -- is suspended whole. *)
   let core_ret = core_return_type ty in
   let is_cofix_return = Suspension.suspends_whole n core_ret b in
-  let cofix_wrap (x : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Stmt.t =
+  let cofix_wrap : Destination.t =
     if is_cofix_return then
-      suspend_whole ~cpp_of:(Types.cpp_ir_of_core_type cx env type_var_ids) ~cod core_ret x
-    else if cod = Void then
+      Custom
+        { build = suspend_whole ~cpp_of:(Types.cpp_ir_of_core_type cx env type_var_ids) ~cod core_ret;
+          into = Exactly cod;
+          returns = true }
+    else
       (* Some tail expressions (like writeTVar) have side effects that must
          not be discarded. *)
-      Cpp_build.return_into_void x
-    else
-      Return (Some x)
+      Destination.return_at (Some cod)
   in
   (* Generate sigma type precondition assertions *)
   let sigma_asserts =
@@ -1488,10 +1490,10 @@ let gen_dfun cx ~minted n b cty ty temps =
       ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) scope.ids)
       ~ty:(fun i -> snd (List.nth all_params i))
   in
-  (* Expose the C++ return type to inner call sites so they can recover erased
-     template type args (see try_recover_erased_return_type). *)
-  let saved_return_type = cx.ctx.lexical.current_cpp_return_type in
-  set_lexical cx (fun l -> { l with current_cpp_return_type = Some scope.cod });
+  (* The body returns at the declared result type, which inner call sites
+     read to recover erased template type args (see
+     try_recover_erased_return_type). *)
+  let ret = Some scope.cod in
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
      implementation instead of the default [Abort] throw. *)
@@ -1530,7 +1532,7 @@ let gen_dfun cx ~minted n b cty ty temps =
         | None ->
           let b =
             List.map (glob_subst_stmt ~spare n rec_call)
-              (with_region cx ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
+              (with_region cx ~ret ~owned:owned_params ?resumes b (fun () -> gen_body_stmts ~ret env cofix_wrap b))
           in
           return_captures_by_value b
       in
@@ -1547,18 +1549,17 @@ let gen_dfun cx ~minted n b cty ty temps =
         | None ->
         match b with
         | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ ->
-          List.map (glob_subst_stmt ~spare n rec_call) (gen_stmts cx env cofix_wrap b)
+          List.map (glob_subst_stmt ~spare n rec_call) (gen_stmts cx (Slot.at ~ret ()) env cofix_wrap b)
         | _ ->
           List.map
             (glob_subst_stmt ~spare n rec_call)
-            (with_region cx ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
+            (with_region cx ~ret ~owned:owned_params ?resumes b (fun () -> gen_body_stmts ~ret env cofix_wrap b))
       in
       let b = return_captures_by_value b in
       clear_current_type_vars cx;
       set_current_parameters cx [];
       definition b
   in
-  set_lexical cx (fun l -> { l with current_cpp_return_type = saved_return_type });
   Base.Table.current_decl_ref := saved_decl_ref;
   set_lexical cx (fun l -> { l with promoted_var_map = saved_promoted_var_map });
   set_current_template_head cx saved_template_head;
@@ -1716,13 +1717,13 @@ let recover_erased_body_types ty b =
 
 (** A constant's initialiser: its body, or -- for an erased proof, a lemma of
     a module whose other members are extracted -- the empty box an erased
-    constructor argument is.  The [Core.Expr.Erased_value] case of {!Expr.gen_expr}
+    constructor argument is.  The [Core.Expr.Erased_value] case of {!Expr.gen_expr_typed}
     is for dead code, an abort; a constant is evaluated, at static
     initialisation. *)
-let gen_constant_value cx ?expected_ty b =
+let gen_constant_value cx ~ret ?expected_ty b =
   match b with
   | Core.Expr.Erased_value _ -> Cpp_passes.Erasure.empty_box
-  | _ -> gen_expr cx ?expected_ty (empty_env ()) b
+  | _ -> (gen_expr_typed cx (Slot.at ~ret ?expected_ty ()) (empty_env ()) b).expr
 
 (** The parameters a head declares for the type variables [cty] spells,
     and for the Core variables [extra] it does not, by the variable each
@@ -1806,12 +1807,13 @@ let gen_decl__inner cx n b ty =
       (* A body that only throws becomes a zero-arg function, so the throw
          happens when the value is asked for rather than during static
          initialisation (which terminates the program before main). *)
-      let body_expr = with_region cx b (fun () -> gen_expr cx (empty_env ()) b) in
+      let body_expr = with_region cx ~ret:None b (fun () -> (gen_expr_typed cx (Slot.at ~ret:None ()) (empty_env ()) b).expr) in
       (templated (thunk n cty_ir body_expr), empty_env (), tvars)
     | _ ->
       begin_body cx ~owner:n ~all_locals:true ();
       let body_expr =
-        with_cpp_return_type cx (Some cty_ir) (fun () -> with_region cx b (fun () -> gen_constant_value cx b))
+        let ret = Some cty_ir in
+        with_region cx ~ret b (fun () -> gen_constant_value cx ~ret b)
       in
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the
@@ -1827,7 +1829,8 @@ let gen_decl__inner cx n b ty =
       in
       let body_expr =
         match Types.slot_repr_of_cpp_type cx cty_ir with
-        | Boxed kind -> Coerce.box_for_any_slot cx kind b body_expr
+        | Boxed kind ->
+          Coerce.into_slot ~origin:(Any_slot {cx; kind; term = b}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated body_expr) (Exactly cty_ir)
         | Native -> body_expr
       in
       let body_expr = baked_initialiser n cty_ir body_expr in
@@ -1942,7 +1945,7 @@ let gen_decl_for_pp__inner cx n b ty =
     let f, env, tvars = gen_function cx n ty h in
     (Some f, env, tvars)
   | cty when Suspension.thunk_reason cx n = Some Suspension.Throws ->
-    let body_expr = gen_expr cx (empty_env ()) h.body in
+    let body_expr = (gen_expr_typed cx (Slot.at ~ret:None ()) (empty_env ()) h.body).expr in
     let inner = thunk n cty body_expr in
     let ds = match h.temps with [] -> inner | l -> Template (l, None, inner) in
     (Some ds, empty_env (), h.tvars)
@@ -1996,7 +1999,7 @@ let gen_spec__inner cx n b ty =
          erased template type args (see try_recover_erased_return_type). Without
          this, calls like pick<natBoxed>() inside a constant body cannot deduce
          the missing type parameter. *)
-      with_cpp_return_type cx (Some ty_ir) @@ fun () ->
+      let ret = Some ty_ir in
       (* Strip a coercion wrapper and track whether a type coercion from std::any
          is needed.  Core.Expr.Coerce wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int).  The body
@@ -2026,7 +2029,7 @@ let gen_spec__inner cx n b ty =
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)
-      let b_expr = with_region cx inner_body (fun () -> gen_constant_value cx ~expected_ty:ty_ir inner_body) in
+      let b_expr = with_region cx ~ret inner_body (fun () -> gen_constant_value cx ~ret ~expected_ty:ty_ir inner_body) in
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
          (a) Core.Expr.Coerce — the extraction explicitly flagged a type coercion.
@@ -2044,7 +2047,7 @@ let gen_spec__inner cx n b ty =
         && (has_magic || Erasure.core_body_returns_erased_field inner_body)
       in
       let b_expr =
-        if needs_any_cast then Coerce.unbox_value cx ty_ir b_expr
+        if needs_any_cast then Coerce.coerce cx ~from:Any ~into:ty_ir b_expr
         else
           (* (c) The emitted expression is itself the evidence: a projection
              out of a pair that was recovered from a box hands back a
@@ -2065,7 +2068,8 @@ let gen_spec__inner cx n b ty =
       in
       let b_expr =
         match Types.slot_repr_of_cpp_type cx ty_ir with
-        | Boxed kind -> Coerce.box_for_any_slot cx kind inner_body b_expr
+        | Boxed kind ->
+          Coerce.into_slot ~origin:(Any_slot {cx; kind; term = inner_body}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated b_expr) (Exactly ty_ir)
         | Native -> b_expr
       in
       (* A type naming a class field this scope cannot resolve would spell

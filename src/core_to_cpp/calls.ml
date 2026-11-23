@@ -359,37 +359,6 @@ let glob_is_nullary_function cx x =
 let apply_global cx x (cglob : Cpp_ir.Lowered.Expr.t) args =
   if args = [] && not (glob_is_nullary_function cx x) then cglob else Cpp_ir.Build.call cglob args
 
-(** The site a callee's {e result} is spelled at ({!Cpp_ir.Types.arrow_site}): a
-    codomain that is a type variable takes its C++ shape from the template
-    argument instantiating it, so it is curried; one the declaration writes
-    out is flat there. *)
-let codomain_site core_ty : Cpp_ir.Types.arrow_site = if core_codomain_is_tvar core_ty then Through_tvar else Declared
-
-(** {!codomain_site} for a call to the global [id].  An inline custom
-    constant has no template argument: what it yields is whatever its text
-    reads -- [fst]'s [%a0.first] is the pair's component, stored flat --
-    except that an argument at a parameter declared as the very type
-    variable the result is arrives named at that variable's curried
-    spelling (the [crane::fn] {!Application.gen_call_args} wraps it in),
-    and the text yields it or a value assigned to it: a fold's
-    accumulator. *)
-let call_result_site id : Cpp_ir.Types.arrow_site =
-  match find_type_opt id with
-  | None -> Declared
-  | Some core_ty when not (is_inline_custom id) -> codomain_site core_ty
-  | Some core_ty ->
-    let rec split acc (t : Core.Type.t) =
-      match t with
-      | Core.Type.Arrow {parameter; result} -> split (resolve_meta parameter :: acc) result
-      | Core.Type.Meta {contents = Some t} -> split acc t
-      | t -> (acc, t)
-    in
-    ( match split [] core_ty with
-    | params, Core.Type.Variable {variable = v; _} ->
-      if List.exists (function Core.Type.Variable {variable = w; _} -> w = v | _ -> false) params then Through_tvar
-      else Declared
-    | _ -> Declared )
-
 (** [result_cpp_via_receiver env callee_ty args] is the C++ type a call's
     result really has, where the callee's declared codomain is one of the type
     variables its first argument's type instantiates -- the field a projection
@@ -473,7 +442,7 @@ let carrier_template cx env tvars c : Cpp_ir.Lowered.Type.t =
     constant one is a complete type that an application leaves unchanged
     ({!Base.Core_util.apply_core_type}), and has no template to name: it is the type
     function {!Cpp_ir.Crane_rt.constant_tc} makes of it. *)
-let hkt_carrier_type_args cx env tvars ?result id tys =
+let hkt_carrier_type_args cx env ~ret tvars ?result id tys =
   Base.Probe.changed "REPAIR_hkt_carrier_type_args" id ~before:None @@
   let ( let* ) = Option.bind in
   let* core_ty = find_type_opt id in
@@ -500,7 +469,7 @@ let hkt_carrier_type_args cx env tvars ?result id tys =
   let* v_core = Base.Core_util.Var_types.find_tvar tys v in
   let* result =
     match result with
-    | None -> current_cpp_return_type cx ()
+    | None -> ret
     | r -> r
   in
   let over = Types.template_arg_of_core_type cx ~site:Through_tvar env tvars v_core in
@@ -539,7 +508,7 @@ let hkt_carrier_type_args cx env tvars ?result id tys =
     the type and the parameters come from.  [all_tvar_names] is in index
     order, as type conversion reads it; the arguments follow the order of the
     [head], the type parameters the lifted template declares. *)
-let lifted_call_type_args cx
+let lifted_call_type_args cx ~ret
     ~(class_args : Cpp_ir.Lowered.Type.t list) ~env ~outer_tvars ~head ~all_tvar_names ~binder_ty ~param_core_tys :
     Cpp_ir.Lowered.Type.t list =
   let in_head id = List.exists (Id.equal id) head in
@@ -562,7 +531,7 @@ let lifted_call_type_args cx
       | t -> t
     in
     let tvar_map =
-      match current_cpp_return_type cx () with
+      match ret with
       | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
       | None -> []
     in
@@ -575,7 +544,7 @@ let lifted_call_type_args cx
             with
             | Some (_, ty) -> ty
             | None -> (
-              match current_cpp_return_type cx () with
+              match ret with
               | Some ret_ty -> ret_ty
               | None -> Cpp_ir.Build.named_variable tvar_name ) )
           extra_tvar_names
@@ -715,7 +684,7 @@ let instantiated_type cx (use : Core.Global_use.t) =
     (Base.Core_util.instantiate_written ~reader:"instantiated_type" use)
     (callee_core_type cx use.callee)
 
-(** {!Coerce.curry_value_to_expected} for the global [use] names. *)
+(** {!Coerce.eta_global} for the global [use] names. *)
 let curry_to_expected cx env ?expected_ty (use : Core.Global_use.t) cglob =
   let decl_ty = callee_core_type cx use.callee in
   let core_ty = instantiated_type cx use in
@@ -727,7 +696,7 @@ let curry_to_expected cx env ?expected_ty (use : Core.Global_use.t) cglob =
     | Some (Function (dom, _)) -> Cpp_ir.Types.Declared_at (List.length dom)
     | _ -> Cpp_ir.Types.Declared
   in
-  Coerce.curry_value_to_expected cx env ?expected_ty ~callee_site core_ty cglob
+  Coerce.eta_global cx env ?expected_ty ~callee_site core_ty cglob
 
 (** The plan a call of the class field [x] through a concrete instance is
     written against.  The instance declares each method as a member template
@@ -793,7 +762,7 @@ type lowered_call = {
     left nothing.  Also the callee's instantiated C++ type and the
     instantiation the type arguments were read from, which the assembly
     needs. *)
-let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan ~has_value_args =
+let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan ~has_value_args =
   let args = if has_value_args then [()] else [] in
   let {
     instantiated =
@@ -1130,7 +1099,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
 
      In both cases, if the callee's Core return type is a Core.Type.Variable that refers to
      one of those erased type params, and we know the concrete return type
-     from the enclosing function context (current_cpp_return_type), we can
+     from the enclosing function context ([ret]), we can
      supply it as an explicit C++ template arg.
 
      This is needed because C++ cannot deduce template type params from lambda
@@ -1144,7 +1113,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
     (* Whether the callee returns a variable of an erased type binder, and
        if so the variable and the concrete C++ type to use for it. *)
     let try_recover_erased_return_type () =
-      match current_cpp_return_type cx () with
+      match ret with
       | None -> None
       | Some ret_ty -> (
         match Option.map (fun t -> resolve_meta (core_return_type t)) (find_type_opt id) with
@@ -1342,7 +1311,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
          rather than merely miss.  Where it cannot be read off the value
          argument, name it -- the carrier is the callee's first variable. *)
       match
-        hkt_carrier_type_args cx env tvars ?result:expected_ty id tys
+        hkt_carrier_type_args cx env ~ret tvars ?result:expected_ty id tys
       with
       | Some [carrier] -> carrier_first carrier
       | _ -> (
@@ -1753,11 +1722,15 @@ let deduce_erased_domains : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = fun
     argument -- {!Cpp_ir.Build.signature} enforces that -- since a partial
     application, or a callee whose arrows an eta-expansion has rearranged,
     would otherwise hand the printer a misaligned list. *)
-let record_call_sig cx env callee_ty (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (e : Cpp_ir.Lowered.Expr.t) :
+    Cpp_ir.Lowered.Expr.t =
   match (e, callee_ty) with
-  | Call ({yields = Untyped; params = Unknown; _}, f, args), Some core_ty ->
+  | Call ({yields = Deduced _; params = Unknown; _}, f, args), Some core_ty ->
+    (* A callee typed by a function alias ([Id_ obj c]) takes the
+       arguments the alias's arrows do. *)
+    let core_ty = if args = [] then core_ty else expand_core_fun_alias core_ty in
     let cpp_of ml = Types.cpp_ir_of_core_type cx env [] ml in
-    ( match cpp_of (core_codomain core_ty) with
+    ( match match written with Some t -> t | None -> cpp_of (core_codomain core_ty) with
     | exception e' when CErrors.noncritical e' -> e
     | ty ->
       let params =
@@ -1770,7 +1743,7 @@ let record_call_sig cx env callee_ty (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowere
          to: what is left of the type once its arguments are taken. *)
       let f : Cpp_ir.Lowered.Expr.t =
         match f with
-        | Call ({yields = Untyped; params = Unknown; _}, g, inner_args) -> (
+        | Call ({yields = Deduced _; params = Unknown; _}, g, inner_args) -> (
           match cpp_of (Base.Type_util.core_drop_arrows (List.length inner_args) core_ty) with
           | exception e' when CErrors.noncritical e' -> f
           | Any | Obligation Opaque_type -> f
@@ -1802,7 +1775,7 @@ let binding_results_of id compute =
     dictionaries are expected at, and what those say of the callee's
     variables.  Read by {!gen_call_args} and by the assembly in {!eta_fun}.
     Nothing here changes the instantiation. *)
-let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Core_plan.Elaborated_call.instantiated) =
+let plan_call cx ~ret ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Core_plan.Elaborated_call.instantiated) =
   let {
     Core_plan.Elaborated_call.call =
       {
@@ -1864,7 +1837,7 @@ let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : 
     | None -> (
       match from_args () with
       | Some _ as a -> a
-      | None -> current_cpp_return_type cx () )
+      | None -> ret )
     | _ -> expected_result
   in
   let typeclass_type_args =
@@ -1900,7 +1873,7 @@ let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : 
     if (not (Base.Core_util.Var_types.is_empty tys)) || excess_args = [] then
       None
     else
-      match current_cpp_return_type cx () with
+      match ret with
       | None -> None
       | Some ret_ty ->
         match find_type_opt id with
@@ -1953,7 +1926,7 @@ let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : 
              ~explicit:(expected_ty <> None)
              ( match expected_ty with
              | Some _ -> expected_ty
-             | None -> current_cpp_return_type cx () ) ) )
+             | None -> ret ) ) )
   in
   {
     instantiated = inst;
@@ -2061,7 +2034,35 @@ let spell_as_declared ~(declared : Core.Type.t list) (orig : Core.Type.t) (t : C
   in
   spell ~in_domain:false orig t
 
-let argument_position cx ~local_callable env id plan i core_arg =
+(** The slot an argument of the call to [id] fills at the parameter
+    declared at the Core type [orig]: what C++ checks it against.  A
+    forwarding reference for a deduced callable; for an inline mapping, a
+    template parameter (its text takes the argument as it comes, at the
+    type it is generated against, [expected]); for any other
+    callee, its declared parameter at the type arguments the call writes
+    ([written_by_var]), a template parameter where a variable the call
+    leaves to C++ to deduce remains in it. *)
+let argument_slot cx env id ~deduced_callable ~written_by_var ~(expected : Cpp_ir.Lowered.Type.t option)
+    (orig : Core.Type.t option) : Cpp_ir.Lowered.Slot_type.t =
+  let slot_of = function Some t -> Cpp_ir.Grammar.Slot_type.Exactly t | None -> Free in
+  if deduced_callable then Forwarded
+  else
+    match Option.map resolve_meta orig with
+    | _ when Base.Table.is_inline_custom id -> Template_parameter expected
+    | None ->
+      Base.Probe.hit "argument-without-parameter" (fun () -> Pp.string_of_ppcmds (GlobRef.print id));
+      slot_of expected
+    | Some orig -> (
+      match Types.cpp_of_core cx env orig with
+      | exception e when CErrors.noncritical e -> slot_of expected
+      | declared ->
+        let t = Cpp_ir.Types.substitute (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var) declared in
+        let deduced =
+          IntSet.exists (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var = None) (collect_tvars_set IntSet.empty orig)
+        in
+        if deduced || Base.Table.is_custom id then Template_parameter (Some t) else Exactly t )
+
+let argument_position cx ~ret ~local_callable env id plan i core_arg =
   let {
     instantiated =
       {
@@ -2359,7 +2360,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
     else
       match arg_expected_ty with
       | Some t when Base.Type_util.has_no_cpp_spelling t ->
-        current_cpp_return_type cx ()
+        ret
       | t -> t
   in
   { index = param_index;
@@ -2379,15 +2380,15 @@ let argument_position cx ~local_callable env id plan i core_arg =
     template application planned and validated against the callee's ABI
     ({!call_type_args}).  Generating the arguments reads the result and
     decides neither. *)
-let lower_call cx ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (use : Core.Global_use.t) args =
+let lower_call cx ~ret ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (use : Core.Global_use.t) args =
   let id = use.callee in
   let lex = current_lexenv cx () in
   let inst =
     Core_plan.Elaborate.instantiation ~walk:(elaborations cx) ~lex ~expected_core:slot.Slot.expected_core_ty
       ~stated_core:slot.Slot.stated_core_ty ~caller ~scope:cx.ctx.lexical.current_type_vars use args
   in
-  let plan = plan_call cx ~lex ?expected_ty env inst in
-  call_type_args cx ~caller ~lex ?expected_ty env id plan
+  let plan = plan_call cx ~ret ~lex ?expected_ty env inst in
+  call_type_args cx ~ret ~caller ~lex ?expected_ty env id plan
     ~has_value_args:(inst.call.regular <> [])
 
 (** What a reference to global [x], its type instantiated by [instantiate],

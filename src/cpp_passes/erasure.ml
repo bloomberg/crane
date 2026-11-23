@@ -165,7 +165,7 @@ let same_type (t : ty) = t
 
 (** A call of [f] on [args], with nothing known of its signature. *)
 let call (f : expr) (args : expr list) : expr =
-  Call ({yields = Untyped; params = Unknown; constructs = None; occurrence = None}, f, args)
+  Call ({yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence = None}, f, args)
 
 let lambda_needs_capture = Cpp_ir.Variables.lambda_needs_capture
 
@@ -582,8 +582,8 @@ let in_block = " in a block template."
 let check_ret : expr -> unit = function
   | Call (res, Entity (r, _, Some {inline = Some tmpl; _}), _) when names_ret tmpl.text -> (
     match (tmpl.form, res.yields) with
-    | Templated, Yields _ -> ()
-    | Templated, Untyped -> refuse_ret r ", but the type its call yields is not known here."
+    | Templated, Typed _ -> ()
+    | Templated, _ -> refuse_ret r ", but the type its call yields is not known here."
     | (Block | Bare_callee), _ -> refuse_ret r in_block )
   | Entity (r, _, Some {inline = Some {form = Block; text; _}; _}) when names_ret text -> refuse_ret r in_block
   | _ -> ()
@@ -745,13 +745,13 @@ and instantiated_expr ~boxing (e : expr) : expr =
       if Base.Table.is_mapped_operation n then Option.get (Base.Table.inline_custom_arity n)
       else List.fold_left (fun n -> function Cpp_ir.Foreign_template.Arg i -> max n (i + 1) | _ -> n) 0 tokens
     in
-    let yields = match res.yields with Yields t -> Some t | Untyped -> None in
+    let yields = match res.yields with Typed t -> Some t | _ -> None in
     Foreign (Call, instantiated_foreign ~boxing n tokens tys (CList.firstn (min named (List.length args)) args) yields)
   | Entity (x, tys, Some {inline = Some {form = Block; text; _}; custom_yields}) ->
     value_block (instantiated_block ~boxing x text tys [] custom_yields)
   (* Every argument of a block's call is its own, spliced or not. *)
   | Call (res, Entity (n, tys, Some {inline = Some {form = Block; text; _}; _}), args) ->
-    let yields = match res.yields with Yields t -> Some t | Untyped -> None in
+    let yields = match res.yields with Typed t -> Some t | _ -> None in
     value_block (instantiated_block ~boxing n text tys args yields)
   (* A text that places nothing is a callee: the call stays a call, of the
      text applied to the type arguments, and its arguments are written as a
@@ -791,7 +791,7 @@ and instantiated_stmt ~boxing (s : stmt) : stmt =
   | Foreign_block b ->
     let value : expr =
       Foreign (Statements, instantiated_block ~boxing b.custom b.template b.type_args b.values (Some b.result_type)) in
-    Bind_variable (b.result, Declare (instantiated_type ~boxing b.result_type, b.binder), value)
+    Cpp_ir.Typed.bind ?binder:(b.binder) (b.result) (instantiated_type ~boxing b.result_type) (value)
   | s -> Map.stmt (instantiating ~boxing) s
 
 and instantiating ~boxing =
@@ -977,10 +977,10 @@ let held_scrutinee ~avoid (scrut : phase Match.scrutinee) (branches : phase Matc
   | [{field_bindings = []; var = None; _}], None, _ -> None
   | _, _, Access_call (Arrow, obj, v, []) when is_v v && not (is_named_object obj) ->
     let x = local () in
-    Some (Bind_variable (x, Declare (forwarding, None), obj), Access_call (Arrow, Local x, v, []))
+    Some (Cpp_ir.Typed.bind (x) (forwarding) (obj), Access_call (Arrow, Local x, v, []))
   | _, _, Call (sg, Access (Dot, obj, v), []) when is_v v && not (is_named_object obj) ->
     let x = local () in
-    Some (Bind_variable (x, Declare (forwarding, None), obj), Call (sg, Access (Dot, Local x, v), []))
+    Some (Cpp_ir.Typed.bind (x) (forwarding) (obj), Call (sg, Access (Dot, Local x, v), []))
   | _, _, (Access_call (Arrow, _, v, []) | Call (_, Access (Dot, _, v), [])) when is_v v -> None
   | _, _, (Local _ | Dereference This) -> None
   | _, _, e ->
@@ -993,7 +993,7 @@ let held_scrutinee ~avoid (scrut : phase Match.scrutinee) (branches : phase Matc
    statements are the enclosing scope's. *)
 let rec declared_in_scope (s : stmt) : Id.t list =
   match s with
-  | Bind_variable (x, Declare _, _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
+  | Bind_variable (x, (Declare _ | Declare_deduced _), _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
   | Structured_binding (xs, _) -> xs
   | Match (_, [br], None) ->
     (match br.var with Some x -> [x] | None -> [])
@@ -1313,7 +1313,7 @@ let rec decide_captures (d : settled) : settled =
         | _ -> fe thunk
       in
       Call
-        ( {yields = Yields ty; params = Unknown; constructs = None; occurrence = None},
+        ( {yields = Typed ty; params = Unknown; constructs = None; occurrence = None},
           qualified ty (Id.of_string "lazy_"),
           [thunk] )
     | _ -> (
@@ -1356,6 +1356,7 @@ and copy_const_captures (d : settled) : settled =
         match s with
         | Declare (x, ty, _) | Declare_value_initialized (x, ty) | Bind_variable (x, Declare (ty, _), _) ->
           declare consts x ty
+        | Bind_variable (x, Declare_deduced _, _) -> declare consts x Auto
         | _ -> consts
       in
       s :: block consts rest

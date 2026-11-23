@@ -50,6 +50,7 @@ let expr : type p. expr:(p Expr.t -> unit) -> stmts:(p Stmt.t list -> unit) -> p
   | Variant_get_if (_, e) ->
     expr e
   | Suspend (_, e) -> expr e
+  | Coerce (_, e) -> expr e
   | Lambda l -> stmts l.body
   | Aggregate a -> each a.values
   | Local_aggregate a -> each a.values

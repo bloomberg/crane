@@ -88,10 +88,14 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(concrete_result = false) ?(e
   let sub = local_var_subst_expr ~keep_cast ~concrete_result ~extra_args target repl in
   match e with
   | Any_cast (ty, Local id) when keep_cast && Id.equal id target ->
-    Cpp_passes.Erasure.unbox ty (match repl with Any_cast (_, inner) -> inner | r -> r)
-  | (Any_cast (_, (Call (_, Local id, _) as call)) | Tolerant_any_cast (_, (Call (_, Local id, _) as call)))
+    Coerce.unbox ty (match Cpp_ir.Typed.head repl with Any_cast (_, inner) -> inner | _ -> repl)
+  | Any_cast (_, (Call (_, Local id, _) as call)) | Tolerant_any_cast (_, (Call (_, Local id, _) as call))
     when concrete_result && Id.equal id target ->
     sub call
+  | Coerce _
+    when (keep_cast || concrete_result)
+         && match Cpp_ir.Typed.head e with Any_cast _ | Tolerant_any_cast _ -> true | _ -> false ->
+    sub (Cpp_ir.Typed.head e)
   | Call (o, Local id, args) when extra_args <> [] && Id.equal id target ->
     Call (o, repl, List.map sub args @ extra_args)
   | Local id when Id.equal id target -> repl
@@ -560,7 +564,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
   in
   let find_self_id id = Option.map fst (find_self id) in
   let call occurrence f args : Cpp_ir.Lowered.Expr.t =
-    Call ({yields = Untyped; params = Unknown; constructs = None; occurrence}, f, args)
+    Call ({yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence}, f, args)
   in
   (* The self id this application spine calls, with every argument along it
      in one source-order list -- an inner application's arguments come

@@ -154,7 +154,13 @@ let declared_holdings params modes body =
       match (mapped_type t, t, borrowed_call init, init) with
       | Some (r, tys), _, _, _ -> note x (Canonical (r, tys))
       | None, Auto, Some (c, tys), _ -> note x (Borrowed (c, tys))
-      | None, Auto, None, Call ({yields = Yields yt; _}, _, _) -> (
+      | None, Auto, None, Call ({yields = Typed yt; _}, _, _) -> (
+        match mapped_type yt with Some (r, tys) -> note x (Canonical (r, tys)) | None -> note x Unknown )
+      | _ -> note x Unknown )
+    | Bind_variable (x, Declare_deduced (v, _), init) -> (
+      match (borrowed_call init, v) with
+      | Some (c, tys), _ -> note x (Borrowed (c, tys))
+      | None, Typed yt -> (
         match mapped_type yt with Some (r, tys) -> note x (Canonical (r, tys)) | None -> note x Unknown )
       | _ -> note x Unknown )
     | Declare (x, t, _) | Declare_value_initialized (x, t) -> (
@@ -254,7 +260,7 @@ let transform_body u params modes (body : stmt list) : stmt list =
     if not !hoisting then None
     else
       let x = fresh () in
-      pending := Bind_variable (x, Declare (Auto, None), e) :: !pending;
+      pending := Cpp_ir.Typed.bind_deduced x (e) :: !pending;
       Some (Local x)
   in
   (* [c] applied to [e], evaluated once. *)
@@ -274,7 +280,7 @@ let transform_body u params modes (body : stmt list) : stmt list =
       | Some (c, tys) -> Borrowed (c, tys)
       | None -> (
         match e with
-        | Call ({yields = Yields t; _}, _, _) -> (
+        | Call ({yields = Typed t; _}, _, _) -> (
           match mapped_type t with Some (r, tys) -> Canonical (r, tys) | None -> Unknown )
         | _ -> Unknown ) )
   in
@@ -456,7 +462,7 @@ let transform_body u params modes (body : stmt list) : stmt list =
       While (c, stmts body)
     (* A borrowed view bound ahead of the call it is passed to stays a
        view; its uses decide whether it escapes. *)
-    | Bind_variable (x, (Declare (Auto, _) as b), init) when Option.has_some (borrowed_call init) ->
+    | Bind_variable (x, (Declare_deduced _ as b), init) when Option.has_some (borrowed_call init) ->
       Bind_variable (x, b, call ~escapes:false ~bound:true init)
     (* A view put in a variable of the canonical type -- a loop variable
        that holds its value ({!Control_to_cpp.Tail.held_across_turns}) set

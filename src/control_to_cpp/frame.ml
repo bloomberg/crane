@@ -97,6 +97,15 @@ let make_slots ~types ~locals =
 let cf_field_names cf = List.map (fun s -> s.Saved_slot.field) cf.Call_frame_info.slots
 let cf_saved_types cf = List.map (fun s -> s.Saved_slot.ty) cf.Call_frame_info.slots
 
+(** The type a frame knows a local [auto x = e] at, from what lowering
+    recorded for [e]: a closure's, at its parameters as it takes them;
+    [Auto] otherwise, which a frame field reads back with [decltype]
+    ({!decltype_of_saved_local}). *)
+let deduced_local_type (v : Cpp_ir.Lowered.Value_type.t) : ty =
+  match v with
+  | Closure {groups = [ps]; result} -> Function (List.map strip_ref_and_const_type ps, result)
+  | _ -> Auto
+
 (** Collect type bindings from a list of statements. Handles
     [Bind_variable (id, Declare (ty, _), _)], [Declare (id, ty, _)] and a
     [Foreign_block]'s result.  Also recurses into [Custom_match] branches,
@@ -105,16 +114,7 @@ let rec collect_type_env (stmts : stmt list) : (Id.t * ty) list =
   List.concat_map
     (fun s ->
       match s with
-      | Bind_variable (id, Declare (Auto, _), Lambda
-        { params = params;
-          return_type = ret_ty_opt;
-          _ }) ->
-        let param_types = List.map (fun (t, _) -> strip_ref_and_const_type t) params in
-        let ret_ty = match ret_ty_opt with
-          | Some t when t <> Void -> t
-          | _ -> Void
-        in
-        [(id, Function (param_types, ret_ty))]
+      | Bind_variable (id, Declare_deduced (v, _), _) -> [(id, deduced_local_type v)]
       | Bind_variable (id, Declare (ty, _), _) -> [(id, ty)]
       | Declare (id, ty, _) | Foreign_block {custom = _;
                                              template = _;
@@ -215,7 +215,7 @@ let make_cont_bindings ~field_names cont_vars cont_types =
       let ty = List.nth cont_types i in
       let field_expr = Access (Dot, Local id_f, List.nth field_names i) in
       match ty with
-      | Shared_pointer _ -> Bind_variable (id, Declare (ty, None), Move field_expr)
+      | Shared_pointer _ -> Cpp_ir.Typed.bind (id) (ty) (Move field_expr)
       | (Obligation Unresolved_type) -> Bind_variable (id, Existing, field_expr)
       | Const inner when not (is_trivially_copyable_type inner) ->
         Bind_variable (id, Declare (Reference (Lvalue, Const inner), None), field_expr)
@@ -225,13 +225,13 @@ let make_cont_bindings ~field_names cont_vars cont_types =
            ill-formed — a non-const lvalue reference cannot bind to an rvalue.
            Use [auto] so the declared type is always deduced as a value type,
            regardless of whether [F0] was a reference or function type. *)
-        Bind_variable (id, Declare (Auto, None), Move field_expr)
+        Cpp_ir.Typed.bind_deduced id (Move field_expr)
       | t when not (copies_cheaply t) ->
         (* Move from frame field to avoid O(n) deep copy of owned value types
            (e.g. [List<T>]).  Safe because [_f] was obtained via
            [std::move(std::get<...>(_frame))] and this field is not used again. *)
-        Bind_variable (id, Declare (ty, None), Move field_expr)
-      | _ -> Bind_variable (id, Declare (ty, None), field_expr))
+        Cpp_ir.Typed.bind (id) (ty) (Move field_expr)
+      | _ -> Cpp_ir.Typed.bind (id) (ty) (field_expr))
     cont_vars
 
 (** Build a type environment from continuation variables and their types,
@@ -529,7 +529,7 @@ and drop_bindings_expr dropped e =
     wrapper tying the knot ({!Analysis.wraps}) -- by the Core fixpoint it was made of,
     not by its name, which another fixpoint may share. *)
 let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
-  | Bind_variable (_, Declare _, Lambda {fixpoint = Some {member = (o, j); encoding; _}; _}) -> (
+  | Bind_variable (_, (Declare _ | Declare_deduced _), Lambda {fixpoint = Some {member = (o, j); encoding; _}; _}) -> (
     let (o', j') = fixpoint.member in
     Core.Occurrence.equal o o' && Int.equal j j'
     && match encoding with Self_passing _ -> true | Knot -> knot | Lowered -> false )
@@ -541,7 +541,7 @@ let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
 let find_fix_wrapper fixpoint stmts =
   find_in_flow stmts
     ~on_stmt:(function
-      | Bind_variable (wid, Declare (Auto, _), Lambda w) when wraps fixpoint w -> Some wid
+      | Bind_variable (wid, Declare_deduced _, Lambda w) when wraps fixpoint w -> Some wid
       | _ -> None )
 
 (** A body this machine adopts as an extra entry point: a fixpoint local to
@@ -633,7 +633,7 @@ let decline_reason ad =
     {!Adopted.entry_id}.  The self-call forwards the fixpoint as a leading argument
     that the entry does not need, so installation drops it. *)
 let adopt_local_fix ~unit ~stmts ~planned = function
-  | Bind_variable (impl_id, Declare (Auto, _), Lambda {params;
+  | Bind_variable (impl_id, Declare_deduced _, Lambda {params;
                                                        body;
                                                        return_type;
                                                        fixpoint = lambda_fixpoint;
@@ -816,6 +816,7 @@ let with_aliased aliased ids = List.fold_left (fun s id -> Id.Set.add id s) alia
 let aliased_after aliased = function
   | Bind_variable (id, Declare (ty, _), e) ->
     if is_borrowed ty then with_aliased aliased (id :: free_vars_expr e) else Id.Set.remove id aliased
+  | Bind_variable (id, Declare_deduced _, _) -> Id.Set.remove id aliased
   | Bind_variable (id, Declare_static _, _) -> Id.Set.add id aliased
   | Declare (id, _, _) | Declare_value_initialized (id, _) | Foreign_block {custom = _;
                                                                             template = _;
@@ -862,7 +863,7 @@ let rec calls_nothing e =
     !ok
 
 (** [bound] once [stmt] has run ({!enter_rewrite_ctx.bound}). *)
-let bound_after bound = function Bind_variable (id, Declare _, _) as stmt -> (id, stmt) :: bound | _ -> bound
+let bound_after bound = function Bind_variable (id, (Declare _ | Declare_deduced _), _) as stmt -> (id, stmt) :: bound | _ -> bound
 
 (** The Core binder the local [x] stands for, if any. *)
 let binder_of ctx x = Option.flatten (List.assoc_opt x ctx.binders)
@@ -942,7 +943,7 @@ let rebuilt_bindings ctx ~kept reads =
 
 (** [binders] once [stmt] has run: the local it declares joins them. *)
 let declared_binders binders = function
-  | Bind_variable (id, Declare (_, b), _) | Declare (id, _, b) | Foreign_block {custom = _;
+  | Bind_variable (id, (Declare (_, b) | Declare_deduced (_, b)), _) | Declare (id, _, b) | Foreign_block {custom = _;
                                                                                 template = _;
                                                                                 result = id;
                                                                                 result_type = _;
@@ -989,7 +990,7 @@ let no_entering_calls = "no ControlIR loop says which calls enter the machine a 
 let planned_point ctx id (tgt : binding) =
   let binder =
     match tgt with
-    | Declare (_, b) -> b
+    | Declare (_, b) | Declare_deduced (_, b) -> b
     | Existing -> binder_of ctx id
     | Declare_static _ -> None
   in
@@ -1021,19 +1022,19 @@ let planned_resume ctx id (tgt : binding) e =
   | None -> None
   | Some entered_by -> (
     match tgt with
-    | Declare (_, Some b) ->
+    | (Declare (_, Some b) | Declare_deduced (_, Some b)) ->
       Some (match point b with Some p -> List.exists entered_by p.after | None -> false)
     | Existing ->
       Option.map
         (fun b ->
-          match (point b, e) with
+          match (point b, Cpp_ir.Typed.head e) with
           | Some p, Call ({occurrence = Some o; _}, _, _) ->
             List.exists
               (fun (c : Core_plan.Recursion.call) -> entered_by c && Core.Occurrence.equal c.occurrence o)
               p.after
           | _ -> false )
         (Option.flatten (List.assoc_opt id ctx.binders))
-    | Declare (_, None) | Declare_static _ -> None )
+    | Declare (_, None) | Declare_deduced (_, None) | Declare_static _ -> None )
 
 (** Why a machine is not made whose recursion plan and finished body
     disagree on whether a statement resumes after a recursive call. *)
@@ -1203,7 +1204,7 @@ and rewrite_enter_stmts ctx stmts =
        rest, pushed under [enter], the call's re-entry.  [cast] is what the
        statement casts the call's result to, if anything. *)
     let make_cont_handler ~cast enter =
-      let result r = match cast with Some ty -> Any_cast (ty, r) | None -> r in
+      let result r = match cast with Some ty -> Cpp_ir.Coercion.cast_box ty r | None -> r in
       (* Which Core values cross the call, in what order the frame keeps
          them, and which it binds again instead -- those no re-entry changes,
          and those recomputable from them -- is the plan's.  Of a value kept
@@ -1216,7 +1217,7 @@ and rewrite_enter_stmts ctx stmts =
          moving.  A save it did not plan moves nothing, and is a violation
          under [CRANE_CHECK_IR]. *)
       let plan_moves =
-        let b = match tgt with Declare (_, b) -> b | Existing -> binder_of ctx id | Declare_static _ -> None in
+        let b = match tgt with Declare (_, b) | Declare_deduced (_, b) -> b | Existing -> binder_of ctx id | Declare_static _ -> None in
         Option.bind b Ownership_ir.Region.Frame_save.lookup
       in
       let moved_by_plan x =
@@ -1294,7 +1295,7 @@ and rewrite_enter_stmts ctx stmts =
       let rest_env =
         let bound =
           match (tgt, cast) with
-          | Declare (Auto, _), None -> [(id, ctx.result_ty)]
+          | Declare_deduced _, None -> [(id, ctx.result_ty)]
           | Declare (ty, _), _ when ty <> Auto -> [(id, ty)]
           | _ -> []
         in
@@ -1303,7 +1304,7 @@ and rewrite_enter_stmts ctx stmts =
       (* When tgt is Existing (a bare assignment), the variable was declared
          in the _call handler scope and does not exist in the _after_f handler
          scope.  Promote to [auto] so the handler declares it. *)
-      let handler_ty : binding = match tgt with Existing -> Declare (Auto, None) | t -> t in
+      let handler_ty : binding = match tgt with Existing -> Declare_deduced (Cpp_ir.Typed.unannotated, None) | t -> t in
       let remat_stmts = List.map snd remat in
       (* A variable the rest assigns before reading it was declared in the
          scope the call was made in, which the handler is not: its first
@@ -1315,8 +1316,8 @@ and rewrite_enter_stmts ctx stmts =
             | Bind_variable (v, Existing, e)
               when (not (List.exists (Id.equal v) !declared)) && List.mem_assoc v env ->
               declared := v :: !declared;
-              Bind_variable (v, Declare (List.assoc v env, None), e)
-            | (Bind_variable (v, Declare _, _) | Declare (v, _, _)) as s ->
+              Cpp_ir.Typed.bind (v) (List.assoc v env) (e)
+            | (Bind_variable (v, (Declare _ | Declare_deduced _), _) | Declare (v, _, _)) as s ->
               declared := v :: !declared;
               s
             | s -> s )
@@ -1325,7 +1326,7 @@ and rewrite_enter_stmts ctx stmts =
                env = rest_env;
                binders =
                  (match tgt with
-                  | Declare (_, b) -> (id, b) :: ctx.binders
+                  | Declare (_, b) | Declare_deduced (_, b) -> (id, b) :: ctx.binders
                   | Existing -> ctx.binders
                   | Declare_static _ -> (id, None) :: ctx.binders);
                aliased =
@@ -1422,7 +1423,7 @@ and rewrite_enter_stmts ctx stmts =
        a function returning it erased, is the call cast: the frame re-enters
        by the call, and the handler casts its result. *)
     let cast, called =
-      match e with
+      match Cpp_ir.Typed.head e with
       | Any_cast (ty, called) -> (Some ty, called)
       | _ -> (None, e)
     in
@@ -1497,16 +1498,7 @@ and rewrite_enter_stmts ctx stmts =
        is defined here and then used as the callee in a continuation. *)
     let updated_env =
       match stmt with
-      | Bind_variable (id, Declare (Auto, _), Lambda
-        { params = params;
-          return_type = ret_ty_opt;
-          _ }) ->
-        let param_types = List.map (fun (t, _) -> strip_ref_and_const_type t) params in
-        let ret_ty = match ret_ty_opt with
-          | Some t when t <> Void -> t
-          | _ -> Void
-        in
-        (id, Function (param_types, ret_ty)) :: ctx.env
+      | Bind_variable (id, Declare_deduced (v, _), _) -> (id, deduced_local_type v) :: ctx.env
       | Bind_variable (id, Declare (ty, _), _) -> (id, ty) :: ctx.env
       | Declare (id, ty, _) | Foreign_block {custom = _;
                                              template = _;
@@ -1608,15 +1600,15 @@ let make_param_copies ~unit varying_params =
          ill-formed — a non-const lvalue reference cannot bind to an rvalue.
          Use [auto] so the declared type is always deduced as a value type,
          regardless of whether [F0] was a reference or function type. *)
-      Bind_variable (id, Declare (Auto, None), Move f)
+      Cpp_ir.Typed.bind_deduced id (Move f)
     | t when not (copies_cheaply t) ->
       (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
          an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
          so the field is safe to consume. *)
-      Bind_variable (id, Declare (t, None), Move f)
+      Cpp_ir.Typed.bind (id) (t) (Move f)
     | _ ->
       (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
-      Bind_variable (id, Declare (stripped, None), f)
+      Cpp_ir.Typed.bind (id) (stripped) (f)
   in
   List.map
     (fun {Frame_param.name = id; ty = ty; mode; pointer_safe} ->
@@ -1628,8 +1620,7 @@ let make_param_copies ~unit varying_params =
                  Dereference (Access (Dot, Local (id_f), id)))
         | None ->
           let stripped = strip_ref_type ty in
-          Bind_variable (id, Declare (stripped, None),
-                 Access (Dot, Local (id_f), id)) )
+          Cpp_ir.Typed.bind (id) (stripped) (Access (Dot, Local (id_f), id)) )
     varying_params
 
 (** Rewrite frame push expressions so that pointer-safe positions use
@@ -1808,7 +1799,7 @@ let own_moved_bindings body =
                 (body_exists
                    (function Access (Dot, Local f', field') -> Id.equal f' id_f && Id.equal field' field | _ -> false)
                    rest ) ->
-      Bind_variable (id, Declare (t, None), Move read) :: go rest
+      Cpp_ir.Typed.bind (id) (t) (Move read) :: go rest
     | s :: rest -> s :: go rest
     | [] -> []
   in
@@ -1965,24 +1956,21 @@ let fix_handler_bindings field_names cf_ps handler =
       | _ -> false
     in
     let remapped = ref [] in
+    let dereferenced : binding -> ty = function
+      | Declare (Shared_pointer inner, _) -> inner
+      | Declare (orig_ty, _) -> strip_ref_and_const_type orig_ty
+      | _ -> Auto
+    in
     let fixed =
       List.map
         (fun stmt ->
           match stmt with
-          | Bind_variable (id, Declare (orig_ty, _), Move e) when is_ps_field_access e ->
-            let base_ty = match orig_ty with
-              | Shared_pointer inner -> inner
-              | _ -> strip_ref_and_const_type orig_ty
-            in
+          | Bind_variable (id, ((Declare _ | Declare_deduced _) as b), Move e) when is_ps_field_access e ->
             remapped := id :: !remapped;
-            Bind_variable (id, Declare (Reference (Lvalue, Const base_ty), None), Dereference e)
-          | Bind_variable (id, Declare (orig_ty, _), e) when is_ps_field_access e ->
-            let base_ty = match orig_ty with
-              | Shared_pointer inner -> inner
-              | _ -> strip_ref_and_const_type orig_ty
-            in
+            Bind_variable (id, Declare (Reference (Lvalue, Const (dereferenced b)), None), Dereference e)
+          | Bind_variable (id, ((Declare _ | Declare_deduced _) as b), e) when is_ps_field_access e ->
             remapped := id :: !remapped;
-            Bind_variable (id, Declare (Reference (Lvalue, Const base_ty), None), Dereference e)
+            Bind_variable (id, Declare (Reference (Lvalue, Const (dereferenced b)), None), Dereference e)
           | s -> s)
         handler
     in

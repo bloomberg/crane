@@ -124,7 +124,7 @@ let field_stores_erased_fn_value ~(field_cpp_ty : Cpp_ir.Lowered.Type.t option) 
     where that expectation is recorded.  Namespace and [shared_ptr] wrappers
     are seen through, as are typedefs, which may name [ind] only indirectly.
     [None] when the return type says nothing about [ind]. *)
-let expected_type_args_from_return cx env ?slot ind ~arity =
+let expected_type_args_from_return cx env ~ret ?slot ind ~arity =
   let rec go (cpp_ty : Cpp_ir.Lowered.Type.t) =
     match cpp_ty with
     | Entity_application (r, tys, _)
@@ -143,7 +143,7 @@ let expected_type_args_from_return cx env ?slot ind ~arity =
   match slot with
   | Some t when go t <> None -> go t
   | _ -> (
-    match current_cpp_return_type cx () with
+    match ret with
     | Some rt -> go rt
     | None -> None )
 

@@ -1,6 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Expressions: {!gen_expr} lowers a Core expression to a CppIR expression,
+(** Expressions: {!gen_expr_typed} lowers a Core expression to a CppIR expression,
     dispatching on its form.  The last of the lowering modules
     ({!Knot} lists the order), driven by {!Lower_expr}.  A variable read, a global used as a value, a
     literal and a coercion's crossing ({!gen_crossing}) are lowered here; a
@@ -16,10 +16,15 @@ open Util
 open Lowering_state
 open Base.Type_util
 open Core_plan.Query
+
+(** Whether [e] is a lambda once its coercions are expanded. *)
+let is_lambda (e : Cpp_ir.Lowered.Expr.t) = match Cpp_passes.Coercions.head e with Lambda _ -> true | _ -> false
 open Application
 open Construction
 open Match
 open Stmts
+module Typed = Cpp_ir.Typed
+
 
 (** The type variable the definition whose body is being generated returns
     boxed, its arguments carrying it only as a type index
@@ -86,9 +91,9 @@ let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
         in
         Some (Cpp_ir.Build.lambda (List.map fst params) None body ~capture:Stored)
 
-(** [gen_expr ?expected_ty ?slot env core_e] -- the CppIR expression for the
-    Core expression [core_e], generated against [expected_ty] where the
-    position states one.  A global that is called when named
+(** [gen_expr slot env core_e] -- the CppIR expression for the
+    Core expression [core_e], generated against the type [slot] states
+    ([Slot.into]), inside a body returning [slot.ret].  A global that is called when named
     ({!Suspension.naming_calls}: a definition that only throws, emitted as a
     zero-parameter function) becomes a call of no arguments in the
     [Core.Expr.Global] case.
@@ -107,14 +112,21 @@ let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
     expression, the body of a lambda that is itself the stored value.  A
     position that opens a new slot (a let-bound right-hand side, a
     non-tail statement) does not take it. *)
-let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.empty_slot) env
-    (core_e : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
+let rec gen_expr_typed cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
+  Typed_checks.typed_lowering cx core_e (gen_form cx slot env core_e)
+
+(** The typed lowering of [core_e], by its form. *)
+and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
+  let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
+  let form = Typed_checks.of_built cx env core_e in
+  (* A form module that types its result; where it could not, as [form]. *)
+  let typed_form (x : Typed.t) = if Cpp_ir.Value_type.unstated x.ty then form x.expr else x in
   match core_e with
   (* [unit] has one value, so a read of a [unit] binder is that value: the
      binder may have no C++ parameter at all ({!Base.Type_util.declaration_drops_binder}). *)
   | Core.Expr.Bound_variable {index = i; _}
     when (match get_env_type_opt cx i with Some t -> core_type_is_unit t | None -> false) ->
-    Monadic.mk_tt_expr ()
+    Typed.v ~ty:(Binders.read_value_type cx env i) (Monadic.mk_tt_expr ())
   | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
     check_binder_scopes cx env i;
     let boxed_read = Binders.read_is_boxed cx i occ in
@@ -156,6 +168,20 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
         false
     in
     let result : Cpp_ir.Lowered.Expr.t = if move_candidate then Move var_expr else var_expr in
+    (* A boxed read is a box, whatever the binder's type converts to. *)
+    let read_ty : Cpp_ir.Lowered.Value_type.t =
+      match Binders.read_value_type cx env i with
+      | Typed t when boxed_read && not (Cpp_ir.Types.prints_as_any t) -> Typed Any
+      | Deduced Untranslated when boxed_read -> Typed Any
+      (* A binder no C++ type was decided for whose Core type is opaque
+         holds the box an erased value is represented by: only a binder
+         declared opaque is an admission. *)
+      | Typed (Obligation Opaque_type)
+        when (match Option.map Binders.strip_param_wrappers (Binders.binder_cpp_type cx i) with
+              | None | Some Auto -> true | Some _ -> false) -> Typed Any
+      | v -> v
+    in
+    let read = Typed.v ~ty:read_ty result in
     if boxed_read then begin
       match expected_ty with
       | Some (Variable (Index (n, _))) when own_index_only_result cx = Some n ->
@@ -163,9 +189,9 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
            it: its template parameter is the caller's instantiation -- in a
            machine the outermost call's -- not the type of a value read at
            the variable at some other depth. *)
-        result
+        read
       | Some ty when not (Cpp_ir.Types.prints_as_any ty) && ty <> Void ->
-        if Types.resolves_to_any_type cx ty then result
+        if Types.resolves_to_any_type cx ty then read
         else
           (* For a CUSTOM-LIST container target, the erased var is boxed at
              runtime as [deque<...erased...>] (each element fully erased).  A
@@ -188,7 +214,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
             | Entity_application (g, _ :: _, _) -> is_list_global g
             | _ -> false
           in
-          let unbox_at t = Cpp_passes.Erasure.unbox t result in
+          let unbox_at t = Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Coerce.unbox t result) in
           if ty_is_list ty then
              (* Canonical erased shape is [deque<std::any>] -- every element
                 boxed as a single [std::any] (see [gen_expr_custom_cons]'s
@@ -211,7 +237,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
              in
              unbox_at (erase_list_elems ty)
            else unbox_at ty
-      | _ -> result
+      | _ -> read
     end
     else
       (* A local function that takes more arguments than the slot hands it at
@@ -235,27 +261,28 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
         when List.length dom > List.length exp_dom -> (
         (* The closure reads the function where it is made, and takes it
            there where this read moves it. *)
-        match (Coerce.curry_value_to_expected cx env ?expected_ty (get_env_type_opt cx i) var_expr,
+        match (Coerce.eta_global cx env ?expected_ty (get_env_type_opt cx i) var_expr,
           var_expr) with
-        | Lambda l, Local x when move_candidate -> Lambda {l with moved = [x]}
-        | e, _ -> e )
+        | e, Local x when move_candidate && is_lambda e -> Typed_checks.adapted_to expected (Coerce.moving x e)
+        | e, _ when e == var_expr -> Typed.rewrap (fun _ -> e) read
+        | e, _ -> Typed_checks.adapted_to expected e )
       (* And the converse: a function the variable holds curried -- a
          parameter a type variable stands at, a fold's accumulator -- read
          where the slot takes its arguments at once, a local fixpoint's
          parameter of type [nat -> nat -> nat]. *)
       | Some (Function _ as into), Some (Function _ as from) -> (
-        match (Coerce.regroup_value ~from ~into var_expr, var_expr) with
-        | Lambda l, Local x when move_candidate -> Lambda {l with moved = [x]}
-        | Lambda _ as e, _ -> e
-        | _ -> result )
-      | _ -> result )
+        match (Coerce.into_slot ~origin:Rg (Typed.typed from var_expr) (Exactly into), var_expr) with
+        | e, Local x when move_candidate && is_lambda e -> Typed_checks.adapted_to (Some into) (Coerce.moving x e)
+        | e, _ when is_lambda e -> Typed_checks.adapted_to (Some into) e
+        | _ -> read )
+      | _ -> read )
   (* A singleton class's dictionary applied, which is the body of the class's
      projection: the method, called on the instance -- a template parameter,
      so a static member -- at the method's own type variables, which here are
      the projection's, numbered past the class's parameters. *)
   | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = i; occurrence = occ};
                      arguments = args} when singleton_call cx env i occ <> None ->
-    Application.gen_singleton_dictionary_call cx env ~i ~occ ~args
+    typed_form @@ Application.gen_singleton_dictionary_call cx (Slot.at ~ret ()) env ~i ~occ ~args
   (* Every application translation is handed is canonical
      ({!Core_passes.Spines}): no head here is a global already applied, a
      coercion, or a one-branch match, and no numeral literal is spelled
@@ -263,28 +290,28 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
   | (Core.Expr.Apply _ | Core.Expr.Construct _) as e when Base.Probe.checking ()
     && not (Core_passes.Spines.canonical_application e) ->
     Base.Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
-    gen_expr cx ?expected_ty ~slot env (Core_passes.Spines.spine e)
+    gen_expr_typed cx slot env (Core_passes.Spines.spine e)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
                      arguments = a1 :: l} when Monadic.is_effect cx Core_plan.Effects.Return use ->
-    Effects.gen_return_expr cx env ~r ~use ~a1 ~l
+    form @@ Effects.gen_return_expr cx (Slot.at ~ret ()) env ~r ~use ~a1 ~l
   (* | Core.Expr.Apply (Core.Expr.Global {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_expr env
      (Core.Expr.Apply (a1, a2::[])) *)
   | Core.Expr.Apply {callee = Core.Expr.Global use;
                      arguments = _ :: _ :: _} as a
     when Monadic.is_sequential_effect cx Core_plan.Effects.Bind use ->
-    Effects.gen_bind_expr cx env a
+    form @@ Effects.gen_bind_expr cx (Slot.at ~ret ()) env a
   | Core.Expr.Apply {callee = (Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _); _} as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
        Wrap in an IIFE, delegating to gen_stmts which handles Core.Expr.Apply(Core.Expr.Fixpoint
        ...). *)
-    with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
+    form @@ with_escape_analysis cx ~ret (fun ret -> with_region cx ~ret a (fun () ->
+      Match_types.value_iife cx env (infer_core_body_type a) (fun into -> gen_stmts cx (Slot.at ~ret ()) env (Destination.Return into) a) ) )
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries, as Core decided it
      ({!Core_plan.Elaborate.static_projection_call}). *)
   | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args}
     when Core_plan.Elaborate.static_projection_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args <> None ->
-    Application.gen_instance_projection cx ~expected_ty ~slot env ~use ~args
+    typed_form @@ Application.gen_instance_projection cx slot env ~use ~args
   (* A closed call building a typeclass instance -- an event injection
      [ReSum_inr] composed from instances and closed lambdas, say -- is the
      same value every time it is evaluated, and evaluating it composes fresh
@@ -295,27 +322,31 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use); arguments = args} as e
     when (not slot.Slot.building_constant)
          && Core_plan.Elaborate.closed_instance_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args -> (
-    let built = gen_expr cx ?expected_ty ~slot:{slot with Slot.building_constant = true} env e in
-    match built with
+    let built = gen_expr_typed cx (Slot.at ~ret ?expected_ty ~slot:{slot with Slot.building_constant = true} ()) env e in
+    (* Kept, it is the value it builds. *)
+    match Cpp_passes.Coercions.head built.expr with
     | Call _ ->
-      Cpp_ir.Build.call
-        (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Base.Common.label_of_r f))))) [built]
+      Typed.rewrap
+        (fun b ->
+          Cpp_ir.Build.call
+            (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Base.Common.label_of_r f))))) [b] )
+        built
     | _ -> built )
   | Core.Expr.Apply {callee = f; arguments = args} ->
-    Application.gen_application cx ~expected_ty ~slot env f args
+    typed_form @@ Application.gen_application cx slot env f args
   | Core.Expr.Lambda _ as a ->
-    Lambda.gen_lambda cx ~expected_ty ~slot env a
+    typed_form @@ Lambda.gen_lambda cx slot env a
   | Core.Expr.Global ({callee = x; _} as use) when is_inline_custom x ->
     let tys = Base.Core_util.written_type_args use in
     let core_ty = callee_core_type_exn cx x in
     let ty = Types.cpp_of_core cx env core_ty in
     ( match ty with
     | Function (dom, cod) ->
-      eta_fun cx ?expected_ty env (Core.Expr.Global use) []
+      Typed_checks.adapted_or_node ~fallback:Cpp_ir.Typed.unannotated expected_ty (eta_fun cx (Slot.at ~ret ?expected_ty ()) env (Core.Expr.Global use) []).expr
     | _ ->
-      mk_cppglob
-        ?yields:
-          (Calls.glob_yields cx env x (Base.Core_util.instantiate_written ~reader:"glob_yields" use))
+      let yields = Calls.glob_yields cx env x (Base.Core_util.instantiate_written ~reader:"glob_yields" use) in
+      Typed.v ~ty:(match yields with Some t -> Typed t | None -> Deduced Foreign_text) @@ mk_cppglob
+        ?yields
         x
         (Types.template_params_of_core cx ~site:Cpp_ir.Types.Through_tvar env
            (List.map snd (Base.Core_util.Var_types.bindings tys)) ) )
@@ -391,11 +422,19 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
     let cglob =
       mk_cppglob ?yields x (Calls.written_at_variables cx x (filter_erased_keyed by_var))
     in
+    let instantiated = Calls.instantiated_type cx use in
+    (* A custom constant with no Core type is the text it maps to: C++
+       alone knows its type. *)
+    let or_foreign (v : Cpp_ir.Lowered.Value_type.t) : Cpp_ir.Lowered.Value_type.t =
+      if Cpp_ir.Value_type.unstated v && is_custom x then Deduced Foreign_text else v
+    in
     if Suspension.naming_calls cx ~cpp_of:(Types.cpp_of_core cx env) x then
       (* A function of no parameters named is called, a call made of this
          use. *)
-      made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob [])
+      Typed.v ~ty:(or_foreign (Typed_checks.core_value_type cx env instantiated))
+        (made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob []))
     else
+      let named = Typed.v ~ty:(or_foreign (Typed_checks.global_value_type cx env x instantiated)) cglob in
       ( match
           Option.map
             (fun ty ->
@@ -437,6 +476,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
            one is not ({!Functions.gen_dfun}) -- and a template is no
            value a conversion can take whole: an adapter at the declared
            signature, at this use's type arguments, is. *)
+        let named = if cglob == named.expr then named else Typed.v ~ty:Typed.unannotated cglob in
         let cglob =
           match from with
           | Function (dom, _)
@@ -444,19 +484,22 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
                    (fun (f : Cpp_ir.Lowered.Type.t) ->
                      match f with Function _ -> not (is_fully_erased_fun_ty f) | _ -> false )
                    dom ->
-            Coerce.curry_value_to_expected cx env ~exact:true
-              (Option.map expand_core_fun_alias (Calls.instantiated_type cx use)) cglob
+            Coerce.eta_global cx env ~exact:true (Option.map expand_core_fun_alias instantiated) cglob
           | _ -> cglob
         in
+        let named =
+          if cglob == named.expr then named
+          else Typed_checks.adapted_to (Option.map (Types.cpp_of_core cx env) instantiated) cglob
+        in
         ( match into with
-        | Some into -> Coerce.coerce cx ~from ~into cglob
-        | None -> cglob )
+        | Some into -> Typed_checks.adapted ~before:named (Some into) (Coerce.coerce cx ~from ~into cglob)
+        | None -> named )
       | _ -> (
         match unit_parameter_adapter cx x cglob with
-        | Some adapter -> adapter
-        | None -> Calls.curry_to_expected cx env ?expected_ty use cglob ) )
+        | Some adapter -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated adapter
+        | None -> Typed_checks.adapted ~before:named expected_ty (Calls.curry_to_expected cx env ?expected_ty use cglob) ) )
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} when is_custom r ->
-    gen_expr_custom_cons cx ?expected_ty ~slot env ty r ts
+    form @@ gen_expr_custom_cons cx slot env ty r ts
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _}
     when ts = []
          &&
@@ -473,7 +516,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
         CErrors.anomaly
           (Pp.str "gen_expr: enum constructor expected ConstructRef")
     in
-    Enum_value (ind_ref, ctor_name)
+    Typed.v ~ty:(Typed_checks.core_value_type cx env (Some ty)) (Enum_value (ind_ref, ctor_name))
   (* A closed constructor term of a shared variant -- a numeral built from
      [xI]/[xO]/[xH], say -- is built once and kept, as ocamlopt keeps a
      structured constant: evaluated again, it is a count bump rather than an
@@ -484,73 +527,78 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
      ({!Core_plan.Elaborate.shared_constant}). *)
   | Core.Expr.Construct {arguments = ts; _} as e
     when (not slot.Slot.building_constant) && Core_plan.Elaborate.shared_constant ~walk:(elaborations cx) e
-         && not (takes_reuse_token cx e) -> (
-    let built = gen_expr cx ?expected_ty ~slot:{slot with Slot.building_constant = true} env e in
-    match built with
+         && not (takes_reuse_token cx e) -> form @@ (
+    let built = (gen_expr_typed cx (Slot.at ~ret ?expected_ty ~slot:{slot with Slot.building_constant = true} ()) env e).expr in
+    match Cpp_passes.Coercions.head built with
     | Call (_, Type_member (Entity_application (n, _, _), _), _)
       when Base.Table.is_shared_variant n && ts <> [] ->
       Cpp_ir.Build.call (Runtime (Cpp_ir.Crane_rt.Constant (constant_name e))) [built]
     | _ -> built )
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} as construction ->
-    Construction.gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts construction
+    form @@ Construction.gen_construction cx slot env ~ty ~r ~ts construction
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
                      occurrence = case_occ}
                        when Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Core_plan.Match_kind.Custom ->
-    Match.gen_custom_match_expr cx ~slot env ~typ ~t ~pv ~case_occ
+    form @@ Match.gen_custom_match_expr cx (Slot.at ~ret ~slot ()) env ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ}
     when Core_plan.Match_kind.is_record (Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
-    Match.gen_record_projection cx ~expected_ty ~slot env core_e ~typ ~t ~pv ~case_occ
+    let x = Match.gen_record_projection cx slot env core_e ~typ ~t ~pv ~case_occ in
+    ( match (x, Match.read_class_method cx typ pv case_occ) with
+    (* A class method named, not called: a function's name. *)
+    | Scope _, Some m -> Typed.v ~ty:(Typed_checks.global_value_type cx env m (Typed_checks.core_type_of cx core_e)) x
+    | _ -> form x )
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ} when lang () == Cpp ->
-    gen_cpp_case cx ~slot typ t env pv case_occ
+    form @@ gen_cpp_case cx (Slot.at ~ret ~slot ()) typ t env pv case_occ
   | Core.Expr.Let {binder_type = ty; _} as a ->
     (* The lambda returns the let's value, at the position's type, and its
        region is planned at that return type too: planned under the
        enclosing function's, a coercion at the let's tail would be planned
        against a position lowering does not give it. *)
-    with_escape_analysis cx (fun () -> with_iife_return_type cx expected_ty (fun () ->
-      with_region cx a (fun () ->
-        let body = gen_stmts cx ~slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a in
+    form @@ with_escape_analysis cx ~ret (fun _ -> (let ret = expected_ty in
+      with_region cx ~ret a (fun () ->
         (* Returning a closure from one path and another closure, or a
            function-typed local, from the next, the lambda deduces no
            common type: it is declared at the let's own, or at the expected
            type where that only regroups its arrows.  Otherwise the expected
            type is what the caller converts to, which need not be a type the
            lambda's returns share. *)
-        Match_types.value_iife ?ret:expected_ty cx env (infer_core_body_type a) body ) ) )
+        Match_types.value_iife ?ret:expected_ty cx env (infer_core_body_type a) (fun into ->
+            gen_stmts cx (Slot.at ~ret ~slot ()) env (Destination.Return into) a ) ) ) )
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ as a ->
     (* Bare fixpoint in expression context: wrap in IIFE, delegate to
        gen_stmts. *)
-    with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
-  | Core.Expr.String s -> Literal (String s)
-  | Core.Expr.UInt63 x -> Literal (Uint63 x)
-  | Core.Expr.Numeral {inductive = ind; value = n} -> (
+    form @@ with_escape_analysis cx ~ret (fun ret -> with_region cx ~ret a (fun () ->
+      Match_types.value_iife cx env (infer_core_body_type a) (fun into -> gen_stmts cx (Slot.at ~ret ()) env (Destination.Return into) a) ) )
+  | Core.Expr.String s -> Typed.v ~ty:(Typed_checks.primitive_type cx env "strings.pstring.type") (Literal (String s))
+  | Core.Expr.UInt63 x -> Typed.v ~ty:(Typed_checks.primitive_type cx env "num.int63.type") (Literal (Uint63 x))
+  | Core.Expr.Numeral {inductive = ind; value = n} ->
+    Cpp_ir.Typed.of_node ~fallback:(Typed_checks.core_value_type cx env (Some (Typed_checks.inductive_type ind))) @@ (
     match Base.Table.get_numeral_info ind with
     | Some info -> Cpp_build.render_numeral info n
     | None ->
       CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
-  | Core.Expr.Float64 f -> Literal (Float f)
+  | Core.Expr.Float64 f -> Typed.v ~ty:(Typed_checks.primitive_type cx env "num.float.type") (Literal (Float f))
   | Core.Expr.Persistent_array {elements = elems; default = def} ->
-    let elems = Array.map (gen_expr cx env) elems in
-    let def = gen_expr cx env def in
+    form @@ let elems = Array.map (fun e -> (gen_expr_typed cx (Slot.at ~ret ()) env e).expr) elems in
+    let def = (gen_expr_typed cx (Slot.at ~ret ()) env def).expr in
     Persistent_array (elems, def)
   | Core.Expr.Coerce {source_type = from; target_type = into; value = t; occurrence = occ} ->
-    gen_crossing cx ?expected_ty ~slot env ~coercion:(Some (from, into)) ~boxed:false t occ
+    form @@ gen_crossing cx slot env ~coercion:(Some (from, into)) ~boxed:false t occ
   | Core.Expr.Boxed_value {value = t; occurrence = occ} ->
-    gen_crossing cx ?expected_ty ~slot env ~coercion:None ~boxed:true t occ
+    form @@ gen_crossing cx slot env ~coercion:None ~boxed:true t occ
   | Core.Expr.Lambda_group_barrier {value = t; occurrence = occ} ->
-    gen_crossing cx ?expected_ty ~slot env ~coercion:None ~boxed:false t occ
+    form @@ gen_crossing cx slot env ~coercion:None ~boxed:false t occ
   | Core.Expr.Erased_value _ ->
     (* An erased proof or type reaching an expression position: a dead one,
        an absurd branch.  Where it is a value a constructor stores it is the
        empty box instead, see {!gen_stored_value}. *)
-    Abort ("unreachable", Cpp_build.abort_ty expected_ty)
+    Cpp_ir.Typed.v ~ty:Never @@ Abort ("unreachable", Cpp_build.abort_ty expected_ty)
   | Core.Expr.Runtime_error msg ->
     (* Unreachable/absurd case - e.g., match on empty type *)
-    Abort (msg, Cpp_build.abort_ty expected_ty)
-  | Core.Expr.Axiom_value s -> Abort ("unrealized axiom: " ^ s, Cpp_build.abort_ty expected_ty)
+    Cpp_ir.Typed.v ~ty:Never @@ Abort (msg, Cpp_build.abort_ty expected_ty)
+  | Core.Expr.Axiom_value s -> Cpp_ir.Typed.v ~ty:Never @@ Abort ("unrealized axiom: " ^ s, Cpp_build.abort_ty expected_ty)
   | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
 
 (** A term crossing a type gap erasure opened: a [Core.Expr.Coerce] with its
@@ -558,8 +606,9 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
     [Core.Expr.Lambda_group_barrier] (neither), lowered against the position
     type {!Position_plan} planned for its occurrence [occ]. *)
 
-and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coercion ~boxed t occ :
+and gen_crossing cx (slot : Slot.slot) env ~coercion ~boxed t occ :
     Cpp_ir.Lowered.Expr.t =
+  let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
   let expected_ty = Binders.planned_position cx occ ~live:expected_ty in
   (* A value crossing into a slot that is really [std::any] has to be built
      at the canonical erased shape -- every component boxed -- because the
@@ -587,54 +636,78 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
   (* A lambda is written against the slot it fills -- its binders and
      arity are the slot's -- and a coercion cannot reshape a callable after
      the fact. *)
-  let inner =
-    gen_expr cx
-      ?expected_ty:(match t with Core.Expr.Lambda _ -> expected_ty | _ -> None)
-      ~slot:
-        (match into_box_kind with Some kind -> Slot.into_box kind slot | None -> slot)
+  let inner_typed =
+    gen_expr_typed cx (Slot.at ~ret ?expected_ty:(match t with Core.Expr.Lambda _ -> expected_ty | _ -> None) ~slot:
+        (match into_box_kind with Some kind -> Slot.into_box kind slot | None -> slot) ())
       env t
   in
-  (* What extraction recorded about the term's own side of the boundary.
-     Not materialised: this is an inferred type, so an [Obligation Opaque_type] here
-     stays one and licenses nothing. *)
-  let recorded_from =
-    match coercion with
-    (* A binder whose C++ type is decided outranks the coercion's recorded
-       source, for the reason given for [Core.Expr.Boxed_value] below: [md] destructured out
-       of a typed pattern is a [List<metadata<std::any>>], whatever erased
-       carrier application the coercion recorded for it. *)
-    | Some (from, _) -> (
-      match t with
-      | Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
-        (* Read below only for whether it is a box, so the plan and
-           lowering need agree on no more than whether the binder is
-           decided at a type that is not one. *)
-        let decided = function Some ty -> not (Cpp_ir.Types.prints_as_any ty) | None -> false in
-        match
-          Binders.planned_binder_type cx ~use:"coerced from" ~agree:(fun p l -> decided p = decided l) i occ
-        with
+  let inner = inner_typed.expr in
+  (* What the inner value is, as lowering typed it: a box where its type is
+     one under any alias (a value-indexed family's [dt<>], a box variable),
+     an abort at the type it prints at. *)
+  let from : Cpp_ir.Lowered.Type.t option =
+    match (inner, inner_typed.ty) with
+    | Abort (_, t), _ -> Some t
+    | _, Typed t ->
+      let al = Coerce.aliases_in cx in
+      let n = Coerce.normal al t in
+      let family_box =
+        (* An alias template of a box ([payload_ty<T1>] for [using
+           payload_ty = crane::obj]): the box, whatever its arguments. *)
+        let rec head (t : Cpp_ir.Lowered.Type.t) =
+          match t with
+          | In_namespace (_, t) | Const t | Reference (_, t) -> head t
+          | t -> t
+        in
+        match head t with
+        | Entity_application (g, _ :: _, ns) ->
+          Types.resolves_to_any_type cx (Entity_application (g, [], ns))
+        | _ -> false
+      in
+      if Base.Type_util.names_erased_alias n || al.boxed_source n || family_box then Some Any else Some t
+    | _ -> None
+  in
+  let boxed_from = match from with Some f -> Erasure.classify_erasure cx (Some f) = `Boxed | None -> false in
+  (* [inner] put in a slot of type [into]: unboxed where it is a box, and
+     otherwise, where [concrete], adapted from its own type. *)
+  let cross ~concrete ~into =
+    match from with
+    | Some _ when boxed_from -> Coerce.coerce cx ~from:Any ~into inner
+    | Some from when concrete -> Coerce.coerce cx ~from ~into inner
+    | _ -> inner
+  in
+  (* Whether extraction recorded the term's own side of the boundary as
+     erased: a box, or a type-class method's [M A] read at an opaque type.
+     A binder whose C++ type is decided outranks the record: [md]
+     destructured out of a typed pattern is a [List<metadata<std::any>>],
+     whatever erased carrier application the coercion recorded for it; a
+     type-class method returning [M A] is opaque in Coq, but its instance's
+     [M] is a template, so the binder has the concrete type it was
+     assigned. *)
+  let recorded =
+    let decided agree i occ use = Binders.planned_binder_type cx ~use ~agree i occ in
+    let of_core core_from = Some (Types.cpp_of_core cx env core_from) in
+    let ty =
+      match (coercion, t) with
+      | Some (core_from, _), Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
+        let is_decided = function Some ty -> not (Cpp_ir.Types.prints_as_any ty) | None -> false in
+        match decided (fun p l -> is_decided p = is_decided l) i occ "coerced from" with
         | Some ty when not (Cpp_ir.Types.prints_as_any ty) -> Some ty
-        | _ -> Some (Types.cpp_of_core cx env from) )
-      | _ -> Some (Types.cpp_of_core cx env from) )
-    (* [Core.Expr.Boxed_value] is extraction's reading of the Coq typing.  A binder whose
-       C++ type was decided at its binding site outranks it: a type-class
-       method returning [M A] is opaque in Coq, but Crane emits the
-       instance's [M] as a template, so the value here has the concrete type
-       the binder was assigned and there is no box to open. *)
-    | None when boxed -> (
-      match t with
-      | Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
-        match Binders.planned_binder_type cx ~use:"boxed from" ~agree:( = ) i occ with
-        | Some ty -> Some ty
-        | None -> Some Cpp_ir.Type.Any )
-      | _ -> Some Cpp_ir.Type.Any )
-    | None -> None
+        | _ -> of_core core_from )
+      | Some (core_from, _), _ -> of_core core_from
+      | None, Core.Expr.Bound_variable {index = i; occurrence = occ} when boxed -> (
+        match decided ( = ) i occ "boxed from" with Some ty -> Some ty | None -> Some Cpp_ir.Type.Any )
+      | None, _ when boxed -> Some Cpp_ir.Type.Any
+      | None, _ -> None
+    in
+    match ty with
+    | Some ty when Cpp_ir.Types.prints_as_any ty ->
+      if Erasure.classify_erasure cx (Some ty) = `Opaque then `Opaque else `Box
+    | _ -> `None
   in
   ( match expected_ty with
     | Some ty when not (Cpp_ir.Types.prints_as_any ty) && ty <> Void
                   && not (match ty with Entity_application (g, _, _) -> Base.Table.is_erased_type_const g | _ -> false) ->
-      (* The position's type, as the expressions below write it. *)
-      let ty_ir = ty in
       let rec is_cpp_erased_var_rec = function
         | Core.Expr.Bound_variable {index = i; occurrence = occ} -> Binders.read_is_boxed cx i occ
         | Core.Expr.Coerce {value = t'; _}
@@ -643,7 +716,6 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
           is_cpp_erased_var_rec t'
         | _ -> false
       in
-      let is_cpp_erased_var = is_cpp_erased_var_rec t in
       (* Namespace-collapsing erase: a namespaced leaf like [R] must become
          plain [std::any], not the malformed [typename R::std::any] the shared
          [erase_type_to_any] produces for an [In_namespace]-wrapped type.
@@ -652,7 +724,7 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
          that needs the CONCRETE element container (e.g. a constructor field
          of type [deque<R>]) converts it with [crane_container_cast] at its
          own site (mirroring [eta_fun]'s function-argument path). *)
-      if is_cpp_erased_var then
+      if is_cpp_erased_var_rec t then
         (* Canonical erased shape is [deque<std::any>] (a bare [std::any]
            per element, not a structure-preserving [pair<any,any>]) -- see
            the matching fix in the [Core.Expr.Bound_variable] case above. *)
@@ -663,70 +735,44 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
             In_namespace (ns_g, Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns))
           | t -> t
         in
-        Coerce.coerce cx ~from:Any ~into:(erase_top_args ty) inner
+        cross ~concrete:true ~into:(erase_top_args ty)
       else if Erasure.core_expr_is_erased cx env t then
-        (* Extraction's oracle reads a type-class method's [M A] as erased,
-           but the binder it is bound to was assigned an opaque type --
-           an admission that the shape could not be resolved, not a box.
-           Say so rather than assert [Any]: {!Coerce.coerce} recovers from a box
-           and must not invent one. *)
-        let opaque = Some (Cpp_ir.Type.Obligation Opaque_type) in
-        let rec binder_is_opaque = function
-          | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
-            Binders.planned_binder_type cx ~use:"opaque binder"
-              ~agree:(fun p l -> (p = opaque) = (l = opaque))
-              i occ
-            = opaque
-          | Core.Expr.Coerce {value = t'; _}
-          | Core.Expr.Boxed_value {value = t'; _}
-          | Core.Expr.Lambda_group_barrier {value = t'; _} ->
-            binder_is_opaque t'
-          | _ -> false
-        in
-        Coerce.coerce cx
-          ~from:(if binder_is_opaque t then Cpp_ir.Type.Obligation Opaque_type else Cpp_ir.Type.Any)
-          ~into:ty inner
-      else
-        (* [core_expr_is_erased] only recognises a handful of shapes and says
-           [false] for the rest.  Extraction already unified the two sides
-           here, so fall back on what it recorded rather than on the
-           oracle's silence. *)
-        ( match recorded_from with
-          (* Only the boxed dimension: extraction's [from] describes the
-             Coq-level type, and the pointer- and converting-constructor
-             dimensions at this boundary have already been settled by the
-             sub-expression that produced [inner]. *)
-          (* Unless the value is a component just read out of an erased
-             pair and the type the context has in mind is itself a pair:
-             that read already handed back the component's own box, so the
-             context's type describes the enclosing pair, not the component,
-             and recovering here would name the wrong one.  When the context
-             wants a non-pair, it is talking about the component, and the
-             box does have to be opened. *)
-          | Some from
-            when Cpp_ir.Types.prints_as_any from
-                 && not
-                      ( Erasure.reads_erased_pair_component cx env t
-                      &&
-                      match ty with
-                      | Entity_application (g, _, _) -> is_prod_global g
-                      | _ -> false ) ->
-            Coerce.coerce cx ~from ~into:(Erasure.boxed_shape_of ty_ir) inner
-          | Some _
-            when ( match coercion with
-                 | Some (from, _) -> Coerce.absurd_coercion cx from ty
-                 | None -> false ) -> (
-            match coercion with
-            (* Absurd only at some instantiations: [tt] read at the index [T1]
-               of [Inc : incE unit] is dead unless [T1] is [unit] -- or the
-               box an erased handler instantiates it at.  Which, C++ decides
-               once it substitutes [T1]. *)
-            | Some (from, _) when contains_tvar ty ->
-              Cpp_ir.Build.iife (Some ty)
-                [ If_constexpr
-                    { test = Convertible (ty, Reference (Lvalue, Const (Types.cpp_of_core cx env from)));
-                      then_ = [Return (Some (Convert (ty, inner)))];
-                      else_ = [Throw Cpp_build.dead_branch_message] } ]
-            | _ -> Abort (Cpp_build.dead_branch_message, ty) )
-          | _ -> inner )
+        (* Extraction's oracle reads the value as erased: recovered where
+           lowering typed it a box, left alone where opaque (an admission
+           that the shape could not be resolved, not a box). *)
+        cross ~concrete:true ~into:ty
+      else if
+        (* Extraction recorded the value's own side as erased; [from] says
+           whether it is a box to open.  A side recorded opaque is an
+           admission, not a box: the position recovering it is the one
+           that knows its shape. *)
+        recorded <> `None
+        (* Unless the value is a component just read out of an erased
+           pair and the type the context has in mind is itself a pair:
+           that read already handed back the component's own box, so the
+           context's type describes the enclosing pair, not the component,
+           and recovering here would name the wrong one.  When the context
+           wants a non-pair, it is talking about the component, and the
+           box does have to be opened. *)
+        && not
+             ( Erasure.reads_erased_pair_component cx env t
+             && match ty with Entity_application (g, _, _) -> is_prod_global g | _ -> false )
+      then (if recorded = `Opaque then inner else cross ~concrete:true ~into:(Erasure.boxed_shape_of ty))
+      else (
+        match coercion with
+        (* Absurd only at some instantiations: [tt] read at the index [T1]
+           of [Inc : incE unit] is dead unless [T1] is [unit] -- or the
+           box an erased handler instantiates it at.  Which, C++ decides
+           once it substitutes [T1]. *)
+        | Some (from, _) when Coerce.absurd_coercion cx from ty && contains_tvar ty ->
+          Cpp_ir.Build.iife (Some ty)
+            [ If_constexpr
+                { test = Convertible (ty, Reference (Lvalue, Const (Types.cpp_of_core cx env from)));
+                  then_ = [Return (Some (Convert (ty, inner)))];
+                  else_ = [Throw Cpp_build.dead_branch_message] } ]
+        | Some (from, _) when Coerce.absurd_coercion cx from ty -> Abort (Cpp_build.dead_branch_message, ty)
+        (* Only the boxed dimension: the pointer- and converting-constructor
+           dimensions at this boundary have already been settled by the
+           sub-expression that produced [inner]. *)
+        | _ -> cross ~concrete:false ~into:ty )
     | _ -> inner )

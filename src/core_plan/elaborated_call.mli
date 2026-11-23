@@ -144,6 +144,7 @@ type static_projection = {
   missing : Core.Type.t list;
       (** The trailing ones of {!domains} the call gives no operand for, which a
           partial application closes over. *)
+  codomain : Core.Type.t option;  (** What the member returns, at the call. *)
 }
 
 (** Whether two static projections project through the same argument, at the

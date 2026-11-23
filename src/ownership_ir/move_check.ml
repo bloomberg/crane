@@ -103,7 +103,7 @@ let rec is_reference : ty -> bool = function Reference _ -> true | In_namespace 
 let aliases_after aliases : stmt -> aliases = function
   | Structured_binding (xs, e) -> bind_into aliases xs e
   | Bind_variable (x, Declare (ty, _), e) when is_reference ty -> bind_into aliases [x] e
-  | Bind_variable (x, (Declare _ | Declare_static _), _) | Declare (x, _, _) | Declare_value_initialized (x, _)
+  | Bind_variable (x, (Declare _ | Declare_deduced _ | Declare_static _), _) | Declare (x, _, _) | Declare_value_initialized (x, _)
   | Foreign_block {result = x; _} ->
     own aliases [x]
   | _ -> aliases
@@ -397,7 +397,7 @@ let passing_violations (modes : Cpp_ir.Param_mode.t list) params body =
       (match e with Move (Local x) -> moved := x :: !moved | _ -> ());
       Cpp_ir.Map.expr (rw ()) e
     and fs (s : stmt) =
-      (match s with Bind_variable (x, Declare _, _) -> declared := x :: !declared | _ -> ());
+      (match s with Bind_variable (x, (Declare _ | Declare_deduced _), _) -> declared := x :: !declared | _ -> ());
       Cpp_ir.Map.stmt (rw ()) s
     and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id () in
     List.iter (fun s -> ignore (fs s)) body;
@@ -541,7 +541,7 @@ let check_by_reference_closures owner ss =
       List.filter_map
         (fun (s : stmt) ->
           match s with
-          | Bind_variable (x, Declare _, Lambda {fixpoint = Some lf; _})
+          | Bind_variable (x, (Declare _ | Declare_deduced _), Lambda {fixpoint = Some lf; _})
             when Region.Local_captures.by_reference lf.member ->
             Some (x, fst lf.member)
           | _ -> None )
@@ -554,7 +554,7 @@ let check_by_reference_closures owner ss =
       List.filter_map
         (fun (s : stmt) ->
           match s with
-          | Bind_variable (y, Declare _, Lambda {fixpoint = Some {member; encoding = Self_passing selves; _}; body; _})
+          | Bind_variable (y, (Declare _ | Declare_deduced _), Lambda {fixpoint = Some {member; encoding = Self_passing selves; _}; body; _})
             when List.exists (fun (_, o) -> Core.Occurrence.equal o (fst member)) planned ->
             Some (y, selves, body)
           | _ -> None )
@@ -579,7 +579,7 @@ let check_by_reference_closures owner ss =
        which may outlive the scope no more than what they read. *)
     let rec go reading : stmt list -> unit = function
       | [] -> ()
-      | (Bind_variable (x, Declare _, Lambda ({fixpoint = Some lf; _} as l)) as s) :: rest
+      | (Bind_variable (x, (Declare _ | Declare_deduced _), Lambda ({fixpoint = Some lf; _} as l)) as s) :: rest
         when Region.Local_captures.by_reference lf.member && l.capture <> Written Nothing ->
         (* One the C++ has capture nothing -- what the plan reads is a
            dictionary, a template parameter -- refers into no scope. *)
@@ -592,7 +592,7 @@ let check_by_reference_closures owner ss =
           (escaping ~group ~callees [x] rest);
         stmt s;
         go (x :: reading) rest
-      | (Bind_variable (x, Declare _, (Lambda l as e)) as s) :: rest
+      | (Bind_variable (x, (Declare _ | Declare_deduced _), (Lambda l as e)) as s) :: rest
         when by_reference l
           && List.exists (fun y -> List.exists (Id.equal y) reading) (Cpp_ir.Variables.free_in_expr e) ->
         List.iter

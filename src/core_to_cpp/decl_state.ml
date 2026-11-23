@@ -723,7 +723,7 @@ let conversion_to_other_instantiation cx ~leading ~name ~templates ~vars ~fields
     let converted =
       List.map
         (fun (field_id, at) ->
-          Convert.gen_type_conversion_expr
+          Cpp_passes.Convert.gen_type_conversion_expr
             (* Every inductive generated into this same scope -- the type
                itself, its mutual siblings, and any other module-local
                inductive -- is spelled bare here, so it must not be

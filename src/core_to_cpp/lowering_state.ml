@@ -237,12 +237,11 @@ type lexical = {
   (* Template type variables for the function currently being translated:
       lexical because a lifted helper or polymorphic lambda has its own. *)
   current_type_vars : Id.t list;
-  (** C++ return type of the enclosing function, set by the function and
-     instance generators ({!with_cpp_return_type}). Used to recover erased
-     template type args at call sites where C++ can't deduce them from lambda
-     arguments ({!current_cpp_return_type}).  Lexical: a lambda's body has
-     its own return type. *)
-  current_cpp_return_type : Cpp_ir.Lowered.Type.t option;
+  (** The values returned so far in the body a join is decided for
+      ({!with_returns}), each with the type lowering synthesised for it;
+      [None] outside such a body.  Lexical: a nested body that decides its
+      own join collects its own. *)
+  returned : (Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Value_type.t) list ref option;
   (** De Bruijn environment: each variable's binder, with its Core type and
      role.  Extended by every binder a scope introduces. *)
   env_types : Core.Lexenv.t;
@@ -277,6 +276,13 @@ type lexical = {
      markers.  Lexical: each such function or instance binds its own class
      parameters. *)
   promoted_var_map : (Id.t * Cpp_ir.Lowered.Type.t) list;
+  (** The function's own type variables, by Core index, that stand for an
+      associated type of a class instance ([M A] read as
+      [typename _tcI0::M]): {!Decl_state.hkt_tvar_resolutions_of_type}.  The
+      body is rewritten with them once lowered; until then a type lowering
+      synthesises still names the variable, and reads it through these
+      ({!Coerce.aliases_in}).  Lexical: each function has its own. *)
+  hkt_resolutions : (int * Cpp_ir.Lowered.Type.t) list;
   (** When true, we are inside a constructor expression (module-level static
      initializer). Promoted type vars that can't be resolved via
      [promoted_var_map] fall back to [Any] ([std::any]) instead of keeping
@@ -389,11 +395,12 @@ let create ~pp_cpp_type () =
           unit = no_unit_facts };
       lexical =
         { current_type_vars = [];
-          current_cpp_return_type = None;
+          returned = None;
           env_types = Core.Lexenv.empty;
           cpp_binder_types = IntMap.empty;
           declared_outer = None;
           promoted_var_map = [];
+          hkt_resolutions = [];
           in_constructor_expr = false;
           rank2_carrier = None;
           lifted_fixpoints = [];
@@ -481,6 +488,14 @@ let current_class_temps cx =
 let current_scope_type_names cx =
   cx.ctx.lexical.current_type_vars @ List.map snd (current_class_temps cx)
 
+(** The associated types the function's own type variables stand for
+    ({!lexical.hkt_resolutions}). *)
+let hkt_resolutions cx = cx.ctx.lexical.hkt_resolutions
+
+(** [f] with [r] as {!lexical.hkt_resolutions}. *)
+let with_hkt_resolutions cx r f =
+  with_field cx (fun c -> c.lexical.hkt_resolutions) (fun v -> set_lexical cx (fun l -> {l with hkt_resolutions = v})) r f
+
 (** [with_type_vars tvars f] runs [f] with [tvars] as the type-variable scope,
     and puts the enclosing scope back on the way out however [f] leaves --
     returning or raising.
@@ -493,21 +508,29 @@ let current_scope_type_names cx =
 let with_type_vars cx (tvars : Id.t list) (f : unit -> 'a) : 'a =
   with_field cx (fun c -> c.lexical.current_type_vars) (set_current_type_vars cx) tvars f
 
-(** [with_cpp_return_type ty f] runs [f] with [ty] as the enclosing
-    function's C++ return type -- the type a tail expression is cast to. *)
-let with_cpp_return_type cx (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a) : 'a =
-  with_field cx
-    (fun c -> c.lexical.current_cpp_return_type)
-    (fun t -> set_lexical cx (fun l -> { l with current_cpp_return_type = t }))
-    ty f
+(** [with_returns f] runs [f] collecting the values returned in the body it
+    lowers ({!record_return}), and gives them back with its result: what a
+    lambda whose return type C++ would deduce joins its returns over. *)
+let with_returns cx (f : unit -> 'a) : 'a * (Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Value_type.t) list =
+  let outer = cx.ctx.lexical.returned and seen = ref [] in
+  let r =
+    with_field cx (fun c -> c.lexical.returned) (fun t -> set_lexical cx (fun l -> { l with returned = t })) (Some seen) f
+  in
+  (* The enclosing body sees them too: an immediately invoked lambda
+     inlined there returns them as its own ({!Destination.finish_inlined}). *)
+  Option.iter (fun o -> o := !seen @ !o) outer;
+  (r, !seen)
 
-(** The enclosing function's C++ return type
-    ({!lexical.current_cpp_return_type}). *)
-let current_cpp_return_type cx () : Cpp_ir.Lowered.Type.t option = cx.ctx.lexical.current_cpp_return_type
+(** Record that [e], of type [ty], is returned by the body being lowered. *)
+let record_return cx (e : Cpp_ir.Lowered.Expr.t) (ty : Cpp_ir.Lowered.Value_type.t) =
+  match cx.ctx.lexical.returned with Some seen -> seen := (e, ty) :: !seen | None -> ()
 
-(** Whether the enclosing function returns [void]. *)
-let returns_void cx =
-  match cx.ctx.lexical.current_cpp_return_type with Some Cpp_ir.Type.Void -> true | _ -> false
+(** The type [e] was recorded at where it was returned ({!record_return}),
+    the node itself, not an equal one. *)
+let returned_type cx (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Value_type.t option =
+  match cx.ctx.lexical.returned with
+  | Some seen -> List.find_map (fun (e', ty) -> if e' == e then Some ty else None) !seen
+  | None -> None
 
 (** [with_parameters bs f] runs [f] with [bs] as the binders of the
     declaration's parameters ({!input.current_parameters}). *)
@@ -744,18 +767,19 @@ let with_itree_mode cx (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
     types the way translation converts them. *)
 let plan_representation :
     (t ->
+    ret:Cpp_ir.Lowered.Type.t option ->
     Core.Expr.t ->
     (Core.Binder.site * int * planned_repr) list * (Core.Occurrence.t * Planned_read.t) list)
     ref =
-  ref (fun _ _ -> ([], []))
+  ref (fun _ ~ret:_ _ -> ([], []))
 
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
 let plan_positions :
-    (t -> outer:Core.Lexenv.t -> reads:(Core.Occurrence.t * Planned_read.t) list -> Core.Expr.t ->
+    (t -> ret:Cpp_ir.Lowered.Type.t option -> outer:Core.Lexenv.t -> reads:(Core.Occurrence.t * Planned_read.t) list -> Core.Expr.t ->
       (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list)
     ref =
-  ref (fun _ ~outer:_ ~reads:_ _ -> [])
+  ref (fun _ ~ret:_ ~outer:_ ~reads:_ _ -> [])
 
 (** [with_region ~owned ~copied ~resumes body f] runs [f], which generates
     [body] as one C++ body owning the variables at the de Bruijn indices
@@ -764,7 +788,7 @@ let plan_positions :
     with the moves planned over [body] ({!Ownership_ir.Region.region}), those
     into the frames entering the machine's entries recorded
     ({!Ownership_ir.Region.Entry_moves}). *)
-let with_region cx ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
+let with_region cx ~(ret : Cpp_ir.Lowered.Type.t option) ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
   let outer = Core.Lexenv.type_opt cx.ctx.lexical.env_types in
   let p =
     Ownership_ir.Region.region ~owned ~copied ~outer ?resumes ?certain ~effects:cx.ctx.input.unit.effects
@@ -780,11 +804,12 @@ let with_region cx ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.E
   let representation, reads, positions =
     match cx.ctx.input.body_owner with
     | Some _ ->
-      let binders, reads = !plan_representation cx body in
+      (* The region returns at the enclosing function's result type. *)
+      let binders, reads = !plan_representation cx ~ret body in
       (* A nested region's positions are planned at its own return type,
          which the enclosing walk does not know; they come first. *)
       let reads = cx.ctx.lexical.planned_reads @ reads in
-      let positions = !plan_positions cx ~outer:cx.ctx.lexical.env_types ~reads body in
+      let positions = !plan_positions cx ~ret ~outer:cx.ctx.lexical.env_types ~reads body in
       (cx.ctx.lexical.representation @ binders, reads, positions @ cx.ctx.lexical.planned_positions)
     | None -> ([], [], [])
   in
@@ -990,12 +1015,12 @@ let reset_env_types cx =
     afterwards.  Escape analysis runs at several nesting levels (lambdas,
     let-in expressions, top-level functions) and each level has its own set of
     safe bindings. *)
-let with_escape_analysis cx f =
+let with_escape_analysis cx ~(ret : Cpp_ir.Lowered.Type.t option) (f : Cpp_ir.Lowered.Type.t option -> 'a) : 'a =
   (* Prevent void optimization from leaking into IIFE/lambda bodies: when the
      outer function returns void, gen_stmts generates bare 'return;' for tt,
      but IIFE bodies return their own type (e.g. monostate), not void. *)
   let inner_return_type =
-    match current_cpp_return_type cx () with
+    match ret with
     | Some Cpp_ir.Type.Void -> None
     | rt -> rt
   in
@@ -1010,17 +1035,7 @@ let with_escape_analysis cx f =
       lexical =
         { cx.ctx.lexical with
           move_plan = Ownership_ir.Region.empty;
-          in_constructor_expr = false;
-          current_cpp_return_type = inner_return_type };
+          in_constructor_expr = false };
       threaded = {match_param_counter = 0; cs_counter = 0} };
-  f ()
+  f inner_return_type
 
-(** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
-    fixpoint, or a record destructure in argument position).  The lambda
-    returns THIS expression's value, not the enclosing function's, so the
-    ambient return type must be re-based on the expression's own expected type
-    ([None] wherever the context imposes none).  Without this the enclosing
-    function's return type leaks into the IIFE body and its tail expression is
-    cast to it — e.g. [any_cast<uint64_t>] on an erased record field that the
-    caller then projects with [.first.first]. *)
-let with_iife_return_type cx (expected_ty : Cpp_ir.Lowered.Type.t option) f = with_cpp_return_type cx expected_ty f

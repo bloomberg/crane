@@ -27,7 +27,7 @@ let declared_in_scope (stmts : Cpp_ir.Lowered.Stmt.t list) =
   List.concat_map
     (fun (s : Cpp_ir.Lowered.Stmt.t) ->
       match s with
-      | Bind_variable (x, Declare _, _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
+      | Bind_variable (x, (Declare _ | Declare_deduced _), _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
       | Structured_binding (xs, _) -> xs
       | Foreign_block b -> [b.result]
       | Custom_match m ->
@@ -39,9 +39,9 @@ let declared_in_scope (stmts : Cpp_ir.Lowered.Stmt.t list) =
       | _ -> [])
     stmts
 
-(** [gen_stmts ?slot env k e] -- [e] lowered as statements, the value it
-    computes handed to [k] (a [return], an assignment).  [slot] is
-    {!Expr.gen_expr}'s, carried into the tail positions.
+(** [gen_stmts slot env d e] -- [e] lowered as statements, the value it
+    computes going to the destination [d] (a [return], an assignment).
+    [slot] is {!Expr.gen_expr_typed}'s, carried into the tail positions.
 
     It leaves the binder types as it found them.  The binders [e] introduces
     -- a let's, a record match's fields -- are pushed for the statements
@@ -50,19 +50,17 @@ let declared_in_scope (stmts : Cpp_ir.Lowered.Stmt.t list) =
     right-hand side ([let p := (let q := .. in ..) in ..]) or the sibling
     argument of a call, and every variable it reads beneath one left pushed
     would read the binder one further in. *)
-let rec gen_stmts cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ast : Cpp_ir.Lowered.Stmt.t list =
+let rec gen_stmts cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.Lowered.Stmt.t list =
   let saved = cx.ctx.lexical.env_types in
-  Fun.protect ~finally:(fun () -> restore_env_types cx saved) (fun () -> gen_stmts_scoped cx ?slot env k ast)
+  Fun.protect ~finally:(fun () -> restore_env_types cx saved) (fun () -> gen_stmts_scoped cx slot env k ast)
 
 (** {!gen_stmts}, the binders it pushes left for {!gen_stmts} to pop. *)
-and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t ->
-  Cpp_ir.Lowered.Stmt.t) ast :
-    Cpp_ir.Lowered.Stmt.t list =
-  (* Statements open a position of their own and state no type for it: the
-     value a [return] here carries goes to the enclosing function, not to the
-     position the caller's expression was being built for.  What a tail
-     statement lands in is {!with_cpp_return_type}, which
-     {!Coerce.position_cpp_ty} falls back to. *)
+and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.ret in
+  (* Statements open a position of their own: the value a [return] here
+     carries goes to the enclosing function, not to the position the
+     caller's expression was being built for.  What a tail statement lands
+     in is [k]'s slot. *)
   match ast with
   | Core.Expr.Let {binder_type = let_ty;
                    value = ((Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group) as fix_term);
@@ -73,9 +71,9 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
     and ids = Core.Recursion.Group.functions rec_group
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
-    Local_functions.gen_let_fix cx ~slot env k ~let_ty ~x ~ids ~funs ~occ ~fix_term ~b ~let_occ
+    Local_functions.gen_let_fix cx (Slot.at ~ret ~slot ()) env k ~let_ty ~x ~ids ~funs ~occ ~fix_term ~b ~let_occ
   | Core.Expr.Let {binder = x; binder_type = t; value = (Core.Expr.Lambda _ as a); body = b; occurrence = let_occ} ->
-    Local_functions.gen_let_lambda cx ~slot env k ~x ~t ~a ~b ~let_occ
+    Local_functions.gen_let_lambda cx (Slot.at ~ret ~slot ()) env k ~x ~t ~a ~b ~let_occ
   | Core.Expr.Let {binder = x; binder_type = t; value = a; body = b; occurrence = let_occ} ->
     let x' = cpp_id_of_id (id_of_binder_name x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in
@@ -90,13 +88,13 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
     let env_rhs = (fst env, snd env') in
     if x == Core.Binder_name.Anonymous then (
       Binders.push_binders cx env [(x_renamed, t)];
-      gen_stmts cx ~slot env' k b )
+      gen_stmts cx (Slot.at ~ret ~slot ()) env' k b )
     else if core_type_is_unit t then (
       (* Unit-typed let bindings: the RHS may call a void-ified function,
          so we can't assign its result to a variable.  Execute the RHS for
          side effects, then declare the variable as Unit::e_TT (its only
          possible value) so the body can still reference it. *)
-      let rhs = gen_stmts cx env_rhs (fun e -> Expression e) a in
+      let rhs = gen_stmts cx (Slot.at ~ret ()) env_rhs Discard a in
       Binders.push_binders cx env [(x_renamed, t)];
       (* Drop trivially pure RHS (e.g. Unit::e_TT from tt, variable refs) *)
       let rhs = List.filter (fun (s : Cpp_ir.Lowered.Stmt.t) ->
@@ -108,15 +106,12 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
          generated C++ (not just the Core term, since optimizations like
          unit-match elimination may drop references). *)
       let body =
-        gen_stmts cx ~slot env' k b
+        gen_stmts cx (Slot.at ~ret ~slot ()) env' k b
       in
       let decl : Cpp_ir.Lowered.Stmt.t list =
         if Lifting.stmts_reference_var x_renamed body then
           let cpp_ty = Types.cpp_of_core cx env t in
-          [ Bind_variable
-              ( x_renamed,
-                Declare (cpp_ty, core_binder cx ~site:(Binding let_occ) env' 1),
-                Monadic.mk_tt_expr () ) ]
+          [ Cpp_ir.Typed.bind ?binder:(core_binder cx ~site:(Binding let_occ) env' 1) (x_renamed) (cpp_ty) (Monadic.mk_tt_expr ()) ]
         else []
       in
       rhs @ decl @ body )
@@ -155,7 +150,6 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
              | None -> false)
           | _ -> false
         in
-        let afun v : Cpp_ir.Lowered.Stmt.t = Bind_variable (x_renamed, Existing, v) in
         (* Thread the let-binding's type annotation as the expected Core type
            so that gen_ctor_call can recover the concrete element type for
            constructors (like nil) whose Core annotation has unresolved metas or
@@ -282,16 +276,16 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
         in
         (* [let t := x <- arg ;; ...] is a tree over [arg]'s family,
            whatever family the function returns into. *)
-        let rhs_result = Types.let_value_result cx env t_effective in
-        with_cpp_return_type cx rhs_result (fun () ->
-          gen_stmts cx
-            ~slot:
-              { slot with
-                Slot.repr = Native;
-                expected_core_ty = Some t_effective;
-                eta_keep_moves = is_single_use_partial_app }
-            env_rhs afun a )
+        let afun = Destination.bind_let cx env x_renamed t_effective in
+        ( afun,
+          gen_stmts cx (Slot.at ~ret:(Destination.stated afun) ~slot:
+            { slot with
+              Slot.repr = Native;
+              expected_core_ty = Some t_effective;
+              eta_keep_moves = is_single_use_partial_app } ())
+          env_rhs afun a )
       in
+      let afun, asgn = asgn in
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)
@@ -308,26 +302,17 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
         match asgn with
           | [Bind_variable (_, Existing, e)] ->
             let cpp_ty = Types.cpp_of_core cx env t in
-            (* When the type contains [Any] (from erased carrier projections) but
-               the generated expression is a lambda with concrete types, derive
-               the std::function type from the lambda's parameter and return
-               types. *)
+            (* Where the type contains [Any] (from erased carrier projections)
+               but the value assigned is a closure with concrete types, the
+               binding is the [crane::fn] its parameters and result spell,
+               as lowering typed it. *)
             let cpp_ty : Cpp_ir.Lowered.Type.t =
-              match (cpp_ty, e) with
-              | Function (dom, _), Lambda
-                { params = params;
-                  return_type = Some ret_ty;
-                  _ }
+              match (cpp_ty, Destination.assigned afun e) with
+              | Function (dom, _), Some {ty = Closure {groups = [params]; result}; _}
                 when List.exists Base.Type_util.has_tany_in_type dom ->
-                let strip_tmod : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
-                  | Const t -> t
-                  | t -> t
-                in
-                let param_tys =
-                  List.map (fun (ty, _) -> strip_tmod ty) params
-                in
-                Function (param_tys, ret_ty)
-              | _, Lambda _ -> cpp_ty
+                let strip_const : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function Const t -> t | t -> t in
+                Function (List.map strip_const params, result)
+              | _, Some {ty = Closure _; _} -> cpp_ty
               | _, _
                 when Base.Type_util.has_erased_type_in_type cpp_ty
                      || Cpp_ir.Types.exists
@@ -359,11 +344,11 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
                   values = args;
                   type_args = tys;
                   binder = core_binder cx ~site:(Binding let_occ) env' 1 } : Cpp_ir.Lowered.Stmt.t)
-              :: gen_stmts cx ~slot env' k b
+              :: gen_stmts cx (Slot.at ~ret ~slot ()) env' k b
             | None ->
-              (Bind_variable (x_renamed, Declare (cpp_ty, core_binder cx ~site:(Binding let_occ) env' 1), e) :
+              (Cpp_ir.Typed.bind ?binder:(core_binder cx ~site:(Binding let_occ) env' 1) (x_renamed) (cpp_ty) (e) :
                 Cpp_ir.Lowered.Stmt.t)
-              :: gen_stmts cx ~slot env' k b
+              :: gen_stmts cx (Slot.at ~ret ~slot ()) env' k b
             end
           | _ ->
             let cpp_ty = Types.cpp_of_core cx env t in
@@ -377,7 +362,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
             in
             ((Declare (x_renamed, cpp_ty, core_binder cx ~site:(Binding let_occ) env' 1) :
               Cpp_ir.Lowered.Stmt.t) :: asgn)
-            @ gen_stmts cx ~slot env_body k b
+            @ gen_stmts cx (Slot.at ~ret ~slot ()) env_body k b
       in
       result
   | Core.Expr.Apply {callee = ((Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group) as fix_term);
@@ -386,29 +371,29 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
     and ids = Core.Recursion.Group.functions rec_group
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
-    Local_functions.gen_applied_fix cx ~slot env k ~x ~ids ~funs ~occ ~fix_term ~args
+    Local_functions.gen_applied_fix cx (Slot.at ~ret ~slot ()) env k ~x ~ids ~funs ~occ ~fix_term ~args
   | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group as fix_term ->
     let x = rec_group.selected
     and ids = Core.Recursion.Group.functions rec_group
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
-    Local_functions.gen_standalone_fix cx env k ~x ~ids ~funs ~occ ~fix_term
+    Local_functions.gen_standalone_fix cx (Slot.at ~ret ()) env k ~x ~ids ~funs ~occ ~fix_term
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
                      arguments = a1 :: a2 :: l} when Monadic.is_effect cx Core_plan.Effects.Bind use ->
-    Effects.gen_bind_stmts cx ~slot env k ast ~r ~use ~a1 ~a2 ~l
+    Effects.gen_bind_stmts cx (Slot.at ~ret ~slot ()) env k ast ~r ~use ~a1 ~a2 ~l
   | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = a1 :: l}
     when Monadic.is_effect cx Core_plan.Effects.Return use ->
-    Effects.gen_return_stmts cx ~slot env k ast ~use ~a1 ~l
+    Effects.gen_return_stmts cx (Slot.at ~ret ~slot ()) env k ast ~use ~a1 ~l
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
                      occurrence = case_occ}
                        when Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Core_plan.Match_kind.Custom ->
-    gen_custom_cpp_case cx ~slot env k typ t pv case_occ
+    gen_custom_cpp_case cx (Slot.at ~ret ~slot ()) env k typ t pv case_occ
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Base.Table.is_tt_constructor r
-      && returns_void cx ->
+      && (ret = Some Cpp_ir.Type.Void) ->
     (* tt (unit constructor) in tail position of a void-returning function *)
-    if cx.ctx.input.itree_mode = Reified then [k (Monadic.mk_itree_ret Void [])]
+    if cx.ctx.input.itree_mode = Reified then [Destination.finish cx k (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Monadic.mk_itree_ret Void []))]
     else
       [Return None]
   | Core.Expr.Global {callee = r; _} when is_ghost r ->
@@ -416,7 +401,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
       (* Reified mode: ghost (void value) at tail position must produce
          ITree<void>::ret() rather than bare return, since the function
          returns shared_ptr<ITree<void>>. *)
-      [k (Monadic.mk_itree_ret Void [])]
+      [Destination.finish cx k (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Monadic.mk_itree_ret Void []))]
     else
       [Return None]
   | Core.Expr.Runtime_error msg ->
@@ -433,7 +418,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
                      branches = pv;
                      occurrence = case_occ}
                        when Core_plan.Match_kind.is_record (Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
-    Match.gen_record_match_stmts cx ~slot env k ast ~typ ~t ~pv ~case_occ
+    Match.gen_record_match_stmts cx (Slot.at ~ret ~slot ()) env k ast ~typ ~t ~pv ~case_occ
   | t ->
     (* Tail position.  No deref_reified needed: in sequential mode, monadic
        variables are direct values (bind desugars to let-binding); in
@@ -460,38 +445,35 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
       | _ -> false
     in
     if is_void_tail then begin
-      let e = gen_expr cx ~slot ?expected_ty:(Coerce.position_cpp_ty cx None) env t in
-      if returns_void cx then
+      let e = (gen_expr_typed cx (Slot.at ~ret ~slot ?expected_ty:(ret) ()) env t).expr in
+      if (ret = Some Cpp_ir.Type.Void) then
         [Expression e; Return None]
+      else if Destination.discards k then
+        (* Side-effect-only destination (e.g. from unit let handler).
+           The void call provides the side effect; the caller handles
+           the variable declaration separately.  No value needed. *)
+        [Expression e]
       else
-        match (k (Literal (Int 0)) : Cpp_ir.Lowered.Stmt.t) with
-        | Expression _ ->
-          (* Side-effect-only continuation (e.g. from unit let handler).
-             The void call provides the side effect; the caller handles
-             the variable declaration separately.  No value needed. *)
-          [Expression e]
-        | _ ->
-          [(Expression e : Cpp_ir.Lowered.Stmt.t)]
-          @ Cpp_build.inline_iife k ((Monadic.mk_tt_expr ()))
+        [(Expression e : Cpp_ir.Lowered.Stmt.t)]
+        @ Destination.finish_inlined cx k (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Monadic.mk_tt_expr ()))
     end
     else begin
-      (* Whether this continuation is the function's result rather than a
-         binding.  Probing [k] is how the void case above already asks. *)
-      let k_returns = match k (Literal (Int 0)) with Return _ -> true | _ -> false in
-      let e = gen_expr cx ~slot ?expected_ty:(Coerce.position_cpp_ty cx None) env t in
+      let e = gen_expr_typed cx (Slot.at ~ret ~slot ?expected_ty:(ret) ()) env t in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
          time even though its Core type is concrete.  In tail position that value
          is the result, so cast it back to the declared return type -- the same
          recovery the let-binding path performs by marking the bound variable
          erased. *)
       let e =
-        match current_cpp_return_type cx () with
-        | Some rt when k_returns -> (
+        match ret with
+        | Some rt when Destination.returns k -> (
+          let adapt f = Typed_checks.adapted ~before:e (Some rt) (f e.expr) in
           match Types.slot_repr_of_cpp_type cx rt with
-          | Boxed Family_box -> Coerce.deep_box_list cx t e
+          | Boxed Family_box ->
+            adapt (fun v -> Coerce.into_slot ~origin:(Family_list {cx; term = t}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated v) (Exactly rt))
           | Boxed Var_box -> e
-          | Native -> Coerce.recover_boxed_component cx rt e )
+          | Native -> adapt (Coerce.recover_boxed_component cx rt) )
         | _ -> e
       in
-      Cpp_build.inline_iife k (e)
+      Destination.finish_inlined cx k e
     end

@@ -446,7 +446,7 @@ let loopify_inner_lambdas ~unit ?(tail_only = false) ~tparams ?(outer_env = []) 
        the single self-reference its encoding recorded. *)
     | Bind_variable
         ( id,
-          (Declare (Auto, _) as tgt),
+          (Declare_deduced _ as tgt),
           Lambda
             ({ params = lparams;
               return_type = ret_ty_opt;
@@ -475,7 +475,7 @@ let loopify_inner_lambdas ~unit ?(tail_only = false) ~tparams ?(outer_env = []) 
         let self = fixpoint_self fixpoint lparams in
         let lbody' = process_stmts lbody' in
         match rest with
-        | Bind_variable (wid, (Declare (Auto, _) as wtgt), Lambda w) :: rest'
+        | Bind_variable (wid, (Declare_deduced _ as wtgt), Lambda w) :: rest'
           when wraps fixpoint w && not (List.exists (Id.equal id) (free_vars_body rest')) ->
           Bind_variable
             ( wid,
@@ -1073,7 +1073,7 @@ let transform_method_own ~unit ?cursor ?moves ~varying ~parts ~park ~tparams ~se
       (* A loop varying the receiver initialises its own copy of it from
          [this]; any other reads [_self] as it was on entry. *)
       if List.exists (Id.equal self_id) (free_vars_body body') then
-        let init_self = Bind_variable (self_id, Declare (self_ty, None), This) in
+        let init_self = Cpp_ir.Typed.bind (self_id) (self_ty) (This) in
         Method {mf with body = init_self :: body'}
       else
         Method {mf with body = body'} )

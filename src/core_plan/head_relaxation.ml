@@ -189,6 +189,7 @@ let apply relaxation (decl : L.Decl.t) : L.Decl.t =
             (* The cast's target is left alone; its operand is not. *)
             | Any_cast (ty, e') -> Any_cast (ty, fe e')
             | Tolerant_any_cast (ty, e') -> Tolerant_any_cast (ty, fe e')
+            | Coerce (({plan = Cast_box _; _} as c), e') -> Coerce (c, fe e')
             | e -> Cpp_ir.Map.expr (m ()) e
           and fs s = Cpp_ir.Map.stmt (m ()) s
           and m () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:erase () in

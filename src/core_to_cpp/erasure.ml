@@ -110,7 +110,8 @@ let rec core_body_returns_erased_field = function
 (** Whether [expr] is a pair recovered from a box, i.e. one whose [any_cast]
     named the erased shape [pair<any, any>] and whose components are therefore
     boxes in their own right. *)
-let reads_recovered_pair : Cpp_ir.Lowered.Expr.t -> bool = function
+let reads_recovered_pair (e : Cpp_ir.Lowered.Expr.t) =
+  match Cpp_ir.Typed.head e with
   | Any_cast (Entity_application (g, args, _), _) | Tolerant_any_cast (Entity_application (g, args, _), _) ->
     is_prod_global g && args <> [] && List.for_all Cpp_ir.Types.prints_as_any args
   | _ -> false
@@ -125,7 +126,8 @@ let reads_recovered_pair : Cpp_ir.Lowered.Expr.t -> bool = function
     let-binding and tail-position paths ask here rather than being told out of
     band: the emitted expression is the evidence, so no flag has to be
     threaded from producer to consumer. *)
-let yields_boxed_component : Cpp_ir.Lowered.Expr.t -> bool = function
+let yields_boxed_component (e : Cpp_ir.Lowered.Expr.t) =
+  match Cpp_ir.Typed.head e with
   | Call (_, Entity (_, _, Some {inline = Some {shape = Pair_projection _; _}; _}), [arg]) -> reads_recovered_pair arg
   (* The accessor is not always a custom-inline call: a projection out of a
      [std::pair] is a plain member read, and that is the same evidence. *)
