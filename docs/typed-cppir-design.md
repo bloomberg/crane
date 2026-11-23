@@ -425,7 +425,7 @@ callable_crossing_matrix.
 ## 7. Progress
 
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
-- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10 and 13 done, `Join` slots; row 17 and typed-fit fatal not yet; see 8, sixth session)
+- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
 - [ ] Phase B2
 - [ ] Phase C
 - [ ] Phase D
@@ -1199,3 +1199,55 @@ Next, in order: row 17 as above (typed call results and frame fields
 first), the census tail (ambient-free return slots everywhere: the
 destination a match branch gets should be its IIFE's, not the ambient
 type), `typed-fit` fatal, B2.
+
+### Phase B1, seventh session (2026-11-22)
+
+Done:
+- **Row 17, `from` from the typed value.**  `gen_crossing` lowers its
+  inner term typed and every coercing branch (erased variable, oracle,
+  recorded, and the fall-through) coerces from that type through one
+  helper, `cross ~concrete ~into`: unbox where the value is a box, adapt
+  from its own type where the branch allows a concrete source
+  (`~concrete`), else leave it.  `binder_is_opaque` and the per-branch
+  `from` choices are deleted.  What the sixth session's attempt lacked,
+  measured with a probe that compared the tree's result with the typed
+  one at every crossing (112 differences at the start, 0 output changes
+  wanted):
+  (a) a variable whose binder has no decided C++ type (none, or `auto`)
+  and whose Core type converts to `Obligation Opaque_type` is read as
+  `Typed Any`: the erased value is represented by a box, and only a
+  binder declared opaque is an admission (62 sites: loopify frame
+  temporaries, `Case_sum1` handlers, `measurer`);
+  (b) a type is a box under aliases (`Coerce.normal`, `boxed_source`,
+  `names_erased_alias`) and as an alias template of a box with
+  arguments (`payload_ty<T1>` for `using payload_ty = crane::obj`;
+  `resolves_to_any_type` reads only the unapplied head);
+  (c) an `Abort` is at the type it carries (it prints as an invoked
+  lambda returning that type, `[]() -> crane::obj { throw ...; }()`), not
+  `Never`, here only (19 sites in `dep_elim`); joins keep `Never`;
+  (d) where extraction recorded the source as opaque (a value-indexed
+  family's call result, `dt<>`, `tuple<>`, `nfun<>`, `domty<>`: 24 sites)
+  the crossing leaves the value alone even though it is typed a box: the
+  enclosing position recovers it at the right shape, and recovering at
+  this crossing's `boxed_shape_of` would name `pair<obj,obj>` where the
+  box holds `pair<uint64_t, monostate>` (`tt_at_computed_type` breaks).
+  So the recorded record keeps choosing *whether* the recorded branch
+  coerces (`recorded : [`Box | `Opaque | `None]`); `from` is the typed
+  value's.
+  Calls whose callee declares an erased result and values already cast
+  out of a box needed nothing further: after (a)-(d) no crossing
+  disagrees.
+- One deliberate output change, in the same commit:
+  `hk_class_field_result_cast_to_concept`, `natMMP::mk_prov(ptr p)`:
+  `Nat::s(crane::any_cast<Nat>(std::move(p)))` becomes
+  `Nat::s(std::move(p))`.  `ptr` is `natPtr::ptr = Nat`, a promoted
+  member typed concrete; the tree unboxed it on the oracle's say-so.  The
+  test compiles and passes.
+
+Findings:
+- A probe that computes the alternative result is not a test of it:
+  differences at one crossing are often absorbed by the enclosing one,
+  and a first flipped run here (an environment switch, then a `sed`
+  edit not checked) showed no change where the committed code changed
+  three files.  Flip in code, check the edit, diff the outputs.
+

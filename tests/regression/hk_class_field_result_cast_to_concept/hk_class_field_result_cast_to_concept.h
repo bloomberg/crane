@@ -206,9 +206,7 @@ struct natMMP {
     return Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
   }
 
-  static provenance mk_prov(ptr p) {
-    return Nat::s(crane::any_cast<Nat>(std::move(p)));
-  }
+  static provenance mk_prov(ptr p) { return Nat::s(std::move(p)); }
 
   static ptr fresh_ptr(state s) { return s; }
 };

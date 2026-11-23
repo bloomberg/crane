@@ -174,6 +174,12 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
       match Binders.read_value_type cx env i with
       | Typed t when boxed_read && not (Cpp_ir.Types.prints_as_any t) -> Typed Any
       | Deduced Not_yet_typed when boxed_read -> Typed Any
+      (* A binder no C++ type was decided for whose Core type is opaque
+         holds the box an erased value is represented by: only a binder
+         declared opaque is an admission. *)
+      | Typed (Obligation Opaque_type)
+        when (match Option.map Binders.strip_param_wrappers (Binders.binder_cpp_type cx i) with
+              | None | Some Auto -> true | Some _ -> false) -> Typed Any
       | v -> v
     in
     let read = Typed.v ~ty:read_ty result in
@@ -631,54 +637,80 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
   (* A lambda is written against the slot it fills -- its binders and
      arity are the slot's -- and a coercion cannot reshape a callable after
      the fact. *)
-  let inner =
-    gen_expr cx
+  let inner_typed =
+    gen_expr_typed cx
       ?expected_ty:(match t with Core.Expr.Lambda _ -> expected_ty | _ -> None)
       ~slot:
         (match into_box_kind with Some kind -> Slot.into_box kind slot | None -> slot)
       env t
   in
-  (* What extraction recorded about the term's own side of the boundary.
-     Not materialised: this is an inferred type, so an [Obligation Opaque_type] here
-     stays one and licenses nothing. *)
-  let recorded_from =
-    match coercion with
-    (* A binder whose C++ type is decided outranks the coercion's recorded
-       source, for the reason given for [Core.Expr.Boxed_value] below: [md] destructured out
-       of a typed pattern is a [List<metadata<std::any>>], whatever erased
-       carrier application the coercion recorded for it. *)
-    | Some (from, _) -> (
-      match t with
-      | Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
-        (* Read below only for whether it is a box, so the plan and
-           lowering need agree on no more than whether the binder is
-           decided at a type that is not one. *)
-        let decided = function Some ty -> not (Cpp_ir.Types.prints_as_any ty) | None -> false in
-        match
-          Binders.planned_binder_type cx ~use:"coerced from" ~agree:(fun p l -> decided p = decided l) i occ
-        with
+  let inner = inner_typed.expr in
+  (* What the inner value is, as lowering typed it: a box where its type is
+     one under any alias (a value-indexed family's [dt<>], a box variable),
+     an abort at the type it prints at. *)
+  let from : Cpp_ir.Lowered.Type.t option =
+    match (inner, inner_typed.ty) with
+    | Abort (_, t), _ -> Some t
+    | _, Typed t ->
+      let al = Coerce.aliases_in cx in
+      let n = Coerce.normal al t in
+      let family_box =
+        (* An alias template of a box ([payload_ty<T1>] for [using
+           payload_ty = crane::obj]): the box, whatever its arguments. *)
+        let rec head (t : Cpp_ir.Lowered.Type.t) =
+          match t with
+          | In_namespace (_, t) | Const t | Reference (_, t) -> head t
+          | t -> t
+        in
+        match head t with
+        | Entity_application (g, _ :: _, ns) ->
+          Types.resolves_to_any_type cx (Entity_application (g, [], ns))
+        | _ -> false
+      in
+      if Base.Type_util.names_erased_alias n || al.boxed_source n || family_box then Some Any else Some t
+    | _ -> None
+  in
+  let boxed_from = match from with Some f -> Erasure.classify_erasure cx (Some f) = `Boxed | None -> false in
+  (* [inner] put in a slot of type [into]: unboxed where it is a box, and
+     otherwise, where [concrete], adapted from its own type. *)
+  let cross ~concrete ~into =
+    match from with
+    | Some _ when boxed_from -> Coerce.coerce cx ~from:Any ~into inner
+    | Some from when concrete -> Coerce.coerce cx ~from ~into inner
+    | _ -> inner
+  in
+  (* Whether extraction recorded the term's own side of the boundary as
+     erased: a box, or a type-class method's [M A] read at an opaque type.
+     A binder whose C++ type is decided outranks the record: [md]
+     destructured out of a typed pattern is a [List<metadata<std::any>>],
+     whatever erased carrier application the coercion recorded for it; a
+     type-class method returning [M A] is opaque in Coq, but its instance's
+     [M] is a template, so the binder has the concrete type it was
+     assigned. *)
+  let recorded =
+    let decided agree i occ use = Binders.planned_binder_type cx ~use ~agree i occ in
+    let of_core core_from = Some (Types.cpp_of_core cx env core_from) in
+    let ty =
+      match (coercion, t) with
+      | Some (core_from, _), Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
+        let is_decided = function Some ty -> not (Cpp_ir.Types.prints_as_any ty) | None -> false in
+        match decided (fun p l -> is_decided p = is_decided l) i occ "coerced from" with
         | Some ty when not (Cpp_ir.Types.prints_as_any ty) -> Some ty
-        | _ -> Some (Types.cpp_of_core cx env from) )
-      | _ -> Some (Types.cpp_of_core cx env from) )
-    (* [Core.Expr.Boxed_value] is extraction's reading of the Coq typing.  A binder whose
-       C++ type was decided at its binding site outranks it: a type-class
-       method returning [M A] is opaque in Coq, but Crane emits the
-       instance's [M] as a template, so the value here has the concrete type
-       the binder was assigned and there is no box to open. *)
-    | None when boxed -> (
-      match t with
-      | Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
-        match Binders.planned_binder_type cx ~use:"boxed from" ~agree:( = ) i occ with
-        | Some ty -> Some ty
-        | None -> Some Cpp_ir.Type.Any )
-      | _ -> Some Cpp_ir.Type.Any )
-    | None -> None
+        | _ -> of_core core_from )
+      | Some (core_from, _), _ -> of_core core_from
+      | None, Core.Expr.Bound_variable {index = i; occurrence = occ} when boxed -> (
+        match decided ( = ) i occ "boxed from" with Some ty -> Some ty | None -> Some Cpp_ir.Type.Any )
+      | None, _ when boxed -> Some Cpp_ir.Type.Any
+      | None, _ -> None
+    in
+    match ty with
+    | Some ty when Cpp_ir.Types.prints_as_any ty ->
+      if Erasure.classify_erasure cx (Some ty) = `Opaque then `Opaque else `Box
+    | _ -> `None
   in
   ( match expected_ty with
     | Some ty when not (Cpp_ir.Types.prints_as_any ty) && ty <> Void
                   && not (match ty with Entity_application (g, _, _) -> Base.Table.is_erased_type_const g | _ -> false) ->
-      (* The position's type, as the expressions below write it. *)
-      let ty_ir = ty in
       let rec is_cpp_erased_var_rec = function
         | Core.Expr.Bound_variable {index = i; occurrence = occ} -> Binders.read_is_boxed cx i occ
         | Core.Expr.Coerce {value = t'; _}
@@ -687,7 +719,6 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
           is_cpp_erased_var_rec t'
         | _ -> false
       in
-      let is_cpp_erased_var = is_cpp_erased_var_rec t in
       (* Namespace-collapsing erase: a namespaced leaf like [R] must become
          plain [std::any], not the malformed [typename R::std::any] the shared
          [erase_type_to_any] produces for an [In_namespace]-wrapped type.
@@ -696,7 +727,7 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
          that needs the CONCRETE element container (e.g. a constructor field
          of type [deque<R>]) converts it with [crane_container_cast] at its
          own site (mirroring [eta_fun]'s function-argument path). *)
-      if is_cpp_erased_var then
+      if is_cpp_erased_var_rec t then
         (* Canonical erased shape is [deque<std::any>] (a bare [std::any]
            per element, not a structure-preserving [pair<any,any>]) -- see
            the matching fix in the [Core.Expr.Bound_variable] case above. *)
@@ -707,70 +738,44 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
             In_namespace (ns_g, Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns))
           | t -> t
         in
-        Coerce.coerce cx ~from:Any ~into:(erase_top_args ty) inner
+        cross ~concrete:true ~into:(erase_top_args ty)
       else if Erasure.core_expr_is_erased cx env t then
-        (* Extraction's oracle reads a type-class method's [M A] as erased,
-           but the binder it is bound to was assigned an opaque type --
-           an admission that the shape could not be resolved, not a box.
-           Say so rather than assert [Any]: {!Coerce.coerce} recovers from a box
-           and must not invent one. *)
-        let opaque = Some (Cpp_ir.Type.Obligation Opaque_type) in
-        let rec binder_is_opaque = function
-          | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
-            Binders.planned_binder_type cx ~use:"opaque binder"
-              ~agree:(fun p l -> (p = opaque) = (l = opaque))
-              i occ
-            = opaque
-          | Core.Expr.Coerce {value = t'; _}
-          | Core.Expr.Boxed_value {value = t'; _}
-          | Core.Expr.Lambda_group_barrier {value = t'; _} ->
-            binder_is_opaque t'
-          | _ -> false
-        in
-        Coerce.coerce cx
-          ~from:(if binder_is_opaque t then Cpp_ir.Type.Obligation Opaque_type else Cpp_ir.Type.Any)
-          ~into:ty inner
-      else
-        (* [core_expr_is_erased] only recognises a handful of shapes and says
-           [false] for the rest.  Extraction already unified the two sides
-           here, so fall back on what it recorded rather than on the
-           oracle's silence. *)
-        ( match recorded_from with
-          (* Only the boxed dimension: extraction's [from] describes the
-             Coq-level type, and the pointer- and converting-constructor
-             dimensions at this boundary have already been settled by the
-             sub-expression that produced [inner]. *)
-          (* Unless the value is a component just read out of an erased
-             pair and the type the context has in mind is itself a pair:
-             that read already handed back the component's own box, so the
-             context's type describes the enclosing pair, not the component,
-             and recovering here would name the wrong one.  When the context
-             wants a non-pair, it is talking about the component, and the
-             box does have to be opened. *)
-          | Some from
-            when Cpp_ir.Types.prints_as_any from
-                 && not
-                      ( Erasure.reads_erased_pair_component cx env t
-                      &&
-                      match ty with
-                      | Entity_application (g, _, _) -> is_prod_global g
-                      | _ -> false ) ->
-            Coerce.coerce cx ~from ~into:(Erasure.boxed_shape_of ty_ir) inner
-          | Some _
-            when ( match coercion with
-                 | Some (from, _) -> Coerce.absurd_coercion cx from ty
-                 | None -> false ) -> (
-            match coercion with
-            (* Absurd only at some instantiations: [tt] read at the index [T1]
-               of [Inc : incE unit] is dead unless [T1] is [unit] -- or the
-               box an erased handler instantiates it at.  Which, C++ decides
-               once it substitutes [T1]. *)
-            | Some (from, _) when contains_tvar ty ->
-              Cpp_ir.Build.iife (Some ty)
-                [ If_constexpr
-                    { test = Convertible (ty, Reference (Lvalue, Const (Types.cpp_of_core cx env from)));
-                      then_ = [Return (Some (Convert (ty, inner)))];
-                      else_ = [Throw Cpp_build.dead_branch_message] } ]
-            | _ -> Abort (Cpp_build.dead_branch_message, ty) )
-          | _ -> inner )
+        (* Extraction's oracle reads the value as erased: recovered where
+           lowering typed it a box, left alone where opaque (an admission
+           that the shape could not be resolved, not a box). *)
+        cross ~concrete:true ~into:ty
+      else if
+        (* Extraction recorded the value's own side as erased; [from] says
+           whether it is a box to open.  A side recorded opaque is an
+           admission, not a box: the position recovering it is the one
+           that knows its shape. *)
+        recorded <> `None
+        (* Unless the value is a component just read out of an erased
+           pair and the type the context has in mind is itself a pair:
+           that read already handed back the component's own box, so the
+           context's type describes the enclosing pair, not the component,
+           and recovering here would name the wrong one.  When the context
+           wants a non-pair, it is talking about the component, and the
+           box does have to be opened. *)
+        && not
+             ( Erasure.reads_erased_pair_component cx env t
+             && match ty with Entity_application (g, _, _) -> is_prod_global g | _ -> false )
+      then (if recorded = `Opaque then inner else cross ~concrete:true ~into:(Erasure.boxed_shape_of ty))
+      else (
+        match coercion with
+        (* Absurd only at some instantiations: [tt] read at the index [T1]
+           of [Inc : incE unit] is dead unless [T1] is [unit] -- or the
+           box an erased handler instantiates it at.  Which, C++ decides
+           once it substitutes [T1]. *)
+        | Some (from, _) when Coerce.absurd_coercion cx from ty && contains_tvar ty ->
+          Cpp_ir.Build.iife (Some ty)
+            [ If_constexpr
+                { test = Convertible (ty, Reference (Lvalue, Const (Types.cpp_of_core cx env from)));
+                  then_ = [Return (Some (Convert (ty, inner)))];
+                  else_ = [Throw Cpp_build.dead_branch_message] } ]
+        | Some (from, _) when Coerce.absurd_coercion cx from ty -> Abort (Cpp_build.dead_branch_message, ty)
+        (* Only the boxed dimension: the pointer- and converting-constructor
+           dimensions at this boundary have already been settled by the
+           sub-expression that produced [inner]. *)
+        | _ -> cross ~concrete:false ~into:ty )
     | _ -> inner )
