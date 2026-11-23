@@ -274,6 +274,7 @@ let verdict cx (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   | Exactly _ -> exact_verdict cx x into
   | Template_parameter _ -> `Unchecked "deduced"
   | Forwarded -> `Unchecked "forwarded"
+  | Join -> `Unchecked "join"
   | _ -> `Unchecked "slot states no type"
 
 (** [verdict]'s census line for [x] in [into], [what] describing [x]. *)

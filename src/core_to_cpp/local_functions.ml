@@ -1136,7 +1136,7 @@ let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
              the lambda's binders. *)
           let compiled_body =
             with_escape_analysis cx (fun () -> with_region cx body (fun () ->
-                gen_stmts cx lam_env (Destination.Return Free) body ) )
+                gen_stmts cx lam_env (Destination.Return Join) body ) )
           in
           restore_env_types cx saved_env_types;
           (free_var_params, lam_param_ids, lam_env, compiled_body) )

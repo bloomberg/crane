@@ -55,7 +55,7 @@ let expected (s : source) (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lo
     | _ -> assert false
   in
   match (into, s.kind) with
-  | (Free | Forwarded | View _ | Join _), _ -> "none"
+  | (Free | Forwarded | View _ | Join), _ -> "none"
   | Template_parameter _, (`Name | `Closure) -> "name"
   | Template_parameter _, `Typed -> "none"
   | Exactly Any, _ -> "box"

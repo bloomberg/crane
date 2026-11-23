@@ -33,13 +33,18 @@ type t =
 let slot_of (t : Cpp_ir.Lowered.Type.t option) : Slot_type.t =
   match t with Some t -> Exactly t | None -> Free
 
+(** The slot of a function's result: the type it states, or where it
+    states none, the join of what it returns (C++ deduces it). *)
+let result_slot (t : Cpp_ir.Lowered.Type.t option) : Slot_type.t =
+  match t with Some t -> Exactly t | None -> Join
+
 (** A [return] from the function whose body is being lowered, at the result
     type lowering has for it. *)
-let return_ cx = Return (slot_of (Lowering_state.current_cpp_return_type cx ()))
+let return_ cx = Return (result_slot (Lowering_state.current_cpp_return_type cx ()))
 
 (** [Return] at [t], or [Return_void] where [t] is [void]. *)
 let return_at (t : Cpp_ir.Lowered.Type.t option) =
-  match t with Some Void -> Return_void | t -> Return (slot_of t)
+  match t with Some Void -> Return_void | t -> Return (result_slot t)
 
 (** The slot the value is put at. *)
 let rec slot = function
@@ -83,7 +88,7 @@ let check_ambient cx d =
     match d with
     | Discard -> ()
     | _ ->
-      let ambient = slot_of (Lowering_state.current_cpp_return_type cx ()) in
+      let ambient = result_slot (Lowering_state.current_cpp_return_type cx ()) in
       Base.Probe.hit "dest-ambient" (fun () ->
           if slot d = ambient then "agree"
           else "disagree in " ^ Typed_checks.site cx)

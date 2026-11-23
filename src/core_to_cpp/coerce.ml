@@ -155,7 +155,7 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
   (* A generic lambda is a callable with no signature to read. *)
   let function_value = Option.has_some (callable from) || from = Deduced Generic_lambda in
   match (from, into) with
-  | _, (Free | Forwarded | View _ | Join _ | Exactly Void) | Never, _ -> None
+  | _, (Free | Forwarded | View _ | Join | Exactly Void) | Never, _ -> None
   | (Closure _ | Function_name _), Template_parameter t -> Some (Name t)
   | (Typed _ | Deduced _), Template_parameter _ -> None
   | _, Exactly into -> (

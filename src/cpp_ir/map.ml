@@ -102,7 +102,7 @@ let slot_type : type p. (p Type.t -> p Type.t) -> p Slot_type.t -> p Slot_type.t
   match s with
   | Exactly t -> Exactly (ty t)
   | Template_parameter t -> Template_parameter (opt ty t)
-  | Forwarded | View _ | Free | Join _ -> s
+  | Forwarded | View _ | Free | Join -> s
 
 (** [coercion ty c] is [c] with every type in it rewritten by [ty]: the
     value's, the slot's, then the plan's. *)

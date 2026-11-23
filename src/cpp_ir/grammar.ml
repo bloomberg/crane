@@ -297,8 +297,9 @@ and Slot_type : sig
     | View : Param_mode.view * GlobRef.t -> 'p t
         (** a typed mapping's view of the type headed so *)
     | Free : 'p t  (** an [auto] variable, or a discarded value *)
-    | Join : int -> lowered t
-        (** the return type of lambda number [n], decided from its returns *)
+    | Join : lowered t
+        (** the return type of the lambda being lowered, which C++ deduces or
+            lowering decides from the values it returns (the join) *)
 end =
   Slot_type
 
