@@ -54,7 +54,7 @@ jobs:
       - name: Module dependency direction
         run: opam exec -- scripts/check-module-deps.sh
 
-      - name: Install clang and GMP
+      - name: Install clang, GMP and Boost
         run: |
           # clang-19 doesn't parse structured-binding packs (theories/cpp/shared_variant.h);
           # pull a newer clang from LLVM's apt repo instead of Ubuntu noble's default.
@@ -63,7 +63,7 @@ jobs:
           curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
           chmod +x /tmp/llvm.sh
           sudo /tmp/llvm.sh 22
-          sudo apt-get install -y libc++-22-dev libc++abi-22-dev libgmp-dev
+          sudo apt-get install -y libc++-22-dev libc++abi-22-dev libgmp-dev libboost-dev
           echo "CXX=clang++-22" >> "$GITHUB_ENV"
           clang++-22 --version
 
@@ -72,7 +72,11 @@ jobs:
 
       - name: Run C++ tests
         run: |
-          # Find and run all test executables except those in wip or requiring BDE
+          # Find and run all test executables except those in wip.  A test's
+          # library (BDE, GMP, Boost) is read from the compile script its dune
+          # rule runs (scripts/test-deps.sh), not from its name; a test whose
+          # library this runner lacks (BDE, always) is skipped, and said so.
+          . scripts/test-deps.sh
           failed=0
           passed=0
           skipped=0
@@ -90,19 +94,17 @@ jobs:
               test_dir=$(dirname "$test_src")
               test_name=$(basename "$test_src" .t.cpp)
 
-              # Skip BDE tests (they end with _bde)
-              if [[ "$test_name" == *_bde ]]; then
-                echo "⊘ SKIPPED: $test_name (requires BDE)"
+              suite_dune="$(dirname "$test_dir")/dune"
+              dep=$(test_dep "$suite_dune" "$test_name" 2>/dev/null || true)
+              if [ -n "$dep" ] && ! dep_prefix "$dep" >/dev/null; then
+                echo "⊘ SKIPPED: $test_name (requires $dep, not installed)"
                 skipped=$((skipped + 1))
                 continue
               fi
 
               echo "=== Building and running: $test_dir/$test_name ==="
 
-              compile_script="scripts/compile-std.sh"
-              if [[ "$test_name" == *_gmp ]]; then
-                compile_script="scripts/compile-gmp.sh"
-              fi
+              compile_script="scripts/compile-${dep:-std}.sh"
 
               # Read the .cpp sources to link with the driver from this test's
               # own dune rule, rather than globbing the directory: a test
@@ -117,7 +119,6 @@ jobs:
               # its rule the same way. A directory dune has no rule for (e.g.
               # a template harness) falls back to collecting every .cpp, as
               # before.
-              suite_dune="$(dirname "$test_dir")/dune"
               if grep -q "(subdir $test_name\$" "$suite_dune" 2>/dev/null; then
                 cpp_sources=()
                 while IFS= read -r fname; do
@@ -126,7 +127,7 @@ jobs:
                   awk -v name="$test_name" '
                     $0 ~ "\\(subdir " name "$" { found=1 }
                     found && /\(subdir / && $0 !~ "\\(subdir " name "$" { exit }
-                    found && (/compile-std\.sh/ || /compile-gmp\.sh/ || /compile-bde\.sh/) { print; exit }
+                    found && (/compile-std\.sh/ || /compile-gmp\.sh/ || /compile-bde\.sh/ || /compile-boost\.sh/) { print; exit }
                   ' "$suite_dune" | grep -oE '[A-Za-z0-9_./]+\.cpp' | grep -v '\.t\.cpp$'
                 )
               else
