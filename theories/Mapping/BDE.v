@@ -2,12 +2,11 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Bloomberg Development Environment (BDE) extraction mappings.
 
-    Maps [option], [prod], [string], [int63], and [float] to their
-    BDE equivalents ([bsl::optional], [bsl::pair], [bsl::string] with a
+    Maps [option], [prod], [string], [int63], and [float] to their BDE
+    equivalents ([bsl::optional], [bsl::pair], [bsl::string] with a
     [bsl::string_view] read view, [int64_t], [double]), and [char63] to
-    [int64_t], as typed mappings (docs/typed-mappings-design.md): they
-    activate on [Import].  The descriptors are [Mapping.StdCore]'s and
-    [Mapping.Std]'s with the [bsl] spellings.
+    [int64_t], as typed mappings: they activate on [Import].  The descriptors
+    are [Mapping.StdCore]'s and [Mapping.Std]'s with the [bsl] spellings.
 
     Sets the stdlib flavor to ["BDE"]. *)
 From Crane Require Extraction.
@@ -20,9 +19,9 @@ Local Open Scope pstring_scope.
 
 #[export] Set Crane StdLib "BDE".
 
-(** [option A] is a [bsl::optional] of its element's C++ type (design
-    15.2), [prod] a [bsl::pair] (design 15.3).  Both copy at their
-    components' cost and are read by value when their components are. *)
+(** [option A] is a [bsl::optional] of its element's C++ type, [prod] a
+    [bsl::pair].  Both copy at their components' cost and are read by value
+    when their components are. *)
 #[export] Instance bde_option_mapping (A : Type) : TypeMapping (option A) :=
   {| type_headers := ["bsl_optional.h"; "bsl_memory.h"];
      type_cpp :=

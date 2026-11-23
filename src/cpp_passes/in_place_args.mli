@@ -1,8 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Arguments a callee writes or replaces in place (typed mappings, design
-    12.5 and 6.6).
+(** Arguments a callee writes or replaces in place (typed mappings: the
+    replace form, or the write-through form [T&] of a mutable value).
 
     A generated function's parameter planned [By_reference]
     ({!Core_plan.Access}), and an operation mapping's argument the template

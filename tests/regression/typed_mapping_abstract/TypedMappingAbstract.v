@@ -7,11 +7,11 @@
       [AbstractInterface], used only through legacy inline constants
       (operation mappings come later): the type side is the typed mapping.
     - [Token]: an inductive mapped abstractly.  Matching on it, or building
-      it, in source is refused (design 19.5.7).
+      it, in source is refused.
     - [Bead]: given a legacy [Crane Extract Numeral] and a typed mapping,
-      which is refused (design 22.5).
+      which is refused.
     - [Pin]: mapped both by [Crane Extract Inductive] and by a typed
-      mapping, which is refused (design 22.5). *)
+      mapping, which is refused. *)
 
 From Corelib Require Import PrimString.
 From Stdlib Require Import List.
@@ -86,8 +86,8 @@ Definition first_token : Token := token 1.
 End AbstractBuild.
 Fail Crane Extraction "typed_mapping_abstract_build" AbstractBuild.
 
-(** A legacy [Crane Extract Numeral] on a typed head is refused too
-    (design 22.5): a typed type's literals are its descriptor's.  The
+(** A legacy [Crane Extract Numeral] on a typed head is refused too:
+    a typed type's literals are its descriptor's.  The
     instance is imported only inside the module that extracts, so this
     conflict is the only one active there. *)
 Inductive Bead : Type := bead_zero | bead_next (b : Bead).

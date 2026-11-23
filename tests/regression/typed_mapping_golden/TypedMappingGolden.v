@@ -1,13 +1,13 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Typed mappings written with the descriptor library's constructors and
-    records only (design 4.4, 24.2).  The file is documentation: each
+    records only.  The file is documentation: each
     instance spells out every choice, with no helper functions.
 
     - [Color]: an enumeration mapped to a C++ enum, with an algebraic
       interface (how each constructor is built and tested).
     - [Buffer A]: a parametric mutable buffer mapped to [std::vector<A>],
-      with a read span and a writable span (design 14.7).
+      with a read span and a writable span.
     - [Handle]: an identity handle mapped to a raw pointer, owned by an
       external allocator.
     - [buffer_set], [buffer_length]: operations on [Buffer A].

@@ -1,8 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Strings as a typed mapping with a [std::string_view] read view
-    (docs/typed-mappings-design.md 14.1-14.5, 24.4), from
+(** Strings as a typed mapping with a [std::string_view] read view, from
     [Mapping.Std] (imported here through [Mapping.StringView], which
     re-exports it):
 

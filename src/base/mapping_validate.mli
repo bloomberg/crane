@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The checks of design section 19 that need only a decoded descriptor and
+(** The checks of a typed mapping that need only a decoded descriptor and
     the Rocq environment.  Each failure is a user error naming the instance,
     the mapped type or operation, and the one rule broken.  [UnsafeVerbatim]
     and [ExactParameter] are accepted with the warning
@@ -9,7 +9,7 @@
 
     Template holes are found outside C++ comments and string and character
     literals (raw string literals are not recognised); each template context
-    admits the holes of design section 18.2. *)
+    admits the holes the Reference Manual lists for it (Template holes). *)
 
 open Mapping_descriptor
 

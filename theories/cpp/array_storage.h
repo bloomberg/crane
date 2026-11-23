@@ -3,7 +3,7 @@
 //
 // crane::array_storage<T>: the elements of a fixed-size mutable array, one
 // addressable T each, for every T.  It is what a typed mapping that hands out
-// std::span views of an array stores (docs/typed-mappings-design.md 14.9):
+// std::span views of an array stores:
 // std::vector<bool> packs its elements into bits and has no bool to point
 // at, so std::span<bool> cannot view it; array_storage<bool> stores bools.
 //

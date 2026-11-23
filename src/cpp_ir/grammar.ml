@@ -86,7 +86,7 @@ and Param_mode : sig
       the [T &&] a deduced callable is, or a mutable [T &].  No parameter is
       planned [By_reference] yet: only a declaration read back has it
       ({!Cpp_ir.Param_mode.spelled}).  [By_view] is a typed mapping's read
-      or writable view of the value, by value (design 7, 12.5): declared at
+      or writable view of the value, by value: declared at
       the view type, not the value's, and given its argument through the
       mapping's declared conversion ({!Cpp_passes.View_args}). *)
   type form =
@@ -118,7 +118,7 @@ and Param_mode : sig
     role : role;
     invalidates_views : bool;
         (** whether the callee may invalidate a view of its argument
-            (design 7.8): replace it, or resize what it holds, so that a
+            (replace it, or resize what it holds), so that a
             caller may not pass a view of the same value beside it *)
   }
 end =

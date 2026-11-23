@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Compiled operation mappings (design 11, 21.4; plan M4): what the
+(** Compiled operation mappings: what the
     pipeline reads of an [OperationMapping (Ref source)] instance.
 
     A plan is compiled once per operation, from the instance that maps the
@@ -11,7 +11,7 @@
     runtime arguments, and erased binders (proofs, type-class instances,
     [Crane Extraction Implicit] positions).  The contract's [ArgumentSpec]s
     are bound to the retained runtime binders one to one, in source order
-    (validation rule 19.6.2, checked when the mapping is resolved).
+    (checked by {!Mapping_validate} when the mapping is resolved).
 
     The template is compiled into the legacy term-template vocabulary of
     {!Cpp_ir.Foreign_template}, so that a call is lowered by the existing
@@ -32,9 +32,9 @@ open Mapping_descriptor
 
 type purity = Pure | Effectful | Opaque
 
-(** How an argument or a result taken as a view is converted (design 12.7,
-    12.8), each a term template of [%a0] in the operation's vocabulary: its
-    [%tN] are the call's type arguments. *)
+(** How an argument or a result taken as a view is converted
+    ({!Cpp_passes.View_args}), each a term template of [%a0] in the
+    operation's vocabulary: its [%tN] are the call's type arguments. *)
 type view_conversions = {
   kind : Mapping_plan.view_kind;  (** the view the template is given *)
   mapped : Names.GlobRef.t;  (** the mapped type the view is of *)
@@ -91,7 +91,7 @@ val find : Names.GlobRef.t -> t
 (** The number of retained runtime arguments a call supplies. *)
 val arity : t -> int
 
-(** Whether the operation keeps argument [a] (design 12.3): [Take],
+(** Whether the operation keeps argument [a]: [Take],
     [OpaqueUse], or named by a [RetainsArgument] fact.  [Read],
     [ReadCanonical], [Write], [WriteCanonical], [Replace] and [Ignore] only
     borrow it for the call. *)

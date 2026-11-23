@@ -2,13 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** What each parameter of each generated function does with the value it
-    is given (design 12.1-12.4), beside whether it owns it ({!Ownership}).
+    is given, beside whether it owns it ({!Ownership}).
 
     A parameter's requirement is a point of a finite lattice, an access
     ([Unused < Read_access < Write_access < Replace_access]) and a
     representation ([Preferred < Canonical]), joined over its uses:
-    - an argument of a mapped operation, as its contract's [InputUse] says
-      (design 12.3);
+    - an argument of a mapped operation, as its contract's [InputUse] says;
     - an argument of a generated function's direct call, as that function's
       summary says of the parameter it is passed at;
     - anything else -- a constructor argument, a returned value, a
@@ -20,7 +19,7 @@
 
     A function named as a value anywhere -- passed, stored, partially
     applied -- is called through a first-class callable, whose parameters
-    take canonical value forms (design 12.9): it is {e pinned}, and
+    take canonical value forms: it is {e pinned}, and
     {!physical} never gives one of its parameters a mutable reference.  Its
     callers read its summary capped at [Read_access], since it holds a copy
     of whatever it writes or replaces. *)
@@ -33,7 +32,7 @@ type requirement = {
   access : access;
   representation : representation;
   invalidates : bool;
-      (** whether the use may invalidate a view of the value (design 7.8): a
+      (** whether the use may invalidate a view of the value: a
           replacement, an opaque use, or an operation argument an
           [InvalidatesViews] fact names; joined by disjunction *)
 }
@@ -46,7 +45,7 @@ val join : requirement -> requirement -> requirement
 val equal : requirement -> requirement -> bool
 
 (** What an argument of a mapped operation passed at [use] requires of the
-    parameter it is (design 12.3): [Take] is a canonical read, or a write if
+    parameter it is: [Take] is a canonical read, or a write if
     a [WritesComponent] fact names the argument ([facts], [name]). *)
 val of_use :
   ?facts:Base.Mapping_descriptor.operation_fact list -> ?name:string -> Base.Mapping_descriptor.input_use -> requirement
@@ -83,7 +82,7 @@ val summarize : ?receiver:(Names.GlobRef.t -> int option) -> Core.Program.t -> t
 val exported : pinned:Core.Ref.User.Set.t -> Names.GlobRef.t -> requirement list -> requirement list
 
 (** The physical form a borrowed parameter of the typed-mapped type [p]
-    with requirement [r] takes (design 12.5), when it is not the canonical
+    with requirement [r] takes, when it is not the canonical
     read form.  An owned parameter is taken by value, before this is asked.
     Where [view_allowed] (default false: a pinned function, a lambda, a
     local function), a [Preferred] read takes [p]'s read view and a

@@ -12,7 +12,17 @@
     wrote it, which the new code may read differently.  So the bake records
     them ({!record}: the files the compiler's dependency output lists, with
     their digests), and an extraction that uses the image checks them first
-    ({!check}), refusing a stale image rather than emitting it. *)
+    ({!check}), refusing a stale image rather than emitting it.
+
+    The check does not re-bake: a bake is a nested extraction, which cannot
+    run inside the one in progress.  [Set Crane Bake Flags] is not compared,
+    since it is in the document, which the build system does see; libraries
+    linked into the driver (BDE's) are not recorded.  The other half is a
+    dune dependency: theories/RuntimeHeaders.v
+    (scripts/runtime-headers-digest.sh) names a definition after the runtime
+    headers' digest and [Crane.Extraction] requires it, so editing a header
+    rebuilds every file that loads Crane before this check would refuse its
+    image. *)
 
 open Names
 

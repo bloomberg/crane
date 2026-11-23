@@ -4,9 +4,8 @@
 
     Maps [option], [prod], [int63], and [float] to their C++ standard
     library equivalents ([std::optional], [std::pair], [int64_t],
-    [double]), and [char63] to [int64_t] (see below), as typed mappings
-    (docs/typed-mappings-design.md 15): they activate on [Import].  [Std]
-    adds the [string] mapping.
+    [double]), and [char63] to [int64_t] (see below), as typed mappings:
+    they activate on [Import].  [Std] adds the [string] mapping.
 
     Sets the stdlib flavor to ["std"]. *)
 From Crane Require Extraction.
@@ -19,9 +18,9 @@ Local Open Scope pstring_scope.
 
 #[export] Set Crane StdLib "std".
 
-(** [option A] is a [std::optional] of its element's C++ type (design
-    15.2), [prod] a [std::pair] (design 15.3).  Both copy at their
-    components' cost and are read by value when their components are. *)
+(** [option A] is a [std::optional] of its element's C++ type, [prod] a
+    [std::pair].  Both copy at their components' cost and are read by value
+    when their components are. *)
 #[export] Instance std_option_mapping (A : Type) : TypeMapping (option A) :=
   {| type_headers := ["optional"; "memory"];
      type_cpp :=

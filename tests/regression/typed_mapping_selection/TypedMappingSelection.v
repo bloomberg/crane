@@ -1,6 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Typed mappings are selected by import (design 4.5, 10.2, 24.1).
+(** Typed mappings are selected by import.
 
     [MappingA] and [MappingB] map the type [Pixel] and the operation
     [brighten] differently.  Importing only one selects it; importing both

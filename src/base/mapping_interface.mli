@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Compiled interfaces (design 20): what a C++ unit's header was written
+(** Compiled interfaces: what a C++ unit's header was written
     against, so that a unit including it agrees.
 
     When an extraction finishes, {!record} persists in the [.vo], beside

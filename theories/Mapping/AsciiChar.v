@@ -1,8 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Extracts [Ascii.ascii] to C++ [char], as OCaml's [ExtrOcamlString]
-    extracts it to OCaml's [char], as a typed mapping
-    (docs/typed-mappings-design.md): it activates on [Import].
+    extracts it to OCaml's [char], as a typed mapping:
+    it activates on [Import].
 
     An [ascii] is otherwise a record of eight [bool]s, and comparing two of
     them goes through [N_of_ascii]: a list of their bits, then a binary

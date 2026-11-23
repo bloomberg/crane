@@ -73,7 +73,7 @@ let splices text i =
     (List.filter (function Cpp_ir.Foreign_template.Arg j -> j = i | _ -> false) (Cpp_ir.Foreign_template.term_template text))
 
 (* An operation mapping's arguments, evaluated once each, in source order,
-   before its text (design 11.9): unless at most one of them computes
+   before its text: unless at most one of them computes
    anything and the text splices that one once, or the operation is pure
    and no computing argument has an effect (then only the arguments the
    text repeats or drops are), each argument that is not
@@ -93,7 +93,7 @@ let prepare_operation_args fresh bind discard {text; in_place; pure} (args : exp
        their order is not observable, so only an argument the text splices
        more than once is bound ahead (once), and one it does not splice is
        evaluated and discarded; the rest are evaluated where the text places
-       them (design 11.9). *)
+       them. *)
     List.mapi
       (fun i (a : expr) ->
         if free_to_repeat a then a

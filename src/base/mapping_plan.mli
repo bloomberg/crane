@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Compiled type mappings (design 21.4, plan D3): what the pipeline reads
+(** Compiled type mappings: what the pipeline reads
     of a [TypeMapping] instance.
 
     A plan is compiled once per mapped head, from the instance that maps the
@@ -52,11 +52,11 @@ type constructor = {
 
 type interface = Abstract | Algebraic of constructor list
 
-(** A read view or a writable view (design 7.1). *)
+(** A read view or a writable view. *)
 type view_kind = Read_view | Write_view
 
 (** Whether a view escaping its owner is copied into a canonical value, by
-    a term template of [%a0], the view; or may not escape (design 7.2). *)
+    a term template of [%a0], the view; or may not escape. *)
 type escape = Materialise of string | Borrow_only
 
 type view_plan = {
@@ -67,7 +67,7 @@ type view_plan = {
   view_headers : string list;
 }
 
-(** No view, a read view, or a read and a writable view (design 7.4). *)
+(** No view, a read view, or a read and a writable view. *)
 type views = {
   read : view_plan option;
   write : view_plan option;
@@ -75,7 +75,7 @@ type views = {
       (** narrows the writable view [%a0] to the read view *)
 }
 
-(** A numeral descriptor compiled (design 8.7, 17): the action of each
+(** A numeral descriptor compiled: the action of each
     numeral constructor, by its index from 1. *)
 type numerals = {
   cases : (int * numeral_action) list;
@@ -182,16 +182,16 @@ val copies_cheaply : t -> argument:(int -> bool) -> bool
     is read by value, the reference forms do not. *)
 val read_by_value : t -> argument:(int -> bool) -> bool
 
-(** A physical parameter form the access model asks for (design 6.6), when
+(** A physical parameter form the access model asks for, when
     it is not the canonical read form ([As_read]). *)
 type physical =
   | As_read
   | Physical_value
   | Physical_const_reference
   | Physical_mutable_reference
-  | Physical_view of view_kind  (** the view, by value (design 12.5) *)
+  | Physical_view of view_kind  (** the view, by value *)
 
-(** The canonical write-through form of [p] (design 6.6): [T&] for a
+(** The canonical write-through form of [p]: [T&] for a
     mutable value, the read form for a handle (writing through a handle
     does not need to reseat it), and [explicit_write] for [ExplicitAccess]
     ([ExactParameter] is not supported and falls back to the read form). *)

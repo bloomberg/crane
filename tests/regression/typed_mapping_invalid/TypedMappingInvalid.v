@@ -1,6 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Invalid typed mapping descriptors (design 19, 24.12).  Each module
+(** Invalid typed mapping descriptors.  Each module
     declares one invalid instance and checks that resolving it fails with a
     focused diagnostic; the instance is active only inside its module.  The
     checks run while TypedMappingInvalid.vo is built; the extraction at the

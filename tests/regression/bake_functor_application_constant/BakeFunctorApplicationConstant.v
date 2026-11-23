@@ -3,7 +3,7 @@
     application [Module FN := F N], and of [GN.vals] through an alias of
     one.
     Expected: either [vals] is baked or [Crane Bake] refuses it with a
-    [Crane Bake: ...] diagnostic, as docs/Crane-Bake.md does for a
+    [Crane Bake: ...] diagnostic, as the Reference Manual says it does for a
     constant inside a functor; [total = 18] either way.
     Fixed: the check accepted it (it is not syntactically inside a
     functor), but the extraction prints [FN] as [using FN = F<N>;] and

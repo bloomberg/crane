@@ -1,10 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Spans over a structural buffer (docs/typed-mappings-design.md 7.7, 7.8,
-    14.6-14.8, 24.5).  [Buf A] is a test-only mapping of a mutable buffer:
-    a [std::vector<A>] with a read view [std::span<const A>] (materialised
-    by copying the elements) and a writable view [std::span<A>]
+(** Spans over a structural buffer.  [Buf A] is a test-only mapping of a
+    mutable buffer: a [std::vector<A>] with a read view [std::span<const A>]
+    (materialised by copying the elements) and a writable view [std::span<A>]
     (borrow-only):
 
     - [total] only reads: [std::span<const T>].

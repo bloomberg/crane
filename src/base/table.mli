@@ -1081,7 +1081,7 @@ val inline_custom_text : GlobRef.t -> string option
     [None] when [r] is not an inline custom. *)
 val inline_custom_arity : GlobRef.t -> int option
 
-(** Whether an [OperationMapping] instance maps [r] (design 11). *)
+(** Whether an [OperationMapping] instance maps [r]. *)
 val is_mapped_operation : GlobRef.t -> bool
 
 (** Check if reference has foreign custom extraction. *)
@@ -1093,8 +1093,9 @@ val find_callback : GlobRef.t -> string option
 (** Find custom extraction code for reference. *)
 val find_custom : GlobRef.t -> string
 
-(** Refuse a type or operation mapped both by a typed instance and by a
-    legacy command, a [Crane Extract Numeral] included (design 22.5).  Run once the typed mappings are discovered. *)
+(** Refuse a type or operation mapped both by a typed instance and by a legacy
+    command, a [Crane Extract Numeral] included.  Run once the typed mappings
+    are discovered. *)
 val check_typed_mapping_conflicts : unit -> unit
 
 (** Find custom extraction code if exists. *)

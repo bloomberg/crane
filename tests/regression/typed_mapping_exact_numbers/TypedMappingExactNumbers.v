@@ -1,9 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** An exact mapping of [nat] (docs/typed-mappings-design.md 16): a test
-    of the descriptors, not a default.  [ExactNat] maps [nat] to
-    [boost::multiprecision::cpp_int], so no value wraps:
+(** An exact mapping of [nat]: a test of the descriptors, not a default.
+    [ExactNat] maps [nat] to [boost::multiprecision::cpp_int], so no value
+    wraps:
     - [O] is [cpp_int{0}], [S n] is [n + 1], a match tests [n > 0] and owns
       the predecessor [n - 1] ([OwnedProjection]);
     - a numeral is a decimal string passed to [cpp_int]'s constructor

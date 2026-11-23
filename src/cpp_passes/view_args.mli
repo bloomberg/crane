@@ -1,8 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The declared view conversions at calls (typed mappings, design 7,
-    12.7, 12.8).
+(** The declared view conversions at calls (typed mappings, Reference
+    Manual, Views).
 
     A generated function's parameter planned as a view
     ({!Cpp_ir.Param_mode.By_view}, read from its callable plan), and an

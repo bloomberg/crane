@@ -21,8 +21,8 @@ program), with read and writable views (`std::string_view`, `std::span`)
 where a mapping declares them. Every file in `theories/Mapping/` (`Std`,
 `StdCore`, `BDE`, the `nat`/`N`/`Z` flavours, GMP, `Real`, `AsciiChar`,
 `DequeList`, `Shared`) and the `ST` monad's arrays and references are typed.
-See the [Reference Manual](Reference-Manual.md#typed-mappings) and the
-[design](typed-mappings-design.md).
+See the [Reference Manual](Reference-Manual.md#typed-mappings) and
+[Compiler-Pipeline.md](Compiler-Pipeline.md#7-typed-mappings-in-the-pipeline).
 
 **Next.**
 
@@ -50,8 +50,7 @@ the two (boxing, erasure, eta-expansion, regrouping, conversion) is one
 decision, `Coerce.decide`, expanded by one finishing pass. Under
 `CRANE_CHECK_IR` a value that does not fit its slot fails extraction unless
 it is on a shrink-only allowlist. See
-[Compiler-Pipeline.md](Compiler-Pipeline.md) and the
-[typed CppIR design](typed-cppir-design.md).
+[Compiler-Pipeline.md](Compiler-Pipeline.md#61-typed-lowering).
 
 **Next.**
 
@@ -126,7 +125,8 @@ counting, shared variants, loopification of tail, tail-modulo-cons and tree
 recursion, immortal top-level constants (never counted or freed), a sticky
 reference count under `NonAtomicRc` plus `SingleThreaded`, borrowing of pair
 components, moves at the last use in loop frames, and
-[`Crane Bake`](Crane-Bake.md) for constants computed at extraction time.
+[`Crane Bake`](Reference-Manual.md#crane-bake) for constants computed at
+extraction time.
 
 **Next.**
 
