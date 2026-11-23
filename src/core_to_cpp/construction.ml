@@ -72,13 +72,17 @@ let constant_name e =
     takes, not the throw a dead position gets, since the constructor runs as
     the value is built; a call returning [unit] is the value its void call
     stands for. *)
-let gen_stored_value cx (slot : Slot.slot) env e : Cpp_ir.Lowered.Expr.t =
+let gen_stored_value_typed cx (slot : Slot.slot) env e : Cpp_ir.Typed.t =
   let ret = slot.Slot.ret in
   match e with
-  | Core.Expr.Erased_value _ -> Cpp_passes.Erasure.empty_box
+  | Core.Expr.Erased_value _ -> Cpp_ir.Typed.typed Any Cpp_passes.Erasure.empty_box
   | e when Monadic.core_value_is_void_call cx e ->
-    Monadic.wrap_void_call_as_value ((gen_expr_typed cx (Slot.at ~ret ~slot ()) env e).expr)
-  | _ -> (gen_expr_typed cx slot env e).expr
+    let x = Monadic.wrap_void_call_as_value ((gen_expr_typed cx (Slot.at ~ret ~slot ()) env e).expr) in
+    Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated x
+  | _ -> gen_expr_typed cx slot env e
+
+(** {!gen_stored_value_typed}'s expression. *)
+let gen_stored_value cx slot env e = (gen_stored_value_typed cx slot env e).expr
 
 (** The constructor [r] of a custom-extracted inductive at [ty] applied to
     [ts]: the user's constructor template instantiated at the type arguments
@@ -147,7 +151,7 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
      argument ([Core.Expr.Erased_value]) is the empty box its erased slot takes; see that
      case of {!gen_expr_typed}. *)
   let gen_ctor_arg ~ret ?expected_ty ?(slot = slot) e =
-    gen_stored_value cx (Slot.at ~ret ?expected_ty ~slot ()) env e
+    gen_stored_value_typed cx (Slot.at ~ret ?expected_ty ~slot ()) env e
   in
   let c = custom cx env ~ret ~expected_ty ~slot ty r in
   let ty_args_for_expected = c.ty_args_for_expected and field_types_for_wrap = c.field_types in
@@ -157,9 +161,8 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
     List.rev (List.mapi (fun i e ->
       let a = custom_field cx env c ~ret ~slot r i e in
       let e = a.term and new_expected = a.expected_core and erased_fn_slot = a.erased_fn_slot in
-      let result =
-        gen_ctor_arg ~ret:a.ret ?expected_ty:a.expected ~slot:a.slot e
-      in
+      let value = gen_ctor_arg ~ret:a.ret ?expected_ty:a.expected ~slot:a.slot e in
+      let result = value.expr in
 
       (* Where this argument is stored, as far as its representation goes:
          [Some [Any]] when the slot is erased and the value has to be boxed
@@ -238,7 +241,7 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
       in
       let result =
         match into with
-        | Some into -> Coerce.coerce cx ~term:e ~into result
+        | Some into -> Coerce.coerce cx ~term:e ~value ~into result
         | None -> result
       in
       (* A closure stored as itself at a field the inductive declares at one
@@ -1473,14 +1476,15 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
           (fun i e ->
             let expected_ty, slot = record_field cx env ~is_boxed:(Binders.read_is_boxed cx) ty r
               ~slot i e in
-            gen_stored_value cx (Slot.at ~ret ~slot ?expected_ty ()) env e)
+            gen_stored_value_typed cx (Slot.at ~ret ~slot ?expected_ty ()) env e)
           ts
       in
       match ty with
       | Core.Type.Global_app {head = n; _} ->
         let field_types = field_types_rec in
         List.mapi
-          (fun i expr ->
+          (fun i (value : Cpp_ir.Typed.t) ->
+            let expr = value.expr in
             match List.nth_opt field_types i with
             | Some ft ->
               (* An erased list leaf forwarded into a concrete-element list
@@ -1503,7 +1507,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
               let declared_ty = declared_field_cpp_ty ft in
               let expr =
                 if erased_domain_fun_ty declared_ty then
-                  Coerce.coerce cx ?term:(List.nth_opt ts i) ~into:declared_ty expr
+                  Coerce.coerce cx ?term:(List.nth_opt ts i) ~value ~into:declared_ty expr
                 else if Cpp_ir.Types.prints_as_any (Types.unfold_cpp_typedef cx env declared_ty) then
                   match List.nth_opt ts i with
                   | Some e ->
@@ -1516,7 +1520,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
               Cpp_passes.Convert.wrap_storage_expr ~storage_ty ~api_ty expr
             | None -> expr)
           base_args
-      | _ -> base_args
+      | _ -> List.map (fun (v : Cpp_ir.Typed.t) -> v.expr) base_args
     in
     nstempmod record_arg_exprs
   in

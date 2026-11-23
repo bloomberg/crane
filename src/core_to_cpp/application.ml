@@ -353,7 +353,7 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
             Binders.planned_binder_type_or_derive cx ~use:"argument's type" ~agree:( = ) env j occ
           | _ -> None
         in
-        Coerce.coerce cx ~term:core_arg ?from ~into:Any expr
+        Coerce.coerce cx ~term:core_arg ?from ~value:arg_typed ~into:Any expr
       else expr
     in
     (* Wrap void calls as values only when the expression will be used

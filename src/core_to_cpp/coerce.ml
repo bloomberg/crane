@@ -948,14 +948,18 @@ let named_value cx env core_ty (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Typed.t 
   in
   Cpp_ir.Typed.v ~ty:from cglob
 
-(** {!ue_plan} through {!into_slot}. *)
-let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t)
-    (expr : Cpp_ir.Lowered.Expr.t) =
+(** {!ue_plan} through {!into_slot}.  The value's type is [from] where the
+    caller states the box it comes from, else [value]'s where [value] is the
+    lowered [expr] itself, else the type [expr] carries. *)
+let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ?(value : Cpp_ir.Typed.t option)
+    ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) =
   (* A lambda is a closure, whatever box the caller says it comes from. *)
   let from_ty : Cpp_ir.Lowered.Value_type.t =
-    match (from, Cpp_ir.Typed.head expr) with
-    | _, Lambda _ | None, _ -> Option.default Cpp_ir.Typed.unannotated (Cpp_ir.Typed.carried expr)
-    | Some t, _ -> Typed t
+    match (from, value, Cpp_ir.Typed.head expr) with
+    | _, _, Lambda _ -> Option.default Cpp_ir.Typed.unannotated (Cpp_ir.Typed.carried expr)
+    | Some t, _, _ -> Typed t
+    | None, Some v, _ when v.expr == expr -> v.ty
+    | None, _, _ -> Option.default Cpp_ir.Typed.unannotated (Cpp_ir.Typed.carried expr)
   in
   into_slot ~origin:(Ue {cx; term; from}) (Cpp_ir.Typed.v ~ty:from_ty expr) (Exactly into)
 
