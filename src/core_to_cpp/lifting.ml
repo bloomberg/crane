@@ -92,6 +92,10 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(concrete_result = false) ?(e
   | (Any_cast (_, (Call (_, Local id, _) as call)) | Tolerant_any_cast (_, (Call (_, Local id, _) as call)))
     when concrete_result && Id.equal id target ->
     sub call
+  | Coerce _
+    when (keep_cast || concrete_result)
+         && match Cpp_ir.Typed.head e with Any_cast _ | Tolerant_any_cast _ -> true | _ -> false ->
+    sub (Cpp_ir.Typed.head e)
   | Call (o, Local id, args) when extra_args <> [] && Id.equal id target ->
     Call (o, repl, List.map sub args @ extra_args)
   | Local id when Id.equal id target -> repl

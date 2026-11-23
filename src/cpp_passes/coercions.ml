@@ -47,8 +47,8 @@ let adapter_param_moves (ty : Cpp_ir.Lowered.Type.t) =
     [list nat] argument is stored as [List<std::any>], not [List<uint64_t>] --
     so the function has to be taken at the erased instantiation, or the
     adapter would unbox to a shape nothing ever boxed. *)
-let erased_fn_instantiation : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t = function
-  | Entity (g, (_ :: _ as tys), xs) -> Entity (g, List.map (fun _ -> Cpp_ir.Type.Any) tys, xs)
+let erased_fn_instantiation ?(box = Cpp_ir.Type.Any) : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t = function
+  | Entity (g, (_ :: _ as tys), xs) -> Entity (g, List.map (fun _ -> box) tys, xs)
   | e -> e
 
 (** [regroup_curried ~from ~into expr]: [expr], a function value of the C++
@@ -293,11 +293,11 @@ let rec expand (p : Cpp_ir.Lowered.Coercion.plan) (e : Cpp_ir.Lowered.Expr.t) : 
   | Erase_as shape -> Erase_callable (shape, e)
   | Convert_to t -> Convert (t, e)
   | Represent (src_ty, dst_ty) -> Convert.gen_type_conversion_expr ~src_ty ~dst_ty e
-  | Box_value erase -> (
+  | Box_value (box, erase) -> (
     match e with
     (* Boxing is not idempotent: [std::any] holding a [std::any] is a box
        no consumer opens twice. *)
-    | Box (Any, _) | Any_cast (Any, _) -> e
+    | (Box (b, _) | Any_cast (b, _)) when b = box -> e
     | _ ->
       (* A closure does not survive as itself: the consumer recovers it with
          [any_cast<std::function<std::any(std::any...)>>], so it is adapted
@@ -306,8 +306,8 @@ let rec expand (p : Cpp_ir.Lowered.Coercion.plan) (e : Cpp_ir.Lowered.Expr.t) : 
          deduces its field type from the argument, and an unboxed
          [std::function] would store [pair<any, function<any(any)>>] where
          the consumer expects [pair<any,any>]. *)
-      let adapted : Cpp_ir.Lowered.Expr.t = if erase then Erase_callable (Boxed_whole, erased_fn_instantiation e) else e in
-      Erasure.converting_ctor Any [adapted] )
+      let adapted : Cpp_ir.Lowered.Expr.t = if erase then Erase_callable (Boxed_whole, erased_fn_instantiation ~box e) else e in
+      Box (box, match adapted with Box (_, x) -> x | x -> x) )
   | Recover_box {into; lambda} -> (
     match (e, lambda) with
     (* A closure built here is not a box, whatever its erased type says: what
@@ -341,12 +341,14 @@ let rec expand (p : Cpp_ir.Lowered.Coercion.plan) (e : Cpp_ir.Lowered.Expr.t) : 
     let call = apply result (Cpp_ir.Build.call e args) in
     Cpp_ir.Build.lambda params None [Return (Some call)] ~capture:Stored
 
+  | Moving (x, p) -> ( match expand p e with Lambda l -> Lambda {l with moved = [x]} | e -> e )
+
 and apply p e = match p with Some p -> expand p e | None -> e
 
-(** [head e]: [e] as its outermost coercions expand it, for a decision that
-    reads the form of the value it adapts. *)
-let rec head (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  match e with Coerce (c, e) -> expand c.plan (head e) | e -> e
+let () = Cpp_ir.Typed.expansion := expand
+
+(** {!Cpp_ir.Typed.head}. *)
+let head = Cpp_ir.Typed.head
 
 (** Every coercion in [decl] expanded, innermost first, so that each plan
     reads the value it adapts as built. *)

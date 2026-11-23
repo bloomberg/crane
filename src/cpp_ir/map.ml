@@ -124,7 +124,7 @@ let coercion ty (c : 'p Coercion.t) : 'p Coercion.t =
     | Represent (a, b) ->
       let a = ty a in
       Represent (a, ty b)
-    | Box_value b -> Box_value b
+    | Box_value (t, b) -> Box_value (ty t, b)
     | Recover_box r ->
       let into = ty r.into in
       Recover_box
@@ -139,6 +139,7 @@ let coercion ty (c : 'p Coercion.t) : 'p Coercion.t =
       let domain = list ty r.domain in
       let args = list (opt plan) r.args in
       Recover_call {domain; args; result = opt plan r.result}
+    | Moving (x, p) -> Moving (x, plan p)
   in
   let from = value_type ty c.from in
   let into = slot_type ty c.into in

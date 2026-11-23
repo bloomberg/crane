@@ -140,7 +140,7 @@ let guard_compare n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_ir.L
     impose, and the lambda's return type is used instead. *)
 let lift_iife_assignment target_var (target_ty : Cpp_ir.Lowered.Type.t option) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Stmt.t list option =
-  match expr with
+  match Cpp_passes.Coercions.head expr with
   | Call
       ( _,
         Lambda

@@ -255,7 +255,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
         let all = ref true and any = ref false in
         let rec stmt (s : Cpp_ir.Lowered.Stmt.t) =
           match s with
-          | Return (Some (Lambda l)) when has_signature l -> any := true
+          | Return (Some e) when (match Cpp_ir.Typed.head e with Lambda l -> has_signature l | _ -> false) -> any := true
           | Return _ -> all := false
           | s -> Cpp_ir.Subterms.stmt ~expr:ignore ~stmts:(List.iter stmt) s
         in
@@ -287,7 +287,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
         | Some f -> Cpp_ir.Expr.Converting_construct (f, [result])
         | None -> Function_value result
       in
-      match (into, List.nth_opt field_types_for_wrap i, result) with
+      match (into, List.nth_opt field_types_for_wrap i, Cpp_ir.Typed.head result) with
       | None, Some ft, Lambda l
         when (not (is_passthrough_ctor_arg i)) && has_signature l && Erasure.core_expr_is_function_value cx e ->
         ( match resolve_meta ft with Core.Type.Variable _ -> named ft | _ -> result )

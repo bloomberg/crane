@@ -1054,6 +1054,8 @@ let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
                           ( opaque (), lifted,
                             List.rev wrapper_call_args ) ) ) ];
               capture = Stored }
+      | Coerce _ when (match Cpp_ir.Typed.head e with Any_cast _ -> true | _ -> false) ->
+        subst_lifted_call_expr target lifted free_args (Cpp_ir.Typed.head e)
       | Any_cast (_, Call (_, Local id, args))
         when Id.equal id target ->
         (* The any_cast wraps a direct call to the variable being lifted.

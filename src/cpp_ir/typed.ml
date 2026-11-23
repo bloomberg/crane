@@ -19,12 +19,18 @@ let untyped expr = {expr; ty = not_yet}
 (** The grouping a lambda's own type has: its parameters, then those of the
     lambda it returns, if its body is only that, and so on; [None] where its
     result is not written. *)
+let expansion : (Lowered.Coercion.plan -> Lowered.Expr.t -> Lowered.Expr.t) ref = ref (fun _ e -> e)
+
+let rec head (e : Lowered.Expr.t) : Lowered.Expr.t =
+  match e with Coerce (c, e) -> !expansion c.plan (head e) | e -> e
+
 let generic (l : lowered Lambda.t) =
   l.type_params <> [] || List.exists (fun ((t : Lowered.Type.t), _) -> Types_.exists (fun t -> t = Auto) t) l.params
 
 let rec closure_arrows (l : lowered Lambda.t) : Lowered.Arrows.t option =
   let group = List.map fst l.params in
-  match (l.return_type, l.body) with
+  let body : Lowered.Stmt.t list = match l.body with [Return (Some e)] -> [Return (Some (head e))] | body -> body in
+  match (l.return_type, body) with
   | Some result, _ -> Some {groups = [group]; result}
   | None, [Return (Some (Lambda inner))] when inner.type_params = [] ->
     Option.map (fun (a : Lowered.Arrows.t) -> {a with groups = group :: a.groups}) (closure_arrows inner)
@@ -50,7 +56,8 @@ and joined_returns body : Lowered.Type.t option =
   | t :: rest when (not !unknown) && List.for_all (( = ) t) rest -> Some t
   | _ -> None
 
-and node_type : Lowered.Expr.t -> Lowered.Value_type.t = function
+and node_type : Lowered.Expr.t -> Lowered.Value_type.t = fun e ->
+  match e with
   | Converting_construct (t, _)
   | Box (t, _)
   | Any_cast (t, _)
@@ -79,6 +86,7 @@ and node_type : Lowered.Expr.t -> Lowered.Value_type.t = function
     match Value_type_.arrows (node_type e) with
     | Some a -> Typed (Function (List.map (fun _ -> Type.Any) (List.concat a.groups), cod))
     | None -> not_yet )
+  | Coerce _ -> node_type (head e)
   | Lambda l when generic l -> Deduced Generic_lambda
   | Lambda l -> ( match closure_arrows l with Some a -> Closure a | None -> not_yet )
   | _ -> not_yet

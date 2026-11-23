@@ -426,7 +426,7 @@ callable_crossing_matrix.
 
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
 - [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
-- [ ] Phase B2
+- [x] Phase B2 (see 8, B2: plans carry their expansion data; `coercions` pass; `Typed.head` is the look-through)
 - [ ] Phase C
 - [ ] Phase D
 - [ ] Phase E (optional)
@@ -1295,3 +1295,89 @@ the C++ type the constructor builds; inline custom operator operands and
 their IIFEs at their own slots; `prod` argument mismatches); (2) drop
 the type-variable exemption, make `typed-fit` fatal under
 `CRANE_CHECK_IR`, file genuine misses in `tests/wip`; (3) B2.
+
+### Phase B2 (2026-11-23)
+
+Done:
+- **Plans carry what their expansion reads.**  `Coercion.plan` is now
+  the expansion vocabulary; decide's two-type answer is
+  `Coercion.decision` (constructors unchanged, `decision_name` for the
+  census).  One plan per adapter, keeping its parameter prefix:
+  `Regroup_curried (from, into)` (`_rg`), `Nest into` (the partial
+  application's closure), `Eta_short {domain; arity}` (`_ee`),
+  `Eta_global {declared; into; site; exact}` (`_ec`), `Name_closure`,
+  `Name_at`, `Erase_as`, `Convert_to` (crossings, carrier arguments),
+  `Represent (src, dst)` (pointer dimension), `Box_value (box, erase)`,
+  `Recover_box {into; lambda}` (a lambda's returns recovered at its
+  codomain by a sub-plan), `Recover_call {domain; args; result}` (`_ue`,
+  sub-plans per argument and result), `Moving (x, p)` (the adapter holds
+  `x` by move: the two `moved = [x]` sites in `expr.ml` now say it as a
+  plan).  `Coerce` keeps one planner per origin (`ue_plan`,
+  `eta_global_plan`, `erase_fn_arg_plan`, `crossing_plan`,
+  `eta_short_plan`, `name_fn_arg_plan`): every read of `Lowering_state`,
+  the environment or Core happens there.  The adapter bodies moved
+  unchanged to `cpp_passes/coercions.ml`, `expand : plan -> Expr.t ->
+  Expr.t`, pure.  `Convert` moved to `cpp_passes` (it was already pure);
+  `Arrow_site` moved to the grammar (`Types.arrow_site` re-exports it).
+  Deviation: `Box_value` names its box type (`Any`) rather than leaving it
+  implicit, because a type rewrite between lowering and finishing (a
+  generic lambda's `Any` respelled `CraneX`, `hkt_record_dict`) must reach
+  the box the expansion builds.
+- **The node survives to finishing.**  `into_slot` returns `Coerce (c,
+  e)` whenever the plan's expansion differs from the value (no identity
+  node).  New pass `coercions`, first in `Pipeline.lowered_passes` after
+  the control check, expands innermost first; new obligation
+  `Representation_obligation.Unlowered_coercion`, checked by `owes` as
+  the pass's fixed point (`unit_tests/pipeline_manifest.expected`
+  updated).  `Resolve` already owed `Coerce`.
+- **Looking through a coercion.**  Deviation from "move shape-inspecting
+  code onto `Typed` / `Expr.under_coercion`": the exact look-through is
+  `Cpp_ir.Typed.head e`, `e` with its outermost coercions expanded (the
+  shape the eager code saw), and `Typed.node_type (Coerce _)` is the node
+  type of that head.  The expansion builds with finishing's vocabulary
+  (`Cpp_passes.Erasure`, `Convert`, `Ownership_ir.Region`), which
+  `cpp_ir` may not read, so `Coercions` installs `expand` into
+  `Typed.expansion` at load.  A hook is the price of keeping `node_type`
+  exact until phase D, where every value crossing modules is a
+  `Typed.t` and `node_type` no longer has to read nodes.  Sites moved to
+  `head` (each found by a byte diff, 31 tests at first): the doc's list
+  (`expr.ml` constant `Call` checks, `Cpp_build.lift_iife_assignment`)
+  and: `application.ml` crossings (`regroup_crossing` results tested by
+  physical identity instead of matching `Convert`), `eta_arg_is_cheap`,
+  pair-accessor `single_arg`, the custom-list `as_value` reuse,
+  `made_of_application` through a recovering coercion (the recursion
+  plan finds the call by its occurrence), result `Call` checks;
+  `Typed.closure_arrows` (a body returning a coerced lambda);
+  `construction.ml` closure naming at a field (`has_signature`,
+  `returns_closures`); `stmts.ml` let binding type from a lambda;
+  `Erasure.reads_recovered_pair` / `yields_boxed_component`;
+  `Coerce.box_for_any_slot`, `Coerce.coerce`'s lambda test,
+  `curry_value_to_expected`'s entity test; `Lifting.local_var_subst_expr`
+  and `Local_functions`' lifted-call substitution (a cast around a call
+  of the lifted local); control lowering: `Frame` (resume cast and
+  `planned_resume`), `Analysis.count_calls_expr`, `Lower.check_lowered`'s
+  `bare`.  `Lifting.fixpoint_escapes_in_stmts` /
+  `fixpoint_named_in_returns` and `tail.ml:make_rhs` needed nothing
+  (their traversals descend into the node, or the eager adapter was not
+  a variable either).
+- Not deferred: `Coerce.box_for_any_slot`, `deep_box_list`,
+  `recover_carrier_result`, `apply_erased_*` still build directly (they
+  never went through `into_slot`); phase C folds them into plans.
+
+Finding: deleting a test's `.vo` does not make dune rebuild it when
+nothing it depends on changed (the digest database remembers the rule);
+a bisecting harness must change the `.v`'s digest each run
+(`/tmp/tcppir8/many.sh` appends a unique comment, `git checkout tests`
+restores).  Two of the early bisections here silently measured nothing.
+
+Commits: `6c64774c3` (plans carry their data, eager), the next commit
+(node survives to finishing).  Extraction byte-identical after each
+(`git status --short tests` empty), no `CRANE_CHECK_IR` violation;
+`dune build @unit_tests/runtest` and `scripts/check-module-deps.sh` pass.
+
+Next: phase C.  Start with the standalone row functions (`regroup_value`,
+`eta_expand_to_expected`, ... are now one-line `into_slot` calls whose
+callers can name the origin and slot) and `box_for_any_slot` /
+`deep_box_list` as plans; then the ambient return type
+(`current_cpp_return_type`, 57 uses; `with_cpp_return_type`, 28), which
+needs destinations threaded to every reader, the bulk of C.

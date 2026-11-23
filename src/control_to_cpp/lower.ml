@@ -923,7 +923,7 @@ let keeps_call taken (stmts : Ir.Stmt.t list) =
    occurrences [calls] as a whole statement or the value they return or
    bind: one a loop's transform takes where it is one of the loop's turns. *)
 let makes_statement_call calls (stmts : Ir.Stmt.t list) =
-  let rec bare : Ir.Expr.t -> Ir.Expr.t = function Any_cast (_, e) | Move e -> bare e | e -> e in
+  let rec bare : Ir.Expr.t -> Ir.Expr.t = function Any_cast (_, e) | Move e -> bare e | Coerce _ as e -> bare (Cpp_ir.Typed.head e) | e -> e in
   let made e =
     match bare e with
     | Call ({occurrence = Some o; _}, _, _) -> List.exists (Core.Occurrence.equal o) calls

@@ -870,6 +870,7 @@ let rec count_calls_expr (check : call_checker) expr =
   | Aggregate {values = args; _}
    |Local_aggregate {values = args; _} ->
     List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
+  | Coerce _ -> count_calls_expr check (Cpp_ir.Typed.head expr)
   | _ -> 0
 
 (** Count recursive calls in a statement list. *)

@@ -16,6 +16,9 @@ open Util
 open Lowering_state
 open Base.Type_util
 open Core_plan.Query
+
+(** Whether [e] is a lambda once its coercions are expanded. *)
+let is_lambda (e : Cpp_ir.Lowered.Expr.t) = match Cpp_passes.Coercions.head e with Lambda _ -> true | _ -> false
 open Application
 open Construction
 open Match
@@ -264,7 +267,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
            there where this read moves it. *)
         match (Coerce.curry_value_to_expected cx env ?expected_ty (get_env_type_opt cx i) var_expr,
           var_expr) with
-        | Lambda l, Local x when move_candidate -> Typed_checks.adapted_to expected (Lambda {l with moved = [x]})
+        | e, Local x when move_candidate && is_lambda e -> Typed_checks.adapted_to expected (Coerce.moving x e)
         | e, _ when e == var_expr -> Typed.rewrap (fun _ -> e) read
         | e, _ -> Typed_checks.adapted_to expected e )
       (* And the converse: a function the variable holds curried -- a
@@ -273,8 +276,8 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
          parameter of type [nat -> nat -> nat]. *)
       | Some (Function _ as into), Some (Function _ as from) -> (
         match (Coerce.regroup_value ~from ~into var_expr, var_expr) with
-        | Lambda l, Local x when move_candidate -> Typed_checks.adapted_to (Some into) (Lambda {l with moved = [x]})
-        | Lambda _ as e, _ -> Typed_checks.adapted_to (Some into) e
+        | e, Local x when move_candidate && is_lambda e -> Typed_checks.adapted_to (Some into) (Coerce.moving x e)
+        | e, _ when is_lambda e -> Typed_checks.adapted_to (Some into) e
         | _ -> read )
       | _ -> read )
   (* A singleton class's dictionary applied, which is the body of the class's
@@ -325,7 +328,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
          && Core_plan.Elaborate.closed_instance_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args -> (
     let built = gen_expr_typed cx ?expected_ty ~slot:{slot with Slot.building_constant = true} env e in
     (* Kept, it is the value it builds. *)
-    match built.expr with
+    match Cpp_passes.Coercions.head built.expr with
     | Call _ ->
       Typed.rewrap
         (fun b ->
@@ -531,7 +534,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
     when (not slot.Slot.building_constant) && Core_plan.Elaborate.shared_constant ~walk:(elaborations cx) e
          && not (takes_reuse_token cx e) -> form @@ (
     let built = gen_expr cx ?expected_ty ~slot:{slot with Slot.building_constant = true} env e in
-    match built with
+    match Cpp_passes.Coercions.head built with
     | Call (_, Type_member (Entity_application (n, _, _), _), _)
       when Base.Table.is_shared_variant n && ts <> [] ->
       Cpp_ir.Build.call (Runtime (Cpp_ir.Crane_rt.Constant (constant_name e))) [built]

@@ -100,6 +100,8 @@ let narrow_captures = Base.Pipeline_trace.pass "narrow_captures" Erasure.narrow_
 let captures = Base.Pipeline_trace.pass "captures" Erasure.decide_captures
 let initialisers = Base.Pipeline_trace.pass "initialisers" Erasure.invoke_capturing_initialisers
 
+let coercions = on_decl "coercions" Coercions.decl
+
 type control_check = unit:Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> unit
 
 (** Every pass before the {!Erasure} seam, in the order they run, over a
@@ -113,6 +115,10 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
     on_decl "control" (fun d ->
         if Base.Probe.checking () then check_control ~unit:u d;
         d );
+    (* Every value lowering put in a slot is adapted as its coercion plans
+       ({!Coercions.expand}), innermost first: from here on an adapter is
+       the code it is. *)
+    coercions;
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
        fixpoint applied in place binds its parameters to in order
@@ -230,6 +236,7 @@ let checked_before_instantiation : obligation -> bool = function Unlowered_condi
 (** What [o] is and the pass that owes it, as a failed check reports it. *)
 let describe : obligation -> string = function
   | Unresolved_type -> "an undetermined type (Obligation Unresolved_type), owed by the pass that wrote it"
+  | Unlowered_coercion -> "an unexpanded coercion, owed by " ^ coercions.name
   | Opaque_type -> "an unsettled representation (Obligation Opaque_type), owed by " ^ seam
   | Unspellable_binder -> "a custom match binder's unspellable type, owed by " ^ seam
   | Unsettled_callable -> "an unsettled callable constraint, owed by " ^ constraints.name
@@ -274,6 +281,7 @@ let owes u (decl : Erasure.settled) (o : obligation) =
   | Opaque_type -> mentions (function Obligation Opaque_type -> true | _ -> false) decl
   | Unspellable_binder -> Erasure.writes_unspellable_binder decl
   | Unsettled_callable -> compare (constraints.run d) d <> 0
+  | Unlowered_coercion -> compare (coercions.run d) d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
   | Implicit_boxed_read -> rewrites boxed_reads

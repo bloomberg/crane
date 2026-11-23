@@ -373,9 +373,10 @@ and Coercion : sig
     | Represent of 'p Type.t * 'p Type.t
         (** a value of the first type at the second, which differs from it in
             its pointer dimension or its elements *)
-    | Box_value of bool
-        (** a value boxed, a callable erased whole first where [true]; one
-            boxed already is left alone *)
+    | Box_value of 'p Type.t * bool
+        (** a value put in the box the type names ([Any]), a callable
+            erased whole first, at the box's instantiation, where [true];
+            one boxed already is left alone *)
     | Recover_box of {
         into : 'p Type.t;
         lambda : ('p Type.t * 'p plan option) option;
@@ -390,6 +391,9 @@ and Coercion : sig
         (** a callable with an erased codomain called through an adapter
             taking [domain] ([_ue]), each argument and the result adapted
             as given *)
+    | Moving of Id.t * 'p plan
+        (** the adapter the plan builds, holding the variable it reads by
+            move *)
 
   (** A coercion: the value's type, the slot's, and the plan between them. *)
   type 'p t = {

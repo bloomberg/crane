@@ -310,7 +310,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
                the std::function type from the lambda's parameter and return
                types. *)
             let cpp_ty : Cpp_ir.Lowered.Type.t =
-              match (cpp_ty, e) with
+              match (cpp_ty, Cpp_ir.Typed.head e) with
               | Function (dom, _), Lambda
                 { params = params;
                   return_type = Some ret_ty;

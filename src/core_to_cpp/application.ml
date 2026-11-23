@@ -432,7 +432,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
            recovered the concrete list already ({!Coerce.coerce} does this for a
            value crossing out of a box), in which case there is nothing
            left to convert. *)
-        ( match as_value () with
+        ( match Cpp_ir.Typed.head (as_value ()) with
         | Converting_construct (t, _) as recovered when cpp_ty_eq t cpp_ty ->
           recovered
         | Any_cast _ as already_cast ->
@@ -462,7 +462,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
             Entity_application (g, [Any], [])
           | _ -> clean_cpp_ty
         in
-        let inner = match as_value () with
+        let inner = match Cpp_ir.Typed.head (as_value ()) with
           | Any_cast _ as already_cast -> already_cast
           | v -> Cpp_passes.Erasure.unbox erased_ty v
         in
@@ -758,9 +758,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
               | Some from -> (
                 (* Keep [a] itself when nothing converts: the caller tests
                    whether the crossing converts by physical identity. *)
-                match Coerce.regroup_crossing ~from ~into a with
-                | Cpp_ir.Expr.Convert (t, _) -> (Convert (t, a) : Cpp_ir.Lowered.Expr.t)
-                | _ -> a )
+                Coerce.regroup_crossing ~from ~into a )
               | None -> a
             in
             (* What the crossing writes depends on the source only through
@@ -1390,6 +1388,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
             | Call (_, Entity (r, _, _), args) when Base.Table.builds_instance r ->
               List.for_all eta_arg_is_cheap args
             | Converting_construct (_, args) -> List.for_all eta_arg_is_cheap args
+            | Coerce _ -> eta_arg_is_cheap (Cpp_passes.Coercions.head e)
             | _ -> false
           in
           (* The number of arguments the callee itself takes.  An
@@ -1672,7 +1671,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
             | Some (Core.Type.Global_app {head = g; _}) when is_prod_global g -> Some g
             | _ -> None
           in
-          ( match prod_g_opt, single_arg with
+          ( match prod_g_opt, Cpp_ir.Typed.head single_arg with
           | _, Any_cast (Entity_application (g, cast_args, _), _)
             when is_prod_global g && cast_args <> []
                  && List.for_all Cpp_ir.Types.prints_as_any cast_args ->
@@ -1725,17 +1724,17 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
         match expected_ty with
         | Some into -> (
           match Coerce.regroup_crossing ~from:written_cod ~into result with
-          | Cpp_ir.Expr.Convert (t, _) -> Some (Cpp_ir.Expr.Convert (t, result) : Cpp_ir.Lowered.Expr.t)
+          | crossed when crossed != result -> Some crossed
           | _ -> None )
         | None -> None
       in
       let cod = match deduced_fn_ty with Some (Function (_, cod)) -> cod | _ -> written_cod in
-      match (crossed, result) with
+      match (crossed, Cpp_passes.Coercions.head result) with
       | Some c, _ -> Typed.of_node c
       | None, Call _ -> Typed.typed cod result
       | None, _ -> Typed.untyped result )
     | _ -> (
-      match (deduced_fn_ty, result) with
+      match (deduced_fn_ty, Cpp_passes.Coercions.head result) with
       | Some (Function (doms, cod)), Call _ when excess_args = [] && List.length doms = List.length args ->
         Typed.typed cod result
       | _ -> Typed.untyped result ) )
@@ -2352,6 +2351,8 @@ let gen_application cx ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Exp
     let written = match (call.ty, recovered == result) with Typed t, true -> Some t | _ -> None in
     match Calls.record_call_sig ?written cx env callee_ty_inst recovered with
     | Any_cast (ty, call) -> Any_cast (ty, made_of_application call)
+    | Coerce (c, call) as r when (match Cpp_ir.Typed.head r with Any_cast _ -> true | _ -> false) ->
+      Coerce (c, made_of_application call)
     | result -> made_of_application result
   in
   (* The call's own type, where {!eta_fun} typed it and nothing recovered

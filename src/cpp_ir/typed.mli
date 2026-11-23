@@ -29,7 +29,17 @@ val untyped : Lowered.Expr.t -> t
     typed where the node does not carry one. *)
 val of_node : Lowered.Expr.t -> t
 
-(** The type [of_node] reads off [e]'s outermost node. *)
+(** How a coercion expands ({!Cpp_passes.Coercions.expand}, which installs
+    itself here: the expansion builds with finishing's vocabulary, which
+    this module may not read). *)
+val expansion : (Lowered.Coercion.plan -> Lowered.Expr.t -> Lowered.Expr.t) ref
+
+(** [head e]: [e] as its outermost coercions expand it, for a decision that
+    reads the form of the value it adapts. *)
+val head : Lowered.Expr.t -> Lowered.Expr.t
+
+(** The type [of_node] reads off [e]'s outermost node, a coercion's off
+    what it expands to. *)
 val node_type : Lowered.Expr.t -> Lowered.Value_type.t
 
 (** [rewrap f x] is [f x.expr] at [x]'s type: for a rewrite that does not

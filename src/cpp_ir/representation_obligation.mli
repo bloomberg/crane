@@ -2,7 +2,8 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** What a lowered declaration may still owe resolution, and the printer
-    must never be handed undecided: a type with no spelling, a callable
+    must never be handed undecided: a type with no spelling, a value not yet
+    adapted to its slot, a callable
     parameter whose constraint the body has not settled, a cast whose caster
     is not chosen, a type variable nothing declares, a type argument a
     mapping's template names and its application leaves out, a call of a
@@ -22,6 +23,9 @@ type t =
   | Unresolved_type
       (** No pass determined a type, so no pass can discharge it; whatever
           wrote it owes it.  Stands at a type as {!Grammar.Type.Obligation}. *)
+  | Unlowered_coercion
+      (** a value adapted to its slot as a plan ({!Grammar.Expr.Coerce}),
+          not yet the adapter it expands to *)
   | Opaque_type
       (** A type whose representation is not known here, settled where a
           type is written down.  Stands at a type as

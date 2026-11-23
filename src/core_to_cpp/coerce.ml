@@ -454,7 +454,7 @@ let rec ue_plan cx ~term ~(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.
         | `Concrete _ -> false
         | `Unknown -> ( match term with Some t -> Erasure.core_expr_is_function_value cx t | None -> false )
       in
-      if is_boxed_type into then Some (Box_value is_function_value)
+      if is_boxed_type into then Some (Box_value (Any, is_function_value))
       else
         match into with
         (* A slot that erased its domain -- a record field whose Rocq type is
@@ -583,7 +583,7 @@ let deep_box_list cx e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
     whatever type its consumer knows, and keeps any other value as it is, as
     does a callable already adapted. *)
 let box_for_any_slot cx kind e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  match expr with
+  match Cpp_ir.Typed.head expr with
   | Erase_callable _ -> expr
   | _ when Erasure.core_expr_is_function_value cx e -> Erase_callable (Boxed_whole, expr)
   | _ -> ( match kind with Family_box -> deep_box_list cx e expr | Var_box -> expr )
@@ -845,7 +845,17 @@ let into_slot ?(al = as_written) ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Low
     | Mapping_name -> ( match x.ty with Typed _ | Deduced _ -> ["name"; "none"] | _ -> builds origin )
     | _ -> builds origin
   in
-  shadow ~al ~adapter:(origin_name origin) ~kind x.ty into ~before:value built
+  let built = shadow ~al ~adapter:(origin_name origin) ~kind x.ty into ~before:value built in
+  (* The node stands for what was built; its expansion is the finishing
+     pass {!Cpp_passes.Coercions.decl}'s. *)
+  match plan with
+  | Some plan when built != value -> (Coerce ({from = x.ty; into; plan}, x.expr) : Cpp_ir.Lowered.Expr.t)
+  | _ -> x.expr
+
+(** [moving x e]: the adapter the coercion [e] builds holding the variable
+    [x] it reads by move. *)
+let moving x (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  match e with Coerce (c, v) -> Coerce ({c with plan = Moving (x, c.plan)}, v) | e -> e
 
 let slot_of_expected (t : Cpp_ir.Lowered.Type.t option) : Cpp_ir.Lowered.Slot_type.t =
   match t with Some t -> Exactly t | None -> Free
@@ -873,7 +883,7 @@ let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option)
     (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   let declared = Option.map (Types.cpp_of_core cx env) core_ty in
   let from : Cpp_ir.Lowered.Value_type.t =
-    match (cglob, declared) with
+    match (Cpp_ir.Typed.head cglob, declared) with
     | Entity (r, _, _), Some (Function (dom, cod)) -> (
       match Cpp_ir.Arrows.of_type (Function (dom, Cpp_ir.Types.spell_arrows Through_tvar cod)) with
       | Some a -> Function_name (r, a)
@@ -889,7 +899,7 @@ let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lower
     (expr : Cpp_ir.Lowered.Expr.t) =
   (* A lambda is a closure, whatever box the caller says it comes from. *)
   let from_ty : Cpp_ir.Lowered.Value_type.t =
-    match (from, expr) with
+    match (from, Cpp_ir.Typed.head expr) with
     | _, Lambda _ | None, _ -> Cpp_ir.Typed.node_type expr
     | Some t, _ -> Typed t
   in

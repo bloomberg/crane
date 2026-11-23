@@ -1026,7 +1026,7 @@ let planned_resume ctx id (tgt : binding) e =
     | Existing ->
       Option.map
         (fun b ->
-          match (point b, e) with
+          match (point b, Cpp_ir.Typed.head e) with
           | Some p, Call ({occurrence = Some o; _}, _, _) ->
             List.exists
               (fun (c : Core_plan.Recursion.call) -> entered_by c && Core.Occurrence.equal c.occurrence o)
@@ -1422,7 +1422,7 @@ and rewrite_enter_stmts ctx stmts =
        a function returning it erased, is the call cast: the frame re-enters
        by the call, and the handler casts its result. *)
     let cast, called =
-      match e with
+      match Cpp_ir.Typed.head e with
       | Any_cast (ty, called) -> (Some ty, called)
       | _ -> (None, e)
     in
