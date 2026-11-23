@@ -427,8 +427,8 @@ callable_crossing_matrix.
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
 - [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
 - [x] Phase B2 (see 8, B2: plans carry their expansion data; `coercions` pass; `Typed.head` is the look-through)
-- [ ] Phase C (in progress: steps 1 and 2 done, the ambient return type deleted (threaded `~ret`); step 3: let binding type, `let_value_result`, `joined_at`/`iife_closure_return_at` done, `call_result_site`/`codomain_site` left; see 8, C third session)
-- [ ] Phase D (in progress: the knot takes one non-optional slot; see 8, C third session)
+- [ ] Phase C (in progress: steps 1 and 2 done, the ambient return type deleted (threaded `~ret`); step 3 done except the shape-reading lowering sites listed in §4; the result site moved to `Coerce.result_site`, see 8, C/D fourth session)
+- [ ] Phase D (in progress: the knot and every form function take one non-optional slot; coercion-builder ratchet in `check-module-deps.sh`; `Not_yet_typed`, the `gen_expr` shim, `Declare_deduced`, `Call.result` reasons not started; see 8, C/D fourth session)
 - [ ] Phase E (optional)
 
 ## 8. Findings
@@ -1652,3 +1652,91 @@ tests` empty, `CRANE_CHECK_IR` on); unit tests and
 Next: fold `~ret`/`?expected_ty` out of the form functions onto the
 slot; `call_result_site`/`codomain_site` via a declared-site callee
 type; then phase D from `Not_yet_typed`.
+
+### Phase C/D, fourth session (2026-11-23)
+
+Done:
+- **Form functions take the slot.**  Every form function on the knot's
+  path (`Lambda.gen_lambda`; `Application.gen_application`, `eta_fun`,
+  `gen_call_args`, `gen_instance_projection`,
+  `gen_singleton_dictionary_call`, `project_through_instance`;
+  `Construction.gen_construction`, `gen_expr_custom_cons`,
+  `gen_stored_value`; `Match.gen_cpp_case(_once)`, `gen_match_branch`,
+  `gen_cpp_custom_body`, `gen_custom_cpp_case`, `gen_custom_match_expr`,
+  `gen_record_projection`, `gen_record_match_stmts`, `record_read_once`;
+  `Effects.gen_return_expr`/`gen_bind_expr`/`gen_bind_stmts`/
+  `gen_return_stmts`; `Local_functions.gen_fix`/`gen_let_fix`/
+  `gen_let_lambda`/`gen_applied_fix`/`gen_standalone_fix`;
+  `Expr.gen_form`/`gen_crossing`) takes `Slot.slot` positionally after
+  `cx` and binds `ret`/`expected_ty` from it.  A script
+  (`/tmp/tcppirF/slotfold.py`) rewrote definitions and call sites (each
+  call's `~ret ?expected_ty ~slot` labels became `Slot.at ...`), so
+  byte-identity holds by construction; where a caller's `ret` and
+  `expected_ty` were its own slot's it now passes the slot on (11 sites
+  in `gen_form`, 3 elsewhere).  Safe because nothing reads `Slot.ret` or
+  `Slot.into` except through `Slot.expected` and the bound names, and
+  every knot call restates both (`Slot.at`).  Match's optional `?slot`
+  became a slot: `branch_slot` takes and returns one; `None` behaved as
+  `Slot.empty_slot` at every reader.  Local closures (`gen_ctor_arg`,
+  `gen_enum_branches`, `gen_default_stmts`, `Functions.gen_body_stmts`,
+  `Instances.gen_body`) and the planning functions shared with
+  `Position_plan` keep `~ret`: they are not knot forms, and the plans
+  have no slot.
+- **The result site lives with the name's type.**  `call_result_site`
+  and `codomain_site` left `Calls`: `Coerce.result_site` is the rule,
+  `Coerce.name_arrows r dom cod` types a global's name with it, and
+  `named_value` and `Typed_checks.global_value_type` use that instead of
+  `spell_arrows Through_tvar`.  A side-by-side probe in `decide_with`
+  (the decision at the old spelling versus the new, `callee-site`) had
+  zero hits over the suite: the spellings differ only for a flat
+  multi-argument codomain, and no such name reaches a decision point.
+  The probe was then deleted.
+- Deviation: `Application`'s excess groups (`cod_site`) and the
+  partial-application `filled_ty` read `Coerce.result_site id`, not the
+  name's `Arrows`.  Both spell the codomain at the call's instantiation
+  (`cod_inst`, the eta arguments' types), which the name's type at its
+  use does not carry; reading the rule the name is typed by keeps the two
+  from drifting.  Reading `Arrows.of_type` of the call's result instead
+  needs the call node to carry its result's `Value_type` (`Call.yields`
+  as a `Value_type`, part of the `Call.result` reasons step).  The two
+  codomain tests (callee arity, binder arity) read
+  `core_codomain_is_tvar` directly.
+- **Coercion-builder ratchet.**  `scripts/check-module-deps.sh` counts,
+  per lowering file (`core_to_cpp/`, `control_to_cpp/`) other than
+  `coerce.ml`, the applications (outside patterns) of `Function_value`,
+  `Erase_callable`, `Box`, `Any_cast`, `Tolerant_any_cast` and
+  `Erasure.box`/`unbox`/`unbox_tolerant`/`empty_box`: 41 sites in 13
+  files, listed in `COERCION_BUILDERS_PENDING`.  More is an error, fewer
+  must lower the count.  Deviation from §4's flat rule: that rule fails
+  today (`match.ml` 10 unboxes, `application.ml` 10, `construction.ml` 7
+  `Erase_callable`s and unboxes, ...); each is a phase C row still to
+  route through `into_slot`.  Adapter lambdas are not counted (no
+  syntactic marker distinguishes them from other lambdas).
+
+Not done, and why (phase D proper):
+- `Deduction.Not_yet_typed`: 46 `Typed.of_node` calls and 6 untyped
+  producers rely on `node_type`'s "does not say" answer; an option-valued
+  `node_type` needs each `of_node` caller to supply the type it knows
+  (mostly the form's `of_built` Core type) or to be one of the nodes that
+  carry their type (`Converting_construct`, `Box`, `Any_cast`, `Call`
+  with `Yields`, ...).  Order: split `node_type` into a total
+  `carried_type` over the carrying nodes and make `of_node` take a
+  fallback `Value_type`, then remove the fallback per caller.
+- The `gen_expr` shim, `Declare_deduced` (29 `Declare (Auto, _)` occurrences,
+  22 of them in `control_to_cpp`/`cpp_passes` where no
+  `Typed.t` exists), `Call.result` reasons, `Typed.expansion`: untouched.
+
+Commits: `b96dd2a61` (form functions take the slot), `767b81c38` (result
+site with the name's type), `05513b4cd` (ratchet).  Extraction
+byte-identical after each (`git status --short tests` empty, 2 wip
+extraction errors as at the base); unit tests and
+`scripts/check-module-deps.sh` pass.  Full `make test` from clean at
+`05513b4cd`: 1526 passed, 16 failed (all `tests/wip`, as at the base),
+`git status --short tests` empty.
+
+Next: phase D from `Not_yet_typed` (the `carried_type`/`of_node`
+fallback split above), then `Call.yields` as a `Value_type` so the
+excess groups read the call's result; then the shim, `Declare_deduced`,
+and lowering the ratchet's counts by routing each site through
+`into_slot`.
+
