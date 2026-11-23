@@ -425,7 +425,7 @@ callable_crossing_matrix.
 ## 7. Progress
 
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
-- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 done; typed-fit not yet fatal; see 8, fourth session)
+- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, row 10 done; rows 13, 17 and typed-fit fatal not yet; see 8, fifth session)
 - [ ] Phase B2
 - [ ] Phase C
 - [ ] Phase D
@@ -1043,3 +1043,63 @@ no type are `Destination.return_ cx` with no ambient type; applied indexed
 events; constructor values at their Core result; effect-primitive slots),
 then drop the type-variable exemption and make `typed-fit` fatal under
 `CRANE_CHECK_IR`, filing genuine misses in `tests/wip`; (3) B2.
+
+### Phase B1, fifth session (2026-11-22)
+
+Done:
+- **Row 10.**  Measured first (probes on both adapters, whole suite):
+  the split lambda's return annotation fired 96 times and was dropped
+  every time by `Cpp_passes.Simplify` (a lambda whose body only returns a
+  lambda is unannotated), and the `Shared_pointer` codomain wrap never
+  fired (a `Shared_pointer` codomain comes only from a self-referential
+  constructor field, `Types.cpp_of_core`, never a call parameter here).
+  Both adapters are deleted; the lambda is lowered against its slot only
+  (`gen_lambda`'s `Return (Exactly cod)` from `arg_expected_ty`, which
+  already existed).  Deviation from the doc's plan: no new slot field
+  was needed.  Of the 96 split annotations, 12 were flat where the
+  destination is curried (`fold_curried_accumulator`,
+  `deque_fold_curried_acc`, `fold_init_curried_branches`): Simplify hid
+  a wrong annotation, another reason to delete it.
+- **Bound-variable call through `Typed.apply`.**  The callee is typed
+  from its binder's Core type (`callee_typed k`: one group of its first
+  `k` value domains, the rest converted as the result); the
+  under-application `_pa` closure and the over-applied excess are
+  `Typed.apply` (`moved` still set on the closure).  The binder is read
+  through `Coerce`/`Boxed_value`/barrier wrappers for both branches (it
+  was direct-only for the under-application); no output changed.
+
+Not done, with what was learned:
+- **Row 13 (joins).**  The scan (`iife_closure_return_at`) cannot be
+  replaced by the 3.3 rule "one common `Typed t` deduces" without output
+  changes, for three measured-by-reading reasons: (a) the match IIFE
+  sites (`iife_closure_return`, `several = false`) annotate even a single
+  callable return; (b) two returns of function-typed binders annotate
+  (a deduced `F&&` parameter is a template parameter of its own), while
+  `Binders.read_value_type` types such a binder at its function type, so
+  both read as one `Typed t`; (c) a call yielding a `crane::fn` is no
+  "callable" to the scan but is `Typed (Function _)`.  So the join needs
+  (i) a `Value_type` for a deduced callable parameter that is not its
+  function type (its template parameter, `Typed (Variable F)`), and
+  (ii) the collected returns: a `Destination.Joining {into; seen}` that
+  `finish` records into.  The lambda site and the five `value_iife`
+  sites take it directly; the match sites build each branch with
+  `Destination.return_ cx` in five functions (`match.ml` ~l.185, 625,
+  637, 751, 979), which need the destination threaded.  One more trap:
+  `gen_lambda`'s fixpoint fold rewrites the last `return f` into
+  `return f(..)` after the body is lowered, so the collected value and
+  the scanned statement differ there.  Recommended method: implement
+  collection plus the type rule as a shadow probe against the scan, fix
+  (i), then switch site by site.
+- **Row 17.**  Not started.  `gen_crossing`'s `from` is `Any`,
+  `Opaque_type` or `recorded_from` by a decision over Core and binder
+  plans; taking it from the typed inner value needs that value typed as
+  boxed where `Binders.read_is_boxed` says so (today it is typed at the
+  Core conversion).  Probe the two side by side first.
+- Census tail, fatal `typed-fit`, B2: not started.
+
+Commits: `82b69cd22` (row 10), `355079d8d` (bound-variable call).
+Extraction byte-identical after each (`git status --short tests` empty,
+the same 2 wip extraction errors), `typed-shadow` 0 disagree.
+
+Next, in order: row 13 as above, row 17, the census tail (fourth
+session's list), `typed-fit` fatal, B2.
