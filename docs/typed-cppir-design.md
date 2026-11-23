@@ -425,7 +425,7 @@ callable_crossing_matrix.
 ## 7. Progress
 
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
-- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, row 10 done; rows 13, 17 and typed-fit fatal not yet; see 8, fifth session)
+- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10 and 13 done, `Join` slots; row 17 and typed-fit fatal not yet; see 8, sixth session)
 - [ ] Phase B2
 - [ ] Phase C
 - [ ] Phase D
@@ -1103,3 +1103,99 @@ the same 2 wip extraction errors), `typed-shadow` 0 disagree.
 
 Next, in order: row 13 as above, row 17, the census tail (fourth
 session's list), `typed-fit` fatal, B2.
+
+### Phase B1, sixth session (2026-11-22)
+
+Baseline census at `7b90ec6f0` (whole suite): destination fits 143179,
+type-variable fits 50766, no slot type 2304, implicit 696, unrelated
+492, type-variable other 159, untyped 112, planned 136; argument
+unrelated 427, type-variable other 188, untyped 221.
+
+Done:
+- **Row 13, joins from types.**  Deviation from 3.2/3.3: no
+  `Destination.Joining`, and `Join` carries no lambda number.  The five
+  match branch builders all take `Destination.return_ cx`, so the
+  returns are collected lexically instead: `Lowering_state.with_returns`
+  installs a collector, `Destination.finish` records each returned
+  expression with the type lowering synthesised for it, and a nested
+  collector hands its records outward (an IIFE inlined by
+  `finish_inlined` returns its body's values as the outer body's; they
+  keep their recorded types instead of the IIFE's).  The join enumerates
+  the body's own-level `return`s (`Match_types.returned_types`, a
+  structural walk, not a classification) and looks each up by physical
+  identity, falling back to `Typed.node_type`; it decides by
+  `Cpp_ir.Value_type.deduces_none`: a closure, a function's name or a
+  generic lambda has no type C++ can write, and two different types have
+  none in common (two `F&&` parameters, `Typed (Variable F0)` and
+  `Typed (Variable F1)`, are two types).  This replaces the syntactic
+  scan; `joined_at` stays as the regrouping rule (it is also used by the
+  custom-case IIFE, which always annotates).  `gen_lambda` asks it of the
+  body as lowered, before the capture substitutions and the fixpoint fold
+  rebuild the returns (the fold trap of the fifth session never arises).
+  `value_iife` takes its body as a thunk.  Shadow first, as recommended:
+  over the suite only 36 join decisions are live (others have a
+  non-function Core type or a single return); two disagreed, both typing
+  bugs, fixed: (a) an inlined match IIFE's lambda return took the IIFE's
+  type (`or_type`), fixed by the outward hand-over above; (b) a class
+  method named through a record projection (`I::m`) and a global left
+  untyped by its form module were typed at their function type: now
+  `Function_name` (`Match.read_class_method`, `Typed_checks.of_built`).
+  Item (i) of the fifth session (a value type for a deduced callable
+  parameter) needed nothing new: such a binder's recorded type is
+  `Reference (Forwarding, Variable F)`, which `read_value_type` already
+  reads as `Typed (Variable F)`; no live decision in the suite depends on
+  it.
+- **`Join` slots.**  `Slot_type.Join` is now nullary: the return slot of
+  the lambda being lowered when C++ deduces its result.  `gen_lambda`
+  without a function slot, a lifted helper, and every return where no
+  result type is in force (`Destination.result_slot`) return at `Join`;
+  `Free` is left to `auto` variables and discarded values.  The 2304
+  "slot states no type" destinations were 2300 joins and 4 discards
+  (census sites `destination` / `discard`).
+- **Row 17, first step.**  A boxed variable read
+  (`Binders.read_is_boxed`) is typed `Typed Any` (it was the binder's
+  converted type).  Probe (`crossing-from`, removed) over
+  `gen_crossing`'s coercing branches before/after: erased variable 207
+  box + 75 concrete -> 282 box.
+
+Not done, with what was learned:
+- **Row 17, `from` from the typed value.**  Tried: all three coercing
+  branches take `from` from the typed inner value where it is `Typed`.
+  12 outputs change, every one dropping a needed unbox
+  (`typed_expr`, `any_cast_nested`, `existential_fn_projection`,
+  `hk_class_field_result_cast_to_concept`, `interp_chain_perf`,
+  `interp_params_family`, `interp_state_after_interp`,
+  `interp_state_case_handler`, `itree_case_handler`,
+  `let_bound_monad_family`, `resum_id_eta_lambda`, wip
+  `shared_event_subevent`): the inner value is typed concrete where it
+  is a box at run time.  The forms: loopify frame temporaries
+  (`_f._tmp2`, `_result`), calls whose callee declares an erased result
+  (typed at the use's instantiation, 24 `recorded` crossings), a value
+  already `crane_any_cast` once (`any_cast_nested`), a variable the
+  oracle reads erased but typed opaque (62, where the old coerce built
+  nothing either).  Next: type a call's result as the callee declares it
+  (erased result -> box) and frame fields from their declarations, then
+  retry; the probe is the experiment above.
+- **Census tail.**  After the joins: destination unrelated 488,
+  type-variable other 159, untyped 116; argument unrelated 427,
+  type-variable other 188, untyped 221.  The largest destination groups
+  are a return slot read from an ambient result type that is not the
+  position's (a `nat` returned where the enclosing function's `state`
+  is in force: `dest-ambient` disagrees 1260 times, the same as the
+  baseline), constructor values at their Core result (`itreeF` for an
+  `itree`), applied indexed events, and a result-only callee variable.
+  `typed-fit` cannot be fatal until those are fixed; not started.
+- B2: not started.
+
+Commits: `17f73a881` (row 13), `f5bf44e57` (boxed read typed as box),
+`c41b00f52` (Join slots).  Extraction byte-identical after each
+(`git status --short tests` empty), no `CRANE_CHECK_IR` violation,
+`typed-shadow` 2637 agree / 0 disagree; `dune build @unit_tests/runtest`
+and `scripts/check-module-deps.sh` pass.  Full `make test` from clean at
+`c41b00f52`: 1526 passed, 16 failed (all `tests/wip`, as at the base),
+`git status --short tests` empty.
+
+Next, in order: row 17 as above (typed call results and frame fields
+first), the census tail (ambient-free return slots everywhere: the
+destination a match branch gets should be its IIFE's, not the ambient
+type), `typed-fit` fatal, B2.
