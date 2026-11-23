@@ -169,7 +169,14 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
         false
     in
     let result : Cpp_ir.Lowered.Expr.t = if move_candidate then Move var_expr else var_expr in
-    let read = Typed.v ~ty:(Binders.read_value_type cx env i) result in
+    (* A boxed read is a box, whatever the binder's type converts to. *)
+    let read_ty : Cpp_ir.Lowered.Value_type.t =
+      match Binders.read_value_type cx env i with
+      | Typed t when boxed_read && not (Cpp_ir.Types.prints_as_any t) -> Typed Any
+      | Deduced Not_yet_typed when boxed_read -> Typed Any
+      | v -> v
+    in
+    let read = Typed.v ~ty:read_ty result in
     if boxed_read then begin
       match expected_ty with
       | Some (Variable (Index (n, _))) when own_index_only_result cx = Some n ->

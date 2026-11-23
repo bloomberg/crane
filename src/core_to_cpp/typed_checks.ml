@@ -282,7 +282,8 @@ let verdict_line cx ~what (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   let detail () = " in " ^ site cx ^ " " ^ what ^ " from " ^ Binders.show_value_type x.ty ^ " into " ^ slot ^ " scope=[" ^ String.concat "," (List.map Names.Id.to_string (Lowering_state.get_current_type_vars cx)) ^ "]" in
   match verdict cx x into with
   | `Unchecked why when String.ends_with ~suffix:"fits" why -> "unchecked (" ^ why ^ ")"
-  | `Unchecked why when String.starts_with ~prefix:"slot at" why -> "unchecked (" ^ why ^ ")" ^ detail ()
+  | `Unchecked why when String.starts_with ~prefix:"slot at" why || why = "slot states no type" ->
+    "unchecked (" ^ why ^ ")" ^ detail ()
   | `Unchecked why -> "unchecked (" ^ why ^ ")"
   | `Unrelated ->
     let al = Coerce.aliases_in cx in

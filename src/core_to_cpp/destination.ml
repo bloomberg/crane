@@ -92,7 +92,7 @@ let check_ambient cx d =
     [d]'s slot ({!Typed_checks.fit}). *)
 let finish cx d (x : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Stmt.t =
   check_ambient cx d;
-  Typed_checks.fit cx ~site:"destination" x (slot d);
+  Typed_checks.fit cx ~site:(if discards d then "discard" else "destination") x (slot d);
   let s = build d x.expr in
   (* A value returned is recorded for the join of the lambda returning it
      ({!Lowering_state.with_returns}): [x]'s type where [x] is what is
