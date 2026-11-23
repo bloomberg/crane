@@ -58,12 +58,12 @@
     out of a pair recovered from a box is bound at a dummy type, as lowering
     binds it ({!Erasure.stmts_yield_boxed}). *)
 
-(** [region ctx body] -- every pattern binder of [body], a region generated
+(** [region ctx ~ret body] -- every pattern binder of [body], a region generated
     in the translation context [ctx], planned: keyed by its site
     ({!Core.Binder.site}, the match and branch) and its field's index there.
     What it reads of the context it reads off [ctx], not the global one: the
     scope [outer] its lexical environment binds, the type variables in scope
-    and the return type, which are the region's; its outer binders at the
+    and the return type [ret], which are the region's; its outer binders at the
     types the head of the declaration being generated declares them at,
     where it declares them directly in [outer] ([declared_outer] in
     {!Lowering_state}), the rest at the Core types [outer] gives them,
@@ -71,6 +71,7 @@
     binder's recorded C++ type is never read. *)
 val region :
   Lowering_state.t ->
+  ret:Cpp_ir.Lowered.Type.t option ->
   Core.Expr.t ->
   (Core.Binder.site * int * Lowering_state.planned_repr) list
   * (Core.Occurrence.t * Lowering_state.Planned_read.t) list

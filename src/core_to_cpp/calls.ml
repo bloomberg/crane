@@ -473,7 +473,7 @@ let carrier_template cx env tvars c : Cpp_ir.Lowered.Type.t =
     constant one is a complete type that an application leaves unchanged
     ({!Base.Core_util.apply_core_type}), and has no template to name: it is the type
     function {!Cpp_ir.Crane_rt.constant_tc} makes of it. *)
-let hkt_carrier_type_args cx env tvars ?result id tys =
+let hkt_carrier_type_args cx env ~ret tvars ?result id tys =
   Base.Probe.changed "REPAIR_hkt_carrier_type_args" id ~before:None @@
   let ( let* ) = Option.bind in
   let* core_ty = find_type_opt id in
@@ -500,7 +500,7 @@ let hkt_carrier_type_args cx env tvars ?result id tys =
   let* v_core = Base.Core_util.Var_types.find_tvar tys v in
   let* result =
     match result with
-    | None -> current_cpp_return_type cx ()
+    | None -> ret
     | r -> r
   in
   let over = Types.template_arg_of_core_type cx ~site:Through_tvar env tvars v_core in
@@ -539,7 +539,7 @@ let hkt_carrier_type_args cx env tvars ?result id tys =
     the type and the parameters come from.  [all_tvar_names] is in index
     order, as type conversion reads it; the arguments follow the order of the
     [head], the type parameters the lifted template declares. *)
-let lifted_call_type_args cx
+let lifted_call_type_args cx ~ret
     ~(class_args : Cpp_ir.Lowered.Type.t list) ~env ~outer_tvars ~head ~all_tvar_names ~binder_ty ~param_core_tys :
     Cpp_ir.Lowered.Type.t list =
   let in_head id = List.exists (Id.equal id) head in
@@ -562,7 +562,7 @@ let lifted_call_type_args cx
       | t -> t
     in
     let tvar_map =
-      match current_cpp_return_type cx () with
+      match ret with
       | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
       | None -> []
     in
@@ -575,7 +575,7 @@ let lifted_call_type_args cx
             with
             | Some (_, ty) -> ty
             | None -> (
-              match current_cpp_return_type cx () with
+              match ret with
               | Some ret_ty -> ret_ty
               | None -> Cpp_ir.Build.named_variable tvar_name ) )
           extra_tvar_names
@@ -793,7 +793,7 @@ type lowered_call = {
     left nothing.  Also the callee's instantiated C++ type and the
     instantiation the type arguments were read from, which the assembly
     needs. *)
-let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan ~has_value_args =
+let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan ~has_value_args =
   let args = if has_value_args then [()] else [] in
   let {
     instantiated =
@@ -1144,7 +1144,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
     (* Whether the callee returns a variable of an erased type binder, and
        if so the variable and the concrete C++ type to use for it. *)
     let try_recover_erased_return_type () =
-      match current_cpp_return_type cx () with
+      match ret with
       | None -> None
       | Some ret_ty -> (
         match Option.map (fun t -> resolve_meta (core_return_type t)) (find_type_opt id) with
@@ -1342,7 +1342,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
          rather than merely miss.  Where it cannot be read off the value
          argument, name it -- the carrier is the callee's first variable. *)
       match
-        hkt_carrier_type_args cx env tvars ?result:expected_ty id tys
+        hkt_carrier_type_args cx env ~ret tvars ?result:expected_ty id tys
       with
       | Some [carrier] -> carrier_first carrier
       | _ -> (
@@ -1806,7 +1806,7 @@ let binding_results_of id compute =
     dictionaries are expected at, and what those say of the callee's
     variables.  Read by {!gen_call_args} and by the assembly in {!eta_fun}.
     Nothing here changes the instantiation. *)
-let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Core_plan.Elaborated_call.instantiated) =
+let plan_call cx ~ret ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Core_plan.Elaborated_call.instantiated) =
   let {
     Core_plan.Elaborated_call.call =
       {
@@ -1868,7 +1868,7 @@ let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : 
     | None -> (
       match from_args () with
       | Some _ as a -> a
-      | None -> current_cpp_return_type cx () )
+      | None -> ret )
     | _ -> expected_result
   in
   let typeclass_type_args =
@@ -1904,7 +1904,7 @@ let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : 
     if (not (Base.Core_util.Var_types.is_empty tys)) || excess_args = [] then
       None
     else
-      match current_cpp_return_type cx () with
+      match ret with
       | None -> None
       | Some ret_ty ->
         match find_type_opt id with
@@ -1957,7 +1957,7 @@ let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : 
              ~explicit:(expected_ty <> None)
              ( match expected_ty with
              | Some _ -> expected_ty
-             | None -> current_cpp_return_type cx () ) ) )
+             | None -> ret ) ) )
   in
   {
     instantiated = inst;
@@ -2093,7 +2093,7 @@ let argument_slot cx env id ~deduced_callable ~written_by_var ~(expected : Cpp_i
         in
         if deduced || Base.Table.is_custom id then Template_parameter (Some t) else Exactly t )
 
-let argument_position cx ~local_callable env id plan i core_arg =
+let argument_position cx ~ret ~local_callable env id plan i core_arg =
   let {
     instantiated =
       {
@@ -2391,7 +2391,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
     else
       match arg_expected_ty with
       | Some t when Base.Type_util.has_no_cpp_spelling t ->
-        current_cpp_return_type cx ()
+        ret
       | t -> t
   in
   { index = param_index;
@@ -2418,8 +2418,9 @@ let lower_call cx ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
     Core_plan.Elaborate.instantiation ~walk:(elaborations cx) ~lex ~expected_core:slot.Slot.expected_core_ty
       ~stated_core:slot.Slot.stated_core_ty ~caller ~scope:cx.ctx.lexical.current_type_vars use args
   in
-  let plan = plan_call cx ~lex ?expected_ty env inst in
-  call_type_args cx ~caller ~lex ?expected_ty env id plan
+  let ret = current_cpp_return_type cx () in
+  let plan = plan_call cx ~ret ~lex ?expected_ty env inst in
+  call_type_args cx ~ret ~caller ~lex ?expected_ty env id plan
     ~has_value_args:(inst.call.regular <> [])
 
 (** What a reference to global [x], its type instantiated by [instantiate],

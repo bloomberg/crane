@@ -810,18 +810,19 @@ let with_itree_mode cx (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
     types the way translation converts them. *)
 let plan_representation :
     (t ->
+    ret:Cpp_ir.Lowered.Type.t option ->
     Core.Expr.t ->
     (Core.Binder.site * int * planned_repr) list * (Core.Occurrence.t * Planned_read.t) list)
     ref =
-  ref (fun _ _ -> ([], []))
+  ref (fun _ ~ret:_ _ -> ([], []))
 
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
 let plan_positions :
-    (t -> outer:Core.Lexenv.t -> reads:(Core.Occurrence.t * Planned_read.t) list -> Core.Expr.t ->
+    (t -> ret:Cpp_ir.Lowered.Type.t option -> outer:Core.Lexenv.t -> reads:(Core.Occurrence.t * Planned_read.t) list -> Core.Expr.t ->
       (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list)
     ref =
-  ref (fun _ ~outer:_ ~reads:_ _ -> [])
+  ref (fun _ ~ret:_ ~outer:_ ~reads:_ _ -> [])
 
 (** [with_region ~owned ~copied ~resumes body f] runs [f], which generates
     [body] as one C++ body owning the variables at the de Bruijn indices
@@ -846,11 +847,13 @@ let with_region cx ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.E
   let representation, reads, positions =
     match cx.ctx.input.body_owner with
     | Some _ ->
-      let binders, reads = !plan_representation cx body in
+      (* The region returns at the enclosing function's result type. *)
+      let ret = cx.ctx.lexical.current_cpp_return_type in
+      let binders, reads = !plan_representation cx ~ret body in
       (* A nested region's positions are planned at its own return type,
          which the enclosing walk does not know; they come first. *)
       let reads = cx.ctx.lexical.planned_reads @ reads in
-      let positions = !plan_positions cx ~outer:cx.ctx.lexical.env_types ~reads body in
+      let positions = !plan_positions cx ~ret ~outer:cx.ctx.lexical.env_types ~reads body in
       (cx.ctx.lexical.representation @ binders, reads, positions @ cx.ctx.lexical.planned_positions)
     | None -> ([], [], [])
   in

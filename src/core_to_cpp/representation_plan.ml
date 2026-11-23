@@ -225,13 +225,13 @@ let reads_boxed_component cx scope a =
     | [] -> false )
   | _ -> false
 
-let region cx body =
+let region cx ~ret body =
   let ctx = cx.ctx in
   let outer = ctx.lexical.env_types in
   let found = ref [] in
   let reads = ref [] in
   let promoted_active = ctx.lexical.promoted_var_map <> [] in
-  let return = ctx.lexical.current_cpp_return_type in
+  let return = ret in
   let type_vars = ctx.lexical.current_type_vars in
   let ns = ctx.input.method_self_ns in
   let reified = ctx.input.itree_mode = Reified in

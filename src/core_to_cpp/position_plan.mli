@@ -25,11 +25,11 @@
     region of its own, where its return type is known.  A position that
     states no type is planned at none. *)
 
-(** [region ~outer ~reads body] -- the planned position type of each
-    coercion in [body], a region generated in the binders [outer] under the
-    return type in force, its variable reads planned as [reads]. *)
+(** [region ~ret ~outer ~reads body] -- the planned position type of each
+    coercion in [body], a region generated in the binders [outer] returning
+    at [ret], its variable reads planned as [reads]. *)
 val region :
-  Lowering_state.t -> outer:Core.Lexenv.t ->
+  Lowering_state.t -> ret:Cpp_ir.Lowered.Type.t option -> outer:Core.Lexenv.t ->
   reads:(Core.Occurrence.t * Lowering_state.Planned_read.t) list ->
   Core.Expr.t ->
   (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list

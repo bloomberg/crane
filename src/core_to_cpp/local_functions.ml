@@ -696,7 +696,7 @@ let gen_let_fix cx ~slot env (k : Destination.t) ~let_ty ~x ~ids ~funs ~occ
        references, extra tvars are resolved to concrete types from the
        enclosing function's return type. *)
     let call_type_args =
-      Calls.lifted_call_type_args cx ~class_args ~env ~outer_tvars
+      Calls.lifted_call_type_args cx ~ret:(current_cpp_return_type cx ()) ~class_args ~env ~outer_tvars
            ~head:(List.map snd all_temps) ~all_tvar_names ~binder_ty:(snd ids.(0))
            ~param_core_tys:
              ( match List.nth_opt funs_compiled x with
@@ -1225,7 +1225,7 @@ let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
        the declaration ended up with, since generalisation may have moved
        a parameter out of it. *)
     let call_type_args =
-      Calls.lifted_call_type_args cx ~class_args ~env ~outer_tvars
+      Calls.lifted_call_type_args cx ~ret:(current_cpp_return_type cx ()) ~class_args ~env ~outer_tvars
            ~head:(List.map snd all_temps_with_funs)
            ~all_tvar_names ~binder_ty:t ~param_core_tys
     in
@@ -1360,7 +1360,7 @@ let gen_applied_fix cx ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
           add_lifted_decl cx (Control_to_cpp.Lower.lower_lifted ~unit:(Lowering_state.unit_context cx) lifted_decl) )
         funs_compiled;
       let call_type_args =
-        Calls.lifted_call_type_args cx ~class_args ~env ~outer_tvars
+        Calls.lifted_call_type_args cx ~ret:(current_cpp_return_type cx ()) ~class_args ~env ~outer_tvars
              ~head:(List.map snd all_temps) ~all_tvar_names ~binder_ty:(snd ids.(x))
              ~param_core_tys:
                ( match List.nth_opt funs_compiled x with

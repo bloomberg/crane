@@ -87,8 +87,9 @@ let gen_stored_value cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env 
     and an identity template collapsed to its one argument. *)
 let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.empty_slot) env
     (ty : Core.Type.t) r ts : Cpp_ir.Lowered.Expr.t =
-  let slot = into_erased_return cx slot in
-  let ty = custom_refined_annotation cx env ~expected_ty ~slot ty r ts in
+  let ret = current_cpp_return_type cx () in
+  let slot = into_erased_return cx ~ret slot in
+  let ty = custom_refined_annotation cx env ~ret ~expected_ty ~slot ty r ts in
   (* Some custom-extracted inductives (e.g. [sum1], registered as
      [Crane Extract Inductive sum1 => "" ["%a0" "%a0"]]) are pure type-level
      erasure markers: their constructor template forwards the argument
@@ -147,13 +148,13 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
   let gen_ctor_arg ?expected_ty ?(slot = slot) e =
     gen_stored_value cx ?expected_ty ~slot env e
   in
-  let c = custom cx env ~expected_ty ~slot ty r in
+  let c = custom cx env ~ret ~expected_ty ~slot ty r in
   let ty_args_for_expected = c.ty_args_for_expected and field_types_for_wrap = c.field_types in
   let ctor_temps_at_slot = c.temps_at_slot and slot_states_unboxed = c.states_unboxed in
   let is_list_cons_ctor = c.list_cons and slot_is_deeply_erased = c.deeply_erased in
   let args =
     List.rev (List.mapi (fun i e ->
-      let a = custom_field cx env c ~slot r i e in
+      let a = custom_field cx env c ~ret ~slot r i e in
       let e = a.term and new_expected = a.expected_core and erased_fn_slot = a.erased_fn_slot in
       let result =
         with_cpp_return_type cx a.ret (fun () -> gen_ctor_arg ?expected_ty:a.expected ~slot:a.slot e)
@@ -411,7 +412,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
           if from_expected <> [] then from_expected
           else
             let from_ret =
-              match current_cpp_return_type cx () with
+              match ret with
               | Some (Cpp_ir.Type.Entity_application (ret_r, ret_tys, _))
                 when Names.GlobRef.CanOrd.equal n ret_r
                      && List.length ret_tys = List.length tys ->
@@ -511,7 +512,8 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
     call, aggregate or reuse of the token the match freed, each argument
     generated against the field it fills. *)
 let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  let slot = into_erased_return cx slot in
+  let ret = current_cpp_return_type cx () in
+  let slot = into_erased_return cx ~ret slot in
   let ty = refined_by_slot slot ty in
   (* Setting [in_constructor_expr] makes unresolvable promoted vars (those
      NOT in [promoted_var_map]) fall back to [Any] = [std::any].
@@ -567,9 +569,9 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
   let fds = record_fields_of_type ty in
   let cons_result = match fds with
   | [] ->
-    let c = regular cx env ~expected_ty ty r ts in
+    let c = regular cx env ~ret ~expected_ty ty r ts in
     let ts_updated = c.args in
-    let temps_from_slot = temps_from_slot cx env ~expected_ty in
+    let temps_from_slot = temps_from_slot cx env ~ret ~expected_ty in
     let erase_past_type_arg = erase_past_type_arg ts_updated in
     (* Generate: Type<temps>::ctor::Constructor_(args) *)
     let gen_ctor_call (args : Cpp_ir.Lowered.Expr.t list) : Cpp_ir.Lowered.Expr.t =
@@ -659,7 +661,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
         let temps =
           if Base.Table.has_dependent_params n then
             let expected_temps =
-              Ctor_args.expected_type_args_from_return cx env ?slot:expected_ty n
+              Ctor_args.expected_type_args_from_return cx env ~ret ?slot:expected_ty n
                 ~arity:(List.length temps)
             in
             match expected_temps with

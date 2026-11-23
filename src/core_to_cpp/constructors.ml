@@ -23,8 +23,8 @@ open Cpp_ir.Type
     is the requirement a [Boxed] slot expresses for a value flowing into an
     erased field or parameter, and it holds for a mapped constructor
     ([std::make_optional<std::any>]) as for one of Crane's own. *)
-let into_erased_return cx slot =
-  match Option.map (Types.slot_repr_of_cpp_type cx) (current_cpp_return_type cx ()) with
+let into_erased_return cx ~ret slot =
+  match Option.map (Types.slot_repr_of_cpp_type cx) (ret) with
   | Some (Boxed kind) -> Slot.into_box kind slot
   | Some Native | None -> slot
 
@@ -185,7 +185,7 @@ let list_propagated_args (ty : Core.Type.t) ts =
    it expands to: the position names [List<entry<T1>>] where the
    annotation has the pair behind it, and the name is what the
    declaration wrote. *)
-let temps_from_slot cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps : Cpp_ir.Lowered.Type.t list) =
+let temps_from_slot cx env ~ret ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps : Cpp_ir.Lowered.Type.t list) =
   let erased_anywhere = Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any in
   (* With no slot of its own, a constructor is the value the enclosing
      function returns, as Step 2b below reads it -- [go (RetF x)] in
@@ -195,7 +195,7 @@ let temps_from_slot cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (te
     match expected_ty with
     | Some _ -> expected_ty
     | None -> (
-      match current_cpp_return_type cx () with
+      match ret with
       | Some (Shared_pointer t) -> Some t
       | t -> t )
   in
@@ -275,9 +275,9 @@ type regular = {
 (** [regular env ~expected_ty ty r ts] -- the constructor [r] of annotation
     [ty] ({!refined_by_slot}) applied to [ts], built at [expected_ty] under
     the return type in force. *)
-let regular cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t) r ts =
+let regular cx env ~ret ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t) r ts =
   let ts_updated = list_propagated_args ty ts in
-  let temps_from_slot = temps_from_slot cx env ~expected_ty in
+  let temps_from_slot = temps_from_slot cx env ~ret ~expected_ty in
   let erase_past_type_arg = erase_past_type_arg ts_updated in
   let ty_core_tparams = match resolve_meta ty with
     | Core.Type.Global_app {type_arguments = tys_orig; _} -> tys_orig
@@ -304,7 +304,7 @@ let regular cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type
       in
       if Base.Table.has_dependent_params n then
         let expected_temps =
-          Ctor_args.expected_type_args_from_return cx env ?slot:expected_ty n
+          Ctor_args.expected_type_args_from_return cx env ~ret ?slot:expected_ty n
             ~arity:(List.length temps)
         in
         match expected_temps with
@@ -724,7 +724,7 @@ let record_field cx env ~is_boxed (ty : Core.Type.t) r ~slot i e =
     [expected_ty] into [slot], its type arguments recovered from the
     arguments, the slot and the position where the annotation leaves them
     unknown. *)
-let custom_refined_annotation cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r ts =
+let custom_refined_annotation cx env ~ret ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r ts =
   (* Extraction leaves a type argument [Tunresolved] where it could not read the
      type off the term -- the element of [Some 1] passed at a parameter of an
      inductive that applies its own higher-kinded parameter ([F nat]).  The
@@ -750,7 +750,7 @@ let custom_refined_annotation cx env ~(expected_ty : Cpp_ir.Lowered.Type.t optio
                  | Some t -> has_tany_in_type (Types.unfold_cpp_typedef cx env t)
                  | None -> false ))
            && not
-                ( match current_cpp_return_type cx () with
+                ( match ret with
                 | Some t -> Types.resolves_to_any_type cx t
                 | None -> false ) ->
       let field_tys =
@@ -840,7 +840,7 @@ let custom_refined_annotation cx env ~(expected_ty : Cpp_ir.Lowered.Type.t optio
     let expected =
       match expected_ty with
       | Some _ -> expected_ty
-      | None -> current_cpp_return_type cx ()
+      | None -> ret
     in
     match (ty, Option.map (fun t -> Base.Type_util.unqualify_ty (Types.unfold_cpp_typedef cx env t))
       expected) with
@@ -886,7 +886,7 @@ end
 (** [custom env ~expected_ty ~slot ty r]: the custom constructor [r] of
     annotation [ty] ({!custom_refined_annotation}), built at [expected_ty]
     into [slot] under the return type in force. *)
-let custom cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r =
+let custom cx env ~ret ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r =
   (* Generate args with expected type hints: pass the i-th type arg of the
      constructor's inductive type before generating the i-th value arg.  This
      allows gen_ctor_call to recover concrete element types for nil lists whose
@@ -961,7 +961,7 @@ let custom cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core
     | None -> [] in
   let draft_ctor_temps_for_wrap =
     Ctor_args.ctor_draft_temps cx env ~promoted_active:(cx.ctx.lexical.promoted_var_map <> [])
-      ~return:(current_cpp_return_type cx ()) ty
+      ~return:(ret) ty
   in
   (* The same slots, read off the destination instead of off this
      constructor's own annotation.  A locally concrete value can be built into
@@ -1069,7 +1069,7 @@ let custom cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core
   let slot_is_deeply_erased =
     erased_arg_under_a_field
     || ((not is_list_cons_ctor)
-        && match current_cpp_return_type cx () with
+        && match ret with
            | Some t -> Types.resolves_to_any_type cx t
            | None -> false)
   in
@@ -1095,10 +1095,10 @@ type custom_arg = {
 (** [custom_field env c ~slot r i e]: where the [i]th argument [e] of the
     custom constructor [r], set up as [c] and built into [slot], is
     generated.  [var] reads a variable as {!Erasure.core_expr_is_function_value} does. *)
-let custom_field cx ?var env c ~slot r i e =
+let custom_field cx ?var env c ~ret ~slot r i e =
   let ty_args_for_expected = c.Custom.ty_args_for_expected and field_types_for_wrap = c.field_types in
   let ctor_temps_at_slot = c.temps_at_slot and is_passthrough_ctor_arg = c.passthrough in
-  let saved_ret = current_cpp_return_type cx () in
+  let saved_ret = ret in
   let new_expected =
     match List.nth_opt field_types_for_wrap i with
     | Some (Core.Type.Variable {variable = j; _} as ft) -> (
