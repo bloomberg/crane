@@ -72,12 +72,12 @@ let constant_name e =
     takes, not the throw a dead position gets, since the constructor runs as
     the value is built; a call returning [unit] is the value its void call
     stands for. *)
-let gen_stored_value cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e : Cpp_ir.Lowered.Expr.t =
+let gen_stored_value cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e : Cpp_ir.Lowered.Expr.t =
   match e with
   | Core.Expr.Erased_value _ -> Cpp_passes.Erasure.empty_box
   | e when Monadic.core_value_is_void_call cx e ->
-    Monadic.wrap_void_call_as_value (gen_expr cx ~slot env e)
-  | _ -> gen_expr cx ?expected_ty ~slot env e
+    Monadic.wrap_void_call_as_value (gen_expr cx ~ret ~slot env e)
+  | _ -> gen_expr cx ~ret ?expected_ty ~slot env e
 
 (** The constructor [r] of a custom-extracted inductive at [ty] applied to
     [ts]: the user's constructor template instantiated at the type arguments
@@ -85,9 +85,9 @@ let gen_stored_value cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env 
     field it fills and boxed where that field is erased (never for a
     pass-through constructor such as ["%a0"], which has no field storage),
     and an identity template collapsed to its one argument. *)
-let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.empty_slot) env
+let gen_expr_custom_cons cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.empty_slot) env
     (ty : Core.Type.t) r ts : Cpp_ir.Lowered.Expr.t =
-  let ret = current_cpp_return_type cx () in
+
   let slot = into_erased_return cx ~ret slot in
   let ty = custom_refined_annotation cx env ~ret ~expected_ty ~slot ty r ts in
   (* Some custom-extracted inductives (e.g. [sum1], registered as
@@ -145,8 +145,8 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
   (* Convert value arguments to C++ expressions.  An erased proof or type
      argument ([Core.Expr.Erased_value]) is the empty box its erased slot takes; see that
      case of {!gen_expr}. *)
-  let gen_ctor_arg ?expected_ty ?(slot = slot) e =
-    gen_stored_value cx ?expected_ty ~slot env e
+  let gen_ctor_arg ~ret ?expected_ty ?(slot = slot) e =
+    gen_stored_value cx ~ret ?expected_ty ~slot env e
   in
   let c = custom cx env ~ret ~expected_ty ~slot ty r in
   let ty_args_for_expected = c.ty_args_for_expected and field_types_for_wrap = c.field_types in
@@ -157,7 +157,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
       let a = custom_field cx env c ~ret ~slot r i e in
       let e = a.term and new_expected = a.expected_core and erased_fn_slot = a.erased_fn_slot in
       let result =
-        with_cpp_return_type cx a.ret (fun () -> gen_ctor_arg ?expected_ty:a.expected ~slot:a.slot e)
+        with_cpp_return_type cx a.ret (fun ret -> gen_ctor_arg ~ret ?expected_ty:a.expected ~slot:a.slot e)
       in
 
       (* Where this argument is stored, as far as its representation goes:
@@ -511,8 +511,8 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
     [construction]), not custom, enum or a shared constant: its factory
     call, aggregate or reuse of the token the match freed, each argument
     generated against the field it fills. *)
-let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  let ret = current_cpp_return_type cx () in
+let gen_construction cx ~ret ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
+
   let slot = into_erased_return cx ~ret slot in
   let ty = refined_by_slot slot ty in
   (* Setting [in_constructor_expr] makes unresolvable promoted vars (those
@@ -824,8 +824,8 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
     (* [gen_ctor_call] is handed its arguments last first, as the
        [List.rev (List.mapi ...)] at its call builds them, and reverses them
        into the source order a [Call] holds. *)
-    let gen_ctor_arg ?expected_ty ?(slot = slot) e =
-      gen_stored_value cx ?expected_ty ~slot env e
+    let gen_ctor_arg ~ret ?expected_ty ?(slot = slot) e =
+      gen_stored_value cx ~ret ?expected_ty ~slot env e
     in
     (* When a constructor's field type is a type variable (Core.Type.Variable i) that
        resolves to an owning pointer type (because T is in method_self_ns),
@@ -1023,7 +1023,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                 | _ -> false
               in
               if is_custom_list_cons core_e then begin
-                gen_ctor_arg ~slot:(Slot.into_box Var_box slot) core_e
+                gen_ctor_arg ~ret ~slot:(Slot.into_box Var_box slot) core_e
               end else begin
                 (* A non-lambda FUNCTION value (e.g. a forwarded callback
                    parameter [f]) stored into an erased field must be wrapped
@@ -1376,14 +1376,14 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
       let ft_opt, expr =
         (* A constructor argument returns its own value, not the enclosing
            function's, so the ambient return type must not reach it. *)
-        with_cpp_return_type cx None (fun () ->
+        with_cpp_return_type cx None (fun ret ->
         let ft_opt =
           try Some (List.nth field_types i)
           with Failure _ | Invalid_argument _ -> None
         in
         let expected_for_arg, arg_slot = regular_field cx env ~is_boxed:(Binders.read_is_boxed cx)
           c ~slot i e in
-        let expr = gen_ctor_arg ~slot:arg_slot ?expected_ty:expected_for_arg e in
+        let expr = gen_ctor_arg ~ret ~slot:arg_slot ?expected_ty:expected_for_arg e in
           (ft_opt, expr) )
       in
       let expr =
@@ -1475,7 +1475,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
           (fun i e ->
             let expected_ty, slot = record_field cx env ~is_boxed:(Binders.read_is_boxed cx) ty r
               ~slot i e in
-            gen_stored_value cx ~slot ?expected_ty env e)
+            gen_stored_value cx ~ret ~slot ?expected_ty env e)
           ts
       in
       match ty with

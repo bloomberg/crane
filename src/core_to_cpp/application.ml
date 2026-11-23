@@ -96,7 +96,7 @@ let singleton_call cx env i occ =
    concrete, so the term is an ordinary application and not the single-branch
    match a projection through an instance {e variable} extracts to; the C++ is
    the same either way. *)
-let project_through_instance cx env (use : Core.Global_use.t) args (projection : Core_plan.Elaborated_call.static_projection) :
+let project_through_instance cx ~ret env (use : Core.Global_use.t) args (projection : Core_plan.Elaborated_call.static_projection) :
   Cpp_ir.Lowered.Expr.t =
   let inst = List.nth args projection.instance in
   let x = use.callee and tys = Base.Core_util.written_type_args use in
@@ -144,7 +144,7 @@ let project_through_instance cx env (use : Core.Global_use.t) args (projection :
   let inst_expr : Cpp_ir.Lowered.Expr.t =
     match Calls.core_arg_to_template_type cx env inst with
     | Some t -> Type_name t
-    | None -> gen_expr cx env inst
+    | None -> gen_expr cx ~ret env inst
   in
   Cpp_ir.Build.call
     (Scope (inst_expr, Base.Common.id_of_global Term x, targs))
@@ -154,14 +154,14 @@ let project_through_instance cx env (use : Core.Global_use.t) args (projection :
          let slot =
            {Slot.empty_slot with Slot.expected_core_ty = List.nth_opt operand_core_tys i}
          in
-         with_cpp_return_type cx expected (fun () ->
-             gen_expr cx ?expected_ty:expected ~slot env a ) )
+         with_cpp_return_type cx expected (fun ret ->
+             gen_expr cx ~ret ?expected_ty:expected ~slot env a ) )
        operands )
 
 (** [gen_call_args ~slot ?expected_ty env id plan] -- the C++ arguments of
     the call of the global [id] that [plan] describes, each generated against
     the parameter it is passed at.  The dictionaries' promoted variables are in scope for them. *)
-let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~written_by_var env id plan :
+let gen_call_args cx ~ret ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~written_by_var env id plan :
     Typed.t list =
   let {
     Calls.instantiated =
@@ -204,7 +204,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
     let ({Calls.index = param_index; param = param_core_ty; expected = arg_expected_ty;
            ret = ret; tvar_erased = param_tvar_erased; written_by_call = param_written_by_call;
            deduced_callable = deduced_callable; expected_subst} : Calls.argument_position) =
-      Calls.argument_position cx ~ret:(current_cpp_return_type cx ()) ~local_callable:(Calls.local_callable cx env) env id
+      Calls.argument_position cx ~ret:(ret) ~local_callable:(Calls.local_callable cx env) env id
         plan i core_arg
     in
     let param_expected_subst () = expected_subst in
@@ -255,8 +255,8 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
       | _ -> slot.Slot.expected_core_ty
     in
     let arg_typed =
-      with_cpp_return_type cx ret (fun () ->
-          Knot.gen_expr_typed cx ?expected_ty:arg_expected_ty
+      with_cpp_return_type cx ret (fun ret ->
+          Knot.gen_expr_typed cx ~ret ?expected_ty:arg_expected_ty
             ~slot:
               { slot with
                 Slot.expected_core_ty = arg_expected_core_ty;
@@ -609,7 +609,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
     [std::function<std::any(std::any...)>] adapter where the callee's type
     erases to [std::any], and its result recovered from a box where the
     callee's codomain is erased. *)
-let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) env f args :
+let eta_fun cx ~ret ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) env f args :
     Typed.t =
   let core_args = args in
 
@@ -627,7 +627,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
   match f with
   | Core.Expr.Global ({callee = id; _} as use) ->
     let lowered =
-      Calls.lower_call cx ~caller:!Base.Table.current_decl_ref ~slot ?expected_ty env use args
+      Calls.lower_call cx ~ret ~caller:!Base.Table.current_decl_ref ~slot ?expected_ty env use args
     in
     let plan = lowered.Calls.plan in
     let {
@@ -677,7 +677,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
     let typed_args =
       let slot = if closed_head then {slot with Slot.building_constant = true} else slot in
       with_promoted_var_map cx (instance_promoted_map @ cx.ctx.lexical.promoted_var_map)
-        (fun () -> gen_call_args cx ~slot ?expected_ty ~written_by_var:lowered.Calls.written_by_var env id plan)
+        (fun () -> gen_call_args cx ~ret ~slot ?expected_ty ~written_by_var:lowered.Calls.written_by_var env id plan)
     in
     let args = List.map (fun (a : Typed.t) -> a.expr) typed_args in
     let ty = lowered.Calls.callee_type
@@ -1032,7 +1032,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
             excess
         in
         if ret_is_chainable then
-          let excess = List.map (gen_expr cx ~slot env) excess_args in
+          let excess = List.map (gen_expr cx ~ret ~slot env) excess_args in
           if cod_is_erased then
             let applied = Coerce.apply_erased_callee base excess in
 
@@ -1757,7 +1757,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
        which is the only place that parameter can be given. *)
     let tc_args, _, args = Calls.split_instance_args ~lex:(current_lexenv cx ()) args in
     let gen_callee () : Cpp_ir.Lowered.Expr.t =
-      match (tc_args, gen_expr cx env f) with
+      match (tc_args, gen_expr cx ~ret env f) with
       | [], e -> e
       | _, Scope (b, id, tys) ->
         Scope (b, id, tys @ List.filter_map (fun a -> Calls.core_arg_to_template_type cx env a) tc_args)
@@ -1986,7 +1986,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
       let expr =
         match x with
         | e when Monadic.core_value_is_void_call cx e ->
-          Monadic.wrap_void_call_as_value (gen_expr cx ~slot:arg_slot env x)
+          Monadic.wrap_void_call_as_value (gen_expr cx ~ret ~slot:arg_slot env x)
         (* A lambda is written against the parameter's Core type as well
            as its C++ one: the binders a flat parameter takes that the term
            does not write become its own ({!Lambda.gen_lambda}), so that it
@@ -1999,12 +1999,12 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
             | Some t when not (core_type_contains_erased ~in_arrows:true t) -> Some t
             | _ -> None
           in
-          gen_expr cx ?expected_ty:(declared_dom i) ~slot:{arg_slot with Slot.expected_core_ty} env x
+          gen_expr cx ~ret ?expected_ty:(declared_dom i) ~slot:{arg_slot with Slot.expected_core_ty} env x
         | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ ->
           let expected = Types.param_expected_cpp_ty cx env callee_param_tys i in
-          gen_expr cx ?expected_ty:expected ~slot:arg_slot env x
+          gen_expr cx ~ret ?expected_ty:expected ~slot:arg_slot env x
         | Core.Expr.Bound_variable {index = j; occurrence = occ} when Binders.read_is_boxed cx j occ ->
-          let inner = gen_expr cx ~slot:arg_slot env x in
+          let inner = gen_expr cx ~ret ~slot:arg_slot env x in
           let expected = Types.param_expected_cpp_ty cx env callee_param_tys i in
           ( match expected with
             | Some ty ->
@@ -2020,7 +2020,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
            The parameter's Core type says, and the slot, which every form
            hands on to the positions whose value is the argument's, refines
            the erased parts by it. *)
-        | _ -> gen_expr cx ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} env x
+        | _ -> gen_expr cx ~ret ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} env x
       in
       match List.nth_opt callee_param_tys i with
       | Some param_ty when erased_callee -> adapt_to_erased_param cx env param_ty x expr
@@ -2200,17 +2200,17 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
           (match get_env_type_opt cx i with Some ty -> core_codomain_erases_to_any n ty | None -> false)
         | _ -> false
       in
-      let result = Coerce.recover_boxed_result cx ~boxed:erased_cod ~expected:expected_ty result in
+      let result = Coerce.recover_boxed_result cx ~ret ~boxed:erased_cod ~expected:expected_ty result in
       Coerce.into_slot
         ~origin:(Carrier_result {fun_ty = callee_fun_core_ty; n_args = n})
         (Cpp_ir.Typed.of_node result)
-        (Coerce.slot_of_expected (Coerce.position_cpp_ty cx expected_ty))
+        (Coerce.slot_of_expected (Coerce.position_cpp_ty ~ret expected_ty))
 
 (** The dictionary of a singleton class, the variable [i] read at [occ],
     applied to [args]: the body of the class's projection, which calls the
     method on the instance -- a template parameter, so a static member -- at
     the method's own type variables. *)
-let gen_singleton_dictionary_call cx env ~i ~occ ~args : Cpp_ir.Typed.t =
+let gen_singleton_dictionary_call cx ~ret env ~i ~occ ~args : Cpp_ir.Typed.t =
   let inst, class_ref, method_ref = Option.get (singleton_call cx env i occ) in
   (* What the method returns: its declared type at the dictionary's
      carrier, its own variables the projection's. *)
@@ -2233,19 +2233,19 @@ let gen_singleton_dictionary_call cx env ~i ~occ ~args : Cpp_ir.Typed.t =
   let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
   Cpp_ir.Build.call
     (Scope (Local inst, Base.Common.id_of_global Term method_ref, targs))
-    (List.map (gen_expr cx env) value_args)
+    (List.map (gen_expr cx ~ret env) value_args)
 
 (** A class field projected through the instance [use] applied to [args]
     names, as Core decided it ({!Core_plan.Elaborate.static_projection_call}); a
     projection missing arguments is eta-expanded over them first. *)
-let gen_instance_projection cx ~expected_ty ~slot env ~use ~args : Cpp_ir.Typed.t =
+let gen_instance_projection cx ~ret ~expected_ty ~slot env ~use ~args : Cpp_ir.Typed.t =
   let projection =
     Option.get (Core_plan.Elaborate.static_projection_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args) in
   match projection.missing with
   | [] ->
     Cpp_ir.Typed.v
       ~ty:(Typed_checks.core_value_type cx env projection.codomain)
-      (project_through_instance cx env use args projection)
+      (project_through_instance cx ~ret env use args projection)
   | missing ->
     let k = List.length missing in
     let call =
@@ -2253,7 +2253,7 @@ let gen_instance_projection cx ~expected_ty ~slot env ~use ~args : Cpp_ir.Typed.
                        arguments = List.map (Base.Core_util.ast_lift k) args
                          @ List.init k (fun i -> Core.Expr.fresh_rel (k - i))}
     in
-    Knot.gen_expr_typed cx ?expected_ty ~slot env
+    Knot.gen_expr_typed cx ~ret ?expected_ty ~slot env
       (Base.Core_util.named_lams
          (List.rev (List.mapi (fun i t -> (Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i)), t)) missing))
          call )
@@ -2262,11 +2262,11 @@ let gen_instance_projection cx ~expected_ty ~slot env ~use ~args : Cpp_ir.Typed.
     call, partial or saturated ({!eta_fun}), its result recovered from a box
     where only a type index pins it down, and the call node recording its
     signature. *)
-let gen_application cx ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t list) : Typed.t =
+let gen_application cx ~ret ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t list) : Typed.t =
   (* A partial application is a callable this position may expect at a
      different currying than the callee's own arrows give it, so the slot's
      type travels with it. *)
-  let call = eta_fun cx ?expected_ty ~slot env f args in
+  let call = eta_fun cx ~ret ?expected_ty ~slot env f args in
   let result = call.expr in
   (* A callee whose result is only pinned down by a type index hands back a
      [std::any] (see {!result_is_index_only_tvar}); recover it at the type

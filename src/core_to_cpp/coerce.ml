@@ -308,10 +308,10 @@ let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t
     The one place that precedence is written down, so that "the type this
     position expects" cannot mean the position at one site and the enclosing
     return type at another. *)
-let position_cpp_ty cx (expected : Cpp_ir.Lowered.Type.t option) =
+let position_cpp_ty ~(ret : Cpp_ir.Lowered.Type.t option) (expected : Cpp_ir.Lowered.Type.t option) =
   match expected with
   | Some _ as t -> t
-  | None -> current_cpp_return_type cx ()
+  | None -> ret
 
 (** A callable handed to a parameter the callee declared at one of its own
     type variables has to arrive under a name: a closure's type cannot be
@@ -934,8 +934,8 @@ let recover_boxed_component cx into (e : Cpp_ir.Lowered.Expr.t) =
     [boxed] is a statement about the callee, not a guess, so the recovery is
     unconditional: unlike {!unbox_into} it casts at a template parameter too,
     which inside a template is the one name the result has. *)
-let recover_boxed_result cx ~boxed ~expected expr =
-  match position_cpp_ty cx expected with
+let recover_boxed_result cx ~ret ~boxed ~expected expr =
+  match position_cpp_ty ~ret expected with
   | Some into when boxed -> coerce cx ~from:Any ~into expr
   | _ -> expr
 

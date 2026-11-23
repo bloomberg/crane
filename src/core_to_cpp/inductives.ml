@@ -769,7 +769,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
      exposed to the body as [gen_dfun] exposes a function's, so a result
      recovered from a box is recovered at it. *)
   let stmts =
-    with_cpp_return_type cx (Some ret_cpp) @@ fun () ->
+    with_cpp_return_type cx (Some ret_cpp) @@ fun ret ->
     with_type_vars cx (vars @ extra_tvar_names) (fun () ->
         (* Include all local value-type inductives with recursive fields in the
            method ns.  This ensures that when the method body constructs or
@@ -777,8 +777,8 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
            type arguments get shared_ptr wrapping to match struct field
            types. *)
         with_method_ns_for_locals cx ~base:method_ns (fun () ->
-            with_region cx ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
-                gen_stmts cx env method_k inner_body ) ) )
+            with_region cx ~ret ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
+                gen_stmts cx ~ret env method_k inner_body ) ) )
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves

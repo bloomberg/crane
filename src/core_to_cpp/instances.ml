@@ -89,8 +89,8 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
   (* Without bodies the methods are their heads alone: what planning reads
      ({!plan_instance_methods}), decided by the very code that generates
      them. *)
-  let gen_body env e =
-    if bodies then gen_stmts cx env (Destination.return_ cx) e
+  let gen_body ~ret env e =
+    if bodies then gen_stmts cx ~ret env (Destination.return_ ~ret cx) e
     else []
   in
   let inner_ty, inner_body, tc_temps, lam_params = instance_layers cx ty body in
@@ -484,7 +484,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
-            with_cpp_return_type cx (Some method_ret_ty) @@ fun () ->
+            with_cpp_return_type cx (Some method_ret_ty) @@ fun ret ->
             if bodies then begin_body cx ~owner:name ();
             if List.for_all (fun b -> b.kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
@@ -497,8 +497,8 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                    static value with a nullary accessor method. *)
                 let stmts =
                   with_method_env_types cx ~outer:outer_binders base_env [] (fun () ->
-                      with_region cx inner_body (fun () ->
-                          gen_body base_env inner_body ) )
+                      with_region cx ~ret inner_body (fun () ->
+                          gen_body ~ret base_env inner_body ) )
                 in
                 ([], method_ret_ty, stmts, [])
               | Some (eta_params, call_expr) ->
@@ -588,8 +588,8 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                 in
                 let stmts =
                   with_method_env_types cx ~outer:outer_binders env renamed_eta (fun () ->
-                    with_region cx ~owned call_expr (fun () ->
-                        gen_body env call_expr ) )
+                    with_region cx ~ret ~owned call_expr (fun () ->
+                        gen_body ~ret env call_expr ) )
                 in
                 let stmts =
                   List.fold_left (fun acc (name, _body_ty, body_cpp) ->
@@ -679,8 +679,8 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                         ~declared:(fun i -> Some binders_db.(i).cpp_ty)
                         ~ty:(fun i -> binders_db.(i).core_ty)
                     in
-                    with_region cx ~owned inner_body (fun () ->
-                        gen_body env inner_body ) )
+                    with_region cx ~ret ~owned inner_body (fun () ->
+                        gen_body ~ret env inner_body ) )
               in
               (cpp_params, method_ret_ty, stmts, tc_tparams)
           in

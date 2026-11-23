@@ -43,7 +43,7 @@ let owned_flags passing = List.rev_map (fun p -> p = Cpp_ir.Param_mode.Owned) (L
     position states a function type: its binders split where the expected
     type returns a function, the parameters it takes and how, its captures,
     and its body as statements returning its result. *)
-let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
+let gen_lambda cx ~ret ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
   (* What the lambda takes by move as it is made. *)
   let moved_captures = moved_names env (Ownership_ir.Region.captures cx.ctx.lexical.move_plan a) in
   (* Whether a binder becomes a C++ parameter: see
@@ -323,7 +323,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
         ty
   in
   let f =
-    with_escape_analysis cx (fun () ->
+    with_escape_analysis cx ~ret (fun ret ->
       let tvars = get_current_type_vars cx in
       (* What the slot this lambda flows into declares its parameters to be,
          when it declares a signature at all. *)
@@ -470,7 +470,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
       in
       let with_lam_return_type f =
         match Option.map (Types.unfold_cpp_typedef cx env) expected_ty with
-        | _ when binderless_result <> None -> with_cpp_return_type cx binderless_result (fun () -> f (Destination.Return (Destination.result_slot binderless_result)))
+        | _ when binderless_result <> None -> with_cpp_return_type cx binderless_result (fun ret -> f ret (Destination.Return (Destination.result_slot binderless_result)))
         | _ when carrier <> None ->
           (* A polymorphic function object returns at the type its own
              parameter fixes, so the enclosing function's return type is
@@ -488,7 +488,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
               cx) core_ty)
             | None, _ -> None
           in
-          with_cpp_return_type cx ret (fun () -> f (Destination.Return (Destination.result_slot ret)))
+          with_cpp_return_type cx ret (fun ret -> f ret (Destination.Return (Destination.result_slot ret)))
         | Some (Function (_, cod)) when cod <> Void ->
           (* Read in this scope: a variable of the callee's the slot names
              ([tfmap]'s [T2]) is erased where it sits, as the binders'
@@ -506,11 +506,11 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
                 | t -> t )
               cod
           in
-          with_cpp_return_type cx (Some cod) (fun () -> f (Destination.Return (Exactly cod)))
+          with_cpp_return_type cx (Some cod) (fun ret -> f ret (Destination.Return (Exactly cod)))
         (* The ambient return type is left alone for the body's legacy
            readers, but it is not this lambda's: its return type is the
            join of what it returns. *)
-        | _ -> with_own_return cx Join (fun () -> f (Destination.Return Join))
+        | _ -> with_own_return cx Join (fun () -> f ret (Destination.Return Join))
       in
       let body_stmts, returned =
         with_returns cx @@ fun () ->
@@ -518,9 +518,9 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
          | None -> (fun f -> f ())
          | Some _ -> with_rank2_carrier cx carrier)
           (fun () ->
-            with_lam_return_type (fun return_ ->
-              with_region cx ~owned:lambda_owned a (fun () ->
-                gen_stmts cx
+            with_lam_return_type (fun ret return_ ->
+              with_region cx ~ret ~owned:lambda_owned a (fun () ->
+                gen_stmts cx ~ret
                   ~slot:{slot with Slot.expected_core_ty = body_expected_core_ty}
                   env
                   return_
@@ -778,7 +778,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
              so no forwarding lambda can name it.  Emit the plain reference
              and let the printer wrap it in the method-calling lambda it
              already builds for method values. *)
-          gen_expr cx env a
+          gen_expr cx ~ret env a
         else
         let arg_ids = List.init n field_param_id in
         let arg_vars = List.map (fun id : Cpp_ir.Lowered.Expr.t -> Local id) arg_ids in
@@ -949,7 +949,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
             (Cpp_ir.Build.call (mk_cppglob r (Calls.written_at_variables cx r by_var)) fwd_args)
       else
         (* Every binder was a type: the body is the value the slot takes. *)
-        gen_expr cx ?expected_ty ~slot env a
+        gen_expr cx ~ret ?expected_ty ~slot env a
     | _ ->
       (* Body is not a template function ref — wrap in void thunk (old
          behavior). gen_expr env a might produce lambdas with [&] capture

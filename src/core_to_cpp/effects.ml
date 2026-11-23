@@ -17,7 +17,7 @@ open Knot
 (** [ret] of an effect monad, the global [use] (at [r]) applied to [a1 :: l],
     in expression position: the returned value in sequential mode, an
     [ITree<R>::ret] in reified mode. *)
-let gen_return_expr cx env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
+let gen_return_expr cx ~ret env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
   let ret_tys = Base.Core_util.written_type_args use in
   if not (Monadic.is_sequential_effect cx Core_plan.Effects.Return use) then begin
     (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
@@ -26,7 +26,7 @@ let gen_return_expr cx env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
     | Core.Expr.Global {callee = g; _} when is_ghost g ->
       Monadic.mk_itree_ret Void []
     | _ ->
-      let inner = gen_expr cx env t in
+      let inner = gen_expr cx ~ret env t in
       (* The result type is the type argument written for the variable the
          returned value is at: [Ret : forall E R, R -> itree E R].  One
          extraction could not read says nothing. *)
@@ -44,23 +44,23 @@ let gen_return_expr cx env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
   end
   else begin
     let t = Base.Common.last (a1 :: l) in
-    gen_expr cx env t
+    gen_expr cx ~ret env t
   end
 
 (** [bind] of an effect monad in sequential mode, the application [a], in
     expression position: an immediately invoked lambda over the statements
     that sequence it. *)
-let gen_bind_expr cx env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
+let gen_bind_expr cx ~ret env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
   (* Sequential mode: bind in expression context (e.g., nested inside
      another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
-  with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-    Match_types.value_iife cx env (Core_plan.Query.infer_core_body_type a) (fun () -> gen_stmts cx env (Destination.return_ cx) a) ) )
+  with_escape_analysis cx ~ret (fun ret -> with_region cx ~ret a (fun () ->
+    Match_types.value_iife cx env (Core_plan.Query.infer_core_body_type a) (fun () -> gen_stmts cx ~ret env (Destination.return_ ~ret cx) a) ) )
 
 (** [bind] of an effect monad, the global [use] (at [r]) applied to
     [a1 :: a2 :: l], in statement position ending in [k]: the action's
     statements, its result bound for the continuation in sequential mode, the
     [bind] call as an expression in reified mode. *)
-let gen_bind_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2
+let gen_bind_stmts cx ~ret ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2
   ~l : Cpp_ir.Lowered.Stmt.t list =
   let bind_tys = Base.Core_util.written_type_args use in
   (* The action's result type: the argument written for the variable the
@@ -77,11 +77,11 @@ let gen_bind_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use 
   in
   (* Reified mode: bind is a real function call, not desugared. *)
   if not (Monadic.is_sequential_effect cx Core_plan.Effects.Bind use) then
-    Destination.finish_inlined cx k (Knot.gen_expr_typed cx ~slot env ast)
+    Destination.finish_inlined cx k (Knot.gen_expr_typed cx ~ret ~slot env ast)
   else begin
     (* Sequential mode: desugar bind into sequential statements. *)
     let a_core, f = Base.Common.last_two (a1 :: a2 :: l) in
-    let action = Knot.gen_expr_typed cx env a_core in
+    let action = Knot.gen_expr_typed cx ~ret env a_core in
     (* Run in place, the action yields its result: the monad's last type
        argument. *)
     let rec value_type (t : Core.Type.t) =
@@ -132,7 +132,7 @@ let gen_bind_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use 
       (* Generate the continuation first, then check if the variable is
          actually referenced in the generated C++ (unit-match elimination
          and Ret-in-void optimization may drop Core-level references). *)
-      let body = gen_stmts cx ~slot env k f in
+      let body = gen_stmts cx ~ret ~slot env k f in
       let cpp_ty = Types.cpp_of_core cx env core_ty in
       let decl : Cpp_ir.Lowered.Stmt.t list =
         if not (Lifting.stmts_reference_var x body) then []
@@ -155,10 +155,10 @@ let gen_bind_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use 
             values = args;
             type_args = tys;
             binder = bound_by_bind env } : Cpp_ir.Lowered.Stmt.t)
-        :: gen_stmts cx ~slot env k f
+        :: gen_stmts cx ~ret ~slot env k f
       | None ->
         Typed_checks.agreement cx ~site:"bind result" action (Exactly ty);
-        (Bind_variable (x, Declare (ty, bound_by_bind env), a) : Cpp_ir.Lowered.Stmt.t) :: gen_stmts cx ~slot env k f
+        (Bind_variable (x, Declare (ty, bound_by_bind env), a) : Cpp_ir.Lowered.Stmt.t) :: gen_stmts cx ~ret ~slot env k f
     end
   | _ ->
     (* No lambda parameters (eta-reduced continuation like bare Ret).
@@ -170,7 +170,7 @@ let gen_bind_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use 
     | Core.Expr.Global use when Monadic.is_effect cx Core_plan.Effects.Return use ->
       (* Eta-reduced Ret: bind action Ret = action (monad right identity).
          In sequential mode, just execute the action and return. *)
-      if returns_void cx then
+      if (ret = Some Cpp_ir.Type.Void) then
         side_effect @ [(Return None : Cpp_ir.Lowered.Stmt.t)]
       else
         [Destination.finish cx k action]
@@ -193,7 +193,7 @@ let gen_bind_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use 
       ( match non_void_ty with
       | Some (cpp_ty, worth_moving) ->
         let temp_id = Id.of_string "_bind_result" in
-        let f_typed = Knot.gen_expr_typed cx env f in
+        let f_typed = Knot.gen_expr_typed cx ~ret env f in
         (* The continuation is the temporary's one reader. *)
         let result : Cpp_ir.Lowered.Expr.t = if worth_moving then Move (Local temp_id) else Local temp_id in
         let app = Cpp_ir.Build.call f_typed.expr [result] in
@@ -201,25 +201,25 @@ let gen_bind_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use 
         [ Bind_variable (temp_id, Declare (cpp_ty, None), a);
           Destination.finish cx k (Cpp_ir.Typed.v ~ty:(Cpp_ir.Typed.applied f_typed.ty 1) app) ]
       | None ->
-        side_effect @ gen_stmts cx ~slot env k f ) ) )
+        side_effect @ gen_stmts cx ~ret ~slot env k f ) ) )
   end
 
 (** [ret] of an effect monad, [use] applied to [a1 :: l], in statement
     position ending in [k]: [k] of the returned value (a bare [return;] in a
     function returning [void]) in sequential mode, [k] of the whole term
     lowered as an [ITree<R>::ret] in reified mode. *)
-let gen_return_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~use ~a1 ~l :
+let gen_return_stmts cx ~ret ~slot env (k : Destination.t) (ast : Core.Expr.t) ~use ~a1 ~l :
   Cpp_ir.Lowered.Stmt.t list =
   if not (Monadic.is_sequential_effect cx Core_plan.Effects.Return use) then begin
     (* Reified mode: Ret is a constructor call, not desugared. *)
-    Destination.finish_inlined cx k (Knot.gen_expr_typed cx ~slot env ast)
+    Destination.finish_inlined cx k (Knot.gen_expr_typed cx ~ret ~slot env ast)
   end
   else begin
     (* Sequential mode: eliminate Ret, just use the value. *)
     let t = Base.Common.last (a1 :: l) in
-    if returns_void cx then
+    if (ret = Some Cpp_ir.Type.Void) then
       (* Void-returning function: discard the value and return. *)
       [Return None]
     else
-      [Destination.finish cx k (Knot.gen_expr_typed cx ?expected_ty:(current_cpp_return_type cx ()) env t)]
+      [Destination.finish cx k (Knot.gen_expr_typed cx ~ret ?expected_ty:(ret) env t)]
   end

@@ -26,6 +26,7 @@ open Base.Common
 type lowering = {
   expr_typed :
     Lowering_state.t ->
+    ret:Cpp_ir.Lowered.Type.t option ->
     ?expected_ty:Cpp_ir.Lowered.Type.t ->
     ?slot:Slot.slot ->
     env ->
@@ -33,6 +34,7 @@ type lowering = {
     Cpp_ir.Typed.t;
   stmts :
     Lowering_state.t ->
+    ret:Cpp_ir.Lowered.Type.t option ->
     ?slot:Slot.slot ->
     env ->
     Destination.t ->
@@ -54,11 +56,11 @@ let get () =
   | None -> CErrors.anomaly (Pp.str "Crane: expression lowering ran before Translation installed it.")
 
 (** {!Expr.gen_expr_typed}. *)
-let gen_expr_typed cx ?expected_ty ?slot env e = (get ()).expr_typed cx ?expected_ty ?slot env e
+let gen_expr_typed cx ~ret ?expected_ty ?slot env e = (get ()).expr_typed cx ~ret ?expected_ty ?slot env e
 
 (** {!gen_expr_typed}'s expression alone, for a caller that does not read
     the type yet. *)
-let gen_expr cx ?expected_ty ?slot env e = (gen_expr_typed cx ?expected_ty ?slot env e).expr
+let gen_expr cx ~ret ?expected_ty ?slot env e = (gen_expr_typed cx ~ret ?expected_ty ?slot env e).expr
 
 (** {!Stmts.gen_stmts}. *)
-let gen_stmts cx ?slot env d e = (get ()).stmts cx ?slot env d e
+let gen_stmts cx ~ret ?slot env d e = (get ()).stmts cx ~ret ?slot env d e

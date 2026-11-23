@@ -2411,14 +2411,13 @@ let argument_position cx ~ret ~local_callable env id plan i core_arg =
     template application planned and validated against the callee's ABI
     ({!call_type_args}).  Generating the arguments reads the result and
     decides neither. *)
-let lower_call cx ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (use : Core.Global_use.t) args =
+let lower_call cx ~ret ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (use : Core.Global_use.t) args =
   let id = use.callee in
   let lex = current_lexenv cx () in
   let inst =
     Core_plan.Elaborate.instantiation ~walk:(elaborations cx) ~lex ~expected_core:slot.Slot.expected_core_ty
       ~stated_core:slot.Slot.stated_core_ty ~caller ~scope:cx.ctx.lexical.current_type_vars use args
   in
-  let ret = current_cpp_return_type cx () in
   let plan = plan_call cx ~ret ~lex ?expected_ty env inst in
   call_type_args cx ~ret ~caller ~lex ?expected_ty env id plan
     ~has_value_args:(inst.call.regular <> [])

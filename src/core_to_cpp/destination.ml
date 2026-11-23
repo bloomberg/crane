@@ -41,10 +41,10 @@ let result_slot (t : Cpp_ir.Lowered.Type.t option) : Slot_type.t =
 (** A [return] from the function or deduced lambda whose body is being
     lowered: at the lambda's own slot ({!Lowering_state.with_own_return}),
     else at the result type lowering has for the function. *)
-let return_ cx =
+let return_ ~ret cx =
   match Lowering_state.own_return cx with
   | Some s -> Return s
-  | None -> Return (result_slot (Lowering_state.current_cpp_return_type cx ()))
+  | None -> Return (result_slot ret)
 
 (** [Return] at [t], or [Return_void] where [t] is [void]. *)
 let return_at (t : Cpp_ir.Lowered.Type.t option) =

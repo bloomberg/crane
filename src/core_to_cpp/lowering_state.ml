@@ -523,11 +523,11 @@ let with_type_vars cx (tvars : Id.t list) (f : unit -> 'a) : 'a =
 
 (** [with_cpp_return_type ty f] runs [f] with [ty] as the enclosing
     function's C++ return type -- the type a tail expression is cast to. *)
-let with_cpp_return_type cx (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a) : 'a =
+let with_cpp_return_type cx (ty : Cpp_ir.Lowered.Type.t option) (f : Cpp_ir.Lowered.Type.t option -> 'a) : 'a =
   with_field cx
     (fun c -> (c.lexical.current_cpp_return_type, c.lexical.own_return))
     (fun (t, o) -> set_lexical cx (fun l -> { l with current_cpp_return_type = t; own_return = o }))
-    (ty, None) f
+    (ty, None) (fun () -> f ty)
 
 (** [with_own_return slot f] runs [f], lowering the body of a lambda C++
     deduces the result of, with its returns at [slot]: the enclosing
@@ -546,6 +546,13 @@ let own_return cx = cx.ctx.lexical.own_return
 (** The enclosing function's C++ return type
     ({!lexical.current_cpp_return_type}). *)
 let current_cpp_return_type cx () : Cpp_ir.Lowered.Type.t option = cx.ctx.lexical.current_cpp_return_type
+
+(** Under [CRANE_CHECK_IR], that [ret], the enclosing result type a
+    lowering entry point was handed, is the ambient one: the two describe
+    one position while both exist. *)
+let check_ret cx ~site (ret : Cpp_ir.Lowered.Type.t option) =
+  if Base.Probe.checking () && ret <> cx.ctx.lexical.current_cpp_return_type then
+    Base.Probe.violation "threaded return type" (Pp.str site)
 
 (** [with_returns f] runs [f] collecting the values returned in the body it
     lowers ({!record_return}), and gives them back with its result: what a
@@ -570,10 +577,6 @@ let returned_type cx (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Value_type.t o
   match cx.ctx.lexical.returned with
   | Some seen -> List.find_map (fun (e', ty) -> if e' == e then Some ty else None) !seen
   | None -> None
-
-(** Whether the enclosing function returns [void]. *)
-let returns_void cx =
-  match cx.ctx.lexical.current_cpp_return_type with Some Cpp_ir.Type.Void -> true | _ -> false
 
 (** [with_parameters bs f] runs [f] with [bs] as the binders of the
     declaration's parameters ({!input.current_parameters}). *)
@@ -831,7 +834,7 @@ let plan_positions :
     with the moves planned over [body] ({!Ownership_ir.Region.region}), those
     into the frames entering the machine's entries recorded
     ({!Ownership_ir.Region.Entry_moves}). *)
-let with_region cx ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
+let with_region cx ~(ret : Cpp_ir.Lowered.Type.t option) ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
   let outer = Core.Lexenv.type_opt cx.ctx.lexical.env_types in
   let p =
     Ownership_ir.Region.region ~owned ~copied ~outer ?resumes ?certain ~effects:cx.ctx.input.unit.effects
@@ -848,7 +851,6 @@ let with_region cx ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.E
     match cx.ctx.input.body_owner with
     | Some _ ->
       (* The region returns at the enclosing function's result type. *)
-      let ret = cx.ctx.lexical.current_cpp_return_type in
       let binders, reads = !plan_representation cx ~ret body in
       (* A nested region's positions are planned at its own return type,
          which the enclosing walk does not know; they come first. *)
@@ -1059,12 +1061,12 @@ let reset_env_types cx =
     afterwards.  Escape analysis runs at several nesting levels (lambdas,
     let-in expressions, top-level functions) and each level has its own set of
     safe bindings. *)
-let with_escape_analysis cx f =
+let with_escape_analysis cx ~(ret : Cpp_ir.Lowered.Type.t option) (f : Cpp_ir.Lowered.Type.t option -> 'a) : 'a =
   (* Prevent void optimization from leaking into IIFE/lambda bodies: when the
      outer function returns void, gen_stmts generates bare 'return;' for tt,
      but IIFE bodies return their own type (e.g. monostate), not void. *)
   let inner_return_type =
-    match current_cpp_return_type cx () with
+    match ret with
     | Some Cpp_ir.Type.Void -> None
     | rt -> rt
   in
@@ -1082,5 +1084,5 @@ let with_escape_analysis cx f =
           in_constructor_expr = false;
           current_cpp_return_type = inner_return_type };
       threaded = {match_param_counter = 0; cs_counter = 0} };
-  f ()
+  f inner_return_type
 

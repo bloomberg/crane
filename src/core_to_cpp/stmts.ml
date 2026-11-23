@@ -50,12 +50,13 @@ let declared_in_scope (stmts : Cpp_ir.Lowered.Stmt.t list) =
     right-hand side ([let p := (let q := .. in ..) in ..]) or the sibling
     argument of a call, and every variable it reads beneath one left pushed
     would read the binder one further in. *)
-let rec gen_stmts cx ?slot env (k : Destination.t) ast : Cpp_ir.Lowered.Stmt.t list =
+let rec gen_stmts cx ~ret ?slot env (k : Destination.t) ast : Cpp_ir.Lowered.Stmt.t list =
+  check_ret cx ~site:"statements" ret;
   let saved = cx.ctx.lexical.env_types in
-  Fun.protect ~finally:(fun () -> restore_env_types cx saved) (fun () -> gen_stmts_scoped cx ?slot env k ast)
+  Fun.protect ~finally:(fun () -> restore_env_types cx saved) (fun () -> gen_stmts_scoped cx ~ret ?slot env k ast)
 
 (** {!gen_stmts}, the binders it pushes left for {!gen_stmts} to pop. *)
-and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : Cpp_ir.Lowered.Stmt.t list =
+and gen_stmts_scoped cx ~ret ?(slot = Slot.empty_slot) env (k : Destination.t) ast : Cpp_ir.Lowered.Stmt.t list =
   (* Statements open a position of their own: the value a [return] here
      carries goes to the enclosing function, not to the position the
      caller's expression was being built for.  What a tail statement lands
@@ -70,9 +71,9 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
     and ids = Core.Recursion.Group.functions rec_group
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
-    Local_functions.gen_let_fix cx ~slot env k ~let_ty ~x ~ids ~funs ~occ ~fix_term ~b ~let_occ
+    Local_functions.gen_let_fix cx ~ret ~slot env k ~let_ty ~x ~ids ~funs ~occ ~fix_term ~b ~let_occ
   | Core.Expr.Let {binder = x; binder_type = t; value = (Core.Expr.Lambda _ as a); body = b; occurrence = let_occ} ->
-    Local_functions.gen_let_lambda cx ~slot env k ~x ~t ~a ~b ~let_occ
+    Local_functions.gen_let_lambda cx ~ret ~slot env k ~x ~t ~a ~b ~let_occ
   | Core.Expr.Let {binder = x; binder_type = t; value = a; body = b; occurrence = let_occ} ->
     let x' = cpp_id_of_id (id_of_binder_name x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in
@@ -87,13 +88,13 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
     let env_rhs = (fst env, snd env') in
     if x == Core.Binder_name.Anonymous then (
       Binders.push_binders cx env [(x_renamed, t)];
-      gen_stmts cx ~slot env' k b )
+      gen_stmts cx ~ret ~slot env' k b )
     else if core_type_is_unit t then (
       (* Unit-typed let bindings: the RHS may call a void-ified function,
          so we can't assign its result to a variable.  Execute the RHS for
          side effects, then declare the variable as Unit::e_TT (its only
          possible value) so the body can still reference it. *)
-      let rhs = gen_stmts cx env_rhs Discard a in
+      let rhs = gen_stmts cx ~ret env_rhs Discard a in
       Binders.push_binders cx env [(x_renamed, t)];
       (* Drop trivially pure RHS (e.g. Unit::e_TT from tt, variable refs) *)
       let rhs = List.filter (fun (s : Cpp_ir.Lowered.Stmt.t) ->
@@ -105,7 +106,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
          generated C++ (not just the Core term, since optimizations like
          unit-match elimination may drop references). *)
       let body =
-        gen_stmts cx ~slot env' k b
+        gen_stmts cx ~ret ~slot env' k b
       in
       let decl : Cpp_ir.Lowered.Stmt.t list =
         if Lifting.stmts_reference_var x_renamed body then
@@ -280,8 +281,8 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
            whatever family the function returns into. *)
         let rhs_result = Types.let_value_result cx env t_effective in
         let afun = Destination.Assign (x_renamed, Destination.slot_of rhs_result) in
-        with_cpp_return_type cx rhs_result (fun () ->
-          gen_stmts cx
+        with_cpp_return_type cx rhs_result (fun ret ->
+          gen_stmts cx ~ret
             ~slot:
               { slot with
                 Slot.repr = Native;
@@ -356,11 +357,11 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
                   values = args;
                   type_args = tys;
                   binder = core_binder cx ~site:(Binding let_occ) env' 1 } : Cpp_ir.Lowered.Stmt.t)
-              :: gen_stmts cx ~slot env' k b
+              :: gen_stmts cx ~ret ~slot env' k b
             | None ->
               (Bind_variable (x_renamed, Declare (cpp_ty, core_binder cx ~site:(Binding let_occ) env' 1), e) :
                 Cpp_ir.Lowered.Stmt.t)
-              :: gen_stmts cx ~slot env' k b
+              :: gen_stmts cx ~ret ~slot env' k b
             end
           | _ ->
             let cpp_ty = Types.cpp_of_core cx env t in
@@ -374,7 +375,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
             in
             ((Declare (x_renamed, cpp_ty, core_binder cx ~site:(Binding let_occ) env' 1) :
               Cpp_ir.Lowered.Stmt.t) :: asgn)
-            @ gen_stmts cx ~slot env_body k b
+            @ gen_stmts cx ~ret ~slot env_body k b
       in
       result
   | Core.Expr.Apply {callee = ((Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group) as fix_term);
@@ -383,27 +384,27 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
     and ids = Core.Recursion.Group.functions rec_group
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
-    Local_functions.gen_applied_fix cx ~slot env k ~x ~ids ~funs ~occ ~fix_term ~args
+    Local_functions.gen_applied_fix cx ~ret ~slot env k ~x ~ids ~funs ~occ ~fix_term ~args
   | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group as fix_term ->
     let x = rec_group.selected
     and ids = Core.Recursion.Group.functions rec_group
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
-    Local_functions.gen_standalone_fix cx env k ~x ~ids ~funs ~occ ~fix_term
+    Local_functions.gen_standalone_fix cx ~ret env k ~x ~ids ~funs ~occ ~fix_term
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
                      arguments = a1 :: a2 :: l} when Monadic.is_effect cx Core_plan.Effects.Bind use ->
-    Effects.gen_bind_stmts cx ~slot env k ast ~r ~use ~a1 ~a2 ~l
+    Effects.gen_bind_stmts cx ~ret ~slot env k ast ~r ~use ~a1 ~a2 ~l
   | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = a1 :: l}
     when Monadic.is_effect cx Core_plan.Effects.Return use ->
-    Effects.gen_return_stmts cx ~slot env k ast ~use ~a1 ~l
+    Effects.gen_return_stmts cx ~ret ~slot env k ast ~use ~a1 ~l
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
                      occurrence = case_occ}
                        when Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Core_plan.Match_kind.Custom ->
-    gen_custom_cpp_case cx ~slot env k typ t pv case_occ
+    gen_custom_cpp_case cx ~ret ~slot env k typ t pv case_occ
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Base.Table.is_tt_constructor r
-      && returns_void cx ->
+      && (ret = Some Cpp_ir.Type.Void) ->
     (* tt (unit constructor) in tail position of a void-returning function *)
     if cx.ctx.input.itree_mode = Reified then [Destination.finish cx k (Cpp_ir.Typed.of_node (Monadic.mk_itree_ret Void []))]
     else
@@ -430,7 +431,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
                      branches = pv;
                      occurrence = case_occ}
                        when Core_plan.Match_kind.is_record (Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
-    Match.gen_record_match_stmts cx ~slot env k ast ~typ ~t ~pv ~case_occ
+    Match.gen_record_match_stmts cx ~ret ~slot env k ast ~typ ~t ~pv ~case_occ
   | t ->
     (* Tail position.  No deref_reified needed: in sequential mode, monadic
        variables are direct values (bind desugars to let-binding); in
@@ -457,8 +458,8 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
       | _ -> false
     in
     if is_void_tail then begin
-      let e = gen_expr cx ~slot ?expected_ty:(current_cpp_return_type cx ()) env t in
-      if returns_void cx then
+      let e = gen_expr cx ~ret ~slot ?expected_ty:(ret) env t in
+      if (ret = Some Cpp_ir.Type.Void) then
         [Expression e; Return None]
       else if Destination.discards k then
         (* Side-effect-only destination (e.g. from unit let handler).
@@ -470,14 +471,14 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
         @ Destination.finish_inlined cx k (Cpp_ir.Typed.of_node (Monadic.mk_tt_expr ()))
     end
     else begin
-      let e = gen_expr_typed cx ~slot ?expected_ty:(current_cpp_return_type cx ()) env t in
+      let e = gen_expr_typed cx ~ret ~slot ?expected_ty:(ret) env t in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
          time even though its Core type is concrete.  In tail position that value
          is the result, so cast it back to the declared return type -- the same
          recovery the let-binding path performs by marking the bound variable
          erased. *)
       let e =
-        match current_cpp_return_type cx () with
+        match ret with
         | Some rt when Destination.returns k -> (
           let adapt f = Typed_checks.adapted ~before:e (Some rt) (f e.expr) in
           match Types.slot_repr_of_cpp_type cx rt with
