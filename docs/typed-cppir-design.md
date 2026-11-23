@@ -1251,3 +1251,47 @@ Findings:
   edit not checked) showed no change where the committed code changed
   three files.  Flip in code, check the edit, diff the outputs.
 
+- **Own return slots for deduced lambdas.**  `Lowering_state.own_return`
+  (set by `with_own_return`, reset by `with_cpp_return_type`) is the slot
+  a `return` fills in the body of a lambda C++ deduces the result of:
+  `value_iife` (its `ret`, else `Join`), `gen_lambda` without a function
+  slot, and a lifted helper.  `Destination.return_` reads it before the
+  ambient type, so the match branches inside such a body (the five
+  builders in `match.ml`) return at the lambda's slot.  The ambient
+  `current_cpp_return_type` is untouched (lowering decisions still read
+  it until phase C), so outputs are byte-identical; only the census and
+  `dest-ambient` see the change.  Census: destination unrelated
+  488 -> 484, type-variable other 159 -> 155 (343 + 16 + ... at type
+  variables), join 2300 -> 2532, fits 143179 -> 142955.  `dest-ambient`
+  disagree 1492.
+
+Census after this session (whole suite): destination unrelated 484,
+type-variable unrelated 343 (of 65858 type-variable fits), untyped 116;
+argument unrelated 427, untyped 221.  The 484 unrelated destinations are
+mostly not IIFE returns.  Largest groups (from, into, value node):
+`itreeF` into `itree` from a constructor call (40: a constructor value
+at its Core result); `nat` into a record `state` from a call or an
+other node (~48: `get_pair_bound_prop`, `cpu_emulator`,
+`coalition_bid_honor_trace`; in `execute`'s `let sum := ... + if ...`,
+the branch of an `if` under an inline custom operator); `prod` into
+`prod` (27, differing arguments); `option<prod<T1,..>>` in
+`lifted_param_const_v_mut` (40); `list` into a `fn` (20,
+`call/0(other)`); `closure nat->nat` into a function (12).  To find
+the site of each, the census line needs the Core form of the value
+(`Destination.finish` has none): thread it, or record the form in
+`Typed.t` at `gen_expr_typed`.
+
+Commits: `0a46b5ab8` (row 17), the next commit (own return slots).
+Extraction byte-identical after each except the named
+`hk_class_field_result_cast_to_concept` change; full `make test` from
+clean at `0a46b5ab8` and again after own return slots: 1526 passed,
+16 failed (all `tests/wip`, as at the base), `git status --short tests`
+empty after the second; `dune build @unit_tests/runtest` and
+`scripts/check-module-deps.sh` pass.
+
+Next, in order: (1) census tail: put the Core form on census lines,
+then fix the groups above at their source (constructor values typed at
+the C++ type the constructor builds; inline custom operator operands and
+their IIFEs at their own slots; `prod` argument mismatches); (2) drop
+the type-variable exemption, make `typed-fit` fatal under
+`CRANE_CHECK_IR`, file genuine misses in `tests/wip`; (3) B2.

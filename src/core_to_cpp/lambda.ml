@@ -510,7 +510,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
         (* The ambient return type is left alone for the body's legacy
            readers, but it is not this lambda's: its return type is the
            join of what it returns. *)
-        | _ -> f (Destination.Return Join)
+        | _ -> with_own_return cx Join (fun () -> f (Destination.Return Join))
       in
       let body_stmts, returned =
         with_returns cx @@ fun () ->
