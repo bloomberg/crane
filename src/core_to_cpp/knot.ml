@@ -61,9 +61,5 @@ let get () =
 (** {!Expr.gen_expr_typed}. *)
 let gen_expr_typed cx slot env e = (get ()).expr_typed cx slot env e
 
-(** {!gen_expr_typed}'s expression alone, for a caller that does not read
-    the type yet. *)
-let gen_expr cx slot env e = (gen_expr_typed cx slot env e).expr
-
 (** {!Stmts.gen_stmts}. *)
 let gen_stmts cx slot env d e = (get ()).stmts cx slot env d e

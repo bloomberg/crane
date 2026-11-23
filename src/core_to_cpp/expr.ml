@@ -1,6 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Expressions: {!gen_expr} lowers a Core expression to a CppIR expression,
+(** Expressions: {!gen_expr_typed} lowers a Core expression to a CppIR expression,
     dispatching on its form.  The last of the lowering modules
     ({!Knot} lists the order), driven by {!Lower_expr}.  A variable read, a global used as a value, a
     literal and a coercion's crossing ({!gen_crossing}) are lowered here; a
@@ -114,10 +114,6 @@ let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
     non-tail statement) does not take it. *)
 let rec gen_expr_typed cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
   Typed_checks.census cx ?expected_ty:(Slot.expected slot) core_e (gen_form cx slot env core_e)
-
-(** {!gen_expr_typed}'s expression alone: the entry point for a caller that
-    does not read the type yet. *)
-and gen_expr cx slot env core_e = (gen_expr_typed cx slot env core_e).expr
 
 (** The typed lowering of [core_e], by its form. *)
 and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
@@ -532,7 +528,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
   | Core.Expr.Construct {arguments = ts; _} as e
     when (not slot.Slot.building_constant) && Core_plan.Elaborate.shared_constant ~walk:(elaborations cx) e
          && not (takes_reuse_token cx e) -> form @@ (
-    let built = gen_expr cx (Slot.at ~ret ?expected_ty ~slot:{slot with Slot.building_constant = true} ()) env e in
+    let built = (gen_expr_typed cx (Slot.at ~ret ?expected_ty ~slot:{slot with Slot.building_constant = true} ()) env e).expr in
     match Cpp_passes.Coercions.head built with
     | Call (_, Type_member (Entity_application (n, _, _), _), _)
       when Base.Table.is_shared_variant n && ts <> [] ->
@@ -585,8 +581,8 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
       CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
   | Core.Expr.Float64 f -> Typed.v ~ty:(Typed_checks.primitive_type cx env "num.float.type") (Literal (Float f))
   | Core.Expr.Persistent_array {elements = elems; default = def} ->
-    form @@ let elems = Array.map (gen_expr cx (Slot.at ~ret ()) env) elems in
-    let def = gen_expr cx (Slot.at ~ret ()) env def in
+    form @@ let elems = Array.map (fun e -> (gen_expr_typed cx (Slot.at ~ret ()) env e).expr) elems in
+    let def = (gen_expr_typed cx (Slot.at ~ret ()) env def).expr in
     Persistent_array (elems, def)
   | Core.Expr.Coerce {source_type = from; target_type = into; value = t; occurrence = occ} ->
     form @@ gen_crossing cx slot env ~coercion:(Some (from, into)) ~boxed:false t occ

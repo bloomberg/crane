@@ -410,7 +410,7 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
          rather than erased -- nothing in the term says which -- so it
          deduces.  Committing to [std::monostate] rejects every call through
          an erased tree.  The slot is still emitted; see the parameter filter
-         in {!Expr.gen_expr}. *)
+         in {!Expr.gen_expr_typed}. *)
       lent Auto
     | None when Base.Type_util.has_tany_written bare_cpp_ty ->
       (* The type is spelled with erased positions (std::any).  Use

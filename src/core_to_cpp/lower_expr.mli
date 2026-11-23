@@ -9,7 +9,7 @@ open Names
     The entry points of expression lowering, from the extracted {!Core} AST
     to the C++-oriented {!Cpp_ir} AST, for the declaration-level generators
     ({!Lower_decl} and the [Gen_*] modules), which lower each body through
-    {!gen_expr} and {!gen_stmts}.
+    {!gen_expr_typed} and {!gen_stmts}.
 
     Lowering itself is spread over modules that each own one form
     ({!Expr}, {!Stmts}, {!Lambda},
@@ -30,11 +30,11 @@ open Names
     {!Convert}, {!Naming},
     {!Cpp_build}). *)
 
-(** Generate a C++ expression from a Core expression
-    ({!Expr.gen_expr}) at the position [slot] describes ({!Slot.at}: the
-    result type of the function whose body it is in, the type the position
-    states). *)
-val gen_expr : Lowering_state.t -> Slot.slot -> env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t
+(** Generate a C++ expression and its type from a Core expression
+    ({!Expr.gen_expr_typed}) at the position [slot] describes ({!Slot.at}:
+    the result type of the function whose body it is in, the type the
+    position states). *)
+val gen_expr_typed : Lowering_state.t -> Slot.slot -> env -> Core.Expr.t -> Cpp_ir.Typed.t
 
 (** Generate C++ statements from a Core expression
     ({!Stmts.gen_stmts}).  The final value goes to the {!Destination}

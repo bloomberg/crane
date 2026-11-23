@@ -778,7 +778,7 @@ let gen_lambda cx (slot : Slot.slot) env (a : Core.Expr.t) : Cpp_ir.Typed.t =
              so no forwarding lambda can name it.  Emit the plain reference
              and let the printer wrap it in the method-calling lambda it
              already builds for method values. *)
-          gen_expr cx (Slot.at ~ret ()) env a
+          (gen_expr_typed cx (Slot.at ~ret ()) env a).expr
         else
         let arg_ids = List.init n field_param_id in
         let arg_vars = List.map (fun id : Cpp_ir.Lowered.Expr.t -> Local id) arg_ids in
@@ -949,10 +949,10 @@ let gen_lambda cx (slot : Slot.slot) env (a : Core.Expr.t) : Cpp_ir.Typed.t =
             (Cpp_ir.Build.call (mk_cppglob r (Calls.written_at_variables cx r by_var)) fwd_args)
       else
         (* Every binder was a type: the body is the value the slot takes. *)
-        gen_expr cx (Slot.at ~ret ?expected_ty ~slot ()) env a
+        (gen_expr_typed cx (Slot.at ~ret ?expected_ty ~slot ()) env a).expr
     | _ ->
       (* Body is not a template function ref — wrap in void thunk (old
-         behavior). gen_expr env a might produce lambdas with [&] capture
+         behavior). (gen_expr_typed env a might produce).expr lambdas with [&] capture
          which fail at static scope, so we use the pre-built capture-free
          lambda f.
 

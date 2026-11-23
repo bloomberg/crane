@@ -1717,13 +1717,13 @@ let recover_erased_body_types ty b =
 
 (** A constant's initialiser: its body, or -- for an erased proof, a lemma of
     a module whose other members are extracted -- the empty box an erased
-    constructor argument is.  The [Core.Expr.Erased_value] case of {!Expr.gen_expr}
+    constructor argument is.  The [Core.Expr.Erased_value] case of {!Expr.gen_expr_typed}
     is for dead code, an abort; a constant is evaluated, at static
     initialisation. *)
 let gen_constant_value cx ~ret ?expected_ty b =
   match b with
   | Core.Expr.Erased_value _ -> Cpp_passes.Erasure.empty_box
-  | _ -> gen_expr cx (Slot.at ~ret ?expected_ty ()) (empty_env ()) b
+  | _ -> (gen_expr_typed cx (Slot.at ~ret ?expected_ty ()) (empty_env ()) b).expr
 
 (** The parameters a head declares for the type variables [cty] spells,
     and for the Core variables [extra] it does not, by the variable each
@@ -1807,7 +1807,7 @@ let gen_decl__inner cx n b ty =
       (* A body that only throws becomes a zero-arg function, so the throw
          happens when the value is asked for rather than during static
          initialisation (which terminates the program before main). *)
-      let body_expr = with_region cx ~ret:None b (fun () -> gen_expr cx (Slot.at ~ret:None ()) (empty_env ()) b) in
+      let body_expr = with_region cx ~ret:None b (fun () -> (gen_expr_typed cx (Slot.at ~ret:None ()) (empty_env ()) b).expr) in
       (templated (thunk n cty_ir body_expr), empty_env (), tvars)
     | _ ->
       begin_body cx ~owner:n ~all_locals:true ();
@@ -1945,7 +1945,7 @@ let gen_decl_for_pp__inner cx n b ty =
     let f, env, tvars = gen_function cx n ty h in
     (Some f, env, tvars)
   | cty when Suspension.thunk_reason cx n = Some Suspension.Throws ->
-    let body_expr = gen_expr cx (Slot.at ~ret:None ()) (empty_env ()) h.body in
+    let body_expr = (gen_expr_typed cx (Slot.at ~ret:None ()) (empty_env ()) h.body).expr in
     let inner = thunk n cty body_expr in
     let ds = match h.temps with [] -> inner | l -> Template (l, None, inner) in
     (Some ds, empty_env (), h.tvars)

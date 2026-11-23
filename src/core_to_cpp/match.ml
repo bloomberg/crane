@@ -600,7 +600,7 @@ and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_oc
         CErrors.anomaly (Pp.str "gen_case_cpp: enum type expected to be a Global_app")
     in
     let scrutinee =
-      Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ (gen_expr cx (Slot.at ~ret ()) env t)
+      Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr)
     in
     let rec gen_enum_branches ~ret = function
       | [] -> []
@@ -675,7 +675,7 @@ and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_oc
     in
     (* The scrutinee is referenced across all branches, so the plan has a
        read of it as one in place, never moved ({!Ownership_ir.Region.Inspected}). *)
-    let scrut_expr = gen_expr cx (Slot.at ~ret ()) env t in
+    let scrut_expr = (gen_expr_typed cx (Slot.at ~ret ()) env t).expr in
     let scrut_expr =
       Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ scrut_expr
     in
@@ -1127,7 +1127,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
      match's own type here keeps {!Coerce.position_cpp_ty}'s fallback from recovering a
      boxed scrutinee at the return type -- [any_cast<step_result>] on what is
      a [bool]. *)
-  let t = gen_expr cx (Slot.at ~ret:(Some typ_ir) ?expected_ty:scrut_expected ()) env t in
+  let t = (gen_expr_typed cx (Slot.at ~ret:(Some typ_ir) ?expected_ty:scrut_expected ()) env t).expr in
   let pair_g_opt = cs.Match_types.pair in
   (* Insert [any_cast] on the scrutinee when the runtime value is [std::any]
      but the template needs a typed expression.
@@ -1535,7 +1535,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
    the fields are read out of, and the statements evaluating it. *)
 let record_read_once cx (slot : Slot.slot) env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Stmt.t list =
   let ret = slot.Slot.ret in
-  let scrut = gen_expr cx (Slot.at ~ret ()) env t in
+  let scrut = (gen_expr_typed cx (Slot.at ~ret ()) env t).expr in
   if is_typeclass || Match_types.is_trivial_scrut scrut then (scrut, [])
   else
     let n = cx.ctx.threaded.cs_counter in
@@ -1656,7 +1656,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
     in
     ( match fld with
     | Some fld ->
-      let access = make_field_access (gen_expr cx (Slot.at ~ret ()) env t) fld in
+      let access = make_field_access ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr) fld in
       let access = wrap_record_field_to_api field access in
       if is_typeclass then
         (* For typeclasses, non-function value fields (like m_id : carrier)
@@ -1889,7 +1889,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
             value_args
         in
         let callee =
-          if not member_template then make_field_access (gen_expr cx (Slot.at ~ret ()) env t) fld
+          if not member_template then make_field_access ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr) fld
           else
             (* The instance's method is a member template (its own [forall A]
                survives), and its type parameters are not always deducible --
@@ -1906,7 +1906,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
               | Some ft -> Base.Core_util.type_maxvar ft
               | None -> 0
             in
-            if nmax <= ipv then make_field_access (gen_expr cx (Slot.at ~ret ()) env t) fld
+            if nmax <= ipv then make_field_access ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr) fld
             else
               let tvars = get_current_type_vars cx in
               let targs =
@@ -1914,7 +1914,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
                     Types.cpp_ir_of_core_type cx env tvars
                       (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = (ipv + 1 + k)}) )
               in
-              Scope ( gen_expr cx (Slot.at ~ret ()) env t,
+              Scope ( (gen_expr_typed cx (Slot.at ~ret ()) env t).expr,
                   Base.Common.id_of_global Term fld,
                   targs )
         in
@@ -2039,7 +2039,7 @@ let gen_record_match_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : 
     | Custom | Variant -> CErrors.anomaly (Pp.str "gen_stmts: a record projection Core did not classify as one")
   in
   if is_simple then
-    (* Simple body: gen_expr handles these as direct field access (no IIFE),
+    (* Simple body: (gen_expr_typed handles these as direct).expr field access (no IIFE),
        so delegate to the default path. *)
     let value =
       gen_expr_typed cx (Slot.at ~ret ?expected_ty:(ret) ()) env ast

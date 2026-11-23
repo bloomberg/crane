@@ -1279,8 +1279,8 @@ let gen_applied_fix cx (slot : Slot.slot) env (k : Destination.t) ~x ~ids ~funs 
            let e =
              match List.nth_opt params i with
              | Some (_, (Core.Type.Arrow _ as ty)) when count_core_value_arrows ty >= 2 ->
-               gen_expr cx (Slot.at ~ret ~expected_ty:(Types.cpp_of_core cx env ty) ~slot:{Slot.empty_slot with expected_core_ty = Some ty} ()) env a
-             | _ -> gen_expr cx (Slot.at ~ret ()) env a
+               (gen_expr_typed cx (Slot.at ~ret ~expected_ty:(Types.cpp_of_core cx env ty) ~slot:{Slot.empty_slot with expected_core_ty = Some ty} ()) env a).expr
+             | _ -> (gen_expr_typed cx (Slot.at ~ret ()) env a).expr
            in
            (* As at a call of the member ({!erased_member_types}). *)
            let e =

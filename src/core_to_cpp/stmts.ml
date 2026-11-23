@@ -41,7 +41,7 @@ let declared_in_scope (stmts : Cpp_ir.Lowered.Stmt.t list) =
 
 (** [gen_stmts slot env d e] -- [e] lowered as statements, the value it
     computes going to the destination [d] (a [return], an assignment).
-    [slot] is {!Expr.gen_expr}'s, carried into the tail positions.
+    [slot] is {!Expr.gen_expr_typed}'s, carried into the tail positions.
 
     It leaves the binder types as it found them.  The binders [e] introduces
     -- a let's, a record match's fields -- are pushed for the statements
@@ -448,7 +448,7 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
       | _ -> false
     in
     if is_void_tail then begin
-      let e = gen_expr cx (Slot.at ~ret ~slot ?expected_ty:(ret) ()) env t in
+      let e = (gen_expr_typed cx (Slot.at ~ret ~slot ?expected_ty:(ret) ()) env t).expr in
       if (ret = Some Cpp_ir.Type.Void) then
         [Expression e; Return None]
       else if Destination.discards k then

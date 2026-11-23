@@ -27,7 +27,7 @@ let gen_return_expr cx (slot : Slot.slot) env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Ex
     | Core.Expr.Global {callee = g; _} when is_ghost g ->
       Monadic.mk_itree_ret Void []
     | _ ->
-      let inner = gen_expr cx (Slot.at ~ret ()) env t in
+      let inner = (gen_expr_typed cx (Slot.at ~ret ()) env t).expr in
       (* The result type is the type argument written for the variable the
          returned value is at: [Ret : forall E R, R -> itree E R].  One
          extraction could not read says nothing. *)
@@ -45,7 +45,7 @@ let gen_return_expr cx (slot : Slot.slot) env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Ex
   end
   else begin
     let t = Base.Common.last (a1 :: l) in
-    gen_expr cx (Slot.at ~ret ()) env t
+    (gen_expr_typed cx (Slot.at ~ret ()) env t).expr
   end
 
 (** [bind] of an effect monad in sequential mode, the application [a], in

@@ -98,7 +98,7 @@ let mentions_unresolved_promoted cx (ty : Cpp_ir.Lowered.Type.t) =
       | _ -> false )
     ty
 
-(** How a term argument of a custom type is generated: by {!gen_expr}, which
+(** How a term argument of a custom type is generated: by {!gen_expr_typed}, which
     fills this in once it is defined.  The one place type conversion calls
     back into expression generation -- a mapped type applied to a term, as a
     fixed-size array is to its length -- so it is the edge the two are

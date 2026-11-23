@@ -77,8 +77,8 @@ let gen_stored_value cx (slot : Slot.slot) env e : Cpp_ir.Lowered.Expr.t =
   match e with
   | Core.Expr.Erased_value _ -> Cpp_passes.Erasure.empty_box
   | e when Monadic.core_value_is_void_call cx e ->
-    Monadic.wrap_void_call_as_value (gen_expr cx (Slot.at ~ret ~slot ()) env e)
-  | _ -> gen_expr cx slot env e
+    Monadic.wrap_void_call_as_value ((gen_expr_typed cx (Slot.at ~ret ~slot ()) env e).expr)
+  | _ -> (gen_expr_typed cx slot env e).expr
 
 (** The constructor [r] of a custom-extracted inductive at [ty] applied to
     [ts]: the user's constructor template instantiated at the type arguments
@@ -145,7 +145,7 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
     with_in_constructor_expr cx true @@ fun () ->
   (* Convert value arguments to C++ expressions.  An erased proof or type
      argument ([Core.Expr.Erased_value]) is the empty box its erased slot takes; see that
-     case of {!gen_expr}. *)
+     case of {!gen_expr_typed}. *)
   let gen_ctor_arg ~ret ?expected_ty ?(slot = slot) e =
     gen_stored_value cx (Slot.at ~ret ?expected_ty ~slot ()) env e
   in
