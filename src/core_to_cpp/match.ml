@@ -459,14 +459,14 @@ let gen_match_branch cx (slot : Slot.slot) env (typ : Core.Type.t) rty cname ids
                    | In_namespace (ns_g, _) -> In_namespace (ns_g, Entity_application (g, [Any], []))
                    | _ -> Entity_application (g, [Any], [])
                  in
-                 Cpp_passes.Erasure.converting_ctor bare_ty [Cpp_passes.Erasure.unbox list_any_ty (Cpp_ir.Expr.Local binding_name)]
+                 Cpp_passes.Erasure.converting_ctor bare_ty [Coerce.unbox list_any_ty (Cpp_ir.Expr.Local binding_name)]
                | Entity_application (g, [elem_ty], _) when Base.Type_util.is_custom_list_global g ->
                  let erased_elem = Cpp_passes.Erasure.erase_type_to_any elem_ty in
                  let cast_ty : Cpp_ir.Lowered.Type.t =
                    if erased_elem = Any then bare_ty
                    else Entity_application (g, [erased_elem], [])
                  in
-                 Cpp_passes.Erasure.unbox cast_ty (Cpp_ir.Expr.Local binding_name)
+                 Coerce.unbox cast_ty (Cpp_ir.Expr.Local binding_name)
                | _ -> Cpp_passes.Erasure.unbox bare_ty (Cpp_ir.Expr.Local binding_name))
             else
               Local binding_name
@@ -1067,7 +1067,7 @@ let gen_cpp_custom_body cx (slot : Slot.slot) env (k : Destination.t) rty ids bo
           not (Binders.read_is_boxed cx i occ) && Erasure.is_env_var_erased cx env tvars i
         | _ -> false
       in
-      if body_is_erased then Destination.adapted (Cpp_passes.Erasure.unbox branch_ty) k
+      if body_is_erased then Destination.adapted (Coerce.unbox branch_ty) k
       else k
     | _ -> k
   in
@@ -1145,7 +1145,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
     let needs_pair_any_cast = cs.Match_types.pair_any_cast in
     if needs_pair_any_cast then begin
       let g = Option.get pair_g_opt in
-      (Cpp_passes.Erasure.unbox (Entity_application (g, [Any; Any], [])) t, true, None)
+      (Coerce.unbox (Entity_application (g, [Any; Any], [])) t, true, None)
     end
     else if (scrut_is_wrapped || (scrut_is_magic && Cpp_ir.Types.prints_as_any typ)
              || scrut_is_cpp_erased)
@@ -1172,7 +1172,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
           Entity_application (g, List.map erase_tparams args, ns)
         | _ -> concrete_match_type
       in
-      (Cpp_passes.Erasure.unbox cast_ty t, false, Some cast_ty)
+      (Coerce.unbox cast_ty t, false, Some cast_ty)
     else
       (t, false, None)
   in
@@ -1339,7 +1339,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
                  let cast_expr : Cpp_ir.Lowered.Expr.t =
                    match stripped with
                    | Entity_application (g, _, _) when is_prod_global g ->
-                     Cpp_passes.Erasure.unbox (Entity_application (g, [Any; Any], [])) (Cpp_ir.Expr.Local name)
+                     Coerce.unbox (Entity_application (g, [Any; Any], [])) (Cpp_ir.Expr.Local name)
                    | Entity_application (g, [_], _) when is_list_global g && not (Base.Table.is_custom g) ->
                      (* List<T> is stored as List<any> by grammar productions —
                         use the converting constructor List<T>(any_cast<List<any>>(v))
@@ -1351,7 +1351,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
                          In_namespace (ns_g, Entity_application (g, [Any], []))
                        | _ -> Entity_application (g, [Any], [])
                      in
-                     Cpp_passes.Erasure.converting_ctor cpp_ty [Cpp_passes.Erasure.unbox list_any_ty (Cpp_ir.Expr.Local name)]
+                     Cpp_passes.Erasure.converting_ctor cpp_ty [Coerce.unbox list_any_ty (Cpp_ir.Expr.Local name)]
                    | Entity_application (g, [_], _) when Base.Type_util.is_custom_list_global g ->
                      Local name
                    | Member _ | Entity_application (GlobRef.ConstRef _, _, _) ->
@@ -1361,7 +1361,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
                         wrapping it. any_cast<std::any>(any(V)) throws; pass
                         the std::any value as-is. *)
                      Local name
-                   | _ -> Cpp_passes.Erasure.unbox cpp_ty (Cpp_ir.Expr.Local name)
+                   | _ -> Coerce.unbox cpp_ty (Cpp_ir.Expr.Local name)
                  in
                  List.map (fun st -> Lifting.local_var_subst_stmt ~keep_cast:true name cast_expr st) stmts
                else stmts)
@@ -1386,7 +1386,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
         let should_strip args =
           List.exists (fun (a : Cpp_ir.Lowered.Expr.t) ->
             match a with
-            | Any_cast (ty, _) -> has_tany_in_type ty
+            | Any_cast (ty, _) | Coerce ({plan = Cast_box {into = ty; _}; _}, _) -> has_tany_in_type ty
             | Local name -> Id.Set.mem name tany_pat_var_names
             | _ -> false) args
         in
@@ -1479,7 +1479,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
               match s with
               | Return (Some (Local name))
                 when Id.Set.mem name erased_pat_vars ->
-                Return (Some (Cpp_passes.Erasure.unbox br_ret (Cpp_ir.Expr.Local name)))
+                Return (Some (Coerce.unbox br_ret (Cpp_ir.Expr.Local name)))
               | s -> s)
               br_stmts
         | _ -> br_stmts

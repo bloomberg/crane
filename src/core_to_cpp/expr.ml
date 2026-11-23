@@ -214,7 +214,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
             | Entity_application (g, _ :: _, _) -> is_list_global g
             | _ -> false
           in
-          let unbox_at t = Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Cpp_passes.Erasure.unbox t result) in
+          let unbox_at t = Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Coerce.unbox t result) in
           if ty_is_list ty then
              (* Canonical erased shape is [deque<std::any>] -- every element
                 boxed as a single [std::any] (see [gen_expr_custom_cons]'s

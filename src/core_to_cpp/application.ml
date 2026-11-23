@@ -438,7 +438,7 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
         | Any_cast _ as already_cast ->
           Cpp_passes.Erasure.converting_ctor cpp_ty [already_cast]
         | v ->
-          Cpp_passes.Erasure.converting_ctor cpp_ty [Cpp_passes.Erasure.unbox list_any_ty v] )
+          Cpp_passes.Erasure.converting_ctor cpp_ty [Coerce.unbox list_any_ty v] )
       | Entity_application (g, [_], _) when Base.Type_util.is_custom_list_global g ->
         let clean_cpp_ty = Cpp_passes.Convert.clean_self_ns cpp_ty in
         (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
@@ -464,7 +464,7 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
         in
         let inner = match Cpp_ir.Typed.head (as_value ()) with
           | Any_cast _ as already_cast -> already_cast
-          | v -> Cpp_passes.Erasure.unbox erased_ty v
+          | v -> Coerce.unbox erased_ty v
         in
         (* When the callee is a REAL function whose parameter has a CONCRETE
            element type — a wholesale-boxed opaque element
@@ -1083,7 +1083,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
             match (Option.map resolve_meta cod_inst, expected_ty) with
             | Some (Core.Type.Erased Core.Erasure_reason.Type_argument), Some t
               when not (Cpp_ir.Types.prints_as_any t) ->
-              Cpp_passes.Erasure.unbox_tolerant t r
+              Coerce.unbox ~tolerant:true t r
             | _ -> r
         else
           Abort ("untranslatable curried proof term", Cpp_build.abort_ty expected_ty) )
@@ -1694,7 +1694,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
                component.  What comes out is concrete, so the accessor's
                result needs no further recovery. *)
             Cpp_ir.Build.call cglob'
-              [Cpp_passes.Erasure.unbox_tolerant (Entity_application (g, glob_tys, [])) single_arg]
+              [Coerce.unbox ~tolerant:true (Entity_application (g, glob_tys, [])) single_arg]
           | Some g, _ ->
             (* Tolerantly: the Core type says the argument is a box, but a
                producer that could name the pair's shape may have emitted the
@@ -1703,7 +1703,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
                pair already in hand through -- where a plain [any_cast] would
                throw on the latter. *)
             Cpp_ir.Build.call cglob'
-              [ Cpp_passes.Erasure.unbox_tolerant (Entity_application (g, [Any; Any], [])) single_arg ]
+              [ Coerce.unbox ~tolerant:true (Entity_application (g, [Any; Any], [])) single_arg ]
           | None, _ -> primary_result )
         else
           primary_result
@@ -2008,7 +2008,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
           let expected = Types.param_expected_cpp_ty cx env callee_param_tys i in
           ( match expected with
             | Some ty ->
-              Cpp_passes.Erasure.unbox (Erasure.erase_type_args_to_any ty) inner
+              Coerce.unbox (Erasure.erase_type_args_to_any ty) inner
             | None ->
               has_unresolved_boxed_arg := true;
               inner )
@@ -2355,9 +2355,9 @@ let gen_application cx (slot : Slot.slot) env (f : Core.Expr.t) (args : Core.Exp
   let built : Cpp_ir.Lowered.Expr.t =
     let written = match (call.ty, recovered == result) with Typed t, true -> Some t | _ -> None in
     match Calls.record_call_sig ?written cx env callee_ty_inst recovered with
-    | Any_cast (ty, call) -> Any_cast (ty, made_of_application call)
-    | Coerce (c, call) as r when (match Cpp_ir.Typed.head r with Any_cast _ -> true | _ -> false) ->
-      Coerce (c, made_of_application call)
+    (* A cast, or a coercion expanding to one, records the call it reads. *)
+    | r when (match Cpp_ir.Typed.head r with Any_cast _ -> true | _ -> false) ->
+      Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:made_of_application ~stmt:Fun.id ~type_:Fun.id ()) r
     | result -> made_of_application result
   in
   (* The call's own type, where {!eta_fun} typed it and nothing recovered

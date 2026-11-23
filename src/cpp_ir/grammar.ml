@@ -401,6 +401,14 @@ and Coercion : sig
     | Recast_carrier of 'p Type.t
         (** a carrier at the erased element converted elementwise to the
             given one ({!Expr.Container_cast}) *)
+    | Cast_box of {
+        into : 'p Type.t;
+        tolerant : bool;
+      }
+        (** a boxed value read at [into] as the site knows it is boxed
+            ({!Cpp_passes.Erasure.unbox}, [tolerant]:
+            {!Cpp_passes.Erasure.unbox_tolerant}): no list shape; [into]
+            is not written as a box *)
     | Moving of Id.t * 'p plan
         (** the adapter the plan builds, holding the variable it reads by
             move *)

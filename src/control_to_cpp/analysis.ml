@@ -136,12 +136,7 @@ let named_tvar x : ty = Variable (Named x)
 
 (** [converting_ctor ty args]: [ty(args)], a box where [ty] is written
     [std::any] -- of what a box holds, where [args] is one. *)
-let converting_ctor (ty : ty) (args : expr list) : expr =
-  match args with
-  | [inner] when Cpp_ir.Types.prints_as_any ty ->
-    let inner = match inner with Box (_, x) -> x | x -> x in
-    Box (ty, inner)
-  | _ -> Converting_construct (ty, args)
+let converting_ctor : ty -> expr list -> expr = Cpp_passes.Erasure.converting_ctor
 
 (** {2 Named Constants}
 

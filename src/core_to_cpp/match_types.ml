@@ -528,7 +528,7 @@ let recover_erased_scrutinee cx env ~is_magic typ (expr : Cpp_ir.Lowered.Expr.t)
   if not is_magic then expr
   else
     let cpp_ty = Types.cpp_of_core cx env typ in
-    if Cpp_ir.Types.prints_as_any cpp_ty then expr else Cpp_passes.Erasure.unbox cpp_ty expr
+    if Cpp_ir.Types.prints_as_any cpp_ty then expr else Coerce.unbox cpp_ty expr
 
 (** Build the qualified constructor struct type for a pattern match branch.
 

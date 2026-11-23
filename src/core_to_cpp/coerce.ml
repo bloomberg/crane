@@ -778,6 +778,9 @@ type origin =
       fun_ty : Core.Type.t option;
       n_args : int;
     }  (** {!carrier_result_plan}: a carrier returned at the erased element *)
+  | Built of Cpp_ir.Lowered.Coercion.plan
+      (** a plan its site decides ({!built}): a cast of what the site knows
+          is boxed, a callable it erases *)
   | Pa
       (** {!Cpp_passes.Coercions.nest}: the closure a partial application leaves
           ({!Cpp_ir.Typed.apply}), regrouped by nesting its own
@@ -797,6 +800,7 @@ let origin_name = function
   | Any_slot _ -> "box_for_any_slot"
   | Family_list _ -> "deep_box_list"
   | Carrier_result _ -> "recover_carrier_result"
+  | Built _ -> "site"
 
 (** The plans an origin's expansion builds, by {!Cpp_ir.Coercion.decision_name}. *)
 let builds = function
@@ -810,6 +814,10 @@ let builds = function
      every level. *)
   | Any_slot _ | Family_list _ -> ["box"; "deep box"]
   | Carrier_result _ -> ["container cast"]
+  | Built (Cast_box _) -> ["unbox"]
+  | Built (Erase_as Boxed_whole) -> ["box"]
+  | Built (Erase_as (At_signature _)) -> ["erase"]
+  | Built _ -> []
 
 (** Whether {!decide} answers for a value of type [from] at [into]: a typed
     value and a slot that states a type, neither mentioning a type variable
@@ -858,6 +866,7 @@ let plan_of origin (x : Cpp_ir.Typed.t) ~(value : Cpp_ir.Lowered.Expr.t) (into :
   | Any_slot {cx; kind; term}, _, _ -> any_slot_plan cx kind term value
   | Family_list {cx; term}, _, _ -> deep_box_plan cx term
   | Carrier_result {fun_ty; n_args}, _, want -> carrier_result_plan ~fun_ty ~n_args ~want
+  | Built p, _, _ -> Some p
   | (Rg | Crossing), _, _ -> None
 
 (** [into_slot ~origin x into]: [x] put in the slot [into] through the
@@ -872,7 +881,7 @@ let into_slot ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   in
   (* The adapters folded in by phase C keep their own test: {!decide} does
      not gate them. *)
-  let own_test = match origin with Any_slot _ | Family_list _ | Carrier_result _ -> true | _ -> false in
+  let own_test = match origin with Any_slot _ | Family_list _ | Carrier_result _ | Built _ -> true | _ -> false in
   (* [std::any] built from what is a [std::any] already, once aliases are
      followed, is the box itself (C++'s converting constructor excludes the
      box's own type): an identity {!coerce} still spells, kept until phase
@@ -1003,3 +1012,21 @@ let at_param cx env param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowe
 let eta_global cx env ?expected_ty ?(callee_site = Cpp_ir.Types.Declared) ?(exact = false) core_ty cglob =
   into_slot ~origin:(Ec {cx; env; core_ty; callee_site; exact}) (named_value cx env core_ty cglob)
     (slot_of_expected expected_ty)
+
+(** [built plan x into]: [x] adapted to [into] as its site decides
+    ([plan]), through {!into_slot}: the site's own test stands, and the
+    census holds the plan to {!decide}. *)
+let built plan (x : Cpp_ir.Typed.t) into = into_slot ~origin:(Built plan) x into
+
+(** [unbox ?tolerant into e]: [e], which its site knows is a box, read at
+    [into] ({!Cpp_passes.Erasure.unbox}, or [unbox_tolerant] where
+    [tolerant]). *)
+let unbox ?(tolerant = false) (into : Cpp_ir.Lowered.Type.t) (e : Cpp_ir.Lowered.Expr.t) =
+  (* An [any_cast] to a type written as a box does not open it. *)
+  if (not tolerant) && Cpp_ir.Types.prints_as_any into then e
+  else built (Cast_box {into; tolerant}) (Cpp_ir.Typed.typed Any e) (Exactly into)
+
+(** [erase shape e]: the callable [e] erased as [shape] ({!Cpp_ir.Expr.Erase_callable}),
+    its site's decision. *)
+let erase shape (e : Cpp_ir.Lowered.Expr.t) =
+  built (Erase_as shape) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated e) Free

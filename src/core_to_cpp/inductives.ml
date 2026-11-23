@@ -923,6 +923,9 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
       match e with
       | Any_cast (Variable (Index (_, Some name) | Named name), inner) when Id.Set.mem name phantom_name_set ->
         strip_phantom_any_cast_expr inner
+      | Coerce ({plan = Cast_box {into = Variable (Index (_, Some name) | Named name); _}; _}, inner)
+        when Id.Set.mem name phantom_name_set ->
+        strip_phantom_any_cast_expr inner
       | _ -> e
     in
     Cpp_ir.Map.expr (strip_phantom_map ()) e
@@ -2690,12 +2693,12 @@ let gen_ind_header_v2 cx
                     :: partner_drains; else_ = []}]
                 in
                 [S.If_declaration
-                  {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_passes.Erasure.unbox (T.Shared_pointer partner_ty)
+                  {name = _sp_id; type_ = T.Pointer T.Auto; init = Coerce.unbox (T.Shared_pointer partner_ty)
                     (E.Unary (Address_of, E.Local _cur_id)); then_ = partner_body; else_ = inner}]
             in
             let loop_body_stmts =
               [S.If_declaration
-                {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_passes.Erasure.unbox (T.Shared_pointer self_ty)
+                {name = _sp_id; type_ = T.Pointer T.Auto; init = Coerce.unbox (T.Shared_pointer self_ty)
                   (E.Unary (Address_of, E.Local _cur_id)); then_ = self_branch_body;
                     else_ = build_if_chain partner_branches}]
             in

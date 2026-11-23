@@ -343,6 +343,15 @@ let rec expand (p : Cpp_ir.Lowered.Coercion.plan) (e : Cpp_ir.Lowered.Expr.t) : 
 
   | Box_list_deep -> Cpp_ir.Build.call (Runtime Cpp_ir.Crane_rt.Deep_box) [e]
   | Recast_carrier t -> Container_cast (t, e, false)
+  (* {!Erasure.unbox}'s structural rules; whether [into] is written as a
+     box was asked where the plan was made ({!Core_to_cpp.Coerce.unbox}):
+     the answer can change by the time this pass runs (a type variable a
+     declaration drops as phantom prints as a box from then on). *)
+  | Cast_box {into; tolerant} -> (
+    match e with
+    | Box (_, inner) -> inner
+    | Lambda _ -> e
+    | _ -> if tolerant then Tolerant_any_cast (into, e) else Any_cast (into, e) )
   | Moving (x, p) -> ( match expand p e with Lambda l -> Lambda {l with moved = [x]} | e -> e )
 
 and apply p e = match p with Some p -> expand p e | None -> e

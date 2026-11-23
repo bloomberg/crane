@@ -974,7 +974,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
               ) (List.mapi (fun idx p -> (idx, p)) new_params) in
               let new_body =
                 List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                  let cast_stmt = Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
+                  let cast_stmt = Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Coerce.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
                   cast_stmt :: stmts
                 ) body_stmts (List.rev cast_bindings)
               in
@@ -1005,7 +1005,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
                  non-lambda case below stores.  The lambda keeps its own
                  concrete result type; [crane_erase_fn] deduces it and boxes
                  what it returns. *)
-              Erase_callable (Boxed_whole, new_lambda)
+              Coerce.erase Boxed_whole new_lambda
             | _ ->
               (* When a custom list literal (e.g. deque<Val>) is stored in a
                  std::any field, regenerate it in a [Boxed] slot so
@@ -1143,7 +1143,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
               ) (List.mapi (fun idx p -> (idx, p)) new_params) in
               let new_body =
                 List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                  let cast_stmt = Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
+                  let cast_stmt = Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Coerce.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
                   cast_stmt :: stmts
                 ) body_stmts (List.rev cast_bindings)
               in
@@ -1178,7 +1178,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
                callable's signature and unboxes each argument.  The field's
                own codomain stays concrete. *)
             | _ when Erasure.core_expr_is_function_value cx core_e ->
-              Erase_callable (At_signature ret_ty, expr)
+              Coerce.erase (At_signature ret_ty) expr
             | _ -> expr )
           | _ -> expr
           with Failure _ | Invalid_argument _ ->
@@ -1334,7 +1334,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
             | None -> (ty, id)
           ) new_params in
           let cast_stmts = List.map (fun (_, orig_id, any_id, concrete_ty) ->
-            Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id))
+            Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Coerce.unbox concrete_ty (Cpp_ir.Expr.Local any_id))
           ) cast_bindings in
           let new_body = cast_stmts @ body_stmts in
           let new_ret_ty = match ret_ty_opt with
@@ -1360,7 +1360,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
           in
           let ret_ty = Types.cpp_of_core cx env (codomain ft) in
           let expr = Cpp_passes.Coercions.erased_fn_instantiation expr in
-          Erase_callable (At_signature (if Cpp_ir.Types.prints_as_any ret_ty then Cpp_ir.Type.Any else ret_ty), expr)
+          Coerce.erase (At_signature (if Cpp_ir.Types.prints_as_any ret_ty then Cpp_ir.Type.Any else ret_ty)) expr
         (* A field erased whole -- [den t], whatever [t] the call names --
            holds a function as the canonical callable it is read back as. *)
         | _ when ft_has_erased_tvar ft ->

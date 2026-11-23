@@ -272,7 +272,7 @@ let erase_returned_fn_values cx (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.
   else
     let rec fix_stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
       match s with
-      | Return (Some (Lambda _ as e)) -> Return (Some (Erase_callable (Boxed_whole, e)))
+      | Return (Some (Lambda _ as e)) -> Return (Some (Coerce.erase Boxed_whole e))
       | _ -> Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:Fun.id ~stmt:fix_stmt ~type_:Fun.id ()) s
     in
     List.map fix_stmt body
@@ -312,7 +312,7 @@ let return_captures_by_value (stmts : Cpp_ir.Lowered.Stmt.t list) =
     | Member (e, id) -> Member (expr e, id)
     | Project (e, id, ty) -> Project (expr e, id, ty)
     | Access_call (Arrow, e, id, args) -> Access_call (Arrow, expr e, id, List.map expr args)
-    | Any_cast (ty, e) -> Any_cast (ty, expr e)
+    | (Any_cast _ | Coerce _) as e -> Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr ~stmt ~type_:Fun.id ()) e
     | e -> e
   and stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
     match s with

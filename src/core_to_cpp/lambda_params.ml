@@ -61,7 +61,7 @@ let return_captures_by_value (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lower
     | Member (e, id) -> Member (expr e, id)
     | Project (e, id, ty) -> Project (expr e, id, ty)
     | Access_call (Arrow, e, id, es) -> Access_call (Arrow, expr e, id, List.map expr es)
-    | Any_cast (ty, e) -> Any_cast (ty, expr e)
+    | (Any_cast _ | Coerce _) as e -> Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr ~stmt ~type_:Fun.id ()) e
     | e -> e
   and stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
     match s with

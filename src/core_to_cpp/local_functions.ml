@@ -1051,7 +1051,7 @@ let gen_let_lambda cx (slot : Slot.slot) env (k : Destination.t) ~x ~t ~a ~b ~le
           (opaque (),
             lifted,
             List.rev (free_args @ List.map sub (List.rev args)) )
-      | Any_cast (ty, e') -> Cpp_passes.Erasure.unbox ty (sub e')
+      | Any_cast (ty, e') -> Coerce.unbox ty (sub e')
       | _ ->
         (* Every other form is a plain structural descent.  Spelling the
            cases out by hand is what let uses of [target] under an [if] or

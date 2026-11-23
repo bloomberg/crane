@@ -88,8 +88,8 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(concrete_result = false) ?(e
   let sub = local_var_subst_expr ~keep_cast ~concrete_result ~extra_args target repl in
   match e with
   | Any_cast (ty, Local id) when keep_cast && Id.equal id target ->
-    Cpp_passes.Erasure.unbox ty (match repl with Any_cast (_, inner) -> inner | r -> r)
-  | (Any_cast (_, (Call (_, Local id, _) as call)) | Tolerant_any_cast (_, (Call (_, Local id, _) as call)))
+    Coerce.unbox ty (match Cpp_ir.Typed.head repl with Any_cast (_, inner) -> inner | _ -> repl)
+  | Any_cast (_, (Call (_, Local id, _) as call)) | Tolerant_any_cast (_, (Call (_, Local id, _) as call))
     when concrete_result && Id.equal id target ->
     sub call
   | Coerce _

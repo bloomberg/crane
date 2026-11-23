@@ -20,3 +20,11 @@ let rec decision_name : 'p decision -> string = function
   | Convert _ -> "convert"
   | Container_cast _ -> "container cast"
   | Then (a, b) -> decision_name a ^ " then " ^ decision_name b
+
+(** [cast_box ?tolerant into e]: [e], which its builder knows is a box,
+    read at [into]: the coercion {!Cpp_passes.Coercions} expands to the cast
+    ([Cast_box]).  For control lowering, which builds below
+    {!Core_to_cpp.Coerce}. *)
+let cast_box ?(tolerant = false) (into : Grammar.lowered Grammar.Type.t) (e : Grammar.lowered Grammar.Expr.t) :
+    Grammar.lowered Grammar.Expr.t =
+  Coerce ({from = Typed Any; into = Exactly into; plan = Cast_box {into; tolerant}}, e)

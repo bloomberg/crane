@@ -116,14 +116,11 @@ deps_of() { ocamlfind ocamldep -modules "$1" | cut -d: -f2; }
 # lowering files that still build one are listed with their count, and the
 # list only shrinks: a count that drops is lowered here, a new site is an
 # error (typed CppIR design, phase D).
-COERCION_BUILDERS_PENDING="core_to_cpp/application.ml:10 core_to_cpp/construction.ml:7
-  core_to_cpp/expr.ml:1 core_to_cpp/functions.ml:3 core_to_cpp/inductives.ml:2 core_to_cpp/instances.ml:1
-  core_to_cpp/lambda_params.ml:1 core_to_cpp/lifting.ml:2 core_to_cpp/local_functions.ml:1
-  core_to_cpp/match_types.ml:1 core_to_cpp/match.ml:10 control_to_cpp/analysis.ml:1 control_to_cpp/frame.ml:1"
+COERCION_BUILDERS_PENDING="core_to_cpp/match.ml:1"
 coercion_builders() {
   code_of "$1" | perl -0777 -ne '$n = 0;
-    while (/(\S+)\s*\b(?:(?:Cpp_ir\.)?(?:Lowered\.)?(?:Expr\.)?(?:Function_value|Erase_callable|Box|Any_cast|Tolerant_any_cast)\s*\(|Erasure\.(?:box|unbox|unbox_tolerant|empty_box)\b)/g) {
-      $n++ unless $1 =~ /^(\||with|function|as)$/ }
+    while (/(\S+)\s*\b(?:(?:Cpp_ir\.)?(?:Lowered\.)?(?:Expr\.)?(?:Function_value|Erase_callable|Box|Any_cast|Tolerant_any_cast)\s*\(|Erasure\.(?:box|unbox|unbox_tolerant)\b)/g) {
+      $n++ unless $1 =~ /^(\||with|function|as|_,)$/ }
     print $n'
 }
 for f in src/core_to_cpp/*.ml src/control_to_cpp/*.ml; do

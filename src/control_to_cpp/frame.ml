@@ -1204,7 +1204,7 @@ and rewrite_enter_stmts ctx stmts =
        rest, pushed under [enter], the call's re-entry.  [cast] is what the
        statement casts the call's result to, if anything. *)
     let make_cont_handler ~cast enter =
-      let result r = match cast with Some ty -> Any_cast (ty, r) | None -> r in
+      let result r = match cast with Some ty -> Cpp_ir.Coercion.cast_box ty r | None -> r in
       (* Which Core values cross the call, in what order the frame keeps
          them, and which it binds again instead -- those no re-entry changes,
          and those recomputable from them -- is the plan's.  Of a value kept
