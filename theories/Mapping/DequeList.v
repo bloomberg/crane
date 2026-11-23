@@ -1,8 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Opt-in extraction mapping: Coq [list] -> C++ [std::deque], as typed
-    mappings (docs/typed-mappings-design.md 15.4): they activate on
-    [Import].
+    mappings: they activate on [Import].
 
     Import this module to extract Coq lists as [std::deque<T>]
     instead of the default [Datatypes::List<T>] linked-list.

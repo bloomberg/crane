@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The OCaml mirror of the typed mapping descriptors of
-    [theories/Mapping/Descriptor.v] (docs/typed-mappings-design.md).  One
+    [theories/Mapping/Descriptor.v] (Reference Manual, Typed mappings).  One
     OCaml type per Rocq inductive or record, one constructor or field per
     Rocq constructor or field, in the same order; Rocq [CamelCase]
     constructors are spelled [Snake_case].  Strings are the decoded

@@ -2,10 +2,10 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Extraction mappings shared by all C++ flavors (Std, BDE).
 
-    Maps [bool] and [sumbool] to C++ [bool] (design 15.1), [unit] to
-    [std::monostate], and [PrimArray.array] to [persistent_array<T>], as
-    typed mappings (docs/typed-mappings-design.md): they activate on
-    [Import].  Imported transitively by [Mapping.Std] and [Mapping.BDE]. *)
+    Maps [bool] and [sumbool] to C++ [bool], [unit] to [std::monostate], and
+    [PrimArray.array] to [persistent_array<T>], as typed mappings: they
+    activate on [Import].  Imported transitively by [Mapping.Std] and
+    [Mapping.BDE]. *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.Descriptor.
 From Corelib Require Import PrimString.

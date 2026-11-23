@@ -123,10 +123,10 @@ let normal_arrows al (a : Cpp_ir.Lowered.Arrows.t) : Cpp_ir.Lowered.Arrows.t =
   | Some r -> {groups = groups @ r.groups; result = r.result}
   | None -> {groups; result}
 
-(** [decide_with aliases from into]: how a value of type [from] is adapted
-    to a slot of type [into], or [None] where it fits as it is (typed CppIR
-    design 3.3).  A total function of the two types; [aliases] only unfolds
-    them.  The first row that matches answers. *)
+(** [decide_with aliases from into]: how a value of type [from] is adapted to
+    a slot of type [into], or [None] where it fits as it is.  A total function
+    of the two types; [aliases] only unfolds them.  The first row that matches
+    answers. *)
 let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) :
     Cpp_ir.Lowered.Coercion.decision option =
   let callable : Cpp_ir.Lowered.Value_type.t -> Cpp_ir.Lowered.Arrows.t option = function
@@ -723,10 +723,9 @@ let any_slot_plan cx kind e (value : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Coe
   | _ when Erasure.core_expr_is_function_value cx e -> Some (Erase_as Boxed_whole)
   | _ -> ( match kind with Family_box -> deep_box_plan cx e | Var_box -> None )
 
-(** The adapters of section 0 of the typed CppIR design that go through
-    {!into_slot}, each by the name its parameters are prefixed with (B1's
-    origin tag), carrying what its expansion reads beyond the value and
-    the slot. *)
+(** The adapters that go through {!into_slot}, each by the name its
+    parameters are prefixed with (its origin tag), carrying what its
+    expansion reads beyond the value and the slot. *)
 type origin =
   | Rg  (** [_rg], a curried value at a flat slot *)
   | Ee of {core_arity : int; returns_a_lambda : bool; arity : int}  (** {!eta_short_plan}: [_ee] *)

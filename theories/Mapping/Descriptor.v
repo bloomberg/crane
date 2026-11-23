@@ -1,6 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Typed mapping descriptors (docs/typed-mappings-design.md).
+(** Typed mapping descriptors (documented in the Reference Manual, Typed
+    mappings).
 
     The data a typed mapping is written in: inductive types and records only,
     no helper functions.  A mapping is an instance of [TypeMapping T] for a
@@ -8,13 +9,12 @@
     importing the file that exports an instance selects it.
 
     Names.  The structured C++ type grammar lives in the nested module
-    [Crane.Cpp], so its constructors are written as in the design:
+    [Crane.Cpp], so its constructors carry that prefix:
     [Crane.Cpp.Name], [Crane.Cpp.Apply], [Crane.Cpp.SourceType],
     [Crane.Cpp.StoredComponent], [Crane.Cpp.Pointer], [Crane.Cpp.Const],
     [Crane.Cpp.UnsafeVerbatim], [Crane.Cpp.TypeArg], [Crane.Cpp.ValueArg]
     (fully qualified: [Crane.Mapping.Descriptor.Crane.Cpp.Name], ...).
-    Everything else is at the top level of this file, under the design's
-    names.
+    Everything else is at the top level of this file.
 
     Every string is a [PrimString.string]; a mapping file opens
     [pstring_scope] to write string literals inside lists.

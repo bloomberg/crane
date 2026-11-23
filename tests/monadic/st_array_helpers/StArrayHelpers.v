@@ -1,10 +1,10 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Helper functions taking an ST array (docs/typed-mappings-design.md 13,
-    24.6, 24.7).  An array is a [std::shared_ptr<crane::array_storage<A>>],
-    a mutable handle with a read view [std::span<const A>] and a writable
-    view [std::span<A>], so each helper below is a function of its own:
+(** Helper functions taking an ST array.  An array is a
+    [std::shared_ptr<crane::array_storage<A>>], a mutable handle with a read
+    view [std::span<const A>] and a writable view [std::span<A>], so each
+    helper below is a function of its own:
 
     - [peek] only reads a cell: [std::span<const T>].
     - [bump] reads one cell and writes it back: [std::span<T>] (Read + Write

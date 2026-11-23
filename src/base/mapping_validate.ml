@@ -557,7 +557,7 @@ let operation_mapping env ~instance ~(source : declaration) cx (m : operation_ma
         | Invalidates_views p -> (
           path "InvalidatesViews" p;
           (* An argument whose views the operation invalidates (it may
-             reallocate) cannot be given to it as a view (design 13.8). *)
+             reallocate) cannot be given to it as a view. *)
           match (use_of p.path_argument, argument_mapping p.path_argument) with
           | Read, Some {type_views = Read_views _ | Read_write_views _; _} ->
             failf

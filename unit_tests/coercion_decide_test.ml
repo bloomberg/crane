@@ -1,11 +1,11 @@
-(* The coercion decision ({!Core_to_cpp.Coerce.decide_with}) over the matrix
-   of typed CppIR phase B1: every kind of callable source (a flat global, a
-   curried local, a lambda, the value of an immediately invoked lambda, a
-   match or a let, a local fixpoint's partial application, a mapping's
-   result) put in every kind of slot (a declared parameter, a type-variable
-   parameter, an inline mapping's [auto], a loop variable, a frame field, a
-   return, a let, a field, an erased slot), at arities 1 to 3.  Types as
-   written, no aliases followed ({!Core_to_cpp.Coerce.as_written}). *)
+(* The coercion decision ({!Core_to_cpp.Coerce.decide_with}) over a matrix:
+   every kind of callable source (a flat global, a curried local, a lambda,
+   the value of an immediately invoked lambda, a match or a let, a local
+   fixpoint's partial application, a mapping's result) put in every kind of
+   slot (a declared parameter, a type-variable parameter, an inline mapping's
+   [auto], a loop variable, a frame field, a return, a let, a field, an erased
+   slot), at arities 1 to 3.  Types as written, no aliases followed
+   ({!Core_to_cpp.Coerce.as_written}). *)
 
 open Crane_plugin
 open Names
@@ -46,8 +46,8 @@ let slots : (string * (int -> Cpp_ir.Lowered.Slot_type.t)) list =
     ("field", fun n -> Exactly (ty ~flat:false n));
     ("erased", fun _ -> Exactly Any) ]
 
-(** The plan design 3.3 asks for, by name: [from] at its grouping into
-    [into]. *)
+(** The plan {!Core_to_cpp.Coerce.decide_with} should give, by name: [from]
+    at its grouping into [into]. *)
 let expected (s : source) (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   let grouping : Cpp_ir.Lowered.Value_type.t -> Cpp_ir.Lowered.Arrows.t = function
     | Function_name (_, a) | Closure a -> a

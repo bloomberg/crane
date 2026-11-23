@@ -33,8 +33,8 @@ Import ListNotations.
 Local Open Scope pstring_scope.
 
 (** [R] is the [Real] class, a [long double] (BitCopy, read by value), and
-    its operations are pure operation mappings (typed mappings,
-    docs/typed-mappings-design.md: they activate on [Import]).  [R0], [R1]
+    its operations are pure operation mappings (typed mappings:
+    they activate on [Import]).  [R0], [R1]
     and [PI] are operations of no argument.  The decision procedures
     return the [bool] a [sumbool] is.  [Rabst] and [Rrepr] are the
     identity, short-circuiting the constructive real infrastructure. *)

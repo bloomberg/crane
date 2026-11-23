@@ -2,9 +2,8 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Standard-library extraction mappings: [StdCore] ([option], [prod],
     [int63], [float], [char63]) and Rocq's primitive [string] as a
-    [std::string] with a [std::string_view] read view
-    (docs/typed-mappings-design.md 14.1-14.5).  Every mapping is typed and
-    activates on [Import].
+    [std::string] with a [std::string_view] read view.  Every mapping is
+    typed and activates on [Import].
 
     A Rocq string is an immutable value, so it has a read view and no
     writable view, and no operation may write it:
@@ -104,7 +103,7 @@ Local Open Scope pstring_scope.
           {| argument_name := "s2"; argument_use := Read |}]
          ReturnValue [] |}.
 
-(** Total, as Rocq's; returns an owner (design 14.4), though it reads its
+(** Total, as Rocq's; returns an owner, though it reads its
     argument through a view. *)
 #[export] Instance string_sub_mapping : OperationMapping (Ref PrimString.sub) :=
   {| operation_headers := ["crane_string.h"];

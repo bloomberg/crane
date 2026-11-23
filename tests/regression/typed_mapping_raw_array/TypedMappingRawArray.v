@@ -1,8 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** A raw-pointer array mapping (docs/typed-mappings-design.md 13.10, 24.8),
-    for tests only: [RawArray A] is a [std::vector<A>*] that a region owns,
-    a mutable handle passed by value.
+(** A raw-pointer array mapping, for tests only: [RawArray A] is a
+    [std::vector<A>*] that a region owns, a mutable handle passed by value.
 
     - Reading or writing through it takes the pointer by value, at every
       level of a chain of calls ending in the write: copying a pointer is

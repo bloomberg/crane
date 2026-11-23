@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Compiled interfaces (docs/typed-mappings-design.md 20), the library
+(** Compiled interfaces (src/base/mapping_interface.mli), the library
     half: [Meter] has two incompatible typed mappings, [Narrow]
     ([std::uint32_t]) and [Wide] ([std::uint64_t]).  [Lib] is extracted on
     its own into [typed_mapping_interface_lib.{h,cpp}] with [Narrow]

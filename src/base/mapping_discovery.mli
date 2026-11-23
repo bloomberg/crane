@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Finding the typed mapping of a source type or operation (plan D1).
+(** Finding the typed mapping of a source type or operation.
 
     {!discover} runs when an extraction starts: it enumerates the instances
     of [TypeMapping] and [OperationMapping] that are active (an [#[export]]

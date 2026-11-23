@@ -328,8 +328,8 @@ Crane Extract Skip STRefToIx.
 (* NOTE: skipping STRefClass seems to drop too much typing information,
  and the value types within references are not inferred. *)
 (* Crane Extract Skip STRefClass. *)
-(** References and arrays are typed mappings (docs/typed-mappings-design.md
-    13): a reference is a [std::shared_ptr<A>] and an array a
+(** References and arrays are typed mappings: a reference is a
+    [std::shared_ptr<A>] and an array a
     [std::shared_ptr<crane::array_storage<A>>], each a mutable handle passed
     by const reference and owned by the shared pointer ([NativeRAII]).  An
     array has a read view, [std::span<const A>], and a writable view,
@@ -339,7 +339,7 @@ Crane Extract Skip STRefToIx.
     keeps it the handle by value, and one that replaces it the handle by
     reference.  [crane::array_storage] (theories/cpp/array_storage.h)
     stores one addressable element each, [bool] included, so the views are
-    valid at every element type (design 14.9).  A reference has no view.
+    valid at every element type.  A reference has no view.
     Shared pointers do not collect cycles of references. *)
 
 From Crane Require Import Mapping.Descriptor.

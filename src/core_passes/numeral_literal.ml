@@ -115,7 +115,7 @@ let rec peano info expr =
 let registered name r = Rocqlib.has_ref name && Rocqlib.check_ref name r
 
 (* The value of a constructor term of a typed numeral descriptor's type,
-   by its constructors' actions (design 17): a field another numeral type
+   by its constructors' actions: a field another numeral type
    (an [Identity] or a [Negate]) is read by that type's own descriptor, or
    as a binary [positive] where its type has none. *)
 let rec typed_value expr =

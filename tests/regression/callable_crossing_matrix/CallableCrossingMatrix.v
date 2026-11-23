@@ -1,7 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Callables crossing between spellings (typed CppIR design, phase B1):
+(** Callables crossing between spellings (the matrix of
+    unit_tests/coercion_decide_test.ml):
     each kind of source -- a global declared flat, a curried local, a
     lambda, the value of a let, of a match, of a local fixpoint applied
     partially, of an inline mapping -- put in each kind of slot -- a

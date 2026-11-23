@@ -1,6 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Operation mappings ([OperationMapping (Ref op)], design 11):
+(** Operation mappings ([OperationMapping (Ref op)]):
 
     - [Counter], an abstract type mapped to [std::int64_t], used only
       through operation mappings: pure [Read] operations, one that splices
@@ -9,7 +9,7 @@
     - [combine] splices its second argument twice and its first after it;
       [ignore_first] ignores its first argument.  Called on [tick]s (a
       legacy inline constant with an effect), each argument is evaluated
-      once (design 11.9): the repeated one is bound ahead and the ignored
+      once: the repeated one is bound ahead and the ignored
       one evaluated as a statement; the others stay in place, since both
       operations are pure and a legacy mapping declares no effect.
     - [Buffer], mapped to a copy-counting C++ type passed by [const&]:

@@ -1,8 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Parameter access planning (design 12): a generated function's parameter
-    of a typed-mapped type takes the physical form its uses require, the
-    requirements joined across direct calls to a fixed point.
+(** Parameter access planning (src/core_plan/access.mli): a generated
+    function's parameter of a typed-mapped type takes the physical form its
+    uses require, the requirements joined across direct calls to a fixed
+    point.
 
     - [Handle], a mutable handle passed by const reference
       ([MutableHandle HandleByConstReference], [std::shared_ptr]): reading

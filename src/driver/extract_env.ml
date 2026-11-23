@@ -2093,7 +2093,8 @@ let full_extr_reading cx opaque_access f (refs, mps) read =
         List.sort_uniq String.compare (List.filter_map Base.Table.extracted_unit_of foreign)
       in
       (* The headers included were written against their units' typed
-         mappings: this extraction must resolve the same (design 20). *)
+         mappings: this extraction must resolve the same
+         ({!Base.Mapping_interface}). *)
       Base.Mapping_interface.check unit_includes;
       warns ();
       let filenames = mono_filename f in

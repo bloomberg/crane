@@ -170,7 +170,7 @@ let compile g =
   in
   (* Whether an argument used as [use] at a binder of type [t] is passed to
      the template as a mutable lvalue: a [Replace] of a mapped type, or a
-     write of one whose write-through form is [T&] (design 6.6). *)
+     write of one whose write-through form is [T&]. *)
   let mapped_head t =
     let head, _ = EConstr.decompose_app_list sigma t in
     match EConstr.kind sigma head with
@@ -179,7 +179,7 @@ let compile g =
     | _ -> None
   in
   (* The view an argument used as [use] at a binder of type [t] is given to
-     the template as (design 7.5): a [Read] the read view, a [Write] the
+     the template as: a [Read] the read view, a [Write] the
      writable view, where its mapped type declares one. *)
   let view_of use t =
     match mapped_head t with
@@ -299,7 +299,7 @@ let compile g =
       arguments
   in
   (* A result borrowed as a view, which a call materialises where it
-     escapes (design 12.8). *)
+     escapes. *)
   let result_view =
     match result with
     | Return_borrowed (((Read_view_borrow | Writable_view_borrow) as form), _) -> (

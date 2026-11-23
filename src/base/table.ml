@@ -3017,7 +3017,7 @@ let same_mutual_block r1 r2 =
   | GlobRef.IndRef (m1, _), GlobRef.IndRef (m2, _) -> MutInd.CanOrd.equal m1 m2
   | _ -> false
 
-(* Custom: a legacy mapping, or a typed one ([TypeMapping], plan D3): the
+(* Custom: a legacy mapping, or a typed one ([TypeMapping]): the
    head of a mapped type or a constructor of one.  Where the content of the
    mapping is read, the typed plan answers first ({!custom_text}). *)
 let is_custom r =
@@ -4098,7 +4098,7 @@ let add_numeral_inductive r info =
     info.converters
 
 (* The numeral information of a typed mapping's numeral descriptor
-   (design 8.7, 17): the literal format is its emitter's, with the
+   ([type_numerals]): the literal format is its emitter's, with the
    validated decimal digits (and sign) at [%n]. *)
 let typed_numeral_info r =
   if not (Mapping_plan.is_type_head r) then None
@@ -4161,13 +4161,13 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
          (r', { info with converters = convs' })))
        ~discharge:(fun x -> Some x)
 
-(** The typed mappings whose head also has a legacy mapping: an error (design
-    22.5), raised once mappings are discovered.  Legacy declarations live in
+(** The typed mappings whose head also has a legacy mapping: an error,
+    raised once mappings are discovered.  Legacy declarations live in
     two tables: a type or operation template ([customs], which also holds
     [Crane Extract Monad], [Skip], the ghost of [Void], and every head a
     [Crane TriviallyCopyable] names, which needs a legacy mapping), and a
     numeral format ([Crane Extract Numeral]: a typed type's numerals are its
-    descriptor's, design 17). *)
+    descriptor's). *)
 let check_typed_mapping_conflicts () =
   let refuse ~kind ~fix head instances command =
     CErrors.user_err

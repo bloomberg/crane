@@ -112,8 +112,7 @@ deps_of() { ocamlfind ocamldep -modules "$1" | cut -d: -f2; }
 # Lowering builds the coercion vocabulary (Function_value, Erase_callable,
 # Box, Any_cast, Tolerant_any_cast, and Erasure's box/unbox helpers) only in
 # Core_to_cpp.Coerce; Cpp_passes.Coercions expands the plans it makes.  A
-# constructor counts where it is applied outside a pattern (typed CppIR
-# design, phase D).
+# constructor counts where it is applied outside a pattern.
 coercion_builders() {
   code_of "$1" | perl -0777 -ne '$n = 0;
     while (/(\S+)\s*\b(?:(?:Cpp_ir\.)?(?:Lowered\.)?(?:Expr\.)?(?:Function_value|Erase_callable|Box|Any_cast|Tolerant_any_cast)\s*\(|Erasure\.(?:box|unbox|unbox_tolerant)\b)/g) {

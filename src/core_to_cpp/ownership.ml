@@ -261,17 +261,17 @@ let rec core_lent_by_reference cx ty =
 
     A borrowed parameter of a typed-mapped type whose [access]
     ({!Core_plan.Access}) asks for more than a read takes the form its
-    access model gives that access (design 6.6, 12.5): [T&] to replace it or
+    access model gives that access: [T&] to replace it or
     to write a mutable value in place, the model's write-through form to
     write through a handle.  Where [reference_allowed] is false -- a
     function named as a value, a method -- a mutable reference is a copy by
     value instead.  Where [view_allowed], a [Preferred] read or write takes
-    the mapping's read or writable view (design 12.5), declared at the view
+    the mapping's read or writable view, declared at the view
     type. *)
 let rec wrap_param_by_ownership cx ?(is_owned = false) ?access ?(reference_allowed = false) ?(view_allowed = false)
     ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t * Cpp_ir.Param_mode.t =
   (* A borrowed parameter of a typed-mapped type takes the form its access
-     requires (design 12.5), where that is not the canonical read form. *)
+     requires, where that is not the canonical read form. *)
   let plan = mapped_plan ?core cpp_ty in
   let physical =
     match (is_owned, access, plan) with

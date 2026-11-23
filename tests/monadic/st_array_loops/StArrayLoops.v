@@ -1,11 +1,10 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Loopified helpers taking ST array views (docs/typed-mappings-design.md
-    12.5, 24.6): with [Crane Loopify], a tail-recursive write loop becomes a
-    [while] loop over its writable view [std::span<T>], and a
-    non-tail-recursive read an explicit stack whose frames hold the read
-    view [std::span<const T>]. *)
+(** Loopified helpers taking ST array views: with [Crane Loopify], a
+    tail-recursive write loop becomes a [while] loop over its writable view
+    [std::span<T>], and a non-tail-recursive read an explicit stack whose
+    frames hold the read view [std::span<const T>]. *)
 
 From Stdlib Require Import Arith.PeanoNat List.
 From Corelib Require PrimString.
