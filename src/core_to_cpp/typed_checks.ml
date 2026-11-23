@@ -193,8 +193,11 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
       | v, _ -> v
     in
     Base.Probe.hit "typed-derived" (fun () -> form_name e ^ " " ^ kind_name derived);
-    match (x, derived) with
-    | Lambda l, Typed t -> (
+    match (x, derived, e) with
+    (* A global function named, not called: its name, whatever spells it. *)
+    | (Entity _ | Scope _ | Type_member _), Typed (Function _), Global {callee; _} ->
+      Typed.v ~ty:(global_value_type cx env callee (core_type_of cx e)) x
+    | Lambda l, Typed t, _ -> (
       match Cpp_ir.Arrows.of_type t with
       | Some a ->
         let doms, result = Cpp_ir.Arrows.curried a in

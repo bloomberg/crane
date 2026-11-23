@@ -93,7 +93,15 @@ let check_ambient cx d =
 let finish cx d (x : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Stmt.t =
   check_ambient cx d;
   Typed_checks.fit cx ~site:"destination" x (slot d);
-  build d x.expr
+  let s = build d x.expr in
+  (* A value returned is recorded for the join of the lambda returning it
+     ({!Lowering_state.with_returns}): [x]'s type where [x] is what is
+     returned, else what the node says. *)
+  ( match (s, d) with
+  | Return (Some e), Return _ -> Lowering_state.record_return cx e x.ty
+  | Return (Some e), _ -> Lowering_state.record_return cx e (Cpp_ir.Typed.node_type e)
+  | _ -> () );
+  s
 
 (** [finish] of [x], where [x] is an immediately invoked lambda inlined
     where [d] returns: its returns become [d]'s statements
@@ -105,9 +113,15 @@ let finish_inlined cx d (x : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Stmt.t list =
     let rebuilt () = [finish cx d (Cpp_ir.Typed.rewrap (fun _ -> Cpp_ir.Build.iife return_type body) x)] in
     if not (returns d) then rebuilt ()
     else
-      (* Each return is the lambda's value, at the type C++ gives it where
+      (* Each return is the lambda's value, at the type it was returned at
+         where its body recorded one, else at the type C++ gives it where
          its node does not say. *)
-      match Cpp_build.inline_returns (fun v -> finish cx d (Cpp_ir.Typed.or_type x.ty (Cpp_ir.Typed.of_node v))) body with
+      let returned v =
+        match Lowering_state.returned_type cx v with
+        | Some ty -> Cpp_ir.Typed.v ~ty v
+        | None -> Cpp_ir.Typed.or_type x.ty (Cpp_ir.Typed.of_node v)
+      in
+      match Cpp_build.inline_returns (fun v -> finish cx d (returned v)) body with
       | Some stmts -> stmts
       | None -> rebuilt () )
   | _ -> [finish cx d x]

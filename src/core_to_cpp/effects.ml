@@ -54,7 +54,7 @@ let gen_bind_expr cx env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
   (* Sequential mode: bind in expression context (e.g., nested inside
      another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
   with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-    Match_types.value_iife cx env (Core_plan.Query.infer_core_body_type a) (gen_stmts cx env (Destination.return_ cx) a) ) )
+    Match_types.value_iife cx env (Core_plan.Query.infer_core_body_type a) (fun () -> gen_stmts cx env (Destination.return_ cx) a) ) )
 
 (** [bind] of an effect monad, the global [use] (at [r]) applied to
     [a1 :: a2 :: l], in statement position ending in [k]: the action's

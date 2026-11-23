@@ -293,7 +293,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
        Wrap in an IIFE, delegating to gen_stmts which handles Core.Expr.Apply(Core.Expr.Fixpoint
        ...). *)
     form @@ with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (Destination.return_ cx) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (fun () -> gen_stmts cx env (Destination.return_ cx) a) ) )
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries, as Core decided it
      ({!Core_plan.Elaborate.static_projection_call}). *)
@@ -533,7 +533,11 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
     form @@ Match.gen_custom_match_expr cx ~slot env ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ}
     when Core_plan.Match_kind.is_record (Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
-    form @@ Match.gen_record_projection cx ~expected_ty ~slot env core_e ~typ ~t ~pv ~case_occ
+    let x = Match.gen_record_projection cx ~expected_ty ~slot env core_e ~typ ~t ~pv ~case_occ in
+    ( match (x, Match.read_class_method cx typ pv case_occ) with
+    (* A class method named, not called: a function's name. *)
+    | Scope _, Some m -> Typed.v ~ty:(Typed_checks.global_value_type cx env m (Typed_checks.core_type_of cx core_e)) x
+    | _ -> form x )
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ} when lang () == Cpp ->
     form @@ gen_cpp_case cx ~slot typ t env pv case_occ
   | Core.Expr.Let {binder_type = ty; _} as a ->
@@ -543,19 +547,19 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
        against a position lowering does not give it. *)
     form @@ with_escape_analysis cx (fun () -> with_iife_return_type cx expected_ty (fun () ->
       with_region cx a (fun () ->
-        let body = gen_stmts cx ~slot env (Destination.return_ cx) a in
         (* Returning a closure from one path and another closure, or a
            function-typed local, from the next, the lambda deduces no
            common type: it is declared at the let's own, or at the expected
            type where that only regroups its arrows.  Otherwise the expected
            type is what the caller converts to, which need not be a type the
            lambda's returns share. *)
-        Match_types.value_iife ?ret:expected_ty cx env (infer_core_body_type a) body ) ) )
+        Match_types.value_iife ?ret:expected_ty cx env (infer_core_body_type a) (fun () ->
+            gen_stmts cx ~slot env (Destination.return_ cx) a ) ) ) )
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ as a ->
     (* Bare fixpoint in expression context: wrap in IIFE, delegate to
        gen_stmts. *)
     form @@ with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (gen_stmts cx env (Destination.return_ cx) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (fun () -> gen_stmts cx env (Destination.return_ cx) a) ) )
   | Core.Expr.String s -> Typed.v ~ty:(Typed_checks.primitive_type cx env "strings.pstring.type") (Literal (String s))
   | Core.Expr.UInt63 x -> Typed.v ~ty:(Typed_checks.primitive_type cx env "num.int63.type") (Literal (Uint63 x))
   | Core.Expr.Numeral {inductive = ind; value = n} ->

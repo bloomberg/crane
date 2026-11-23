@@ -243,6 +243,11 @@ type lexical = {
      arguments ({!current_cpp_return_type}).  Lexical: a lambda's body has
      its own return type. *)
   current_cpp_return_type : Cpp_ir.Lowered.Type.t option;
+  (** The values returned so far in the body a join is decided for
+      ({!with_returns}), each with the type lowering synthesised for it;
+      [None] outside such a body.  Lexical: a nested body that decides its
+      own join collects its own. *)
+  returned : (Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Value_type.t) list ref option;
   (** De Bruijn environment: each variable's binder, with its Core type and
      role.  Extended by every binder a scope introduces. *)
   env_types : Core.Lexenv.t;
@@ -397,6 +402,7 @@ let create ~pp_cpp_type () =
       lexical =
         { current_type_vars = [];
           current_cpp_return_type = None;
+          returned = None;
           env_types = Core.Lexenv.empty;
           cpp_binder_types = IntMap.empty;
           declared_outer = None;
@@ -520,6 +526,30 @@ let with_cpp_return_type cx (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a)
 (** The enclosing function's C++ return type
     ({!lexical.current_cpp_return_type}). *)
 let current_cpp_return_type cx () : Cpp_ir.Lowered.Type.t option = cx.ctx.lexical.current_cpp_return_type
+
+(** [with_returns f] runs [f] collecting the values returned in the body it
+    lowers ({!record_return}), and gives them back with its result: what a
+    lambda whose return type C++ would deduce joins its returns over. *)
+let with_returns cx (f : unit -> 'a) : 'a * (Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Value_type.t) list =
+  let outer = cx.ctx.lexical.returned and seen = ref [] in
+  let r =
+    with_field cx (fun c -> c.lexical.returned) (fun t -> set_lexical cx (fun l -> { l with returned = t })) (Some seen) f
+  in
+  (* The enclosing body sees them too: an immediately invoked lambda
+     inlined there returns them as its own ({!Destination.finish_inlined}). *)
+  Option.iter (fun o -> o := !seen @ !o) outer;
+  (r, !seen)
+
+(** Record that [e], of type [ty], is returned by the body being lowered. *)
+let record_return cx (e : Cpp_ir.Lowered.Expr.t) (ty : Cpp_ir.Lowered.Value_type.t) =
+  match cx.ctx.lexical.returned with Some seen -> seen := (e, ty) :: !seen | None -> ()
+
+(** The type [e] was recorded at where it was returned ({!record_return}),
+    the node itself, not an equal one. *)
+let returned_type cx (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Value_type.t option =
+  match cx.ctx.lexical.returned with
+  | Some seen -> List.find_map (fun (e', ty) -> if e' == e then Some ty else None) !seen
+  | None -> None
 
 (** Whether the enclosing function returns [void]. *)
 let returns_void cx =

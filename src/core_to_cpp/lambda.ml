@@ -512,7 +512,8 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
            nothing. *)
         | _ -> f (Destination.Return Free)
       in
-      let body_stmts =
+      let body_stmts, returned =
+        with_returns cx @@ fun () ->
         (match carrier with
          | None -> (fun f -> f ())
          | Some _ -> with_rank2_carrier cx carrier)
@@ -525,6 +526,9 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
                   return_
                   a ) ) )
       in
+      (* The returns as lowered, the values [returned] records: the
+         substitutions and the fixpoint fold below rebuild them. *)
+      let raw_body = body_stmts in
       let body_stmts =
         List.fold_left
           (fun stmts (_, _, subst) ->
@@ -692,7 +696,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
                  [return], which have no common type to deduce. *)
               let core_ty = match body_expected_core_ty with Some _ as t -> t | None -> infer_core_body_type a in
               Option.bind core_ty (fun t ->
-                match Match_types.iife_closure_return_at ~several:true cx env t body_stmts with
+                match Match_types.iife_closure_return_at ~several:true ~returned cx env t raw_body with
                 | Some ty when Types.names_only_scoped_tvars cx ty -> Some ty
                 | _ -> None ) ) )
       in

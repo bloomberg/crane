@@ -638,15 +638,16 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
         wild_br
     in
     let void_ret = Match_types.iife_void_return cx env typ pv in
-    let branches, default =
+    let (branches, default), returned =
       let ret =
         match void_ret with
         | Some Void -> void_ret
         | _ -> current_cpp_return_type cx ()
       in
-      with_cpp_return_type cx ret (fun () ->
-          let branches = gen_enum_branches (Array.to_list pv) in
-          (branches, gen_default_stmts ()) )
+      with_returns cx (fun () ->
+          with_cpp_return_type cx ret (fun () ->
+              let branches = gen_enum_branches (Array.to_list pv) in
+              (branches, gen_default_stmts ()) ) )
     in
     let body : Cpp_ir.Lowered.Stmt.t list =
       [Switch {scrutinee = scrutinee; enum = ind_ref; branches = branches; default = default}]
@@ -655,7 +656,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
       match void_ret with
       | Some _ -> Some Cpp_ir.Type.Void
       | None ->
-        Match_types.iife_closure_return ?ret:(current_cpp_return_type cx ()) cx env typ pv body
+        Match_types.iife_closure_return ?ret:(current_cpp_return_type cx ()) ~returned cx env typ pv body
     in
     Cpp_ir.Build.iife iife_ret_opt body
   else
@@ -753,7 +754,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
         ([], Some body_stmts)
       | Core.Pattern.Tuple _ -> gen_branches (i + 1) cs
     in
-    let branches, wildcard = gen_branches 0 (Array.to_list pv) in
+    let (branches, wildcard), returned = with_returns cx (fun () -> gen_branches 0 (Array.to_list pv)) in
     let iife_ret_opt =
       match Match_types.iife_void_return cx env typ pv with
       | Some _ -> Some Cpp_ir.Type.Void
@@ -765,7 +766,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
           | Some Void, _ | _, [] -> None
           | rt, {Core.Match.Branch.result_type = rty; _} :: _ -> branch_return cx env rt rty
         in
-        Match_types.iife_closure_return ?ret cx env typ pv [Match (scrut, branches, wildcard)]
+        Match_types.iife_closure_return ?ret ~returned cx env typ pv [Match (scrut, branches, wildcard)]
     in
     (* Perceus reuse (Crane Reuse): rebuild a same-inductive constructor in
        a cell the match frees instead of allocating, via the [<ctor>__reuse]
@@ -1583,6 +1584,14 @@ let gen_custom_match_expr cx ?slot env ~typ ~t ~pv ~case_occ : Cpp_ir.Lowered.Ex
   in
   Cpp_ir.Build.iife (Some iife_ret) stmts
 
+(** The class method a record projection [typ]/[pv] reads, where it reads
+    one (a field of a type class, not applied). *)
+let read_class_method cx typ pv case_occ : GlobRef.t option =
+  match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ with
+  | Core_plan.Match_kind.Record {typeclass = true; body = Projection {field; application = Read}} ->
+    List.nth_opt (List.filter_map Fun.id (record_fields_of_type typ)) field
+  | _ -> None
+
 (** A match taking the record [t] at [typ] apart (the term [core_e]), in
     expression position: a field read, a field called, or the record
     destructured into locals for the one branch's body. *)
@@ -2003,8 +2012,8 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
           (stmts, taken || (is_typeclass && match decl_ty with Reference _ -> false | _ -> true)) )
         (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
     in
-    Match_types.value_iife ?ret:expected_ty cx env (Some r)
-      (cache @ List.concat_map fst asgns
+    Match_types.value_iife ?ret:expected_ty cx env (Some r) (fun () ->
+      cache @ List.concat_map fst asgns
        @ Binders.with_binders cx env renamed_ids (fun () ->
              if Base.Probe.checking () then
                List.iteri

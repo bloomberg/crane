@@ -31,3 +31,14 @@ let deduction_name : Deduction.t -> string = function
   | Generic_lambda -> "generic lambda"
   | Requirement -> "requirement"
   | Not_yet_typed -> "not yet typed"
+
+(** Whether a lambda returning values of the types [returned] leaves C++ no
+    return type to deduce: a closure or a function's name has none it can
+    write, a generic lambda neither, and two different types have none in
+    common (two callable parameters deduced as [F0] and [F1]).  An abort
+    fits whatever the others give; a type only C++ knows says nothing. *)
+let deduces_none (returned : 'p t list) : bool =
+  List.exists (function Closure _ | Function_name _ | Deduced Generic_lambda -> true | _ -> false) returned
+  || match List.filter_map (function Typed t -> Some t | _ -> None) returned with
+     | t :: rest -> List.exists (fun t' -> t' <> t) rest
+     | [] -> false
