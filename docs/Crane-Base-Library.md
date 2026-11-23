@@ -1,443 +1,360 @@
 # Crane Base Library
 
-Crane comes with a base library of mappings, and types for monadic effects. The library can be found [here](https://github.com/bloomberg/crane/tree/main/theories).
+Crane ships a library of mappings, effect definitions and C++ runtime headers
+in [`theories/`](https://github.com/bloomberg/crane/tree/main/theories), built
+as the Rocq library `Crane`.
 
-**Architecture note:** Most effect modules follow a shared-definitions pattern. A `*Defs.v` file contains the flavor-independent effect inductives and smart constructors, while flavor-specific files (e.g., `IO.v` for standard library, `IOBDE.v` for BDE) re-export the definitions and add C++ extraction mappings.
+- `Extraction.v` loads the plugin: `From Crane Require Extraction.`
+- `Mapping/` maps Rocq types and operations to C++. Every file there is a
+  [typed mapping](Reference-Manual.md#typed-mappings) and activates on
+  `Import`.
+- `Monads/` defines effects on interaction trees, mapped with the legacy
+  commands, and the `ST` monad, whose arrays and references are typed.
+- `External/` declares C++ types used through axioms (vectors, string views),
+  mapped with the legacy commands.
+- `cpp/` and `cpp_bde/` hold the header-only C++ runtime that generated code
+  includes.
 
----
-
-## Core
-
-### `Extraction.v`
-
-Declares the Crane ML module that provides the extraction plugin.
+Activation follows Rocq's imports. `From Crane Require Import Mapping.Std.`
+activates the standard mappings; a bare `Require` loads the file without
+activating them. A file that imports two mappings of the same type (say
+`Mapping.NatIntStd` and `Mapping.NatGMP`) gets an ambiguity error naming
+both instances at extraction.
 
 ---
 
 ## Mappings
 
+The tables give each file's C++ types; the operations listed are mapped to
+native C++ arithmetic or library calls instead of being extracted from their
+Rocq definitions.
+
+### Choosing a flavour
+
+| Import | Types |
+| --- | --- |
+| `Mapping.Std` | standard library: `option`, `prod`, strings, primitive integers and floats |
+| `Mapping.BDE` | the same with BDE (`bsl::`) types |
+| `Mapping.NatIntStd`, `Mapping.NInt`, `Mapping.ZInt` | `nat`, `N`/`positive`, `Z` as machine integers (bounded; for prototyping) |
+| `Mapping.NatIntBDE`, `Mapping.NIntBDE`, `Mapping.ZIntBDE` | the same, BDE flavour |
+| `Mapping.NatGMP`, `Mapping.NGMP`, `Mapping.ZGMP` | arbitrary precision with GMP's `mpz_class` |
+| `Mapping.Real` | axiomatized reals as `long double` |
+| `Mapping.AsciiChar` | `ascii` as `char` |
+| `Mapping.DequeList` | `list` as `std::deque` |
+
+Without a list mapping, `list` and every other inductive are generated as
+C++ types (`List<A>`, a value type holding a `std::variant`).
+
 ### `Mapping/Shared.v`
 
-Defines common extraction mappings for boolean and basic types shared across library variants.
+Shared by every flavour; exported by `Std` and `BDE`.
 
-- **`bool`** — Extracted to C++ `bool` with `true`/`false` constructors
-- **`sumbool`** — Extracted to C++ `bool`
-- **`negb`, `andb`, `orb`** — Boolean operations (`!`, `&&`, `||`)
-- **`void`** — Unit type for effects (with constructor `ghost`)
-- **`PrimArray.array`** — Persistent copy-on-write arrays (`persistent_array<T>`)
-- **`PrimArray.make`, `get`, `set`, `length`, `copy`** — Array operations
+| Rocq | C++ |
+| --- | --- |
+| `bool` | `bool` |
+| `sumbool A B` | `bool` |
+| `unit` | `std::monostate` |
+| `PrimArray.array A` | `persistent_array<A>` (`persistent_array.h`, copy-on-write) |
 
-### `Mapping/Std.v`
+Operations: `negb`, `andb`, `orb`; `PrimArray.make`, `get`, `default`,
+`set`, `length`, `copy`.
 
-Provides extraction mappings from Rocq types to C++ standard library types.
+### `Mapping/StdCore.v` and `Mapping/Std.v`
 
-Imports and re-exports `Mapping/Shared.v`.
+`StdCore` maps everything but strings; `Std` exports `StdCore` and adds the
+string mapping. Both set `Crane StdLib "std"`.
 
-**Type mappings:**
-- **`option`** → `std::optional<T>`
-- **`prod`** → `std::pair<T, U>`
-- **`fst`, `snd`** → `.first`, `.second`
-- **`PrimString.char63`** → `int64_t` (it is `int` by definition; `get` reads a byte as 0..255)
-- **`PrimString.string`** → `std::string`
-- **`PrimInt63.int`** → `int64_t` (with 63-bit masking for arithmetic operations)
-- **`PrimFloat.float`** → `double`
+| Rocq | C++ |
+| --- | --- |
+| `option A` | `std::optional<A>` |
+| `prod A B` | `std::pair<A, B>` |
+| `PrimInt63.int` | `int64_t` holding 0..2^63-1 |
+| `PrimFloat.float` | `double` |
+| `PrimString.char63` | `int64_t` (`char63` is `int`; `get` reads a byte as 0..255) |
+| `PrimString.string` (`Std` only) | `std::string`, with a `std::string_view` read view |
+
+- `fst` and `snd` borrow their component: a `let` binding one out of a pair
+  binds it by `const` reference.
+- `PrimInt63`: `add`, `sub`, `mul` (wrapping, computed unsigned and masked
+  to 63 bits), `div`, `mod` (Rocq's `x / 0 = 0`, `x mod 0 = x`), `eqb`,
+  `ltb`, `leb`, `land`, `lor`, `lxor`, `lsl`, `lsr`, `asr`, and the
+  primitives `crane_int63.h` implements after Rocq's kernel: `mulc`, `divs`,
+  `mods`, `ltsb`, `lesb`, `addc`, `addcarryc`, `subc`, `subcarryc`,
+  `diveucl`, `diveucl_21`, `addmuldiv`, `compare`, `compares`, `head0`,
+  `tail0`.
+- `PrimFloat`: `add`, `sub`, `mul`, `div`, `opp`, `abs`, `sqrt`, `eqb`,
+  `ltb`, `leb`, `of_uint63`, `classify`, `compare`, and through
+  `crane_float.h`: `normfr_mantissa`, `frshiftexp`, `ldshiftexp`, `next_up`,
+  `next_down`.
+- `PrimString` (`crane_string.h`): `length`, `cat` (cut to `max_length`, as
+  in Rocq), `get` (the byte, unsigned), `make` (length clamped to
+  `max_length`), `max_length` (16777211), `compare`, `sub`.
+
+A generated function that only reads a string (passes it to `length`, `get`,
+`sub`, or to a function that only reads it) takes `std::string_view`; one
+that keeps, returns, stores or matches it takes `const std::string&` (or
+`std::string` when it owns it); a function returning a string returns
+`std::string`. A string literal passed as a view is the view of the literal.
+
+`Mapping/StringView.v` re-exports `Std`, for files that imported it when the
+string-view mapping was separate.
 
 ### `Mapping/BDE.v`
 
-Provides extraction mappings from Rocq types to Bloomberg's BDE library types.
+The `Std` descriptors with BDE spellings. Exports `Shared`; sets
+`Crane StdLib "BDE"`.
 
-Imports and re-exports `Mapping/Shared.v`.
+| Rocq | C++ |
+| --- | --- |
+| `option A` | `bsl::optional<A>` |
+| `prod A B` | `bsl::pair<A, B>` |
+| `PrimString.string` | `bsl::string`, with a `bsl::string_view` read view |
+| `PrimInt63.int` | `int64_t` (masked as in `Std`) |
+| `PrimFloat.float` | `double` |
+| `PrimString.char63` | `int64_t` |
 
-**Type mappings:**
-- **`option`** → `bsl::optional<T>`
-- **`prod`** → `bsl::pair<T, U>`
-- **`fst`, `snd`** → `.first`, `.second`
-- **`PrimString.char63`** → `int64_t` (it is `int` by definition; `get` reads a byte as 0..255)
-- **`PrimString.string`** → `std::string` (via `bsl_string.h`)
-- **`PrimInt63.int`** → `int64_t` (via `bsl_cstdint.h`, no masking)
-- **`PrimFloat.float`** → `double`
+The same operations as `Std`. BDE builds compile as C++20, so the BDE runtime
+avoids C++23/26 features (`crane::unreachable` instead of
+`std::unreachable`, named instead of repeated `_` structured bindings).
 
-### `Mapping/NatIntStd.v`
+### Numbers
 
-Maps Rocq's `nat` type to `unsigned int` with std library operations. Uses numeral folding (`Crane Extract Numeral nat => "%nu"`) to compile Peano chains into unsigned integer literals.
+| File | Maps | C++ type | Exports |
+| --- | --- | --- | --- |
+| `NatIntStd.v` | `nat` | `uint64_t` | `Std` |
+| `NatIntBDE.v` | `nat` | `unsigned int` | `BDE` |
+| `NInt.v` | `positive`, `N` | `unsigned int` | `Std` |
+| `NIntBDE.v` | `positive`, `N` | `unsigned int` | `BDE` |
+| `ZInt.v` | `Z` | `int64_t` | `NInt`, `NatIntStd` |
+| `ZIntBDE.v` | `Z` | `int64_t` | `NIntBDE`, `NatIntBDE` |
+| `NatGMP.v` | `nat` | `mpz_class` | `Std` |
+| `NGMP.v` | `positive`, `N` | `mpz_class` | `Std` |
+| `ZGMP.v` | `Z` | `mpz_class` | `NGMP`, `NatGMP` |
 
-Imports and re-exports `Mapping/Std.v`.
+Each type mapping declares its numerals, so a constructor chain is written as
+one literal (`UINT64_C(3)` for `nat` under `NatIntStd`). Operations:
 
-**Warning**: This mapping is unsafe for serious use. `nat` is infinite while `unsigned int` is bounded; use for testing and prototyping only.
+- `nat`: `Nat.add`, `mul`, `div`, `modulo`, `double`, `pred`, `sub`, `max`,
+  `min`, `eqb`, `ltb`, `leb`, `compare`, `PeanoNat.Nat.eq_dec`, and in the
+  machine-integer files `Nat.iter`. The files also declare
+  `nat_of_int : int -> nat` and `string_of_nat : nat -> string` (axioms with
+  mapped implementations).
+- `positive` and `N`: `add`, `sub`, `mul`, `succ`, `pred`, `eqb`, `ltb`,
+  `leb`, `compare`, `eq_dec`, `min`, `max`; for `N` also `div`, `modulo`,
+  `double`, `succ_double`; `N.of_nat`, `N.to_nat`, `Pos.of_nat`,
+  `Pos.to_nat`.
+- `Z`: `add`, `sub`, `mul`, `div`, `modulo`, `opp`, `abs`, `succ`, `pred`,
+  `eqb`, `ltb`, `leb`, `gtb`, `geb`, `compare`, `eq_dec`, `min`, `max`,
+  `of_nat`, `to_nat`, `of_N`, `to_N`, `abs_N`.
 
-**Additional functions:**
-- **`nat_of_int : int -> nat`** — Convert int63 to nat (with axioms)
-- **`string_of_nat : nat -> string`** — Convert nat to string
-- Defines literal constants `zero` through `one_hundred_fifty` as nat values
-
-### `Mapping/NatIntBDE.v`
-
-Maps Rocq's `nat` type to `unsigned int` with BDE library operations.
-
-Imports and re-exports `Mapping/BDE.v`.
-
-Same structure and warnings as `NatIntStd.v`, but uses BDE library functions (`bsl::max`, `bsl::min`, etc.).
-
-### `Mapping/NInt.v`
-
-Maps Rocq's `N` (binary natural numbers) and `positive` to `unsigned int` with native C++ arithmetic. Provides all `N` and `Pos` operations (add, sub, mul, div, comparisons, etc.).
-
-Imports and re-exports `Mapping/Std.v`.
-
-### `Mapping/NIntBDE.v`
-
-BDE variant of `NInt.v`. Maps `N` and `positive` to `unsigned int` using BDE library functions.
-
-Imports and re-exports `Mapping/BDE.v`.
-
-### `Mapping/ZInt.v`
-
-Maps Rocq's `Z` (binary integers) to `int64_t` with native C++ arithmetic. Uses numeral folding (`Crane Extract Numeral Z => "INT64_C(%n)"`) for large integer literals.
-
-Imports and re-exports `Mapping/NInt.v`.
-
-### `Mapping/ZIntBDE.v`
-
-BDE variant of `ZInt.v`. Maps `Z` to `int64_t` using BDE library functions.
-
-Imports and re-exports `Mapping/NIntBDE.v`.
-
-### `Mapping/NatGMP.v`
-
-Maps Rocq's `nat` to GMP arbitrary-precision integers (`mpz_class`). Useful when `unsigned int` overflow is a concern.
-
-### `Mapping/NGMP.v`
-
-Maps Rocq's `N` to GMP arbitrary-precision integers (`mpz_class`).
-
-### `Mapping/ZGMP.v`
-
-Maps Rocq's `Z` to GMP arbitrary-precision integers (`mpz_class`).
-
-### `Mapping/DequeList.v`
-
-Opt-in mapping that extracts Rocq's `list` to `std::deque<T>` instead of the default linked-list representation. Useful when a program relies on efficient indexing or push/pop at both ends, which a linked-list extraction handles poorly.
-
-Import this module instead of (or after) `Mapping/Std.v`'s default `list` handling to switch representations.
+The machine-integer mappings are bounded where Rocq's numbers are not:
+arithmetic wraps and conversions truncate past the C++ type's range. Use them
+only where values provably fit, or use the GMP files (link with
+`-lgmpxx -lgmp`). An exact mapping of `nat` to
+`boost::multiprecision::cpp_int` is an example in
+`tests/regression/typed_mapping_exact_numbers/`, not a shipped file.
 
 ### `Mapping/Real.v`
 
-Maps Rocq's `R` (axiomatized reals) to a C++ `Real` class wrapping `long double` (defined in `crane_real.h`).
+Maps `R` to `Real` (`crane_real.h`, a `long double`). Exports `Std` only: it
+does not choose a representation for `Z`, `N` or `positive`. Programs that
+use `INR`, `IZR`, `IPR` or `IPR_2` import an integer flavour too
+(`From Crane Require Import Mapping.ZInt Mapping.Real.`).
 
-Imports and re-exports `Mapping/ZInt.v`.
+Operations: `R0`, `R1`, `Rplus`, `Rmult`, `Ropp`, `Rinv`, `Rminus`, `Rdiv`,
+`Rabs`, `Rsqr`, `Rmax`, `Rmin`, `pow`, `sqrt`, `sin`, `cos`, `tan`, `asin`,
+`acos`, `atan`, `PI`, `Rle_dec`, `Rlt_dec`, `Req_EM_T`, `INR`, `IZR`, `IPR`,
+`IPR_2`, `Rabst`, `Rrepr`. The constructive real modules
+`Rdefinitions.RbaseSymbolsImpl` and `Rdefinitions.RinvImpl` are skipped.
 
-**Mapped operations:**
-- Core field: `R0`, `R1`, `Rplus`, `Rmult`, `Ropp`, `Rinv`, `Rminus`, `Rdiv`
-- Utility: `Rabs`, `Rsqr`, `Rmax`, `Rmin`
-- Power/sqrt: `pow`, `sqrt`
-- Trigonometry: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `PI`
-- Decisions: `Rle_dec`, `Rlt_dec`, `Req_EM_T`
-- Coercions: `INR`, `IZR`, `IPR`
+### `Mapping/AsciiChar.v`
+
+Maps `Ascii.ascii` to `char` (as OCaml's `ExtrOcamlString` does), so
+comparing two characters is one instruction instead of a conversion through
+`N`. The constructor packs eight `bool`s; a match unpacks them. Maps
+`Ascii.compare`, `Ascii.eqb` and `Ascii.ascii_dec`. Exports `Shared`, whose
+`bool` its constructor and projections are written against.
+
+### `Mapping/DequeList.v`
+
+Opt-in: maps `list A` to `std::deque<A>` instead of the generated
+`List<A>`, for programs that index or work at both ends. A deque copies
+every element, so it is read by `const` reference, and a match copies the
+tail, so a head-tail recursion over a deque is quadratic. Maps `length`,
+`app`, `List.map`, `List.rev`, `List.filter`, `List.fold_right`,
+`List.fold_left`, `List.forallb`, `List.flat_map`, `List.concat`,
+`String.list_ascii_of_string`, `String.string_of_list_ascii`.
 
 ---
 
-## Effect Definitions
+## Effects
 
-All effect modules are built on interaction trees (ITrees). Each effect defines an inductive type representing its operations and smart constructors for invoking them.
+All effects are built on interaction trees (ITrees) and mapped with the
+legacy commands (`Crane Extract Monad`, `Crane Extract Inlined Constant`,
+`Crane Extract Skip`). Most effect modules share their definitions: a
+`*Defs.v` file holds the flavour-independent effect inductive and smart
+constructors, and the flavour files (`IO.v` for the standard library,
+`IOBDE.v` for BDE) re-export them with C++ mappings.
 
-Crane provides two ITree extraction modes. Use **erased mode** (the default) when your program simply runs effects — IO, STM, threads, etc. — and you never need to inspect the tree structure itself. This produces the most natural C++: monadic binds become sequential statements, and the ITree wrapper disappears entirely. Use **reified mode** when your Rocq code pattern-matches on `observe`, defines CoFixpoint-based servers or interpreters, or otherwise needs to traverse the ITree as a data structure. In reified mode the tree is preserved as a `std::shared_ptr<ITree<R>>` value that can be inspected, transformed, and eventually executed.
+### ITree modes
 
-To select a mode, import one of the two modules (they are mutually exclusive):
+Import one of the two (they are exclusive):
 
 ```coq
-From Crane Require Import Monads.ITree.          (* erased mode — default *)
-From Crane Require Import Monads.ITreeReified.    (* reified mode *)
+From Crane Require Import Monads.ITree.          (* erased mode, the default *)
+From Crane Require Import Monads.ITreeReified.   (* reified mode *)
 ```
 
-### `Monads/ITree.v` (Erased mode)
-
-The default ITree extraction mode. `itree E R` extracts to just `R` — the monadic wrapper is completely erased. `bind` becomes sequential statements and `Ret` disappears. Effect events are dispatched via inline customs on the smart constructors.
-
-Re-exports `ITreeBase.v` (shared library erasure directives).
-
-- **`itree (E : Type → Type) (R : Type) : Type`** — Coinductive interaction tree
-- **`bind`** — Monadic bind (erased to sequential statements)
-- **`Ret`**, **`Tau`**, **`Vis`** — Constructors (erased in this mode)
-- **`trigger`** — Trigger an effect
-- **`hoist`** — Transform effect types in a tree
-
-Supports monadic notation: `e1 ;; e2` for sequencing and `x <- c1 ;; c2` for binding.
-
-### `Monads/ITreeReified.v` (Reified mode)
-
-Alternative ITree extraction mode for programs that need to observe or traverse ITree structure — CoFixpoint servers, interpreters that pattern-match on `observe`, schedulers, etc.
-
-Import this module instead of `Monads.ITree`.
-
-- **`itree E R`** extracts to `std::shared_ptr<ITree<R>>`
-- **`bind`** extracts to actual function calls (not sequential statements)
-- **`Ret`/`Tau`/`Vis`** extract to constructors (not erased)
-- **`observe`** extracts to method call for pattern matching on `Ret`/`Tau`/`Vis`
-- Functions named `main` returning `itree E R` are extracted as `_main` with an automatic wrapper that calls `->run()`
+- **Erased** (`Monads/ITree.v`, re-exports `ITreeBase.v`): `itree E R`
+  extracts to `R`. `bind` becomes sequential statements, `Ret` the value, and
+  events are dispatched by the smart constructors' mappings. Use it when the
+  program only runs effects. Provides `itree`, `bind`, `Ret`, `Tau`, `Vis`,
+  `trigger`, `hoist`, and the notations `e1 ;; e2` and `x <- c1 ;; c2`.
+- **Reified** (`Monads/ITreeReified.v`): `itree E R` extracts to
+  `std::shared_ptr<ITree<R>>` (`crane_itree.h`); `bind` is a call, `Ret`,
+  `Tau` and `Vis` are constructors, and `observe` can be matched. Use it for
+  CoFixpoint servers, interpreters and schedulers that inspect the tree. A
+  function named `main` returning an `itree` is extracted as `_main` with a
+  wrapper that runs it.
 
 ### `Monads/IO.v` / `Monads/IOBDE.v`
 
-IO effects for console and file operations. Shared definitions are in `IODefs.v`.
-
-**Console effects (`consoleE`):**
-- **`print (s : string)`** — Print string without newline
-- **`print_endline (s : string)`** — Print string with newline
-- **`get_line`** — Read line from standard input
-
-**File effects (`fileE`):**
-- **`read (path : string)`** — Read contents of a file
-- **`write_file (path content : string)`** — Write content to a file
-- **`append_file (path content : string)`** — Append content to a file
-- **`file_exists (path : string)`** — Check if a file exists
-- **`remove_file (path : string)`** — Remove a file
+Console (`consoleE`): `print`, `print_endline`, `get_line`. Files (`fileE`):
+`read`, `write_file`, `append_file`, `file_exists`, `remove_file`. Shared
+definitions in `IODefs.v`.
 
 ### `Monads/STM.v` / `Monads/STMBDE.v`
 
-Software Transactional Memory effects. Shared definitions are in `STMDefs.v`. Both flavors use `stm_adapter.h` for the C++ implementation, backed by `crane-stm/`.
-
-- **`TVar (A : Type) : Type`** — Transactional variable (axiom)
-- **`newTVar {A} (a : A)`** — Create new transactional variable
-- **`readTVar {A} (v : TVar A)`** — Read value from transactional variable
-- **`writeTVar {A} (v : TVar A) (a : A)`** — Write value to transactional variable
-- **`atomically {A} (t : itree stmE A) : itree ioE A`** — Execute STM transaction atomically
-- **`orElse {A} (l r : itree stmE A) : itree stmE A`** — Alternative transaction
-- **`retry {A}`** — Retry the current transaction
-- **`check (b : bool)`** — Assert condition or retry
-- **`getSTM {A} (v : vector A) (i : int)`** — Transactional vector access
-- **`isEmptySTM {A} (v : vector A)`** — Transactional vector empty check
-- **`modifyTVar {A} (a : TVar A) (f : A → A)`** — Atomically modify a variable
+Software transactional memory, implemented by `stm_adapter.h` over
+`crane-stm/`. `TVar A`, `newTVar`, `readTVar`, `writeTVar`,
+`atomically : itree stmE A -> itree ioE A`, `orElse`, `retry`, `check`,
+`modifyTVar`, and `getSTM`, `isEmptySTM` over vectors. Shared definitions
+in `STMDefs.v`.
 
 ### `Monads/Thread.v` / `Monads/ThreadBDE.v`
 
-Thread-based concurrency effects. Shared definitions are in `ThreadDefs.v`.
-
-- **`thread : Type`** — Thread handle (axiom)
-- **`spawn {A B} (f : A → B) (a : A)`** — Create and start a new thread (axiom)
-- **`join (t : thread)`** — Wait for thread to complete
-- **`sleep (d : int)`** — Sleep for milliseconds
-- **`runConc {A} (c : itree concE A) : A`** — Execute a concurrent computation
-
-The `concE` effect composes `threadE` (join, sleep) with `consoleE` (print operations).
+`thread` (a `crane::thread`: copyable, joinable from any copy), `spawn`,
+`join`, `sleep` (milliseconds), `runConc`. `concE` composes `threadE` with
+`consoleE`. Shared definitions in `ThreadDefs.v`.
 
 ### `Monads/Par.v` / `Monads/ParBDE.v`
 
-Parallel computation effects using futures. Shared definitions are in `ParDefs.v`.
+Futures: `future B`, `async`, `get_thread` (`.get()`), `runPar`. Shared
+definitions in `ParDefs.v`.
 
-- **`future (B : Type) : Type`** — Future handle for async result (axiom)
-- **`async {A B} (f : A → B) (a : A)`** — Spawn async task, returns `future B`
-- **`get_thread {B} (t : future B)`** — Wait for task result (extracts to `.get()`)
-- **`runPar {A} (c : itree parE A) : A`** — Execute a parallel computation
+### Clock, directories, environment, paths, temporary files
 
-### `Monads/Clock.v` / `Monads/ClockBDE.v`
+| Module | Operations |
+| --- | --- |
+| `Clock.v` / `ClockBDE.v` | `steady_now`, `system_now`, `now` (milliseconds as `int`) |
+| `Dir.v` / `DirBDE.v` | `create_directory`, `remove_directory`, `list_directory`, `current_path` |
+| `Env.v` / `EnvBDE.v` | `get_env`, `set_env`, `unset_env` |
+| `Path.v` / `PathBDE.v` | `canonical`, `relative`, `absolute`, `is_directory`, `is_regular_file` |
+| `TempFile.v` / `TempFileBDE.v` | `create_temp_file`, `create_temp_dir` |
 
-Clock/time effects. Shared definitions are in `ClockDefs.v`. All timestamps are `int` (int63) representing milliseconds.
+Each has a `*Defs.v` file with the shared definitions.
 
-- **`steady_now`** — Monotonic clock time
-- **`system_now`** — Wall-clock time
-- **`now`** — Alias for `system_now`
+### `Monads/STMonad.v`
 
-### `Monads/Dir.v` / `Monads/DirBDE.v`
+A Haskell-style `ST` monad for local mutable state, distinct from STM.
+`STMonadFacts.v`, `STMonadSpec.v` and `STMonadArrayFacts.v` hold the
+reasoning principles (not extracted); `Indices.v` defines `Ix` (index types,
+after Haskell's `Data.Ix`) and `Ix_Correct`.
 
-Directory operations. Shared definitions are in `DirDefs.v`.
+The array and reference types are typed mappings:
 
-- **`create_directory (path : string) : bool`** — Create a directory
-- **`remove_directory (path : string) : bool`** — Remove a directory
-- **`list_directory (path : string) : list string`** — List directory contents
-- **`current_path : string`** — Get current working directory
+| Rocq | C++ | Views |
+| --- | --- | --- |
+| `STRef S A` | `std::shared_ptr<A>` | none |
+| `STArray T S A` | `std::shared_ptr<crane::array_storage<A>>` | `std::span<const A>` (read), `std::span<A>` (write), borrow-only |
 
-### `Monads/Env.v` / `Monads/EnvBDE.v`
+| Operation | C++ | Contract |
+| --- | --- | --- |
+| `newSTRef v` | `std::make_shared<A>(v)` | takes `v`, fresh identity |
+| `readSTRef r` | `*r` | reads `r` |
+| `writeSTRef r a` | `*r = a` | writes `r`, takes `a` |
+| `newArray lo hi def`, `newListArray lo hi elems` | a new `array_storage` | fresh identity |
+| `readArray arr i` | `arr[i]` | reads `arr` |
+| `writeArray arr i v` | `arr[i] = v` | writes `arr`, takes `v` |
+| `getElems arr` | the elements as a list | reads `arr` |
 
-Environment variable operations. Shared definitions are in `EnvDefs.v`.
+So a helper that reads and writes one array extracts as its own function
+taking `std::span<A>` (or `const std::shared_ptr<...>&` where it keeps the
+array) instead of being inlined into its caller. `crane::array_storage<bool>`
+stores addressable `bool`s, so the span mapping holds for every element
+type. Arrays are reference counted; cycles through an array are not
+collected.
 
-- **`get_env (name : string) : option string`** — Get environment variable
-- **`set_env (name value : string)`** — Set environment variable (POSIX `setenv`)
-- **`unset_env (name : string)`** — Unset environment variable (POSIX `unsetenv`)
+`Module Recursion` provides `rec` and `call` for writing recursive `ST`
+computations; it is skipped by extraction, and `rec`/`call` are mapped to an
+explicit work-stack idiom.
 
-### `Monads/Path.v` / `Monads/PathBDE.v`
+### `Monads/GlobalState.v`, `Monads/Error.v`
 
-Filesystem path operations. Shared definitions are in `PathDefs.v`.
-
-- **`canonical (path : string) : string`** — Canonicalize path
-- **`relative (path : string) : string`** — Make path relative
-- **`absolute (path : string) : string`** — Make path absolute
-- **`is_directory (path : string) : bool`** — Check if path is a directory
-- **`is_regular_file (path : string) : bool`** — Check if path is a regular file
-
-### `Monads/TempFile.v` / `Monads/TempFileBDE.v`
-
-Temporary file/directory creation. Shared definitions are in `TempFileDefs.v`.
-
-- **`create_temp_file (prefix : string) : string`** — Create a temporary file, returns path
-- **`create_temp_dir (prefix : string) : string`** — Create a temporary directory, returns path
-
-### `Monads/STMonad.v` / `Monads/STMonadFacts.v`
-
-A Haskell-style `ST` monad for encapsulated, in-place mutable state — distinct
-from the `STM` (software transactional memory) effect documented above. `ST`
-computations extract to plain in-place mutation with no transactional
-machinery; `STMonadFacts.v` provides the correctness lemmas for `ST`-based
-code (not extracted).
-
-- **`STRefClass (T : Type)`** — Type class for mutable reference cells
-- **`STRef`** — A mutable reference handle (extracts to a bare value, `%t2`)
-- **`newSTRef {A} (a : A)`** — Allocate a new reference (extracts to assignment)
-- **`readSTRef {A} (r : STRef A)`** — Read a reference's current value
-- **`writeSTRef {A} (r : STRef A) (a : A)`** — Write a reference's value
-- **`runST {A} (c : ...) : A`** — Run an `ST` computation, discharging its state
-- **`STArray`** — A mutable array (extracts to `std::vector<T> *`)
-- **`newArray`, `readArray`, `writeArray`, `newListArray`, `getElems`** — Array
-  operations on `STArray`
-- **`Ix (T : Type) (ltu : T -> T -> Prop)`** — Type class for indexable range
-  types (modeled after Haskell's `Data.Ix`), used to bound `STArray` indices
-- **`Ix_Correct`** — Correctness properties for an `Ix` instance (not extracted)
-- **`Module Recursion`** — Provides `rec`/`call` combinators for extracting
-  recursive computations written against the `ST` monad; the module itself is
-  skipped during extraction, with `rec`/`call` mapped directly to an explicit
-  C++ work-stack idiom
+A global-state event family (`crane_globals.h`) with its reasoning facts in
+`GlobalStateFacts.v`, and `Err`, the error type of runtime errors raised
+through ITree's exception events.
 
 ---
 
-## External Types
+## External types
 
 ### `External/Vector.v` / `External/VectorBDE.v`
 
-Defines a dynamic vector type. Shared definitions are in `VectorDefs.v`.
-
-- **`vector (A : Type) : Type`** — Dynamic vector of type A
-- **`emptyVec (A : Type)`** — Create empty vector
-- **`get {A} (v : vector A) (x : int)`** — Get element at index
-- **`push {A} (v : vector A) (a : A)`** — Append element
-- **`pop {A} (v : vector A)`** — Remove last element
-- **`size {A} (v : vector A)`** — Get vector length
-- **`isEmpty {A} (v : vector A)`** — Check if empty
-- **`assign {A} (v : vector A) (x : int) (a : A)`** — Set element at index
+`vector A` as `std::vector<A>` (or `bsl::vector`): `emptyVec`, `get`,
+`push`, `pop`, `size`, `isEmpty`, `assign`. Shared definitions in
+`VectorDefs.v`.
 
 ### `External/StringViewStd.v` / `External/StringViewBDE.v`
 
-Defines a string view type for non-owning string references with axiomatic properties. Shared definitions are in `StringViewDefs.v`.
-
-**Basic operations:**
-- **`string_view : Type`** — Non-owning string view (extracts to `std::basic_string_view<char>`)
-- **`empty (sv : string_view) : bool`** — Check if view is empty
-- **`empty_sv : string_view`** — The empty string view
-- **`sv_eq (sv1 sv2 : string_view) : bool`** — Equality check
-- **`length (sv : string_view) : int`** — View length
-- **`substr (sv : string_view) (i j : int) : string_view`** — Substring view from position i with length j
-- **`sv_get (sv : string_view) (i : int) : char63`** — Character access (unchecked)
-- **`sv_at (sv : string_view) (i : int) : char63`** — Character access (bounds-checked)
-- **`sv_of_string (s : string) : string_view`** — Convert string to view
-- **`contains (sv : string_view) (c : char63) : bool`** — Check if view contains character
-
-**Axiomatic properties:**
-- **`sv_eq_rel`** — Equivalence relation on string views
-- **`empty_substr`** — Zero-length substring is always empty
-- **`empty_length`** — View is empty iff its length is zero
-- **`length_of_string`** — String view length equals string length
-- **`substr_of_string_comm`** — Substring operations commute with string conversion
-- **`contains_iff_exists_get`** — A view contains a character iff it appears at some valid position
-- **`sv_get_substr`** — Characters in a substr match the original at offset positions
-- **`length_substr`** — Length of a substr is bounded by the requested length
-- **`length_substr_prefix`** — Prefix case: length of substr from 0
-- **`contains_substr_prefix_false`** / **`contains_substr_prefix_true`** — Contains correctness for prefixes
-- **`length_nonneg`** — Length is always non-negative
+An axiomatized `string_view` type (`std::basic_string_view<char>`) with
+`empty`, `empty_sv`, `sv_eq`, `length`, `substr`, `sv_get` (bounds-checked,
+returns the byte as `0..255`, `0` out of range), `sv_at` (throws out of
+range), `sv_of_string`, `contains`, and axioms relating them
+(`StringViewDefs.v`). For strings used as values, prefer `Mapping.Std`,
+whose `PrimString.string` mapping already passes read-only strings as
+`std::string_view`.
 
 ---
 
-## C++ Runtime Headers
+## C++ runtime headers
 
-Crane includes C++ header files that support extracted code at runtime. These are located in `theories/cpp/`.
+Generated code includes these by name, so `theories/cpp` (or
+`theories/cpp_bde` for BDE builds) must be on the include path
+(`-I<crane>/theories/cpp`). They are header-only.
 
-Generated code includes them by name, so the directory has to be on the
-compiler's include path (`-Itheories/cpp`) when you build extracted C++.
-
-### `small_vector.h`
-
-`crane::small_vector<T, N>`, a stack with inline storage for its first `N`
-elements. Used for the worklists in generated iterative destructors and for the
-frame stacks that [loopification](Reference-Manual.md#set-crane-loopify--crane-loopify)
-introduces. Both have depth proportional to a structure's *height* rather than
-its size, so in practice they stay within the inline capacity and never touch
-the heap; the vector spills to a heap buffer if they don't. Included by nearly
-every generated header.
-
-### `crane_fn.h`
-
-Helpers for storing a concrete callable into a type-erased `std::any` field. A
-value-dependent function type erased to `std::any` is read back at the
-application site as `std::function<std::any(std::any...)>`, so the construction
-site must store exactly that canonical representation rather than the raw
-closure — otherwise the `any_cast` throws.
-
-### `conslist.h`
-
-`crane::list<T>`, an immutable persistent singly-linked cons list: a chain of
-refcounted cells, which is the natural C++ image of a Rocq `list` and the same
-representation OCaml uses. `cons`, `head`, and `tail` are O(1) with full
-structural sharing. Available as a container mapping for code where consing is
-the hot path, which persistent random-access vectors handle badly.
-
-### `arena.h`
-
-The scoped-arena runtime: `crane::arena`, the `arena_scope` / `arena_use_scope`
-guards, and the factories that bump-allocate when a scope is open. Emitted only
-under [`Set Crane Arena`](Reference-Manual.md#set-crane-arena--crane-noarena).
-
-### `alloc_profile.h`
-
-Opt-in global allocation counters, for measuring the total heap allocation
-volume (count and bytes) of a generated program. Compiled in only when
-`CRANE_ALLOC_PROFILE` is defined — it overrides the global `operator new`/
-`delete` for the whole binary — and zero overhead otherwise.
-
-### `crane_itree.h`
-
-C++ runtime for reified interaction trees. Defines the `ITree<R>` template class with `Ret`, `Tau`, and `Vis` variants, `observe()` for pattern matching, `run()` for execution, and `itree_bind` for monadic composition.
-
-### `crane_real.h`
-
-C++ `Real` class wrapping `long double`, used by `Mapping/Real.v`. Provides arithmetic operators, trigonometric functions, and conversion utilities.
-
-### `stm_adapter.h`
-
-Adapter header providing the `stm::` namespace API (`newTVar`, `readTVar`, `writeTVar`, `atomically`, `orElse`, `retry`) that STM extraction mappings target.
-
-### `crane-stm/`
-
-Full C++ implementation of Software Transactional Memory with transaction logs, control blocks, and conflict detection. This is the backend that `stm_adapter.h` delegates to.
-
-### `persistent_array.h`
-
-Copy-on-write persistent array implementation used by `PrimArray` extraction.
-
-### `crane_pch.h`
-
-Precompiled header bundling the standard library headers commonly needed by
-generated code (`<memory>`, `<optional>`, `<variant>`, `<any>`, etc.), used to
-speed up compilation of extracted C++.
-
-### `lazy.h`
-
-Defines `crane::lazy<T>`, a memoizing thunk used to represent lazily-evaluated
-values (e.g., `CoFixpoint` bodies) in the generated C++ — `force()` evaluates
-the wrapped closure once and caches the result.
-
-### `mini_stm.h`
-
-An earlier, self-contained single-header STM implementation. `stm_adapter.h`
-now documents itself as providing a `mini_stm.h`-compatible API on top of the
-full `crane-stm/` backend, so `mini_stm.h` is kept as a reference for that
-API surface rather than being the active STM implementation.
-
-### `rc.h`
-
-A single-allocation, single-threaded `rc<T>`/`weak<T>` smart pointer pair
-(control block and value share one heap allocation, non-atomic reference
-counts). Used by `stm_adapter.h`/`crane-stm/` internals where the overhead
-of `std::shared_ptr`'s atomic counting and separate control block isn't
-needed.
-
-### `skipnode.h`
-
-C++ runtime support for the STM-backed skip list example (`SkipNode`,
-forward-pointer levels). `MAX_LEVELS` must be kept in sync with the
-corresponding Rocq `SkipList.v`'s `maxLevels` constant.
+| Header | Contents |
+| --- | --- |
+| `small_vector.h` | `crane::small_vector<T, N>`, a stack with inline storage for the worklists of iterative destructors and the frame stacks of loopified functions |
+| `fn.h`, `crane_fn.h` | `crane::fn<R(A...)>`, a closure as a shared immutable value; storing a callable into an erased field |
+| `obj.h` | `crane::obj`, an erased value, shared rather than copied |
+| `shared_block.h` | the header of every shared runtime block: count and destroy function; immortal and sticky counts |
+| `shared_variant.h`, `word.h` | `crane::shared_variant` (`Set Crane SharedVariant`) |
+| `crane_variant.h` | `crane::variant` (`Set Crane FastVariant`) |
+| `field.h` | `crane::field<T>` (`Set Crane BoxedFields`) |
+| `rc.h` | `crane::rc<T>`, single-allocation non-atomic counting (`Set Crane NonAtomicRc`) |
+| `pool.h` | the per-thread (or, under `SingleThreaded`, global) heap of small blocks |
+| `lazy.h` | `crane::lazy<T>`, a memoising thunk for coinductive values |
+| `arena.h` | scoped arenas (`Set Crane Arena`) |
+| `persistent_array.h` | the copy-on-write array `PrimArray` maps to |
+| `shared_array.h` | `crane::shared_array<T>`, an immutable shared array; static blocks for baked constants |
+| `array_storage.h` | `crane::array_storage<T>`, one addressable element each (ST arrays) |
+| `crane_st.h` | ST array helpers |
+| `crane_string.h` | the `PrimString` operations |
+| `crane_int63.h`, `crane_float.h` | the `PrimInt63` and `PrimFloat` primitives without an operator |
+| `writable.h` | `crane::writable(v).ref()`, a temporary an in-place argument binds |
+| `template_argument.h` | `crane::template_argument_t<T, I>`, used by view conversions |
+| `crane_hash.h` | `crane::hash<T>`, including pairs |
+| `conslist.h` | `crane::list<T>`, a persistent cons list, available as a container mapping |
+| `aggregate.h` | a struct's fields as a pack (C++26) or counted bindings (C++20) |
+| `crane_bake.h` | the `Crane Bake` writer and reader |
+| `crane_unreachable.h` | `crane::unreachable()` for builds before C++23 |
+| `crane_thread.h` | `crane::thread`, a copyable thread handle |
+| `crane_itree.h` | reified interaction trees |
+| `crane_real.h` | the `Real` class |
+| `crane_globals.h` | storage for the global-state event family |
+| `stm_adapter.h`, `crane-stm/` | the STM API and its implementation |
+| `mini_stm.h` | an earlier single-header STM, kept as the reference for `stm_adapter.h`'s API |
+| `skipnode.h` | support for the STM skip-list example |
+| `crane_pch.h` | a precompiled header of the standard headers generated code uses |
+| `alloc_profile.h`, `stats.h`, `count_rc.h` | measurement: allocation counters (`CRANE_ALLOC_PROFILE`), event counters (`CRANE_STATS`), reference-count traffic (`CRANE_COUNT_RC=1` at extraction) |

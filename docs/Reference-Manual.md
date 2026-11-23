@@ -1,112 +1,531 @@
 # Reference Manual
 
-This reference manual documents all Crane commands, configuration settings, extraction rules, and supported syntactic forms.
-It is intended to be exhaustive, precise, and implementation-accurate.
+This manual documents every Crane vernacular command, option and mapping
+form, and the environment variables a user may set. For how the plugin works
+inside, see [Compiler-Pipeline.md](Compiler-Pipeline.md).
+
+Every command needs the plugin loaded: `From Crane Require Extraction.` (or
+`From Crane Require Import Extraction.`). Command names, option names and
+the syntax below are those of `src/g_extraction.mlg` and `src/base/table.ml`.
+
+Contents:
+
+- [Extracting](#extracting): `Crane Extraction` and its variants,
+  `Crane Show Extraction`, `Crane Extraction Language`
+- [Mappings](#mappings): how Rocq types and operations become C++
+- [Typed mappings](#typed-mappings): `TypeMapping`, `OperationMapping`,
+  `Crane Show Mapping`, `Crane Check Mapping`
+- [Legacy mapping commands](#legacy-mapping-commands): `Crane Extract
+  Inductive`, `Crane Extract Inlined Constant`, `Crane Extract Constant`,
+  `Crane Extract Foreign Constant`, `Crane Extract Numeral`,
+  `Crane TriviallyCopyable`, `Crane Extract Monad`, `Crane Extract Skip`,
+  `Crane Extract Skip Module`, `Crane Extract Void`, `Crane Extract Callback`
+- [Which headers a unit includes](#which-headers-a-unit-includes)
+- [`Crane Bake`](#crane-bake)
+- [Code generation options](#code-generation-options): `StdLib`, `Loopify`,
+  `Reuse`, `Arena`, `NonAtomicRc`, `SingleThreaded`, `FastVariant`,
+  `SharedVariant`, `BoxedFields`, `Format Style`, output and optimisation
+  options
+- [Other commands](#other-commands): `Crane Extraction Inline`,
+  `Crane Extraction Implicit`, `Crane Extraction Blacklist`,
+  `Crane Guard Compare`, `Crane Benchmark`
+- [Environment variables](#environment-variables)
 
 ---
 
-## `Crane Extract Inductive`
+## Extracting
 
-Define how a Rocq inductive type should be mapped to C++.
-
-### Syntax
+### `Crane Extraction`
 
 ```coq
-Crane Extract Inductive <Rocq type> =>
-  "<C++ type>"
-  [ "<C++ term for Rocq constructor 0>"  "<C++ term for Rocq constructor 1>" ]
-  "<C++ statements for pattern matching>"
-  From "<library0>" "<library1>".
+Crane Extraction <qualid>.
+Crane Extraction "<output path>" <qualid> ... <qualid>.
+Crane Recursive Extraction <qualid> ... <qualid>.
+Crane Separate Extraction <qualid> ... <qualid>.
+Crane Extraction Library <ident>.
+Crane Recursive Extraction Library <ident>.
+Crane Extraction TestCompile <qualid> ... <qualid>.
+Crane Extraction TestCompile "<output path>" <qualid> ... <qualid>.
 ```
 
-* **`<Rocq type>`**
-  The name of the Rocq inductive type being mapped (e.g., `option`, `prod`, `list`).
+* `Crane Extraction <qualid>` extracts one definition, module or type with
+  its dependencies and prints the code instead of writing files.
+* `Crane Extraction "<output path>" ...` writes `<output path>.h` and
+  `<output path>.cpp` (a trailing `.cpp` in the path is dropped). A relative
+  path is resolved against the output directory (see
+  [Output options](#output-options)). The usual form names one module:
+  `Crane Extraction "tokenizer" Tokenizer.` The module becomes a C++ struct
+  (or a namespace) named after it.
+* `Crane Recursive Extraction` extracts several definitions and their
+  dependencies together and prints the result.
+* `Crane Separate Extraction` writes one `.h`/`.cpp` pair per Rocq library
+  the definitions and their dependencies come from, each including the
+  headers of the libraries it uses.
+* `Crane Extraction Library <ident>` extracts the loaded library `<ident>`
+  to files named after it; `Crane Recursive Extraction Library` also extracts
+  every library it depends on.
+* `Crane Extraction TestCompile` extracts as `Crane Extraction` does and then
+  compiles the result with `clang++` (using the `StdLib` and BDE settings),
+  as a check that it builds.
 
-* **`"<C++ type>"`**
-  The C++ type expression that corresponds to the Rocq inductive type. This is a template string that may include type parameter placeholders (`%t0`, `%t1`, etc.) to represent polymorphic type arguments.
+Every extraction uses the mappings and options in effect at the command.
+A unit that includes the header of a unit extracted earlier (separate
+extraction across files) must resolve the same typed mappings for the heads
+that header was written against; a different instance or no mapping is an
+error naming both.
 
-* **`[ "<C++ term for Rocq constructor 0>" "<C++ term for Rocq constructor 1>" ... ]`**
-  A space-separated list of C++ expressions enclosed in square brackets, one for each constructor of the Rocq inductive type. Each expression defines how to construct a value of the C++ type corresponding to that Rocq constructor. These expressions may use constructor argument placeholders (`%a0`, `%a1`, etc.).
-
-* **`"<C++ statements for pattern matching>"`**
-  A C++ code block that implements pattern matching (case analysis) on values of this type. This should dispatch to the appropriate branch based on which constructor was used, binding constructor arguments to names specified by branch parameter placeholders (`%b0a0`, `%b0a1`, etc.) and executing the corresponding branch code (`%br0`, `%br1`, etc.).
-
-* **`From ...` clause**
-  A space-separated list of libraries/headers whose inclusion is required.  Crane will translate these to the corresponding `#include <...>` directives.  A type mapping must name the header that declares its type: see [Which headers a unit includes](#which-headers-a-unit-includes).
-
-### Example: mapping Rocq's `option` type to `std::optional`
+### `Crane Show Extraction`
 
 ```coq
-Crane Extract Inductive option =>
-  "std::optional<%t0>"
-  [ "std::make_optional<%t0>(%a0)"
-    "std::nullopt" ]
-  "if (%scrut.has_value()) {
-     %t0 %b0a0 = *%scrut; %br0
-   } else {
-     %br1
-   }"
-  From "optional" "memory".
+Crane Show Extraction.
 ```
 
-### Example: mapping Rocq's `prod` type to `std::pair`
+Inside a proof, prints the C++ extraction of the term built so far.
+
+### `Crane Extraction Language`
+
+```coq
+Crane Extraction Language C++.
+```
+
+`C++` is the only language. The command exists for parity with Rocq's
+extraction.
+
+---
+
+## Mappings
+
+A mapping tells Crane how to represent a Rocq type, or how to implement a
+Rocq operation, in C++. Without one, Crane generates its own C++ for every
+inductive type and function it extracts.
+
+There are two mechanisms:
+
+* **Typed mappings** are type-class instances of `TypeMapping` and
+  `OperationMapping` from `theories/Mapping/Descriptor.v`. They state the C++
+  type as structured data, and contracts that the access, ownership and view
+  analyses read: how a value is copied, read, written and passed, and what
+  an operation does with each argument. An instance is active when the
+  module that declares it is imported (`#[export] Instance`), so the imports
+  of a file are its mapping configuration. Every mapping in
+  `theories/Mapping/` and the ST arrays and references of
+  `Monads/STMonad.v` are typed.
+* **Legacy mapping commands** (`Crane Extract Inductive`, `Crane Extract
+  Inlined Constant`, ...) give C++ as template strings with no contract.
+  They remain necessary for monads and effects (`Crane Extract Monad`,
+  `Skip`, `Void`), which have no typed form yet, and are used by the effect
+  libraries in `theories/Monads/` and `theories/External/`.
+
+A head may be mapped by one mechanism only. When an extraction starts, a
+head mapped both by an active instance and by a legacy `Crane Extract ...`
+(or `Crane Extract Numeral`) command is an error:
+
+```text
+Crane: option is mapped twice: by the typed mapping std_option_mapping and by
+a legacy Crane Extract command. ...
+```
+
+Because typed instances activate on `Import`, a bare
+`Require Crane.Mapping.Std.` no longer selects the standard mappings; write
+`From Crane Require Import Mapping.Std.`
+
+---
+
+## Typed mappings
+
+The descriptor library is `Crane.Mapping.Descriptor`. It contains inductive
+types and records only. Strings are `PrimString.string`, so a mapping file
+opens `pstring_scope`. The design and its rationale are in
+[typed-mappings-design.md](typed-mappings-design.md).
+
+### Example
+
+An abstract type mapped to `std::uint64_t`, with three operations:
+
+```coq
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
+From Crane Require Import Extraction Mapping.Descriptor.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
+Open Scope pstring_scope.
+
+Axiom Counter : Type.
+Axiom counter_zero : Counter.
+Axiom counter_add : Counter -> nat -> Counter.
+Axiom counter_value : Counter -> nat.
+
+#[export] Instance counter_mapping : TypeMapping Counter :=
+  {| type_headers := ["cstdint"];
+     type_cpp := Crane.Cpp.Name "std::uint64_t";
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews Counter;
+     type_interface := AbstractInterface;
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+
+#[export] Instance counter_zero_mapping : OperationMapping (Ref counter_zero) :=
+  {| operation_headers := ["cstdint"];
+     operation_cpp := Expr "std::uint64_t{0}";
+     operation_contract := PureOperation [] ReturnValue [] |}.
+
+#[export] Instance counter_add_mapping : OperationMapping (Ref counter_add) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(c) + %arg(n))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "c"; argument_use := Read |};
+          {| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+
+#[export] Instance counter_value_mapping : OperationMapping (Ref counter_value) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(c)";
+     operation_contract :=
+       PureOperation [{| argument_name := "c"; argument_use := Read |}]
+         ReturnValue [] |}.
+
+Module Counting.
+Definition total (xs : list nat) : nat :=
+  counter_value (fold_left counter_add xs counter_zero).
+End Counting.
+
+Crane Extraction "counting" Counting.
+```
+
+`Counting::total` is generated as a fold over the list whose accumulator is
+a `std::uint64_t`, starting at `std::uint64_t{0}` and adding with
+`(_x0 + _x1)`. Algebraic examples (a user inductive mapped to
+`std::uint8_t` or `std::optional`, matches included) are in
+`tests/regression/typed_mapping_algebraic/`; `theories/Mapping/StdCore.v` maps
+`option` and `prod` the same way.
+
+### `TypeMapping T`
+
+```coq
+Class TypeMapping (T : Type) : Type := {
+  type_headers : list string;
+  type_cpp : Crane.Cpp.TypeExpr;
+  type_components : list Component;
+  type_copy : CopyModel;
+  type_access : AccessModel;
+  type_views : Views T;
+  type_interface : TypeInterface;
+  type_model : ValueModel;
+  type_lifetime : LifetimeModel;
+  type_release : ReleasePlan;
+  type_numerals : option (NumeralSpec T)
+}.
+```
+
+An instance may be parametric (`Instance m (A : Type) : TypeMapping (option
+A)`); it is compiled once per head, and a type argument at a use stands for
+the parameter it instantiates.
+
+| Field | Meaning |
+| --- | --- |
+| `type_headers` | Headers the C++ type needs, included wherever a unit uses the type. |
+| `type_cpp` | The canonical C++ type, structured: `Crane.Cpp.Name "std::string"`, `Crane.Cpp.Apply "std::optional" [Crane.Cpp.TypeArg t]`, `Crane.Cpp.Pointer t`, `Crane.Cpp.Const t`, `Crane.Cpp.StoredComponent "c"` (the C++ type Crane chose for component `c`), `Crane.Cpp.SourceType T` (the C++ type of a Rocq type), `Crane.Cpp.UnsafeVerbatim "..."` (raw text; warns). `Crane.Cpp.ValueArg "..."` is a non-type template argument. Must not be a reference. |
+| `type_components` | Named parts of the value, each `{\| component_name := "c"; component_type := ... \|}`: `KnownType A` (a type parameter) or `FieldType (Ref ctor) i` (field `i`, from 0 after the parameters, of a constructor). Templates refer to them with `%stored(c)`. |
+| `type_copy` | What a copy costs: `BitCopy` (scalar or raw handle), `RetainIdentity` (shares one identity, as `shared_ptr`), `DuplicateValue` (independent copy, possibly expensive), `CopyComponents ["c"; ...]` (a bounded aggregate that costs what the named components cost), `UnknownCopy`. Replaces `Crane TriviallyCopyable`. |
+| `type_access` | How the canonical value may be read, written and passed (below). |
+| `type_views` | `NoViews T`, `ReadViews r`, or `ReadWriteViews r w read_from_write` (below). |
+| `type_interface` | `AbstractInterface` (no constructors visible), or `AlgebraicInterface [ctor mappings]`: how each constructor is built and matched (below). |
+| `type_model` | `Structural` (copies are the same value), `Identity` (copies alias one mutable identity), `Unspecified`. |
+| `type_lifetime` | `NativeRAII` (the C++ value owns its resource), `RegionOwned (Ref r)`, `ExternallyOwned`, `ManualShared (Ref retain) (Ref release)`. A raw pointer with `NativeRAII` is rejected. |
+| `type_release` | `OrdinaryRelease` or `DrainWith "..."`. |
+| `type_numerals` | How a literal of the type is written (below), or `None`. |
+
+`type_model`, `RegionOwned`, `ManualShared` and `DrainWith` are validated and
+recorded in a unit's compiled interface; code generation does not yet act on
+them.
+
+#### Access models
+
+| `type_access` | Canonical read | Write through | Replace | Take |
+| --- | --- | --- | --- | --- |
+| `ReadOnlyValue ReadByValue` | `T` | invalid | invalid | `T` |
+| `ReadOnlyValue ReadByConstReference` | `const T&` | invalid | invalid | `T` |
+| `ReadOnlyValue (ReadByComponents cs)` | `T` if every component in `cs` is read by value, else `const T&` | invalid | invalid | `T` |
+| `MutableValue style` | from `style` | `T&` | `T&` | `T` |
+| `ReadOnlyHandle HandleByValue` | `T` | invalid | invalid | `T` |
+| `ReadOnlyHandle HandleByConstReference` | `const T&` | invalid | invalid | `T` |
+| `MutableHandle HandleByValue` | `T` | `T` | `T&` | `T` |
+| `MutableHandle HandleByConstReference` | `const T&` | `const T&` | `T&` | `T` |
+
+`ExplicitAccess {| explicit_read := ...; explicit_write := ...;
+explicit_replace := ... |}` gives each form directly (`CanonicalByValue`,
+`CanonicalByConstReference`, `CanonicalByMutableReference`, or
+`ExactParameter "..."`, which warns). Crane picks each generated function's
+parameter form from what the function does with the parameter (the access
+analysis) and the type's access model: a function that only reads a
+`ReadByConstReference` value takes `const T&`, one that writes through a
+`MutableHandle HandleByConstReference` handle takes `const T&` too, one that
+replaces it takes `T&`, and one that keeps it takes `T`. A function named as
+a value (passed, stored, partially applied) keeps canonical forms.
+
+#### Views
+
+A view is a non-owning value, cheap to pass, that a function may take
+instead of the canonical value:
+
+```coq
+Record ViewSpec (T : Type) (mode : ViewMode) : Type := {
+  view_headers : list string;
+  view_cpp : Crane.Cpp.TypeExpr;
+  view_from_canonical : string;   (* %value: a live canonical value *)
+  view_escape : ViewEscape T      (* MaterialiseView (Expr "...%view...") | BorrowOnly *)
+}.
+```
+
+`ReadViews r` declares a read view; `ReadWriteViews r w "..."` adds a
+writable view and the conversion (over `%view`) that narrows it to the read
+view. A parameter that is only read (`Read`) takes the read view, one that
+is written (`Write`) the writable view. A view returned borrowed from an
+operation stays a view while its owner lives; where it escapes (returned,
+stored, passed canonically) it is materialised by `MaterialiseView`, or
+refused under `BorrowOnly`. A view passed beside an argument the callee may
+invalidate views of is taken of a copy, or refused.
+
+The standard string mapping (`Mapping/Std.v`) declares a
+`std::string_view` read view materialised as `std::string`, so a generated
+function that only reads a string takes `std::string_view`. ST arrays
+(`Monads/STMonad.v`) declare `std::span<const T>` and `std::span<T>` views,
+`BorrowOnly`.
+
+#### Constructors and matches
+
+```coq
+Record ConstructorMapping : Type := {
+  ctor_source : Declaration;           (* Ref (@Some A) *)
+  ctor_build : Construction;           (* Expr "..." or WithBody "init" "body" *)
+  ctor_view : option ConstructorView
+}.
+Record ConstructorView : Type := {
+  view_requirement : ObservationRequirement;  (* PreferredObservation | CanonicalObservation *)
+  case_test : string;                          (* over %scrut *)
+  case_fields : list (nat * Projection)        (* field index, projection *)
+}.
+```
+
+A projection is `OwnedProjection "..."` (a new value),
+`CanonicalBorrowProjection "..."` (a reference into the scrutinee) or
+`ReadViewProjection "..."` (a read view of a field). A match tests the
+constructor views in the order the list gives them; the last needs no test.
+Each constructor of the type appears at most once.
+
+#### Numerals
+
+```coq
+Record NumeralSpec (T : Type) : Type := {
+  numeral_cases : list NumeralCase;      (* per constructor: NumeralZero, NumeralOne,
+                                            NumeralSuccessor i, NumeralDouble i,
+                                            NumeralDoublePlusOne i, NumeralIdentity i,
+                                            NumeralNegate i *)
+  numeral_emitter : NumeralEmitter;      (* IntegerToken "prefix" "suffix"
+                                            | DecimalConstructor "callee" *)
+  numeral_converters : list Declaration  (* e.g. [Ref Nat.of_num_uint] *)
+}.
+```
+
+`Mapping/NatIntStd.v` maps `nat` to `uint64_t` with
+`IntegerToken "UINT64_C(" ")"`, so `S (S (S O))` is written `UINT64_C(3)`.
+A typed type's literals come from its descriptor; an extraction where the
+type also has a `Crane Extract Numeral` fails.
+
+### `OperationMapping (Ref op)`
+
+```coq
+Class OperationMapping (source : Declaration) : Type := {
+  operation_headers : list string;
+  operation_cpp : Construction;
+  operation_contract : OperationContract
+}.
+```
+
+`Ref op` names the operation by identity; Crane never unfolds it.
+`Ref (@fst)` and `Ref (@PrimArray.get)` name polymorphic operations.
+`operation_cpp` is `Expr "..."` or `WithBody "init" "body"`, where the body
+completes the `%result` slot the initialiser declares.
+
+The contract is `PureOperation args result facts`,
+`EffectfulOperation args result facts`, or `OpaqueOperation`. `args` binds
+one `{| argument_name := "x"; argument_use := u |}` to each argument Crane
+keeps at run time, in source order (type arguments, proofs, type-class
+instances and `Crane Extraction Implicit` positions are not listed); the
+template names them `%arg(x)`. Crane evaluates every argument once, in
+source order, before the template is expanded, however often the template
+mentions it.
+
+| `InputUse` | Meaning | Parameter it asks for |
+| --- | --- | --- |
+| `Ignore` | not observed; the template may not mention it | none |
+| `Read` | read during the call | read view if any, else canonical read |
+| `ReadCanonical` | read, and needs the canonical representation | canonical read |
+| `Write` | mutated in place during the call, not kept | writable view if any, else write-through |
+| `WriteCanonical` | mutated, needs the canonical representation | write-through |
+| `Take` | owned by the operation | the value (moved at its last use, else copied) |
+| `Replace` | may replace or reseat the caller's value | `T&` |
+| `OpaqueUse` | unknown | conservative |
+
+An argument written or replaced in place must be a variable the caller may
+write; anything else is copied into a temporary for the call.
+
+| `ResultSpec` | Meaning |
+| --- | --- |
+| `ReturnValue` | a new value |
+| `ReturnBorrowed form {\| path_argument := "x"; path_components := [...] \|}` | a borrow (`CanonicalBorrow`, `ReadViewBorrow`, `WritableViewBorrow`) of a component of argument `x` |
+| `ReturnSameIdentity "x"` | the identity of argument `x` |
+| `ReturnFreshIdentity inits` | a new identity, with its components initialised from arguments |
+| `ReturnOpaque` | unknown |
+
+Facts: `ReadsComponent path`, `WritesComponent path (Some "x")`,
+`InvalidatesElementBorrows path` (an element assignment),
+`InvalidatesViews path` (a resize), `RetainsArgument "x" path`,
+`ReleasesIdentity "x"`, `ExternalEffect "name"`. A `PureOperation` may not
+write, replace, return a fresh identity, write a component, retain outside
+its result, release, or have an external effect.
+
+`Mapping/StdCore.v` maps `fst` and `snd` as borrows
+(`ReturnBorrowed CanonicalBorrow` of component `first`/`second`), so a `let`
+binding one out of a pair binds it by `const` reference.
+
+### Template holes
+
+| Hole | Meaning | Allowed in |
+| --- | --- | --- |
+| `%arg(x)` | the prepared argument named `x` | `operation_cpp` |
+| `%aN` | constructor argument `N` | `ctor_build` |
+| `%stored(c)` | the C++ type of component `c` | everywhere |
+| `%tN` | the C++ type of type argument `N` | everywhere |
+| `%ret` | the result type | `ctor_build`, projections, `operation_cpp`, `MaterialiseView` |
+| `%result` | the owning result slot | the body of a `WithBody` |
+| `%scrut` | the value matched | `case_test`, projections |
+| `%value` | the canonical value a view is made from | `view_from_canonical` |
+| `%view` | the view being converted or materialised | `read_from_write`, `MaterialiseView` |
+| `%tmpN` | a fresh local name | everywhere |
+
+Holes are found outside C++ comments and string and character literals
+(raw string literals are not recognised). A hole not allowed in its context,
+or a `%stored(c)` naming an undeclared component, is an error when the
+mapping is resolved.
+
+### Selection and errors
+
+For a type or operation, Crane tries every active instance with that head
+and unifies its class argument with the use:
+
+* none applies: the head is unmapped and Crane generates its own C++;
+* one applies: it is decoded, validated and compiled;
+* more than one applies: an error naming all of them. Instance priorities
+  are never consulted, so importing two modules that map the same type
+  differently is an error, not an override.
+
+Validation errors name the instance, the mapped type or operation, and the
+rule broken (an argument list that does not match the retained arguments,
+`Write` on a read-only type, a canonical type that is a reference,
+`ReadWriteViews` on a read-only access model, a constructor listed twice, a
+field index out of range, ...). `UnsafeVerbatim` and `ExactParameter` are
+accepted with the warning `crane-mapping-unsafe`.
+
+### `Crane Show Mapping` and `Crane Check Mapping`
+
+```coq
+Crane Show Mapping <term>.
+Crane Check Mapping <term> Selects <qualid>.
+Crane Check Mapping <term> Unmapped.
+Crane Check Mapping <term> Fails With "<text>".
+```
+
+* `Crane Show Mapping` prints the instance that maps a type or an operation
+  and the decoded descriptor:
+
+  ```text
+  Counter is mapped by counter_mapping:
+  TypeMapping
+    type_headers := ["cstdint"]
+    type_cpp := Name "std::uint64_t"
+    ...
+  ```
+
+* `Crane Check Mapping ... Selects inst` fails unless `inst` maps the term;
+  `Unmapped` fails if any typed mapping applies; `Fails With "text"` fails
+  unless resolving the mapping fails with a message containing `text`
+  (spacing ignored). They are meant for tests:
+
+  ```coq
+  Crane Check Mapping (option nat) Selects std_option_mapping.
+  Crane Check Mapping (list nat) Unmapped.
+  ```
+
+`CRANE_TRACE_MAPPINGS=1` reports, during extraction, every discovered head
+and every resolved descriptor.
+
+### What has no typed form yet
+
+Monads (`Crane Extract Monad`), effect events, `Crane Extract Skip` and
+`Crane Extract Void` have no typed counterpart; the effect libraries and
+`External/` use the legacy commands. The legacy commands are not deprecated
+until they do.
+
+---
+
+## Legacy mapping commands
+
+These commands map with C++ template strings. A string argument written as
+`"..."` may also be a bare identifier where the grammar says `cppname`.
+
+### `Crane Extract Inductive`
+
+```coq
+Crane Extract Inductive <inductive> => "<C++ type>"
+  [ "<constructor 0>" ... "<constructor n>" ]
+  ["<match template>"]
+  [Boxed Element "<wrapper>"]
+  [Drain "<drain template>"]
+  [From "<header>" ...].
+```
+
+The clauses must appear in this order; each in brackets is optional. The
+constructor list must have one entry per constructor.
+
+| Placeholder | Meaning |
+| --- | --- |
+| `%t0`, `%t1`, ... | type parameters of the inductive |
+| `%a0`, `%a1`, ... | constructor arguments |
+| `%scrut` | the matched value |
+| `%b0a0` | name bound to argument 0 of branch 0 |
+| `%br0`, `%br1`, ... | the branch for constructor 0, 1, ... |
+| `%elem` | the element slot of a container with a `Boxed Element` clause |
+| `%yield(e)` | in a `Drain` template: push child `e` onto the destructor's worklist |
 
 ```coq
 Crane Extract Inductive prod =>
   "std::pair<%t0, %t1>"
   [ "std::make_pair(%a0, %a1)" ]
-  "%t0 %b0a0 = %scrut.first;
-   %t1 %b0a1 = %scrut.second;
-   %br0"
+  "const auto& [%b0a0, %b0a1] = %scrut; %br0"
   From "utility".
 ```
 
-### Structure
+(`option` and `prod` are typed in `Mapping/StdCore.v`; the example is how a
+legacy mapping is written.)
 
-Placeholders inside extraction templates provide access to type arguments,
-constructor arguments, branch parameters, and the scrutinee.
+#### `Boxed Element`
 
-### Placeholder Table
-
-| Placeholder       | Meaning                                          |
-| ----------------- | ------------------------------------------------ |
-| `%t0`, `%t1`, ... | Type parameters to the inductive type            |
-| `%a0`, `%a1`, ... | Constructor arguments                            |
-| `%scrut`          | Scrutinee in a pattern match                     |
-| `%b0a0`           | Name bound to the 0th argument of the 0th branch |
-| `%br0`, `%br1`    | The branch for the 0th, 1st, ... constructor.    |
-| `%elem`           | Element slot of a container carrying a `Boxed Element` clause (see below) |
-
-### `Boxed Element` clause
-
-Some C++ container types require a **complete** element type: they evaluate `sizeof`/`alignof` of the element at the point the container type is *named*, not merely when it is used (the immer containers behave this way). A Rocq inductive that is recursive *through* such a container — for example a `json` type with a field of type `list json` — would name the container with an incomplete element type, which does not compile. The `Boxed Element` clause lets a container mapping wrap its element in a pointer-sized indirection (a "box") **only at those recursive occurrences**, leaving every other element unwrapped.
-
-#### Syntax
-
-```coq
-Crane Extract Inductive <Rocq type> =>
-  "<C++ type using %elem>"
-  [ "<C++ term for Rocq constructor 0>" ... ]
-  "<C++ statements for pattern matching>"
-  Boxed Element "<wrapper>"
-  From "<library0>" "<library1>".
-```
-
-The clause appears after the pattern-matching block and before the `From` clause; as elsewhere, the `From` clause may be omitted.
-
-* **`"<wrapper>"`**
-  A C++ type template over `%t0` (the bare element type) that provides the indirection, e.g. `"immer::box<%t0>"`. The wrapper must be pointer-sized, copyable, and convert implicitly both to and from `%t0`, so that the constructor and pattern-matching templates are identical whether or not the element is boxed.
-
-#### The `%elem` placeholder
-
-With a `Boxed Element` clause, use `%elem` in place of `%t0` in the container's type and constructor templates wherever the stored element type appears. Crane resolves `%elem`, per element type, to:
-
-* the wrapper applied to that element (`%t0` substituted with the element type) when the element is a generated inductive that recurses through this container, and
-* the bare element type otherwise.
-
-The decision is made per element type and is global: a given `<container> T` has one and the same C++ representation everywhere it occurs. Element types that can never be recursive through the container — scalars, custom-mapped types, function types, all-nullary (`enum class`) inductives, and non-recursive structs — are never boxed.
-
-#### Example
+Some containers need a complete element type where the container type is
+named (the immer containers do). An inductive recursive through such a
+container, for example a `json` with a field of type `list json`, would name
+it with an incomplete element type. `Boxed Element "<wrapper>"` wraps the
+element in a pointer-sized indirection only at those recursive occurrences.
+Write `%elem` instead of `%t0` in the container's type and constructor
+templates; Crane resolves it to the wrapper applied to the element where the
+element is a generated inductive recursive through this container, and to
+the bare element otherwise. The wrapper must be pointer-sized, copyable, and
+convert implicitly to and from `%t0`.
 
 ```coq
 Crane Extract Inductive list =>
@@ -120,167 +539,183 @@ Crane Extract Inductive list =>
   From "immer/flex_vector.hpp" "immer/box.hpp".
 ```
 
-Given `Inductive json := JList (elems : list json) | ...`, the recursive `list json` occurrence is emitted as `immer::flex_vector<immer::box<json>>`, while a non-recursive occurrence such as `list ascii` is emitted as `immer::flex_vector<char>` — unboxed.
+The recursive `list json` becomes `immer::flex_vector<immer::box<json>>`;
+`list ascii` stays `immer::flex_vector<char>`. A field already boxed this way
+is stored by value, not behind another `std::shared_ptr`.
 
-#### Interaction with recursive fields
+#### `Drain`
 
-Crane normally wraps a constructor field that recurses through a container in `std::shared_ptr` (or, under `Crane Arena`, a raw region pointer) so that the field has a known size while the type is still incomplete. When the element is already boxed via a `Boxed Element` clause, that box breaks the cycle, so the outer indirection is redundant: Crane stores such a field **by value** instead. In the example above, `JList`'s field is emitted as `immer::flex_vector<immer::box<json>>` directly, not `std::shared_ptr<immer::flex_vector<immer::box<json>>>`.
-
----
-
-## `Crane TriviallyCopyable`
-
-Declare that the C++ type a Rocq type is mapped to is trivially copyable whenever its type arguments are.
-
-### Syntax
+A generated inductive's destructor frees deep values with a loop instead of
+recursion. For a field held in a mapped container, `Drain` says how to hand
+the container's children to that loop: `%scrut` is the container, and
+`%yield(e)` pushes child `e`. Without it the destructor assumes a
+smart-pointer field.
 
 ```coq
-Crane TriviallyCopyable <Rocq type> ... .
+Crane Extract Inductive list =>
+  "crane::list<%t0>"
+  [ "crane::list<%t0>{}" "crane::cons(%a0, %a1)" ]
+  "if (%scrut.empty()) { %br0 } else { const %t0& %b1a0 = %scrut.front(); auto %b1a1 = %scrut.tail(); %br1 }"
+  Boxed Element "crane::box<%t0>"
+  Drain "%scrut.drain_each([&](auto&& _e) { %yield(std::move(_e)); });"
+  From "conslist.h".
 ```
 
-Each argument must already have a mapping (from `Crane Extract Inductive`); the command errors otherwise, because it records the C++ name that mapping produces, not the Rocq name.
-
-### What it is for
-
-A mapping template is a string. Nothing in `"std::pair<%t0, %t1>"` tells Crane what copying a `std::pair` costs, so without a declaration Crane must assume the worst and reach for `std::move` or `const &` where a copy would have been free — most visibly in loopified functions, whose frame fields are copied on every iteration.
-
-The property is conditional on the arguments, which is what these types actually satisfy: `std::pair<int, char>` is trivially copyable, `std::pair<std::string, int>` is not. Scalars take no arguments, so the condition is vacuous for them, and built-in scalar names (`int`, `uint64_t`, `double`, …) are recognised without a declaration.
-
-### Example
+### `Crane Extract Inlined Constant`
 
 ```coq
-Crane Extract Inductive prod =>
-  "std::pair<%t0, %t1>"
-  [ "std::make_pair(%a0, %a1)" ]
-  "const auto& [%b0a0, %b0a1] = %scrut; %br0"
-  From "utility".
-
-Crane TriviallyCopyable prod.
+Crane Extract Inlined Constant <qualid> => "<C++ expression>" [From "<header>" ...].
 ```
 
-`Mapping/Std.v` and `Mapping/BDE.v` declare this for `option` and `prod`, so the `std::` and `bsl::` flavours of these types are treated alike.
-
----
-
-## `Crane Extract Inlined Constant`
-
-Map a Rocq constant to a literal C++ expression (i.e., no function call or wrapper).
-
-### Syntax
+Replaces every use of the constant by the expression, with `%a0`, `%a1`, ...
+for its arguments. A constant whose type is a type (`Axiom point : Type.`)
+is mapped to a C++ type this way.
 
 ```coq
-Crane Extract Inlined Constant <Rocq definition name> => "<C++ expr>" From "<library0>" "<library1>".
+Axiom larger : nat -> nat -> nat.
+Crane Extract Inlined Constant larger => "std::max(%a0, %a1)" From "algorithm".
 ```
 
-* **`<Rocq definition name>`**
-  The name of the Rocq constant or function being mapped (e.g., `fst`, `snd`).
+An inlined constant has no contract: the access and ownership analyses treat
+each argument as a canonical read, and the argument is evaluated once if the
+template mentions it more than once.
 
-* **`"<C++ expr>"`**
-  A C++ expression that replaces calls to the Rocq constant. This expression may use argument placeholders (`%a0`, `%a1`, etc.) to reference the arguments passed to the constant.
-
-* **`From ...` clause**
-  A space-separated list of libraries/headers whose inclusion is required. Crane will translate these to the corresponding `#include <...>` directives.  The headers of the mapped types the constant takes or returns need not be repeated: see [Which headers a unit includes](#which-headers-a-unit-includes).
-
-### Examples
+### `Crane Extract Constant`
 
 ```coq
-Crane Extract Inlined Constant fst => "%a0.first" From "utility".
-Crane Extract Inlined Constant snd => "%a0.second" From "utility".
+Crane Extract Constant <qualid> [ "<id>" ... ] => "<C++ callable>" [From "<header>" ...].
 ```
 
-### Placeholder Table
-
-| Placeholder       | Meaning                                          |
-| ----------------- | ------------------------------------------------ |
-| `%a0`, `%a1`, ... | Arguments of the constant                        |
-
----
-
-## `Crane Extract Constant`
-
-Provide a C++ implementation for a Rocq `Parameter`/`Axiom` (a constant with no
-body — extraction has nothing to translate on its own). Crane generates a
-static method whose body simply forwards to the given C++ name, applying it to
-the constant's own parameters positionally: `return <C++ expr>(<param0>,
-<param1>, ...);`. This is **not** a placeholder-substitution template like
-`Crane Extract Inlined Constant` — you supply a callable C++ expression (a
-function name, or something that can be called like one), not an arbitrary
-expression using `%a0`/`%a1`.
-
-Only applies to constants without a body; it has no effect if used on a
-constant that Rocq can already extract from its definition.
-
-### Syntax
-
-```coq
-Crane Extract Constant <Rocq definition name> [ "<id0>" "<id1>" ... ] => "<C++ callable>" From "<library0>" "<library1>".
-```
-
-* **`<Rocq definition name>`**
-  The name of the Rocq `Parameter`/`Axiom` being mapped.
-
-* **`[ "<id0>" "<id1>" ... ]`**
-  Optional space-separated list of strings accepted by the grammar for parity
-  with upstream Rocq extraction; currently unused by Crane's code generator
-  for constants (it does not affect the generated forwarding call).
-
-* **`"<C++ callable>"`**
-  The name of a C++ function (or other callable expression) to invoke with the
-  constant's arguments, in order. Not a `%a0`-style template.
-
-* **`From ...` clause**
-  Optional; a space-separated list of libraries/headers whose inclusion is
-  required — Crane adds the corresponding `#include` directives.
-
-### Example
+Implements a `Parameter` or `Axiom` (a constant without a body). Crane
+generates a function with the constant's signature whose body calls the C++
+callable with the constant's arguments in order:
 
 ```coq
 Parameter foreign_inc : nat -> nat.
 Crane Extract Constant foreign_inc => "foreign_inc_impl" From "foreign_inc_impl.h".
 ```
 
-This generates (roughly):
-
 ```cpp
-static uint64_t foreign_inc(uint64_t _x0);
-// ...
-uint64_t Module::foreign_inc(uint64_t _x0) {
-  return foreign_inc_impl(_x0);
-}
+uint64_t foreign_inc(uint64_t x0_) { return foreign_inc_impl(x0_); }
 ```
 
----
+The callable is a name, not a `%a0` template. The optional list of strings
+is accepted for parity with Rocq's extraction and ignored. On a constant
+with a body the command has no effect.
 
-## `Crane Extract Foreign Constant`
-
-Like `Crane Extract Constant`, but restricted to function-typed constants (it
-errors if given a `Parameter`/`Axiom` whose type is a sort/arity rather than a
-function type) and without a `From` clause. At the code-generation level it
-currently produces the same forwarding-call body as `Crane Extract Constant`;
-the practical differences are the missing `From` clause and the function-type
-restriction, plus separate internal bookkeeping so it can't be redefined via
-the other `Extract Constant` variants (and vice versa).
-
-### Syntax
+### `Crane Extract Foreign Constant`
 
 ```coq
-Crane Extract Foreign Constant <Rocq definition name> => "<C++ callable>".
+Crane Extract Foreign Constant <qualid> => "<C++ callable>".
 ```
 
-### Example
+As `Crane Extract Constant`, for function-typed constants only and without a
+`From` clause. Name a C++ function other than the generated one: the
+forwarding function has the Rocq constant's name.
 
 ```coq
 Parameter native_checksum : nat -> nat.
-Crane Extract Foreign Constant native_checksum => "native_checksum".
+Crane Extract Foreign Constant native_checksum => "native_checksum_impl".
+Crane Print Extraction Foreign.
 ```
+
+`Crane Print Extraction Foreign` lists the constants mapped so.
+
+### `Crane Extract Numeral`
+
+```coq
+Crane Extract Numeral <inductive> => "<format>".
+```
+
+Folds constructor chains of a unary or binary number type (`S (S (S O))`,
+`xO (xI xH)`) into a literal: `%n` in the format is the value. The format
+must be a numeric-literal wrapper: exactly one `%n`, and none of `;`, braces,
+quotes, backslash, slash or brackets.
+
+```coq
+Crane Extract Numeral nat => "%nu".
+Crane Extract Numeral Z => "INT64_C(%n)".
+```
+
+Every standard number mapping is typed and declares its numerals in its
+descriptor: with one of them imported, a `Crane Extract Numeral` on the same
+type makes the next extraction fail.
+
+### `Crane TriviallyCopyable`
+
+```coq
+Crane TriviallyCopyable <inductive> ... .
+```
+
+Declares that the C++ type a legacy `Crane Extract Inductive` mapping
+produces is trivially copyable whenever its type arguments are, so Crane
+copies it where it would otherwise move or take a reference (most visibly in
+loop frames). Built-in scalar names (`int`, `uint64_t`, `double`, ...) need
+no declaration. The type must have a legacy mapping; a typed mapping states
+its copy cost in `type_copy`, and the command is an error on it.
+
+### `Crane Extract Monad`
+
+```coq
+Crane Extract Monad <monad> [ bind := <qualid> , ret := <qualid> ] => "<C++ type>" [From "<header>" ...].
+Crane Extract Monad <monad> [ bind := <qualid> , ret := <qualid> ] [From "<header>" ...].
+```
+
+`bind` and `ret` may be given in either order. Crane lowers `bind` to
+sequential statements and `ret` to the value; the C++ type, with `%t0` for
+the result type, is the type of a computation (`"%t0"` when omitted).
+
+```coq
+Crane Extract Monad STM [ bind := bind , ret := Ret ] => "%t0".
+```
+
+### `Crane Extract Skip` and `Crane Extract Skip Module`
+
+```coq
+Crane Extract Skip <qualid>.
+Crane Extract Skip Module <module>.
+```
+
+Crane emits nothing for the constant, type or module and assumes the C++
+provides it. Uses are inlined to nothing; a mapping that still refers to a
+skipped type sees it erased.
+
+```coq
+Crane Extract Skip Module Rdefinitions.RbaseSymbolsImpl.
+```
+
+### `Crane Extract Void`
+
+```coq
+Crane Extract Void <void type> [ <ghost term> ].
+```
+
+Registers an uninhabited type and a term of it that Rocq requires but that
+never exists at run time. Both are erased from the generated C++.
+
+### `Crane Extract Callback`
+
+```coq
+Crane Extract Callback ["<label>"] <qualid>.
+Crane Print Extraction Callback.
+Crane Reset Extraction Callback.
+```
+
+Records a constant as an entry point for foreign code, with an optional
+label. The registration is stored and listed, but the C++ backend does not
+use it yet.
 
 ---
 
 ## Which headers a unit includes
 
-A generated unit includes the `From` headers of every mapping its code uses, and of every mapped type its code computes with -- a type it never spells included, such as the type a mapped operation returns into a temporary.  A mapping in scope that the code does not use contributes no header.
+A generated unit includes the headers of every mapping its code uses, and of
+every mapped type its code computes with, including a type it never spells
+(such as the type a mapped operation returns into a temporary). A mapping in
+scope that the code does not use contributes no header.
 
-So a mapping names the headers its own text needs, except those of the mapped types it takes or returns.  Below, `origin_at` and `on_axis` need no `From` clause: code that uses either computes with a `point`, so `<complex>` is included wherever they are.  `is_real` is written `((std::complex<double>(b ? 1.0 : 0.0, 0.0)).imag() == 0.0)`, which never spells `point`, and its unit includes `<complex>`.
+So an operation mapping names the headers its own text needs, except those
+of the mapped types it takes or returns:
 
 ```coq
 Axiom point : Type.
@@ -293,212 +728,377 @@ Crane Extract Inlined Constant origin_at => "std::complex<double>(%a0 ? 1.0 : 0.
 Crane Extract Inlined Constant on_axis => "(%a0.imag() == 0.0)".
 ```
 
-A type mapping -- of an inductive, of a constant whose Rocq type is a type, of a monad (`Crane Extract Monad`), or a container's `Boxed Element` wrapper -- has no such fallback: it must name the header that declares its C++ type.  Where one has no `From` clause and its type names anything but C++'s builtin types and the mapping's placeholders, Crane warns (`crane-mapping-without-header`).  Code using such a mapping may still compile, because another mapping in use or one of Crane's runtime headers happens to include the header, but nothing promises that it will.
+`origin_at` and `on_axis` need no `From` clause: code using either computes
+with a `point`, so `<complex>` is included.
 
-An operation mapping -- of a constant whose Rocq type is not a type, or a constructor or match template of an inductive -- that writes a name of the C++ standard library is checked the same way: where the standard header declaring it is neither in the mapping's `From` clause nor in that of a mapped type its signature names, Crane warns (`crane-mapping-standard-header`), once, when it first extracts code using the mapping -- the mapping of a type in its signature may come after it.  The check knows the standard library's commonly mapped names only, and does not judge a mapping whose own headers, or whose signature types' headers, are not the standard library's (anything with a `.` or a `/`): such a header may include whatever its mapping needs.
+A type mapping (an inductive, a constant whose type is a type, a monad, a
+`Boxed Element` wrapper) must name the header that declares its C++ type.
+Where a legacy one has no `From` clause and its type names anything but
+builtin types and placeholders, Crane warns
+(`crane-mapping-without-header`). A legacy operation mapping that writes a
+standard-library name whose header is neither in its `From` clause nor in
+that of a mapped type its signature names gets
+`crane-mapping-standard-header`, once, when code using it is first
+extracted:
 
 ```coq
 Axiom larger : nat -> nat -> nat.
 (* Warns: std::max is declared in <algorithm>. *)
 Crane Extract Inlined Constant larger => "std::max(%a0, %a1)".
-(* Does not. *)
-Crane Extract Inlined Constant larger => "std::max(%a0, %a1)" From "algorithm".
 ```
+
+A typed mapping lists its headers in `type_headers`, `operation_headers` and
+`view_headers`.
 
 ---
 
-## `Crane Extraction`
-
-Perform C++ extraction of a Rocq definition.
-The extracted code will include all mappings currently in scope.
-
-### Syntax 1
+## `Crane Bake`
 
 ```coq
-Crane Extraction "<output path>" <Rocq definition name>.
+Crane Bake <qualid> ... <qualid>.
+Set Crane Bake Flags "<extra clang++ flags>".
 ```
 
-* **`"<output path>"`**
-  The file path (relative or absolute) for the generated C++ files. If the path ends with `.cpp`, Crane will strip the extension. The command generates both `.h` and `.cpp` files at the specified location.
-
-* **`<Rocq definition name>`**
-  The name of the Rocq definition to extract (e.g., a function, module, or type).
-
-#### Example
+Computes each closed constant once, when the command runs, and extracts it
+as data: the generated code initialises the constant from a static image
+instead of running its body. Arrays of scalars (and arrays of such arrays)
+become constant-initialised immortal blocks; everything else is rebuilt from
+a word stream at static initialisation, keeping sharing.
 
 ```coq
-Crane Extraction "tokenizer" Tokenizer.
+From Stdlib Require Import List.
+From Crane Require Import Extraction Mapping.Std Mapping.NatIntStd.
+
+Module Squares.
+Definition table : list nat := List.map (fun n => n * n) (List.seq 0 10).
+End Squares.
+
+Crane Bake Squares.table.
+Crane Extraction "squares" Squares.
 ```
 
-### Syntax 2
+`squares.h` declares `table` as
+`crane::bake::read<List<uint64_t>>(crane_baked_table_...)`, and
+`squares.cpp` ends with the image, one node per row with a comment naming
+it.
 
-```coq
-Crane Extraction <Rocq definition name>.
-```
+* The constant must be transparent, outside any functor, module type or
+  functor application, and its type must hold only data. Crane refuses a
+  function, a type, a proof, a coinductive (lazy or effectful) value, or an
+  opaque type without a mapping.
+* Put the command after the mappings and options the extraction uses: the
+  bake extracts the constant with the settings in effect at the command.
+* Crane extracts the constant alone, compiles it with `clang++ -O1` plus
+  `Set Crane Bake Flags` and `CRANE_BAKE_FLAGS`, runs it, and records the
+  image with the constant, so it survives `Require`. A baked constant is
+  never inlined.
+* **Stale images.** The bake records every file the compiler read (runtime
+  headers, mapping headers, system headers) with its digest, the compiler
+  version and `CRANE_BAKE_FLAGS`. An extraction that would emit the image
+  checks them and fails with `Crane Bake: the baked image of <c> is stale:
+  <file> has changed since it was baked.` Rebuild the file containing the
+  `Crane Bake` command. `Crane.Extraction` requires
+  `Crane.RuntimeHeaders`, generated with a digest of the runtime headers, so
+  under dune a changed runtime header rebuilds every file that loads Crane.
 
-* **`<Rocq definition name>`**
-  The name of the Rocq definition to extract. When no output path is specified, the extracted code is displayed in the editor's response window instead of being written to files.
-
-#### Example
-
-```coq
-Crane Extraction Tokenizer.
-```
-
-### Related commands
-
-* `Crane Recursive Extraction <name0> <name1> ...` — like Syntax 2, but extracts several definitions (and their dependencies) together, displayed in the response window.
-* `Crane Separate Extraction <name0> <name1> ...` — extracts several definitions with the generated code split across one file per Rocq library, instead of a single monolithic file.
-* `Crane Extraction Library <module>` — extracts an entire compiled Rocq library (`.vo`) to a corresponding C++ file, mirroring the module structure.
-* `Crane Recursive Extraction Library <module>` — like `Crane Extraction Library`, but also recursively extracts every library that `<module>` depends on.
-* `Crane Extraction TestCompile <name0> <name1> ...` and `Crane Extraction TestCompile "<output path>" <name0> <name1> ...` — like `Crane Extraction`, but additionally compiles the generated C++ with Clang (using the current BDE/StdLib settings) to check it builds, without producing a linkable artifact for you to keep. Useful as a quick correctness smoke test during development.
+Details, the image format and limits: [Crane-Bake.md](Crane-Bake.md).
 
 ---
 
-## `Crane Extraction Language`
+## Code generation options
 
-Select the target language for extraction.
-
-### Syntax
+### `Set Crane StdLib`
 
 ```coq
-Crane Extraction Language C++.
-```
-
-Currently `C++` is the only supported language; the command exists for parity with upstream Rocq extraction and future extensibility.
-
----
-
-## `Crane Extraction Inline` / `Crane Extraction NoInline`
-
-Force specific constants to be inlined (or not inlined) at their call sites during extraction, independent of any custom C++ mapping.
-
-### Syntax
-
-```coq
-Crane Extraction Inline <name0> <name1> ...
-Crane Extraction NoInline <name0> <name1> ...
-Crane Print Extraction Inline.
-Crane Reset Extraction Inline.
-```
-
-* `Crane Extraction Inline` marks the given constants for inlining.
-* `Crane Extraction NoInline` removes that marking.
-* `Crane Print Extraction Inline` shows the constants currently marked for inlining.
-* `Crane Reset Extraction Inline` clears all inlining marks set via these commands.
-
----
-
-## `Set Crane StdLib`
-
-Select the mapping set for standard types.
-
-### Syntax
-
-```coq
-Set Crane StdLib "<name>".
-```
-
-* **`"<name>"`**
-  The name of the standard library mapping set to use.
-
-### Options
-
-| StdLib Name | Meaning                                                                 |
-| ----------- | ----------------------------------------------------------------------- |
-| `"std"`     | Use C++ standard library types (e.g., `std::string`, `std::shared_ptr`) |
-| `"BDE"`     | Use Bloomberg's BDE types (`bsl::string`, `bsl::shared_ptr`, etc.)      |
-
-### Examples
-
-```coq
-Set Crane StdLib "std".
+Set Crane StdLib "std".   (* default *)
 Set Crane StdLib "BDE".
 ```
 
-Selecting `"std"` or `"BDE"` loads the appropriate predefined extraction mappings from the Crane Base Library.
+Selects the flavour of the names Crane writes itself (`std::shared_ptr` or
+`bsl::shared_ptr`, `std::move` or `bsl::move`, ...) and of the BDE build.
+It does not load mappings: `Mapping.Std` and `Mapping.BDE` set it when
+imported (`#[export] Set Crane StdLib`), so import the mapping flavour you
+want and leave this option alone.
 
----
-
-## `Set Crane BDE Directory`
-
-Required when working with BDE and performing compilation tests via:
-
-```
-Crane Extraction TestCompile
-```
-
-### Syntax
+### `Set Crane BDE Directory`
 
 ```coq
 Set Crane BDE Directory "<path>".
 ```
 
-* **`"<path>"`**
-  The filesystem path to the BDE installation directory. This can be a relative path (e.g., `"./bde_install"`) or an absolute path (e.g., `"~/bde_install/"` or `"/usr/local/bde"`). Crane uses this directory to locate include paths, library files, auxiliary tools used by the BDE environment.
+The BDE installation `Crane Extraction TestCompile` and `Crane Bake` build
+against under `StdLib "BDE"`.
 
-### Example
+### `Set Crane Loopify` / `Crane Loopify`
+
+Turns recursive functions into loops, so deep inputs cannot overflow the C++
+stack.
 
 ```coq
-Set Crane BDE Directory "~/bde_install/".
+Set Crane Loopify.             (* all eligible functions; default off *)
+Crane Loopify <qualid> ... .   (* these functions *)
+Crane NoLoopify <qualid> ... . (* not these *)
+Crane Reset Loopify.
+Set Crane Loopify Diagnostics. (* report an outcome per recursive function *)
+Set Crane Loopify Strict.      (* a function left recursive is an error *)
 ```
+
+Tail recursion becomes a `while` loop, tail recursion modulo cons a loop
+writing through a hole, and other recursion a loop over an explicit heap
+stack of frames. A setting for a function of a functor instance, such as
+`Crane NoLoopify ZMap.Raw.add` for `ZMap := FMapAVL.Make(Z_as_OT)`, also
+applies to every function whose last two path components are the same
+(`Raw.add`) when no setting names that function itself.
+
+`CRANE_LOOPIFY_DIAGNOSTICS=1` does the same as `Set Crane Loopify
+Diagnostics`. Each line is prefixed with the emitted file:
+
+| Outcome | Meaning |
+| --- | --- |
+| `tail loop` | a flat `while` |
+| `tail-modulo-cons` | a flat `while` writing through a hole |
+| `frame stack` | an explicit heap stack: O(depth) heap, O(1) C++ stack |
+| `deferred (...)` | left alone; the shape already runs in O(1) stack (a `lazy_`-wrapped cofixpoint body) |
+| `DECLINED: ...` | the emitted C++ still calls itself |
+
+The outcome is decided from the emitted code: a transformed body that still
+calls itself is a decline, whatever the strategy claimed.
+`scripts/loopify-coverage.sh` sweeps the test corpus and diffs the declines
+against `tests/loopify-coverage.golden`.
+
+Shapes that still decline: a self-call inside a lambda, a continuation, or a
+function passed over the children of a nested inductive (the lambda may run
+later, so its call cannot become a frame push); a self-call inside a local
+fixpoint or a spliced partner the machine cannot enter (lift the local
+fixpoint to a top-level function); a recursive call passing a value-type
+receiver.
+
+### `Set Crane Reuse` / `Crane Reuse`
+
+```coq
+Set Crane Reuse.               (* default off *)
+Crane Reuse <qualid> ... .
+Crane NoReuse <qualid> ... .
+Crane Reset Reuse.
+```
+
+Perceus-style in-place reuse: at a match on an owned recursive value whose
+branch rebuilds a constructor of the same type, the matched cell is
+rewritten in place when it is uniquely owned, checked at run time. It fires
+only under `Set Crane NonAtomicRc` or for a type under
+`Set Crane SharedVariant`, never for coinductive types or enums. A
+per-function setting overrides the global flag. A loopified recursive
+function does not use the match rewrite (exclude it with
+`Crane NoLoopify` to get it); under `Reuse` and `NonAtomicRc`, a
+tail-modulo-cons loop that owns its input reuses cells itself.
+
+### `Set Crane Arena` / `Crane NoArena`
+
+```coq
+Set Crane Arena.               (* default off *)
+Crane NoArena <inductive> ... .
+```
+
+Makes the allocation of recursive fields check for an open
+`crane::arena_scope` and bump-allocate from it. The pointer type and layout
+do not change, so arena and heap values mix freely, and a value that
+outlives its scope is kept alive by a refcounted keeper. With the flag off,
+allocation calls `std::make_shared` (or `crane::make_rc`, or
+`bsl::make_shared`) and no arena code is included. `Crane NoArena` keeps the
+plain factory for the listed types, for values that outlive the scope.
+
+```cpp
+{
+  crane::arena_scope _scope;      // a fresh region
+  auto t = build_big_tree(input); // recursive fields bump-allocate
+  consume(t);
+}                                 // region released
+```
+
+`crane::arena_use_scope` installs an existing region. Without a scope,
+allocations fall back to a per-thread region freed at thread exit.
+
+### `Set Crane NonAtomicRc`
+
+```coq
+Set Crane NonAtomicRc.
+```
+
+Uses `crane::rc` (non-atomic count in the same allocation as the value)
+instead of `std::shared_ptr` for recursive fields, and takes precedence over
+`bsl::shared_ptr`. Sound only when values are not shared across threads. A
+unit whose program uses a mapping that runs code on several threads
+(`<thread>`, `<future>`, `crane_thread.h`, `bsl_thread.h`, `bsl_future.h`,
+`stm_adapter.h`: `Monads.Thread`, `Monads.Par`, `Monads.STM` and their BDE
+flavours) keeps `std::shared_ptr`, with the warning
+`crane-non-atomic-rc-concurrent`. Under this option a constructor's factory
+takes each field of the inductive's own type as a `crane::child_slot<T>`, so
+rebuilding a path in a persistent tree allocates only the nodes on the path.
+
+### `Set Crane SingleThreaded`
+
+```coq
+Set Crane SingleThreaded.
+```
+
+A promise that the program uses Crane values from one thread at a time: the
+runtime's block heap is one global instead of one per thread. Withheld, like
+`NonAtomicRc`, from a unit that runs on several threads. With both options
+set, immortal blocks use a "sticky" count that is updated without an
+immortality test.
+
+### `Set Crane FastVariant`
+
+```coq
+Set Crane FastVariant.
+```
+
+Stores an inductive's alternatives in `crane::variant` (`crane_variant.h`)
+instead of `std::variant`: the same interface, with copies, moves and
+destruction as inline switches. Code that matches on an extracted type's
+`v()` must then use `crane::holds_alternative`, `crane::get` and
+`crane::get_if`. Ignored under BDE.
+
+### `Set Crane SharedVariant`
+
+```coq
+Set Crane SharedVariant.
+```
+
+Stores a recursive inductive's values as shared blocks
+(`crane::shared_variant`, one word per value) and its recursive fields as the
+values themselves (`crane::shared_box`). A top-level constant whose type is
+not a C++ literal type is initialised through `crane::immortal(...)`: its
+blocks are never counted or freed. Ignored under BDE.
+
+### `Set Crane BoxedFields`
+
+```coq
+Set Crane BoxedFields.
+```
+
+Stores a constructor field whose type is an inductive behind the smart
+pointer recursive fields already use (OCaml's representation), so copying or
+destroying the outer value stops at the field. A structured binding then
+sees the pointer.
+
+### `Set Crane Format Style`
+
+```coq
+Set Crane Format Style "None".
+```
+
+Crane lays out its output itself, in the LLVM style as clang-format applies
+it (two-space indentation, 80 columns, a blank line between definitions,
+sorted includes). No external formatter runs. `"None"` keeps the printer's
+text as written; any other value (default `"LLVM"`) lays it out.
+
+### Output options
+
+```coq
+Set Crane Extraction Output Directory "<dir>".
+Set Crane Extraction File Comment "<text>".
+```
+
+* **Output Directory**: where files are written, created if missing. Rocq's
+  `-output-directory` flag does the same. Without either, Crane writes to
+  the current directory and warns (`crane-extraction-default-directory`).
+* **File Comment**: a comment at the top of every generated file.
+
+### Optimisation and compatibility options
+
+```coq
+Set Crane Extraction Optimize.            (* default on *)
+Set Crane Extraction Flag <n>.            (* bitmask of Core simplifications *)
+Set Crane Extraction Conservative Types.  (* default off *)
+Set Crane Extraction AutoInline.          (* default off *)
+Set Crane Extraction TypeExpand.          (* default on *)
+Set Crane Extraction AccessOpaque.        (* default on *)
+Set Crane Extraction SafeImplicits.       (* default on *)
+```
+
+`Optimize` switches the Core simplifications inherited from Rocq's
+extraction (inlining, dummy-argument removal, let reduction); `Flag` selects
+them individually, `0` being `Unset Crane Extraction Optimize`.
+`Conservative Types` keeps dummy lambdas of top-level constants.
+`AutoInline` inlines small definitions automatically. `TypeExpand` expands
+type abbreviations. `AccessOpaque` extracts the bodies of opaque constants
+(with a warning); unset, they are treated as axioms. `SafeImplicits` makes an implicit argument that is still used
+an error rather than a warning. These are debugging and compatibility knobs;
+the test corpus is validated against the defaults.
 
 ---
 
-## `Crane Benchmark`
+## Other commands
 
-Compare one or more observationally equivalent Rocq definitions across multiple
-backends and compiler configurations. Every benchmarked definition must have
-type `unit -> PrimString.string`.
+### `Crane Extraction Inline` / `NoInline`
 
-Crane extracts each definition once per backend, builds the Cartesian product
-of definitions and configurations, and runs every executable once. The command
-stops if a build fails or if the programs produce different output. Only after
-that check does Crane generate a performance report with
-[hyperfine](https://github.com/sharkdp/hyperfine).
+```coq
+Crane Extraction Inline <qualid> ... .
+Crane Extraction NoInline <qualid> ... .
+Crane Print Extraction Inline.
+Crane Reset Extraction Inline.
+```
 
-### Syntax
+Forces constants to be inlined, or not, at their uses.
+
+### `Crane Extraction Implicit`
+
+```coq
+Crane Extraction Implicit <qualid> [ <arg> ... ].
+```
+
+Drops the listed arguments (positions from 1, or names) of a constant,
+inductive or constructor from the generated signature.
+
+```coq
+Crane Extraction Implicit newSTRef [idx].
+```
+
+### `Crane Extraction Blacklist`
+
+```coq
+Crane Extraction Blacklist <ident> ... .
+Crane Print Extraction Blacklist.
+Crane Reset Extraction Blacklist.
+```
+
+Names Crane must not use for generated files and modules, to avoid
+collisions with existing headers.
+
+### `Crane Guard Compare`
+
+```coq
+Crane Guard Compare <constant> => <constructor or constant>.
+```
+
+Adds an identity short-circuit to a comparison function: when its first two
+arguments of the same type are the same value (the same object, or for a
+shared variant the same block), it returns the given result at once instead
+of walking both. For a structural comparison over large shared values this
+turns a deep walk into a pointer test.
+
+```coq
+Crane Guard Compare tcompare => Eq.
+```
+
+### `Crane Benchmark`
 
 ```coq
 Crane Benchmark
-  <function0> [As "<label0>"],
-  <function1> [As "<label1>"],
-  ...
+  <qualid> [As "<label>"], ..., <qualid> [As "<label>"]
 On
-  <backend0> [With "<flags0>"],
-  <backend1> [With "<flags1>"],
-  <backendN> [With "<flagsN>"].
+  <backend> [With "<flags>"], ..., <backend> [With "<flags>"].
 ```
 
-* **`<function>`**
-  A Rocq definition of type `unit -> PrimString.string`. Crane performs the
-  required C++ or OCaml extraction automatically.
-
-* **`As "<label>"`**
-  An optional name used in the report. Without it, Crane displays the Rocq
-  qualified name.
-
-* **`<backend>`**
-  The compilation backend to use.
-
-* **`"<flags>"`**
-  Optional flags passed directly to the backend compiler, such as `"-O3"` or
-  `"-O3 -flto"`. Quoted arguments and backslash escaping are supported within
-  the string.
-
-### Backends
-
-| Backend | Meaning                                    |
-| ------- | ------------------------------------------ |
-| `OCaml` | Use Rocq's OCaml extraction and `ocamlopt` |
-| `C++`   | Use Crane's C++ extraction and `clang++`   |
-
-### Example
+Compares observationally equivalent definitions, each of type
+`unit -> PrimString.string`, across backends (`OCaml`: Rocq's OCaml
+extraction and `ocamlopt`; `C++`: Crane and `clang++`) and compiler flags.
+Crane builds every combination, runs each once, stops if a build fails or
+the outputs differ, and then reports timings with
+[hyperfine](https://github.com/sharkdp/hyperfine), which must be installed.
 
 ```coq
-Definition baseline (_ : unit) : string := run_baseline input.
-Definition optimized (_ : unit) : string := run_optimized input.
-
 Crane Benchmark
   baseline As "baseline",
   optimized As "optimized"
@@ -507,561 +1107,28 @@ On
   OCaml With "-O3".
 ```
 
-This example builds four benchmarks. `baseline` and `optimized` must print
-exactly the same result in all four builds.
-
 ---
 
-## `Crane Extract Skip`
+## Environment variables
 
-Exclude a Rocq symbol from extraction. Use this for axioms or primitives that are provided externally in C++ (e.g., by a native library). Crane will not emit a definition for the skipped symbol; references to it are assumed to link against your external implementation.
+Read by the plugin when it runs:
 
-### Syntax
-
-```coq
-Crane Extract Skip <Rocq identifier>.
-```
-
-* **`<Rocq identifier>`**
-  The name of the Rocq type, constant, or axiom to omit from generated C++.
-
-### Example
-
-```coq
-Crane Extract Skip iSTM.
-Crane Extract Skip iatomically.
-```
-
----
-
-## `Crane Extract Skip Module`
-
-Exclude an entire Rocq module from extraction. Use this for modules containing axioms, proof terms, or internal implementation details that should not appear in the generated C++.
-
-### Syntax
-
-```coq
-Crane Extract Skip Module <Rocq module>.
-```
-
-* **`<Rocq module>`**
-  The qualified name of the Rocq module to omit from generated C++.
-
-### Example
-
-```coq
-Crane Extract Skip Module Rdefinitions.RbaseSymbolsImpl.
-Crane Extract Skip Module Random_axioms.
-```
-
----
-
-## `Set Crane Loopify` / `Crane Loopify`
-
-Control the loopification optimization, which transforms recursive functions into iterative C++ using explicit stacks.
-
-### Global flag
-
-```coq
-Set Crane Loopify.    (* Enable loopification for all eligible functions *)
-Unset Crane Loopify.  (* Disable loopification (default) *)
-```
-
-When enabled, Crane automatically transforms eligible recursive functions (tail-recursive, tail-modulo-cons, and multi-recursive patterns) into `while` loops with explicit stack frames.
-
-### Per-function control
-
-```coq
-Crane Loopify <function0> <function1> ...    (* Enable for specific functions *)
-Crane NoLoopify <function0> <function1> ...  (* Disable for specific functions *)
-Crane Reset Loopify.                         (* Reset all loopification settings *)
-```
-
-A function defined inside a functor is generated from the functor's body,
-whose members cannot be named. A setting for a function of one of its
-instances, such as `Crane NoLoopify ZMap.Raw.add` for `ZMap := FMapAVL.Make(Z_as_OT)`,
-therefore also applies to every function whose last two path components are
-the same (`Raw.add`), when no setting names that function itself.
-
-### Example
-
-```coq
-Set Crane Loopify.
-Crane Extraction "my_module" MyModule.
-```
-
-### Checking what was loopified
-
-```coq
-Set Crane Loopify Diagnostics.  (* report an outcome per recursive function *)
-Set Crane Loopify Strict.       (* turn a function it could not linearise into an error *)
-```
-
-`CRANE_LOOPIFY_DIAGNOSTICS=1` in the environment does the same as the first, so
-a whole project can be swept without editing every `.v` file. Each line is
-prefixed with the emitted file, since the same function can be linearised in
-one unit and declined in another. The outcomes are:
-
-| Outcome | Meaning |
+| Variable | Effect |
 | --- | --- |
-| `tail loop` | Became a flat `while`. |
-| `tail-modulo-cons` | Became a flat `while` writing through a hole. |
-| `frame stack` | Recursion moved to an explicit heap stack — O(depth) heap, O(1) C++ stack. |
-| `deferred (...)` | Left alone deliberately; the shape already runs in O(1) stack (a `lazy_`-wrapped cofixpoint body). |
-| `DECLINED: ...` | The emitted C++ still calls itself. |
-
-The target invariant is *no emitted function retains a self-call*, not
-*everything becomes a flat loop*: a flat loop is only achievable for tail and
-tail-modulo-cons shapes, and tree recursion inherently needs O(depth) space,
-which the frame stack supplies as heap frames rather than C++ stack frames.
-
-The outcome is decided by a postcondition rather than by whether a bail-out
-announced itself — the transformed body is re-classified, and a surviving
-self-call is a decline whatever the strategy claimed — so a silent bail-out
-cannot hide. Outcomes are collected silently and printed once per unit, one
-line per function: the last outcome recorded, which describes the emitted
-code (a member of a recursive group is recorded again once the whole group is
-lowered).
-
-`scripts/loopify-coverage.sh` sweeps the test corpus and diffs the declines
-against the tracked `tests/loopify-coverage.golden`; `--accept` rewrites the
-baseline. Adding a decline is a regression even though every runtime test still
-passes.
-
-### Shapes that still decline
-
-`tests/loopify-coverage.golden` lists every decline in the test corpus, in
-three classes.
-
-**A self-call survived the transform.** Most declines. The self-call sits
-inside a lambda, a continuation, or a function passed over the children of a
-nested inductive, and the transform correctly refuses to rewrite it: the
-lambda may be invoked later, or elsewhere, so its call cannot simply become a
-frame push. Continuation-passing shapes would need the continuation
-defunctionalised.
-
-**Needs a second machine entry.** The self-call is inside a local fixpoint or
-a spliced partner's body that the function's machine cannot yet enter. Lifting
-the local fixpoint by hand to a top-level sibling avoids it.
-
-**Value-type receiver.** A recursive call passes a value-type receiver, whose
-address cannot be stored in a frame. Supporting it needs a mode in which the
-frame owns the receiver by value, as it already does for ordinary
-parameters.
-
----
-
-## `Set Crane Arena` / `Crane NoArena`
-
-Enable arena (region) allocation for the recursive fields of inductive types.
-
-Arena membership is a **runtime** property of the calling scope, not a property
-of a type. The pointer representation never changes: a recursive field is the
-same smart pointer either way, and a type's layout is identical whether or not
-arenas are in use. What `Set Crane Arena` changes is the *factory* at each
-allocation site, which becomes a branch on whether an arena scope is currently
-installed on this thread — bump-allocating from the region if so, and allocating
-normally if not. Because layout is invariant, arena and non-arena values
-interoperate freely, and a value that outlives its scope stays alive through a
-refcounted keeper rather than dangling.
-
-```coq
-Set Crane Arena.    (* emit the scope-checking factory at recursive-field allocations *)
-Unset Crane Arena.  (* emit the plain factory; no arena runtime is pulled in (default) *)
-```
-
-With the flag off, allocation sites call `std::make_shared` (or `crane::make_rc`
-under [`Set Crane NonAtomicRc`](#set-crane-nonatomicrc), or `bsl::make_shared`
-under BDE) and the generated code has no arena dependency at all.
-
-### Opting types out
-
-```coq
-Crane NoArena <ind0> <ind1> ...   (* these types never bump-allocate *)
-```
-
-The listed inductives keep the plain factory even inside an open arena scope.
-Use this for values expected to outlive the scope that builds them, where
-keeping them in the region would extend the region's lifetime unnecessarily.
-
-### Using it from C++
-
-When the flag is on, Crane emits `#include "arena.h"`, the runtime header
-providing `crane::arena` and the scope guards. The driver opens a scope around
-the code that builds the values:
-
-```cpp
-{
-    crane::arena_scope _scope;      // owns a fresh region
-    auto t = build_big_tree(input); // recursive fields bump-allocate
-    consume(t);
-}                                   // region released in O(1)
-```
-
-`crane::arena_use_scope` installs an existing region instead of creating one,
-for nesting or for sharing a region across several calls. With no scope
-installed, allocations fall back to a per-thread region that is *not* reclaimed
-until the thread exits, so an embedding that forgets the guard leaks rather than
-crashes. Debug builds warn once per thread when the fallback is reached after
-some scope has already been installed elsewhere in the process; hits before any
-scope has ever been installed (a dynamically-initialized global building a
-program-lifetime table, say) are expected and stay quiet.
-
-### Example
-
-```coq
-Set Crane Arena.
-Crane NoArena result.     (* [result] values escape the scope, so keep them off the region *)
-Crane Extraction "trees" Trees.
-```
-
----
-
-## `Set Crane Reuse` / `Crane Reuse`
-
-Enable the Perceus-style in-place reuse pass. At a match on an owned recursive
-value whose arm rebuilds a constructor of the same type, the matched cell is
-written in place instead of a fresh one being allocated — provided the value is
-uniquely owned. Uniqueness is checked at run time, so the rewrite is safe even
-where the analysis cannot prove exclusivity statically: a shared cell simply
-takes the allocating path.
-
-A recyclable cell needs a reusable control block, so the rewrite fires only
-under [`Set Crane NonAtomicRc`](#set-crane-nonatomicrc) (`crane::rc`) or for a
-type under `Set Crane SharedVariant`. Coinductive types and matches on enums
-are never rewritten, and the arm must rebuild exactly the scrutinee's type.
-
-### Global flag
-
-```coq
-Set Crane Reuse.    (* apply the reuse rewrite wherever it is eligible *)
-Unset Crane Reuse.  (* never reuse (default) *)
-```
-
-### Per-function control
-
-```coq
-Crane Reuse <fn0> <fn1> ...    (* Enable for specific functions *)
-Crane NoReuse <fn0> <fn1> ...  (* Disable for specific functions *)
-Crane Reset Reuse.             (* Reset all reuse settings *)
-```
-
-A per-function setting overrides the global flag.
-
-### Interaction with loopification
-
-The match rewrite does not apply in a function that is
-[loopified](#set-crane-loopify--crane-loopify): loopification owns that shape,
-since stack safety is the stronger guarantee. A loopified function with no
-recursion to rewrite (a definition that is not a fixpoint and holds no local
-fixpoint, such as a balancing helper) keeps the match rewrite. A loopified
-recursive function does not take a shared variant owned for reuse, since
-nothing in it would recycle the block. Under `Set Crane Reuse` with
-`Set Crane NonAtomicRc`, a tail-modulo-cons loop that owns its input recycles
-cells itself instead: each turn rebuilds its output cell in the input cell it
-frees. If you want the match rewrite for a particular function, exclude it from
-loopification with `Crane NoLoopify`.
-
----
-
-## `Set Crane NonAtomicRc`
-
-Swap the smart pointer used for recursive fields from `std::shared_ptr`, whose
-reference count is atomic, to `crane::rc`, which is non-atomic and puts the
-count in the same allocation as the object.
-
-```coq
-Set Crane NonAtomicRc.
-```
-
-Off by default. This is sound only for extracted code that does not share values
-across threads, which is Crane's clone-at-boundary model: values crossing a
-thread boundary are copied rather than shared. It takes precedence over the
-`bsl::shared_ptr` that [`Set Crane StdLib "BDE"`](#set-crane-stdlib) would
-otherwise select.
-
-The promise is not taken on trust. A unit whose program uses a mapping that
-puts its values on several threads keeps `std::shared_ptr`, and Crane warns
-(`crane-non-atomic-rc-concurrent`). Those mappings are the ones from the
-headers that start threads (`<thread>`, `<future>`, `crane_thread.h`,
-`bsl_thread.h`, `bsl_future.h`: `Monads.Thread`, `Monads.Par` and their BDE
-flavours) and Crane's transactional memory (`stm_adapter.h`: `Monads.STM` and
-`Monads.STMBDE`). Transactional memory is there to be shared by threads that
-the program's caller starts, even when the extracted code starts none.
-
-Under this option, a constructor's factory takes each field holding a value of
-the inductive itself as a `crane::child_slot<T>`. A slot built from a value
-boxes it into a new cell, except that all values of a constructor without
-fields (`Leaf`, `Nil`) share one cell per constructor and thread. Where a
-constructor is applied to a field read out of a matched value, the generated
-code passes `crane::child(p)` for the field `p`, and the new node shares the
-cell `p` points to instead of copying the child into a new one. Rebuilding a
-path in a persistent tree then allocates only the nodes on the path. Neither
-applies to coinductive types, to types under `Set Crane SharedVariant`, whose
-values are shared blocks already, or under [`Set Crane Arena`](#set-crane-arena--crane-noarena).
-
----
-
-## `Set Crane Format Style`
-
-Choose whether Crane lays out the generated C++.
-
-```coq
-Set Crane Format Style "None".
-```
-
-Crane lays out its output itself, in the LLVM style as clang-format applies it
-with `SeparateDefinitionBlocks: Always`: two-space indentation, lines broken at
-80 columns, short function bodies on one line, a blank line between
-definitions, sorted includes. No external formatter is run. The value `"None"`
-keeps the printer's text as written: valid C++, with no indentation and lines
-of any length. Any other value (the default is `"LLVM"`; the clang-format style
-strings earlier versions passed on are accepted) lays the output out.
-
----
-
-## Output options
-
-```coq
-Set Crane Extraction Output Directory "<dir>".
-Set Crane Extraction File Comment "<text>".
-```
-
-* **Output Directory** — where the generated `.h`/`.cpp` are written. The
-  directory is created if it does not exist. Equivalent to Rocq's
-  `-output-directory` command-line flag, which Crane also honors.
-* **File Comment** — a comment emitted at the top of every generated file, for
-  license headers or provenance notes. Empty by default.
-
----
-
-## Optimization options
-
-```coq
-Set Crane Extraction Optimize.       (* on by default *)
-Unset Crane Extraction Optimize.     (* disable all Core-level optimizations *)
-Set Crane Extraction Flag <n>.       (* select individual optimizations by bitmask *)
-Set Crane Extraction Conservative Types.
-```
-
-`Optimize` is a coarse switch over the Core-level simplifications inherited
-from Rocq's extraction (inlining, dummy-argument removal, let-reduction);
-`Flag` exposes the same set as a bitmask for finer control, where `0` is
-equivalent to `Unset Crane Extraction Optimize`. `Conservative Types` keeps
-dummy lambdas that would otherwise be removed when a top-level constant is
-defined, which is occasionally needed to preserve a type signature that
-downstream C++ depends on.
-
-These are debugging and compatibility knobs; the defaults are what the test
-corpus is validated against.
-
----
-
-## `Crane Extraction Implicit`
-
-Declare that certain arguments of a constant, inductive, or constructor are implicit and should be dropped from the extracted C++ signature, mirroring Rocq's own implicit-argument mechanism for cases Crane cannot infer automatically.
-
-### Syntax
-
-```coq
-Crane Extraction Implicit <Rocq identifier> [ <arg0> <arg1> ... ].
-```
-
-* **`<Rocq identifier>`**
-  The constant, inductive, or constructor whose arguments are being marked.
-
-* **`[ <arg0> <arg1> ... ]`**
-  A space-separated list of argument positions (1-indexed integers) or argument names to treat as implicit.
-
-### Example
-
-```coq
-Crane Extraction Implicit map [ 1 ].
-```
-
----
-
-## `Crane Extraction Blacklist`
-
-Prevent Crane from using specific identifiers as generated file/module names, to avoid collisions with existing C++ headers or reserved names.
-
-### Syntax
-
-```coq
-Crane Extraction Blacklist <name0> <name1> ...
-Crane Print Extraction Blacklist.
-Crane Reset Extraction Blacklist.
-```
-
-* `Crane Extraction Blacklist` adds identifiers to the blacklist.
-* `Crane Print Extraction Blacklist` shows the current blacklist.
-* `Crane Reset Extraction Blacklist` clears it.
-
-### Example
-
-```coq
-Crane Extraction Blacklist String List.
-```
-
----
-
-## `Crane Extract Callback`
-
-Register a Rocq definition as an ML/C callback target — a function that native (foreign) code can call back into. Used together with `Crane Extract Foreign Constant`-style FFI bridges.
-
-### Syntax
-
-```coq
-Crane Extract Callback ["<label>"] <Rocq definition name>.
-Crane Print Extraction Callback.
-Crane Reset Extraction Callback.
-```
-
-* **`"<label>"`**
-  Optional label used to name the callback entry point. Without it, Crane derives a name from the Rocq identifier.
-
-* `Crane Print Extraction Callback` lists registered callbacks.
-* `Crane Reset Extraction Callback` clears all registered callbacks.
-
----
-
-## `Crane Print Extraction Foreign`
-
-Show the constants currently registered via `Crane Extract Foreign Constant`.
-
-### Syntax
-
-```coq
-Crane Print Extraction Foreign.
-```
-
----
-
-## `Crane Extract Void`
-
-Register a Rocq axiom/constant as an uninhabited (void) type paired with a "ghost" term used to satisfy Rocq's syntax where a value is required but never actually produced/consumed at runtime. Both the void type and the ghost term are erased from the generated C++.
-
-### Syntax
-
-```coq
-Crane Extract Void <Rocq void type> [ <Rocq ghost term> ].
-```
-
-* **`<Rocq void type>`**
-  A constant already established (e.g., via an axiom) as an empty/uninhabited type.
-
-* **`<Rocq ghost term>`**
-  A placeholder term of that type used only to satisfy Rocq's type checker; it is never extracted.
-
-### Example
-
-```coq
-Crane Extract Void MyEffect.void [ MyEffect.ghost ].
-```
-
----
-
-## `Crane Guard Compare`
-
-Register a comparison-guard relationship between a function and a constructor, informing Crane's loopification/pattern-match analysis that calls to `<function>` should be treated as guarded by that constructor for termination/structural purposes.
-
-### Syntax
-
-```coq
-Crane Guard Compare <Rocq function> => <Rocq constructor>.
-```
-
-* **`<Rocq function>`**
-  Must be a plain constant (not an inductive or constructor).
-
-* **`<Rocq constructor>`**
-  The constructor used as the comparison guard.
-
----
-
-## `Crane Bake`
-
-Compute closed constants once, when the command runs, and extract them as data. The generated code initialises each one from a static image, with no code computing it at startup. Arrays of scalars (and arrays of such arrays) become constant-initialised immortal blocks. Everything else is rebuilt from a flat word stream at static initialisation, keeping sharing (a DAG stays a DAG). See `docs/Crane-Bake.md`.
-
-### Syntax
-
-```coq
-Crane Bake <constant> <constant> ... .
-Set Crane Bake Flags "<extra clang++ flags>".   (* also read from CRANE_BAKE_FLAGS *)
-```
-
-* **`<constant>`**
-  A transparent constant outside any functor or module type, whose type holds only data. Crane refuses a function, a type, a proof, a coinductive value (lazy or effectful), or an opaque type that has no mapping.
-
-* Put it after the mappings and options the extraction uses. Crane extracts the constant on its own, compiles it with `clang++ -O1`, runs it, and records the image with the constant, so it survives `Require`. A baked constant is never inlined.
-
----
-
-## `Crane Show Extraction`
-
-Display the C++ extraction of the term corresponding to the current proof state (e.g., while working inside a proof script). Useful for interactively inspecting how in-progress definitions will extract.
-
-### Syntax
-
-```coq
-Crane Show Extraction.
-```
-
----
-
-## `Crane Extract Numeral`
-
-Register a Peano-style or binary numeric inductive type for numeral folding. When registered, chains of constructors like `S(S(S(O)))` are folded into integer literals (e.g., `3u`) in the generated C++.
-
-### Syntax
-
-```coq
-Crane Extract Numeral <Rocq inductive type> => "<format string>".
-```
-
-* **`<Rocq inductive type>`**
-  The name of the Rocq inductive type to register (e.g., `nat`, `N`, `Z`). Must be an inductive type with a recognizable zero/successor pattern (for Peano types) or a binary numeric type.
-
-* **`"<format string>"`**
-  A C++ expression template where `%n` is replaced by the folded integer value.
-
-### Placeholder Table
-
-| Placeholder | Meaning                               |
-| ----------- | ------------------------------------- |
-| `%n`        | The folded integer value              |
-
-### Examples
-
-```coq
-Crane Extract Numeral nat => "%nu".    (* nat: S(S(S(O))) → 3u *)
-Crane Extract Numeral N => "%nu".      (* N: binary nat → unsigned literal *)
-Crane Extract Numeral Z => "INT64_C(%n)".  (* Z: binary integer → INT64_C(42) *)
-```
-
----
-
-## `Crane Extract Monad`
-
-Define how a Rocq monad should be mapped to a C++ monad type, and tell Crane which Rocq identifiers implement `bind` and `ret`. This enables correct translation of monadic notation and do-notation.
-
-### Syntax
-
-```coq
-Crane Extract Monad <Rocq monad type> [ bind := <bind name> , ret := <ret name> ] => "<C++ monad type>".
-```
-
-* **`<Rocq monad type>`**
-  The type constructor of the Rocq monad (e.g., `STM`).
-* **`bind := <bind name>`**
-  The Rocq identifier implementing monadic bind for this monad.
-* **`ret := <ret name>`**
-  The Rocq identifier implementing monadic return for this monad.
-* **`"<C++ monad type>"`**
-  The C++ monad type expression. Use `%t0` to refer to the result type parameter of the monad.
-
-### Example
-
-```coq
-Crane Extract Monad STM [ bind := bind , ret := Ret ] => "%t0".
-```
+| `CRANE_BAKE_FLAGS` | extra `clang++` flags for `Crane Bake`, recorded with the image |
+| `CRANE_LOOPIFY_DIAGNOSTICS=1` | as `Set Crane Loopify Diagnostics` |
+| `CRANE_TRACE_MAPPINGS=1` | report discovered typed-mapping heads and resolved descriptors |
+| `CRANE_TRACE_ACCESS=1` | print the parameter access summaries |
+| `CRANE_CHECK_IR=1` | run every internal consistency check (slower; on in the test suite) |
+| `SDKROOT` | the macOS SDK `clang++` is run with |
+
+Developer switches (`CRANE_TRACE_PIPELINE`, `CRANE_TRACE_PASSES`,
+`CRANE_PROBE`, `CRANE_RENDER_TWICE`, ...) are listed in
+[Compiler-Pipeline.md](Compiler-Pipeline.md#10-checking-tracing-and-layering).
+
+C++ macros the runtime headers read when the generated code is compiled:
+`CRANE_ALLOC_PROFILE` (global allocation counters, `alloc_profile.h`),
+`CRANE_STATS` (runtime event counters, `stats.h`), `CRANE_STRICT_ARITY`
+(removes `crane::fn`'s implicit conversion between curried and flat argument
+groupings, so a crossing the generated code missed does not compile; the
+test suite uses it).
