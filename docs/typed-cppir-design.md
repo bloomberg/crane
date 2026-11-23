@@ -1832,6 +1832,18 @@ Not done, and why:
   builds, and an extraction round.
 - typed-fit fatal: no.  The census still has `unrelated` (911),
   `erase` (96), `unbox` (48), `eta`, `box`, `convert`, `regroup` verdicts
-  at destinations and arguments (from `/tmp/tcppirF/p2.log`, unchanged
+  at destinations and arguments (`/tmp/tcppirF/p4.log`, as before
   this session), each a latent mis-typing or a missing adapter.
 
+Commits: `2d90230e5` (no `Not_yet_typed`), `8aa1b273b` (`gen_expr` shim
+deleted), `190485521` (`Call.yields` a `Value_type`).  Extraction
+byte-identical after the first and third (`git status --short tests`
+empty, 2 wip extraction errors as at the base; the second is the same
+function); unit tests and `scripts/check-module-deps.sh` pass.  Full
+`make test` from clean at `190485521`: 1526 passed, 16 failed (all
+`tests/wip`, as at the base), `git status --short tests` empty.
+
+Next: `Declare_deduced` (resolved away by `Resolve`, readers ported per
+file); then the ratchet sites, each with a plan whose expansion is what
+it builds today; then real types for the `Unannotated` adapter operands,
+origin by origin, with the shadow census as the gate.
