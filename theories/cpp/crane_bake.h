@@ -67,6 +67,26 @@
 // an image asserts that the target reads its scalars at the widths the bake
 // host wrote them at ([data_model]), which is what cross-compiling a baked
 // unit could break.
+//
+// Why data, and why this form.  C++ constant evaluation cannot leave a heap
+// allocation in a constant, so the value cannot be [constexpr].  Written as
+// constructor calls it costs about six times the data in code and ten times
+// the compile time, and a long list nests deeper than Clang parses.  Rows
+// of typed structs with designated initialisers compile no faster, and
+// would need the reader to name the user's types, which the writer knows
+// only by [__PRETTY_FUNCTION__].  The writer lays the image out itself
+// rather than through Crane's layout ([Emit.Layout] would give every
+// element of a long braced list its own line), and the image is text, not
+// CppIR, which cannot spell [constinit], [[clang::no_destroy]] or
+// [shared_array::fixed<N>].
+//
+// Not handled: inductive nodes and [crane::list] cells cannot be
+// constant-initialised ([shared_variant] stores a nullary constructor as an
+// odd integer in a pointer and [shared_box] its word in a [uintptr_t],
+// neither allowed in a constant expression), so they are rebuilt at static
+// initialisation, as is a [shared_array] of non-scalar elements.  [immer]
+// containers and [crane::obj] have no hook, and fail to compile ("no way to
+// write a value of this type").
 
 #pragma once
 

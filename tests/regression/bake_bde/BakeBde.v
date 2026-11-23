@@ -1,7 +1,8 @@
 (** Found by Ephyra (round 21, BDE flavour). [Crane Bake] under
     [Mapping.BDE], with the BDE root given the way the BDE tests give it
-    ([Set Crane BDE Directory "~/..."]). docs/Crane-Bake.md lists
-    [bsl::string] in the image format, so BDE is meant to be supported.
+    ([Set Crane BDE Directory "~/..."]). The Reference Manual
+    lists [bsl::string] among the types an image holds, so BDE is meant
+    to be supported.
 
     Expected: [table] and [pair] are baked; the program (built with
     [scripts/compile-bde.sh]) prints [6 6].

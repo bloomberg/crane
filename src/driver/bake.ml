@@ -16,7 +16,15 @@
     Only a value can be baked: its type is checked to hold no function, type,
     coinductive (lazy, or effectful) value or opaque type, which no image can
     hold.  Every compiler and program run goes through {!Toolchain} and
-    {!Subprocess}. *)
+    {!Subprocess}.
+
+    The bake extracts with the options and mappings in effect at the
+    command, and in its own mode (see {!bake_one}), which may differ from
+    the user's extraction.  The image is structural (constructor indices,
+    then fields in order), so the two need only agree on constructor order
+    and on which fields are erased, which they do for one Rocq environment;
+    the only representation-dependent part, a static block's element type,
+    is checked when the image is read. *)
 
 open Names
 
