@@ -1043,7 +1043,8 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                    (unbox each argument, box the result). *)
                 (* Wrap via the [crane_erase_fn] runtime helper (emitted as
                    [#include "crane_fn.h"] in the header preamble). *)
-                Coerce.box_for_any_slot cx Var_box core_e expr
+                Coerce.into_slot ~origin:(Any_slot {cx; kind = Var_box; term = core_e}) (Cpp_ir.Typed.of_node expr)
+                  (Exactly Any)
               end )
           | Function (param_tys, ret_ty) when List.exists (fun t -> t = Cpp_ir.Type.Any) param_tys ->
             ( match expr with
@@ -1363,9 +1364,10 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
         (* A field erased whole -- [den t], whatever [t] the call names --
            holds a function as the canonical callable it is read back as. *)
         | _ when ft_has_erased_tvar ft ->
-          Coerce.box_for_any_slot cx
-            (Types.box_kind_of_cpp_type (Types.cpp_of_core cx env ft))
-            core_e expr
+          let slot = Types.cpp_of_core cx env ft in
+          Coerce.into_slot
+            ~origin:(Any_slot {cx; kind = Types.box_kind_of_cpp_type slot; term = core_e})
+            (Cpp_ir.Typed.of_node expr) (Exactly slot)
         | _ -> expr )
     in
     let gen_and_wrap i e =
@@ -1497,7 +1499,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                  the canonical callable a field erased whole ([den t] at a
                  [TFun] index) is read back as; [coerce] supplies the
                  [crane_erase_fn] adapter for the one, and
-                 {!Coerce.box_for_any_slot} for the other. *)
+                 {!Coerce.any_slot_plan} for the other. *)
               let declared_ty = declared_field_cpp_ty ft in
               let expr =
                 if erased_domain_fun_ty declared_ty then
@@ -1505,7 +1507,9 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                 else if Cpp_ir.Types.prints_as_any (Types.unfold_cpp_typedef cx env declared_ty) then
                   match List.nth_opt ts i with
                   | Some e ->
-                    Coerce.box_for_any_slot cx (Types.box_kind_of_cpp_type declared_ty) e expr
+                    Coerce.into_slot
+                      ~origin:(Any_slot {cx; kind = Types.box_kind_of_cpp_type declared_ty; term = e})
+                      (Cpp_ir.Typed.of_node expr) (Exactly declared_ty)
                   | None -> expr
                 else expr
               in

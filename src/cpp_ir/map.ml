@@ -139,6 +139,8 @@ let coercion ty (c : 'p Coercion.t) : 'p Coercion.t =
       let domain = list ty r.domain in
       let args = list (opt plan) r.args in
       Recover_call {domain; args; result = opt plan r.result}
+    | Box_list_deep -> Box_list_deep
+    | Recast_carrier t -> Recast_carrier (ty t)
     | Moving (x, p) -> Moving (x, plan p)
   in
   let from = value_type ty c.from in

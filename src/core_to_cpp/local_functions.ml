@@ -978,7 +978,7 @@ let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
        arguments, so a parameter declared at one of them is a template
        parameter C++ has to deduce.  A closure has no name to deduce, and
        so cannot agree with the same parameter as settled by another
-       argument; {!Coerce.name_fn_arg_for_tvar_param} names it. *)
+       argument; {!Coerce.name_fn_arg_plan} names it. *)
     (* {!Base.Core_util.collect_lams} hands the binders back innermost-first, so
        the source order these are read in is the reverse of [params]. *)
     let param_core_tys =
@@ -994,7 +994,7 @@ let gen_let_lambda cx ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
       List.mapi
         (fun i a ->
           match List.nth_opt param_core_tys i with
-          | Some ty -> Coerce.name_fn_arg_for_tvar_param ty a
+          | Some ty -> Coerce.into_slot ~origin:(Tvar_name ty) (Cpp_ir.Typed.of_node a) (Template_parameter None)
           | None -> a )
         args
     in

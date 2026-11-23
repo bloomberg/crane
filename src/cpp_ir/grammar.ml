@@ -391,6 +391,12 @@ and Coercion : sig
         (** a callable with an erased codomain called through an adapter
             taking [domain] ([_ue]), each argument and the result adapted
             as given *)
+    | Box_list_deep
+        (** a list at a concrete element boxed at every level
+            ([crane_deep_box]) *)
+    | Recast_carrier of 'p Type.t
+        (** a carrier at the erased element converted elementwise to the
+            given one ({!Expr.Container_cast}) *)
     | Moving of Id.t * 'p plan
         (** the adapter the plan builds, holding the variable it reads by
             move *)

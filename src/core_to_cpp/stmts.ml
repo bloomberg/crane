@@ -481,7 +481,8 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
         | Some rt when Destination.returns k -> (
           let adapt f = Typed_checks.adapted ~before:e (Some rt) (f e.expr) in
           match Types.slot_repr_of_cpp_type cx rt with
-          | Boxed Family_box -> adapt (Coerce.deep_box_list cx t)
+          | Boxed Family_box ->
+            adapt (fun v -> Coerce.into_slot ~origin:(Family_list {cx; term = t}) (Cpp_ir.Typed.of_node v) (Exactly rt))
           | Boxed Var_box -> e
           | Native -> adapt (Coerce.recover_boxed_component cx rt) )
         | _ -> e

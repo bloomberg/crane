@@ -51,7 +51,7 @@ let adapt_to_erased_param cx env param_ty a expr =
     when (match get_env_type_opt cx j with
           | Some t -> Types.cpp_of_core cx env t = Types.cpp_of_core cx env param_ty
           | None -> false) -> expr
-  | _ -> Coerce.erase_fn_arg_for_param cx env param_ty a expr
+  | _ -> Coerce.at_param cx env param_ty a expr
 
 (** [stmts] with the declaration of the local [id] standing for the Core
    binder [b]. *)
@@ -276,7 +276,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
     let expr : Cpp_ir.Lowered.Expr.t =
       match param_core_ty with
       | Some param_ty when not deduced_callable ->
-        Coerce.erase_fn_arg_for_param cx env param_ty core_arg expr
+        Coerce.at_param cx env param_ty core_arg expr
       | _ -> expr
     in
     (* A callable at an inline mapping's parameter declared at a type
@@ -735,7 +735,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
       | _ -> None
     in
     (* Each argument read at its parameter as the call writes it
-       ({!Coerce.regroup_crossing}): [pf : pair<fn<R(A, B)>, nat>] passed to
+       ({!Coerce.crossing_plan}): [pf : pair<fn<R(A, B)>, nat>] passed to
        [myfst<fn<fn<R(B)>(A)>, nat>].  Only where every argument has its own
        parameter to line up with: no erased argument, no erased domain, and
        no receiver -- a method's is read at its struct's own instantiation,
@@ -758,7 +758,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
               | Some from -> (
                 (* Keep [a] itself when nothing converts: the caller tests
                    whether the crossing converts by physical identity. *)
-                Coerce.regroup_crossing ~from ~into a )
+                Coerce.into_slot ~origin:Crossing (Typed.typed from a) (Exactly into) )
               | None -> a
             in
             (* What the crossing writes depends on the source only through
@@ -1074,7 +1074,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
             | Some target ->
               let here = List.filteri (fun i _ -> i < n_first) excess in
               let rest = List.filteri (fun i _ -> i >= n_first) excess in
-              let r = Cpp_ir.Build.call (Coerce.unbox_value cx target (Cpp_ir.Build.call base here)) rest in
+              let r = Cpp_ir.Build.call (Coerce.coerce cx ~from:Any ~into:target (Cpp_ir.Build.call base here)) rest in
               ( match expected_ty with
               | Some exp -> Convert (exp, r)
               | None -> r )
@@ -1715,7 +1715,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
        instantiation may have erased ([ReSum_inl] at [ReSum<erased, erased>]
        where the call names the concrete events).  Read at the type expected
        of it where the two differ only in how their arrows are grouped
-       ({!Coerce.regroup_crossing}): [wrap<fn<fn<R(B)>(A)>>(f)] stored as a
+       ({!Coerce.crossing_plan}): [wrap<fn<fn<R(B)>(A)>>(f)] stored as a
        [list (A -> B -> R)]. *)
     ( match written_fn_ty with
     | Some (Cpp_ir.Type.Function (doms, written_cod))
@@ -1723,7 +1723,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
       let crossed =
         match expected_ty with
         | Some into -> (
-          match Coerce.regroup_crossing ~from:written_cod ~into result with
+          match Coerce.into_slot ~origin:Crossing (Typed.typed written_cod result) (Exactly into) with
           | crossed when crossed != result -> Some crossed
           | _ -> None )
         | None -> None
@@ -2024,7 +2024,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
       in
       match List.nth_opt callee_param_tys i with
       | Some param_ty when erased_callee -> adapt_to_erased_param cx env param_ty x expr
-      | Some param_ty -> Coerce.erase_fn_arg_for_param cx env param_ty x expr
+      | Some param_ty -> Coerce.at_param cx env param_ty x expr
       | None -> expr) args
     in
     (* Detect over-application: when a local variable's C++ type has fewer
@@ -2200,9 +2200,11 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
           (match get_env_type_opt cx i with Some ty -> core_codomain_erases_to_any n ty | None -> false)
         | _ -> false
       in
-      Coerce.recover_boxed_result cx ~boxed:erased_cod ~expected:expected_ty result
-      |> Coerce.recover_carrier_result ~fun_ty:callee_fun_core_ty ~n_args:n
-           ~want:(Coerce.position_cpp_ty cx expected_ty)
+      let result = Coerce.recover_boxed_result cx ~boxed:erased_cod ~expected:expected_ty result in
+      Coerce.into_slot
+        ~origin:(Carrier_result {fun_ty = callee_fun_core_ty; n_args = n})
+        (Cpp_ir.Typed.of_node result)
+        (Coerce.slot_of_expected (Coerce.position_cpp_ty cx expected_ty))
 
 (** The dictionary of a singleton class, the variable [i] read at [occ],
     applied to [args]: the body of the class's projection, which calls the

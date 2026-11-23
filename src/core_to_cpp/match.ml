@@ -1697,7 +1697,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
             | Core.Type.Global_app {type_arguments = args; _} -> Base.Core_util.type_subst_list args fld_ty
             | _ -> fld_ty
           in
-          Coerce.curry_value_to_expected cx env ?expected_ty (Some fld_ty) access
+          Coerce.eta_global cx env ?expected_ty (Some fld_ty) access
       else
         access
     | _ ->
@@ -1886,7 +1886,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
                    [Nat].  Box the elements on the way in, as the result is
                    unboxed on the way out. *)
                 Cpp_ir.Expr.Container_cast (Types.cpp_of_core cx env' pt, e, false)
-              | Some pt -> Coerce.erase_fn_arg_for_param cx env' pt a e
+              | Some pt -> Coerce.at_param cx env' pt a e
               | None -> e )
             value_args
         in
@@ -1950,9 +1950,9 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
         | None -> false
       in
       let call = Coerce.recover_boxed_result cx ~boxed:erased_cod ~expected:expected_ty call in
-      Coerce.recover_carrier_result
-        ~fun_ty:(if is_typeclass then None else fld_ty_opt)
-        ~n_args:n_value_args ~want:expected_ty call
+      Coerce.into_slot
+        ~origin:(Carrier_result {fun_ty = (if is_typeclass then None else fld_ty_opt); n_args = n_value_args})
+        (Cpp_ir.Typed.of_node call) (Coerce.slot_of_expected expected_ty)
     | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
   | Destructure, _ | Projection _, _ ->
     (* Destructure record fields into local variables, then evaluate the body
@@ -2051,11 +2051,14 @@ let gen_record_match_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) 
        nat -> nat] -- must be stored in the canonical adapter form the
        application site casts back to. *)
     let value =
-      match Option.map (Types.slot_repr_of_cpp_type cx) (current_cpp_return_type cx ()) with
-      | Some (Boxed kind) ->
-        Typed_checks.adapted ~before:value (current_cpp_return_type cx ())
-          (Coerce.box_for_any_slot cx kind ast value.expr)
-      | Some Native | None -> value
+      match current_cpp_return_type cx () with
+      | Some rt -> (
+        match Types.slot_repr_of_cpp_type cx rt with
+        | Boxed kind ->
+          Typed_checks.adapted ~before:value (Some rt)
+            (Coerce.into_slot ~origin:(Any_slot {cx; kind; term = ast}) value (Exactly rt))
+        | Native -> value )
+      | None -> value
     in
     Destination.finish_inlined cx k value
   else

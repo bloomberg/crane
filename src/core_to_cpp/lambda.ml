@@ -992,5 +992,6 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
         !found
       | _ -> false
     in
-    Coerce.eta_expand_to_expected ?expected_ty ~core_arity ~returns_a_lambda
-      ~arity:(List.length filtered_args) f )
+    Coerce.into_slot
+      ~origin:(Ee {core_arity; returns_a_lambda; arity = List.length filtered_args})
+      (Cpp_ir.Typed.of_node f) (Coerce.slot_of_expected expected_ty) )

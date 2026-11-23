@@ -265,7 +265,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
         when List.length dom > List.length exp_dom -> (
         (* The closure reads the function where it is made, and takes it
            there where this read moves it. *)
-        match (Coerce.curry_value_to_expected cx env ?expected_ty (get_env_type_opt cx i) var_expr,
+        match (Coerce.eta_global cx env ?expected_ty (get_env_type_opt cx i) var_expr,
           var_expr) with
         | e, Local x when move_candidate && is_lambda e -> Typed_checks.adapted_to expected (Coerce.moving x e)
         | e, _ when e == var_expr -> Typed.rewrap (fun _ -> e) read
@@ -275,7 +275,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
          where the slot takes its arguments at once, a local fixpoint's
          parameter of type [nat -> nat -> nat]. *)
       | Some (Function _ as into), Some (Function _ as from) -> (
-        match (Coerce.regroup_value ~from ~into var_expr, var_expr) with
+        match (Coerce.into_slot ~origin:Rg (Typed.typed from var_expr) (Exactly into), var_expr) with
         | e, Local x when move_candidate && is_lambda e -> Typed_checks.adapted_to (Some into) (Coerce.moving x e)
         | e, _ when is_lambda e -> Typed_checks.adapted_to (Some into) e
         | _ -> read )
@@ -488,8 +488,7 @@ and gen_form cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e 
                    (fun (f : Cpp_ir.Lowered.Type.t) ->
                      match f with Function _ -> not (is_fully_erased_fun_ty f) | _ -> false )
                    dom ->
-            Coerce.curry_value_to_expected cx env ~exact:true
-              (Option.map expand_core_fun_alias instantiated) cglob
+            Coerce.eta_global cx env ~exact:true (Option.map expand_core_fun_alias instantiated) cglob
           | _ -> cglob
         in
         let named =

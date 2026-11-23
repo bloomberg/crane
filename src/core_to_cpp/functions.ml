@@ -262,7 +262,7 @@ let dead_unit_returns_to_abort cx (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.L
 
 (** Adapt closures returned from a function whose return type is the erased
     [std::any] (e.g. the [nat -> nat] branch of a dependent
-    [if b then nat else nat -> nat]).  Like {!box_for_any_slot} at
+    [if b then nat else nat -> nat]).  Like {!Coerce.any_slot_plan} at
     argument and value-declaration positions, the callable must be stored in
     the canonical [std::function<std::any(std::any...)>] form that the
     application site recovers with an [any_cast].  Nested lambda bodies are
@@ -1829,7 +1829,8 @@ let gen_decl__inner cx n b ty =
       in
       let body_expr =
         match Types.slot_repr_of_cpp_type cx cty_ir with
-        | Boxed kind -> Coerce.box_for_any_slot cx kind b body_expr
+        | Boxed kind ->
+          Coerce.into_slot ~origin:(Any_slot {cx; kind; term = b}) (Cpp_ir.Typed.of_node body_expr) (Exactly cty_ir)
         | Native -> body_expr
       in
       let body_expr = baked_initialiser n cty_ir body_expr in
@@ -2046,7 +2047,7 @@ let gen_spec__inner cx n b ty =
         && (has_magic || Erasure.core_body_returns_erased_field inner_body)
       in
       let b_expr =
-        if needs_any_cast then Coerce.unbox_value cx ty_ir b_expr
+        if needs_any_cast then Coerce.coerce cx ~from:Any ~into:ty_ir b_expr
         else
           (* (c) The emitted expression is itself the evidence: a projection
              out of a pair that was recovered from a box hands back a
@@ -2067,7 +2068,8 @@ let gen_spec__inner cx n b ty =
       in
       let b_expr =
         match Types.slot_repr_of_cpp_type cx ty_ir with
-        | Boxed kind -> Coerce.box_for_any_slot cx kind inner_body b_expr
+        | Boxed kind ->
+          Coerce.into_slot ~origin:(Any_slot {cx; kind; term = inner_body}) (Cpp_ir.Typed.of_node b_expr) (Exactly ty_ir)
         | Native -> b_expr
       in
       (* A type naming a class field this scope cannot resolve would spell

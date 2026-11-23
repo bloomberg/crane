@@ -13,30 +13,6 @@ open Lowering_state
 open Base.Type_util
 open Core_plan.Query
 
-(** [recover_carrier_result ~fun_ty ~n_args ~want expr] converts a call whose
-    declared result is a carrier applied to a type variable -- [M A], a
-    {!Core.Type.Variable_app} -- into the same carrier at the element the position means.
-
-    A dictionary stores its methods monomorphically, so such a result comes
-    back at the erased element whatever the call's own arguments were, and only
-    an elementwise conversion gets from [M<std::any>] to [M<Nat>].  [fun_ty] is
-    the callee's Core function type, or [None] where the caller knows the
-    question does not arise. *)
-let recover_carrier_result ~fun_ty ~n_args ~(want : Cpp_ir.Lowered.Type.t option) (expr : Cpp_ir.Lowered.Expr.t) :
-    Cpp_ir.Lowered.Expr.t =
-  let carrier_result =
-    match Option.map (core_codomain_after n_args) fun_ty with
-    | Some (Some (Core.Type.Variable_app _)) -> true
-    | _ -> false
-  in
-  match want with
-  (* A reified monadic carrier is a [shared_ptr], not a container: it has no
-     elements to walk, and getting from one element type to another is the
-     reification path's business, not a cast's. *)
-  | Some (Shared_pointer _) -> expr
-  | Some want when carrier_result && not (Cpp_ir.Types.prints_as_any want) -> Container_cast (want, expr, false)
-  | _ -> expr
-
 (** Whether a position has stated a type concrete enough to recover a box into.
     A slot spelled [std::any] wants the box as it stands, and one still spelled
     as a template parameter has not been stated at all: an [any_cast] there
@@ -180,7 +156,7 @@ let decide_with al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.S
         Option.map (fun b -> Cpp_ir.Coercion.Eta {declared = a; into = b}) (Cpp_ir.Arrows.of_type into)
       (* Nor is the name of a function taking a callable: such a parameter
          is a deduced [F&&], which makes the function a template
-         ({!curry_value_to_expected}). *)
+         ({!eta_global_plan}). *)
       | Some ({groups = d :: _; _} as a), Some b
         when (match from with Function_name _ -> true | _ -> false)
              && List.exists (fun t -> Option.has_some (Cpp_ir.Arrows.of_type (strip_cpp_ref_const t))) d ->
@@ -372,7 +348,7 @@ let apply_erased_curried ?(box = false) (callee : Cpp_ir.Lowered.Expr.t) arg_exp
 
 (** Apply a callee whose static C++ type is the erased [std::any].  [std::any]
     is not callable, so the canonical [std::function<std::any(std::any...)>]
-    adapter the producer stored via {!box_for_any_slot} is recovered with
+    adapter the producer stored via {!any_slot_plan} is recovered with
     an [any_cast] and each argument is boxed.  The result is a [std::any]. *)
 let apply_erased_callee callee arg_exprs =
   apply_erased_curried ~box:true callee arg_exprs
@@ -506,13 +482,13 @@ let coerced_kind : Cpp_ir.Lowered.Expr.t -> string = function
   | Container_cast _ -> "container cast"
   | _ -> "other"
 
-(** [regroup_crossing ~from ~into expr]: [expr], whose C++ type is [from],
+(** [crossing_plan ~from ~into]: a value whose C++ type is [from],
     read at [into] where the two differ only in how their arrows are grouped
     ({!Cpp_ir.Types.arrow_site}) -- a value spelled where it was declared reaching
     a slot a type argument spells curried, or back.  [crane_convert] regroups
     every function the value holds ([crane_cast_to] for [crane::fn] of
     another arity).  A function value itself is not this: it reaches a slot
-    through the adapter {!curry_value_to_expected} writes,
+    through the adapter {!eta_global_plan} plans,
     whose type is the slot's. *)
 let crossing_plan ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Coercion.plan option =
   let from = strip_cpp_ref_const from and into = strip_cpp_ref_const into in
@@ -556,47 +532,13 @@ let absurd_coercion cx from (into : Cpp_ir.Lowered.Type.t) =
   && into <> Void
   && not (Types.resolves_to_any_type cx into)
 
-(** A list computed at a concrete element type (a call's result, a variable)
-    going into a [Family_box] slot ([den t]): the family's generic consumers
-    read it with every level boxed in turn -- its elements, and their
-    components and elements -- so it is boxed at that shape
-    ([crane_deep_box]), whatever container the [list] mapping makes it.  A
-    literal needs no conversion, being built at the erased shape already (its
-    slot is [Boxed]). *)
-let deep_box_list cx e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  match strip_magic e with
-  | Core.Expr.Construct _ -> expr
-  | e -> (
-    match
-      Option.bind (infer_core_body_type e) (fun t ->
-          Cpp_passes.Erasure.erased_list_shape (Types.cpp_of_core cx (empty_env ()) t) )
-    with
-    | Some _ -> Cpp_ir.Build.call (Runtime Cpp_ir.Crane_rt.Deep_box) [expr]
-    | None -> expr )
-
-(** Adapt a value being stored into a boxed slot of kind [kind] to the shape
-    its consumers read back out of the box.  A function value is read with
-    [any_cast<std::function<std::any(std::any)>>], which is what the
-    [crane_erase_fn] runtime helper builds, deducing the callable's signature
-    with [std::function] CTAD; a list in a [Family_box], by
-    {!deep_box_list}.  A [Var_box] -- an existential's payload -- is read at
-    whatever type its consumer knows, and keeps any other value as it is, as
-    does a callable already adapted. *)
-let box_for_any_slot cx kind e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  match Cpp_ir.Typed.head expr with
-  | Erase_callable _ -> expr
-  | _ when Erasure.core_expr_is_function_value cx e -> Erase_callable (Boxed_whole, expr)
-  | _ -> ( match kind with Family_box -> deep_box_list cx e expr | Var_box -> expr )
-
-
 (** Make a global named in value position into an expression a caller can
     invoke ({!Cpp_passes.Coercions.eta_global}), given the Core type
     [core_ty] it is used at, the slot type [expected_ty], the arrow site
     [callee_site] it is spelled at, and whether an erased callable parameter
     keeps its signature ([exact]).  [None] where its name is a value
     already. *)
-let eta_global_plan cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(callee_site = Cpp_ir.Types.Declared)
-    ?(exact = false) core_ty : Cpp_ir.Lowered.Coercion.plan option =
+let eta_global_plan cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~callee_site ~exact core_ty : Cpp_ir.Lowered.Coercion.plan option =
   let declared = Option.map (Types.cpp_of_core cx env) core_ty in
   match Cpp_passes.Coercions.eta_global_outer ~declared ~into:expected_ty with
   | None -> None
@@ -638,8 +580,8 @@ let convert_carrier_plan cx param_core_ty (param_cpp_ty : Cpp_ir.Lowered.Type.t)
     Some (Convert_to param_cpp_ty)
   | _ -> None
 
-(** [erase_fn_arg_for_param env param_ty e expr] wraps a function-valued
-    argument when the callee's parameter type is the canonical erased
+(** [erased_param env param_ty]: the parameter's C++ type, and the shape a
+    function-valued argument is wrapped at when it is the canonical erased
     [std::function<std::any(std::any...)>] adapter (e.g. a class method
     polymorphic in its own type argument, [forall A, (A -> A) -> A -> A]):
     a concrete closure does not convert to the erased signature. *)
@@ -703,22 +645,78 @@ let erase_fn_arg_plan cx env param_core_ty e : Cpp_ir.Lowered.Coercion.plan opti
   | Some shape when Erasure.core_expr_is_function_value cx e -> Some (Erase_as shape)
   | _ -> convert_carrier_plan cx param_core_ty param_cpp_ty e
 
+(** [carrier_result_plan ~fun_ty ~n_args ~want]: a call whose declared
+    result is a carrier applied to a type variable -- [M A], a
+    {!Core.Type.Variable_app} -- converted into the same carrier at the
+    element the position means.
+
+    A dictionary stores its methods monomorphically, so such a result comes
+    back at the erased element whatever the call's own arguments were, and only
+    an elementwise conversion gets from [M<std::any>] to [M<Nat>].  [fun_ty] is
+    the callee's Core function type, or [None] where the caller knows the
+    question does not arise. *)
+let carrier_result_plan ~fun_ty ~n_args ~(want : Cpp_ir.Lowered.Type.t option) : Cpp_ir.Lowered.Coercion.plan option =
+  let carrier_result =
+    match Option.map (core_codomain_after n_args) fun_ty with
+    | Some (Some (Core.Type.Variable_app _)) -> true
+    | _ -> false
+  in
+  match want with
+  (* A reified monadic carrier is a [shared_ptr], not a container: it has no
+     elements to walk, and getting from one element type to another is the
+     reification path's business, not a cast's. *)
+  | Some (Shared_pointer _) -> None
+  | Some want when carrier_result && not (Cpp_ir.Types.prints_as_any want) -> Some (Recast_carrier want)
+  | _ -> None
+
+(** A list computed at a concrete element type (a call's result, a variable)
+    going into a [Family_box] slot ([den t]): the family's generic consumers
+    read it with every level boxed in turn -- its elements, and their
+    components and elements -- so it is boxed at that shape
+    ([crane_deep_box]), whatever container the [list] mapping makes it.  A
+    literal needs no conversion, being built at the erased shape already (its
+    slot is [Boxed]). *)
+let deep_box_plan cx e : Cpp_ir.Lowered.Coercion.plan option =
+  match strip_magic e with
+  | Core.Expr.Construct _ -> None
+  | e -> (
+    match
+      Option.bind (infer_core_body_type e) (fun t ->
+          Cpp_passes.Erasure.erased_list_shape (Types.cpp_of_core cx (empty_env ()) t) )
+    with
+    | Some _ -> Some Box_list_deep
+    | None -> None )
+
+(** A value [e], built as [value], stored into a boxed slot of kind [kind],
+    adapted to the shape its consumers read back out of the box.  A function
+    value is read with [any_cast<std::function<std::any(std::any)>>], which
+    is what the [crane_erase_fn] runtime helper builds, deducing the
+    callable's signature with [std::function] CTAD; a list in a
+    [Family_box], by {!deep_box_plan}.  A [Var_box] -- an existential's
+    payload -- is read at whatever type its consumer knows, and keeps any
+    other value as it is, as does a callable already adapted. *)
+let any_slot_plan cx kind e (value : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Coercion.plan option =
+  match value with
+  | Erase_callable _ -> None
+  | _ when Erasure.core_expr_is_function_value cx e -> Some (Erase_as Boxed_whole)
+  | _ -> ( match kind with Family_box -> deep_box_plan cx e | Var_box -> None )
+
 (** The adapters of section 0 of the typed CppIR design that go through
     {!into_slot}, each by the name its parameters are prefixed with (B1's
     origin tag), carrying what its expansion reads beyond the value and
     the slot. *)
 type origin =
-  | Rg  (** {!regroup_value}: [_rg] *)
-  | Ee of {core_arity : int; returns_a_lambda : bool; arity : int}  (** {!eta_expand_to_expected}: [_ee] *)
+  | Rg  (** [_rg], a curried value at a flat slot *)
+  | Ee of {core_arity : int; returns_a_lambda : bool; arity : int}  (** {!eta_short_plan}: [_ee] *)
   | Ec of {
       cx : Lowering_state.t;
       env : env;
       core_ty : Core.Type.t option;
-      callee_site : Cpp_ir.Types.arrow_site option;
-      exact : bool option;
-    }  (** {!curry_value_to_expected}: [_ec] *)
-  | Crossing  (** {!regroup_crossing}: [crane_convert] *)
-  | Tvar_name of Core.Type.t  (** {!name_fn_arg_for_tvar_param}: [crane::fn] *)
+      callee_site : Cpp_ir.Types.arrow_site;
+      exact : bool;
+    }  (** {!eta_global_plan}: [_ec], a value from {!named_value} *)
+  | Crossing  (** {!crossing_plan}: [crane_convert] *)
+  | Tvar_name of Core.Type.t  (** {!name_fn_arg_plan}: [crane::fn] *)
   | Ue of {
       cx : Lowering_state.t;
       term : Core.Expr.t option;
@@ -729,10 +727,23 @@ type origin =
       env : env;
       param_core_ty : Core.Type.t;
       term : Core.Expr.t;
-    }  (** {!erase_fn_arg_for_param}: erase a callable, convert a carrier *)
+    }  (** {!erase_fn_arg_plan} at {!param_slot}: erase a callable, convert a carrier *)
   | Mapping_name
       (** {!Cpp_passes.Coercions.name_at}: a callable at an inline mapping's parameter
           declared at a type variable, named *)
+  | Any_slot of {
+      cx : Lowering_state.t;
+      kind : box_kind;
+      term : Core.Expr.t;
+    }  (** {!any_slot_plan}: a value stored in a box *)
+  | Family_list of {
+      cx : Lowering_state.t;
+      term : Core.Expr.t;
+    }  (** {!deep_box_plan}: a list stored in a [Family_box] *)
+  | Carrier_result of {
+      fun_ty : Core.Type.t option;
+      n_args : int;
+    }  (** {!carrier_result_plan}: a carrier returned at the erased element *)
   | Pa
       (** {!Cpp_passes.Coercions.nest}: the closure a partial application leaves
           ({!Cpp_ir.Typed.apply}), regrouped by nesting its own
@@ -749,6 +760,9 @@ let origin_name = function
   | Param _ -> "erase_fn_arg_for_param"
   | Pa -> "grouped_lambda"
   | Mapping_name -> "mapping_name"
+  | Any_slot _ -> "box_for_any_slot"
+  | Family_list _ -> "deep_box_list"
+  | Carrier_result _ -> "recover_carrier_result"
 
 (** The plans an origin's expansion builds, by {!Cpp_ir.Coercion.decision_name}. *)
 let builds = function
@@ -758,6 +772,10 @@ let builds = function
   | Tvar_name _ | Mapping_name -> ["name"]
   | Ue _ -> ["box"; "deep box"; "unbox"; "erase"; "recover"; "convert"; "container cast"]
   | Param _ -> ["erase"; "box"; "convert"]
+  (* {!decide} sees a family's slot as a plain box: a deep box is a box at
+     every level. *)
+  | Any_slot _ | Family_list _ -> ["box"; "deep box"]
+  | Carrier_result _ -> ["container cast"]
 
 (** Whether {!decide} answers for a value of type [from] at [into]: a typed
     value and a slot that states a type, neither mentioning a type variable
@@ -795,7 +813,7 @@ let plan_of origin (x : Cpp_ir.Typed.t) ~(value : Cpp_ir.Lowered.Expr.t) (into :
   | Ee {core_arity; returns_a_lambda; arity}, _, expected_ty ->
     eta_short_plan ?expected_ty ~core_arity ~returns_a_lambda ~arity ()
   | Ec {cx; env; core_ty; callee_site; exact}, _, expected_ty ->
-    eta_global_plan cx env ?expected_ty ?callee_site ?exact core_ty
+    eta_global_plan cx env ?expected_ty ~callee_site ~exact core_ty
   | Tvar_name t, _, _ -> name_fn_arg_plan t value
   | Ue {cx; term; from}, _, Some into ->
     ue_plan cx ~term ~from ~into ~lambda:(match value with Lambda _ -> true | _ -> false)
@@ -803,13 +821,24 @@ let plan_of origin (x : Cpp_ir.Typed.t) ~(value : Cpp_ir.Lowered.Expr.t) (into :
   | Param {cx; env; param_core_ty; term}, _, _ -> erase_fn_arg_plan cx env param_core_ty term
   | Mapping_name, _, _ -> ( match into with Template_parameter spelled -> Some (Name_at spelled) | _ -> None )
   | Pa, _, into -> Some (Nest into)
+  | Any_slot {cx; kind; term}, _, _ -> any_slot_plan cx kind term value
+  | Family_list {cx; term}, _, _ -> deep_box_plan cx term
+  | Carrier_result {fun_ty; n_args}, _, want -> carrier_result_plan ~fun_ty ~n_args ~want
   | (Rg | Crossing), _, _ -> None
 
 (** [into_slot ~origin x into]: [x] put in the slot [into] through the
     adapter [origin] names.  Where {!decide} answers ({!decides}), its plan
     decides whether the adapter is built at all; elsewhere the adapter's own
     test does.  Held to {!decide} under [CRANE_PROBE] ({!shadow}). *)
-let into_slot ?(al = as_written) ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+let into_slot ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
+  let al =
+    match origin with
+    | Ec {cx; _} | Ue {cx; _} | Param {cx; _} | Any_slot {cx; _} | Family_list {cx; _} -> aliases_in cx
+    | _ -> as_written
+  in
+  (* The adapters folded in by phase C keep their own test: {!decide} does
+     not gate them. *)
+  let own_test = match origin with Any_slot _ | Family_list _ | Carrier_result _ -> true | _ -> false in
   (* [std::any] built from what is a [std::any] already, once aliases are
      followed, is the box itself (C++'s converting constructor excludes the
      box's own type): an identity {!coerce} still spells, kept until phase
@@ -821,7 +850,7 @@ let into_slot ?(al = as_written) ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Low
   in
   let value = Cpp_passes.Coercions.head x.expr in
   let plan =
-    if decides al x.ty into && not box_of_box then
+    if (not own_test) && decides al x.ty into && not box_of_box then
       match decide_with al x.ty into with
       | Some p when List.mem (Cpp_ir.Coercion.decision_name p) (builds origin) -> plan_of origin x ~value into
       | _ -> None
@@ -860,27 +889,10 @@ let moving x (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
 let slot_of_expected (t : Cpp_ir.Lowered.Type.t option) : Cpp_ir.Lowered.Slot_type.t =
   match t with Some t -> Exactly t | None -> Free
 
-(** {!name_fn_arg_plan} through {!into_slot}. *)
-let name_fn_arg_for_tvar_param param_core_ty (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  into_slot ~origin:(Tvar_name param_core_ty) (Cpp_ir.Typed.of_node expr) (Template_parameter None)
-
-(** {!Cpp_passes.Coercions.regroup_curried} through {!into_slot}. *)
-let regroup_value ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) =
-  into_slot ~origin:Rg (Cpp_ir.Typed.typed from expr) (Exactly into)
-
-(** {!eta_short_plan} through {!into_slot}. *)
-let eta_expand_to_expected ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~core_arity ~returns_a_lambda ~arity
-    (f : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  into_slot ~origin:(Ee {core_arity; returns_a_lambda; arity}) (Cpp_ir.Typed.of_node f) (slot_of_expected expected_ty)
-
-(** {!crossing_plan} through {!into_slot}. *)
-let regroup_crossing ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) =
-  into_slot ~origin:Crossing (Cpp_ir.Typed.typed from expr) (Exactly into)
-
-(** {!eta_global_plan} through {!into_slot}: a global's name
-    is taken at the grouping it is declared at, a variable at its type. *)
-let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?callee_site ?exact core_ty
-    (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+(** The value a global or variable named at the Core type [core_ty] is,
+    typed for {!into_slot} at origin [Ec]: a global's name at the grouping
+    it is declared at, a variable at its type. *)
+let named_value cx env core_ty (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Typed.t =
   let declared = Option.map (Types.cpp_of_core cx env) core_ty in
   let from : Cpp_ir.Lowered.Value_type.t =
     match (Cpp_ir.Typed.head cglob, declared) with
@@ -891,8 +903,7 @@ let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option)
     | _, Some t -> Typed t
     | _, None -> Deduced Not_yet_typed
   in
-  into_slot ~al:(aliases_in cx) ~origin:(Ec {cx; env; core_ty; callee_site; exact}) (Cpp_ir.Typed.v ~ty:from cglob)
-    (slot_of_expected expected_ty)
+  Cpp_ir.Typed.v ~ty:from cglob
 
 (** {!ue_plan} through {!into_slot}. *)
 let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t)
@@ -903,7 +914,7 @@ let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lower
     | _, Lambda _ | None, _ -> Cpp_ir.Typed.node_type expr
     | Some t, _ -> Typed t
   in
-  into_slot ~al:(aliases_in cx) ~origin:(Ue {cx; term; from}) (Cpp_ir.Typed.v ~ty:from_ty expr) (Exactly into)
+  into_slot ~origin:(Ue {cx; term; from}) (Cpp_ir.Typed.v ~ty:from_ty expr) (Exactly into)
 
 (** [recover_boxed_component into e] opens the box when [e] is evidently a
     component read out of a pair that was recovered from one.  The context's
@@ -911,10 +922,6 @@ let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lower
     the evidence that it is physically a [std::any]. *)
 let recover_boxed_component cx into (e : Cpp_ir.Lowered.Expr.t) =
   if Erasure.yields_boxed_component e then coerce cx ~from:Any ~into e else e
-
-(** [unbox_value into e] recovers [e], a value known to come out of a box, at
-    [into]: {!coerce} from [std::any]. *)
-let unbox_value cx into (e : Cpp_ir.Lowered.Expr.t) = coerce cx ~from:Any ~into e
 
 (** [recover_boxed_result ~boxed ~expected expr] casts the result of a call
     back into the type the position expects -- see {!position_cpp_ty} -- when
@@ -939,18 +946,26 @@ let unbox_into cx into e =
   | Some into when states_unboxed_target into -> coerce cx ~from:Any ~into e
   | _ -> e
 
-(** {!erase_fn_arg_plan} through {!into_slot}: the argument [e] lowered
-    as [expr], at the parameter the callee declares at [param_core_ty]. *)
-let erase_fn_arg_for_param cx env param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+(** The slot of a parameter the callee declares at [param_core_ty], for
+    {!erase_fn_arg_plan}. *)
+let param_slot cx env param_core_ty : Cpp_ir.Lowered.Slot_type.t =
   (* The parameter as the callee declares it: erased where only the Core
      type says so, a value-indexed family the C++ type in this scope does
      not show ([fn(Inst::sem)->bool], [sem] erased in the functor's
      body). *)
-  let slot : Cpp_ir.Lowered.Slot_type.t =
-    match erased_param cx env param_core_ty with
-    | Function (dom, _), Some (At_signature cod) -> Exactly (Function (List.map (fun _ -> Cpp_ir.Type.Any) dom, cod))
-    | _, Some Boxed_whole -> Exactly Any
-    | t, _ -> Exactly t
-    | exception e when CErrors.noncritical e -> Free
-  in
-  into_slot ~al:(aliases_in cx) ~origin:(Param {cx; env; param_core_ty; term = e}) (Cpp_ir.Typed.of_node expr) slot
+  match erased_param cx env param_core_ty with
+  | Function (dom, _), Some (At_signature cod) -> Exactly (Function (List.map (fun _ -> Cpp_ir.Type.Any) dom, cod))
+  | _, Some Boxed_whole -> Exactly Any
+  | t, _ -> Exactly t
+  | exception e when CErrors.noncritical e -> Free
+
+(** The argument [e], lowered as [expr], at the parameter the callee
+    declares at [param_core_ty]. *)
+let at_param cx env param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  into_slot ~origin:(Param {cx; env; param_core_ty; term = e}) (Cpp_ir.Typed.of_node expr) (param_slot cx env param_core_ty)
+
+(** A global or variable named at the Core type [core_ty] put in the slot
+    [expected_ty] states ({!eta_global_plan}). *)
+let eta_global cx env ?expected_ty ?(callee_site = Cpp_ir.Types.Declared) ?(exact = false) core_ty cglob =
+  into_slot ~origin:(Ec {cx; env; core_ty; callee_site; exact}) (named_value cx env core_ty cglob)
+    (slot_of_expected expected_ty)

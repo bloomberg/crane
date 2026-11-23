@@ -715,7 +715,7 @@ let instantiated_type cx (use : Core.Global_use.t) =
     (Base.Core_util.instantiate_written ~reader:"instantiated_type" use)
     (callee_core_type cx use.callee)
 
-(** {!Coerce.curry_value_to_expected} for the global [use] names. *)
+(** {!Coerce.eta_global} for the global [use] names. *)
 let curry_to_expected cx env ?expected_ty (use : Core.Global_use.t) cglob =
   let decl_ty = callee_core_type cx use.callee in
   let core_ty = instantiated_type cx use in
@@ -727,7 +727,7 @@ let curry_to_expected cx env ?expected_ty (use : Core.Global_use.t) cglob =
     | Some (Function (dom, _)) -> Cpp_ir.Types.Declared_at (List.length dom)
     | _ -> Cpp_ir.Types.Declared
   in
-  Coerce.curry_value_to_expected cx env ?expected_ty ~callee_site core_ty cglob
+  Coerce.eta_global cx env ?expected_ty ~callee_site core_ty cglob
 
 (** The plan a call of the class field [x] through a concrete instance is
     written against.  The instance declares each method as a member template
