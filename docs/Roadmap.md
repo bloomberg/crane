@@ -1,97 +1,160 @@
 # Roadmap
 
-Crane is an evolving extraction system for lowering verified Rocq programs into modern, idiomatic C++. This roadmap outlines the major areas of ongoing and planned development.
+Crane is an evolving extraction system from verified Rocq programs to
+modern, idiomatic C++. This page lists what recently landed and what comes
+next, by area. Open defects are tracked as tests in
+[`tests/wip`](https://github.com/bloomberg/crane/tree/main/tests/wip).
 
 ---
 
-## 1. Broader Rocq Language Coverage
+## 1. Mappings
 
-Crane handles a large subset of Rocq's functional core, including modules, type classes, and coinductive types. Ongoing work includes expanding support for:
+**Done.** Typed mappings replace template strings with data: a
+`TypeMapping` or `OperationMapping` instance gives a type's C++ type as a
+structured value and states its copy, access, view and lifetime models and
+each operation's contract. Instances are selected by imports, ambiguity is an
+error, a unit's selected mappings are recorded in its compiled interface and
+checked by the units that include its header, and `Crane Show Mapping` /
+`Crane Check Mapping` inspect them. Parameter passing follows from what each
+function does with each argument (an access analysis over the whole
+program), with read and writable views (`std::string_view`, `std::span`)
+where a mapping declares them. Every file in `theories/Mapping/` (`Std`,
+`StdCore`, `BDE`, the `nat`/`N`/`Z` flavours, GMP, `Real`, `AsciiChar`,
+`DequeList`, `Shared`) and the `ST` monad's arrays and references are typed.
+See the [Reference Manual](Reference-Manual.md#typed-mappings) and the
+[design](typed-mappings-design.md).
+
+**Next.**
+
+* Typed forms for effects: event families, monads, `Crane Extract Skip` and
+  `Crane Extract Void` have no typed counterpart, so `theories/Monads/` and
+  `theories/External/` still use the legacy commands.
+* Deprecation of the legacy mapping commands (`Crane Extract Inductive`,
+  `Crane Extract Inlined Constant`, `Crane Extract Constant`,
+  `Crane Extract Numeral`, `Crane TriviallyCopyable`) once every standard use
+  has a typed equivalent.
+* Acting on the parts of a descriptor that are validated but not yet used by
+  code generation: `RegionOwned` and `ManualShared` lifetimes, `DrainWith`
+  release plans, value models.
+* View parameters for first-class function values, which keep canonical
+  parameter forms today.
+* Better diagnostics when a mapping's C++ does not compile.
+
+---
+
+## 2. Compiler internals
+
+**Done.** Lowering is typed: every lowered expression carries its C++ type,
+every position states what it asks of the value, and every adapter between
+the two (boxing, erasure, eta-expansion, regrouping, conversion) is one
+decision, `Coerce.decide`, expanded by one finishing pass. Under
+`CRANE_CHECK_IR` a value that does not fit its slot fails extraction unless
+it is on a shrink-only allowlist. See
+[Compiler-Pipeline.md](Compiler-Pipeline.md) and the
+[typed CppIR design](typed-cppir-design.md).
+
+**Next.**
+
+* Shrink the typed-fit allowlist (`unit_tests/typed_fit_allowlist.txt`, 211
+  entries). Each entry is a type-reconstruction defect: erased or boxed
+  components (47), higher-kinded carriers and monad instances against their
+  unfolding (34), promoted variables and instance members (29), other wrong
+  value types (29), event families named unapplied (25), callables grouped
+  otherwise (22), `itreeF` against `itree` (12), type variables against
+  concrete types (8), monad transformers by name (4).
+* Typed CppIR phase E: view conversions as coercion plans decided at
+  lowering, with `view_args` keeping only cross-argument checks; optionally
+  regrouping through `crane::regroup<Into>`.
+
+---
+
+## 3. Rocq language coverage
+
+Crane handles a large subset of Rocq's functional core, including modules,
+functors, type classes and coinductive types. Ongoing work:
 
 * more complex module and functor patterns,
-* advanced type class features,
+* advanced type class features (higher-kinded and rank-2 uses),
 * universe polymorphism edge cases,
-* other currently unsupported features.
-
-The goal is to enable extraction of a wider range of Rocq developments without requiring user workarounds.
+* value-dependent types that survive extraction, with less type erasure.
 
 ---
 
-## 2. Improved Testing
+## 4. Testing
 
-A key part of Crane's correctness strategy is **empirical validation**:
+Crane's correctness strategy is empirical validation of the extractor:
 
-* random generation of Rocq programs,
-* differential testing against other extractors (e.g. OCaml extraction, [CertiCoq](https://github.com/CertiCoq/certicoq)),
-* property-based and fuzz testing of the generated C++,
-* runtime detection of issues in the generated C++ with [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html), [MemorySanitizer](https://clang.llvm.org/docs/MemorySanitizer.html), [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html), and [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html),
-* static analysis of the generated C++ with [Infer](https://fbinfer.com/).
-
-Work is ongoing to expand this pipeline and automate the detection of discrepancies.
+* random generation of typed Rocq programs, compared between `vm_compute`
+  and the extracted C++ (in use; the defects it finds are filed under
+  `tests/wip`),
+* differential testing against other extractors (OCaml extraction,
+  [CertiCoq](https://github.com/CertiCoq/certicoq)),
+* runtime checks with [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html),
+  [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
+  (`CRANE_CPP_SANITIZE` in the test scripts),
+  [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html) and
+  [MemorySanitizer](https://clang.llvm.org/docs/MemorySanitizer.html),
+* static analysis of the generated C++ with [Infer](https://fbinfer.com/)
+  (`scripts/run-infer.sh`),
+* the `CRANE_CHECK_IR` boundary checks, on for the whole test suite.
 
 ---
 
-## 3. Enhanced Concurrency and Effects
+## 5. Effects and concurrency
 
-Crane includes a growing library of monadic effects built on [interaction trees](https://github.com/DeepSpec/InteractionTrees), including IO (console + file), STM, threads, parallelism, clock, directory, environment, path, and temporary file operations. Future extensions include:
+Crane has a library of effects on
+[interaction trees](https://github.com/DeepSpec/InteractionTrees): IO
+(console and files), STM, threads, futures, clock, directories, environment,
+paths and temporary files, plus the `ST` monad for local mutable state.
+Planned:
 
-* additional effect libraries (state, nondeterminism, etc.),
-* streamlined interfaces for defining custom effects,
-* richer concurrency abstractions,
-* improved performance of the STM backend,
+* typed event and monad mappings (section 1),
+* additional effect libraries (state, nondeterminism),
+* simpler definition of custom effects,
+* richer concurrency abstractions and a faster STM backend,
 * techniques for reasoning about monadic code.
 
 ---
 
-## 4. More Customizable Extraction Rules
+## 6. Performance of the generated code
 
-Crane's macro language allows developers to tailor how Rocq definitions map to C++ syntax. We plan to:
+Extracted C++ should be competitive with hand-written C++ and with the
+OCaml extraction of the same source.
 
-* add more macro constructs for finer control,
-* offer higher-level templates for common extraction patterns,
-* improve diagnostics when custom mappings fail,
-* provide built-in mappings for more Rocq standard library components.
+**Done.** Perceus-style in-place reuse, scoped arenas, non-atomic reference
+counting, shared variants, loopification of tail, tail-modulo-cons and tree
+recursion, immortal top-level constants (never counted or freed), a sticky
+reference count under `NonAtomicRc` plus `SingleThreaded`, borrowing of pair
+components, moves at the last use in loop frames, and
+[`Crane Bake`](Crane-Bake.md) for constants computed at extraction time.
 
-This will reduce the boilerplate needed when integrating large developments.
+**Next.**
 
----
-
-## 5. Performance of the Generated Code
-
-Extracted C++ should be competitive with what an engineer would write by hand,
-and with the OCaml extraction of the same Rocq source. Current and planned work
-includes:
-
-* reducing allocation volume — Perceus-style in-place reuse, container mappings
-  that match the source's asymptotics, and scoped arenas,
-* eliminating recursion so deep inputs cannot overflow the stack, and closing
-  the [remaining gap](Reference-Manual.md#shapes-that-still-decline) in that
-  pass,
-* narrowing the cost of type erasure for dependent types that survive
-  extraction,
-* extending the benchmark suite beyond the `ParseALot` pipeline so regressions
-  are caught on realistic workloads.
+* constant-initialised nodes for baked inductives and lists, which are
+  rebuilt at startup today, and baking support for immer containers,
+* closing the [remaining loopification gap](Reference-Manual.md#set-crane-loopify--crane-loopify)
+  (self-calls inside lambdas and continuations, local fixpoints a machine
+  cannot enter),
+* extending the benchmark suite beyond `ParseALot`.
 
 ---
 
-## 6. Verified Components at Scale
+## 7. Verified components at scale
 
-A future goal is to **deploy verified libraries into production** across Bloomberg's C++ systems.
-This requires:
+A goal is to deploy verified libraries in production across Bloomberg's C++
+systems. This requires:
 
-* scaling extraction to large Rocq codebases,
-* stabilizing Crane's API and generated code conventions,
-* strengthening guarantees about interface compatibility,
-* providing migration guidance as Crane evolves.
+* scaling extraction to large Rocq developments,
+* stabilizing Crane's API and generated-code conventions, including the
+  deprecation path of the legacy mapping commands,
+* guarantees about interface compatibility across separately extracted
+  units (compiled interfaces check typed mappings today),
+* migration guidance as Crane evolves.
 
 ---
 
-## 7. Developer Experience and Tooling
+## 8. Developer experience
 
-Planned enhancements include:
-
-* improved error messages during extraction,
-* better documentation and examples,
+* clearer error messages during extraction,
 * editor tooling and integration with Rocq IDEs,
-* utilities for inspecting generated C++,
-* quality-of-life improvements for everyday users.
+* utilities for inspecting generated C++ and the decisions behind it.
