@@ -1,6 +1,68 @@
 # Typed CppIR: expression types and one coercion
 
-Status: design. Branch `typed-cppir`, from `typed-mappings` d7c3f9fdc.
+Status: done (phases A-D, 2026-11-23).  Phase E (consumers) stays future
+work.  Branch `typed-cppir`.
+
+**What changed.**  Lowering is typed: every form module returns a
+`Cpp_ir.Typed.t` (expression and `Value_type.t`: `Typed`, `Closure`,
+`Function_name`, `Never`, or `Deduced` with a closed list of reasons) and
+takes a non-optional `Slot.slot` carrying a `Slot_type.t`; the `gen_expr`
+shim, `?expected_ty` at the knot and `Deduction.Not_yet_typed` are gone.
+Statement lowering writes into a `Destination.t`.  Every adapter between a
+value and its slot (rows 1-17 of the inventory: box, unbox, erase a
+callable, eta-expand a global, regroup, recover a boxed result, convert a
+carrier, name a callable for a template parameter, ...) is one decision,
+`Coerce.decide`, a total function of the two types, and one builder,
+`Coerce.into_slot`, which returns `Coerce (coercion, value)` carrying the
+plan; the finishing pass `coercions` (first after `control`) expands it and
+discharges `Unlowered_coercion`.  The ambient return type
+(`current_cpp_return_type` and friends), `Types.let_value_result`,
+`Calls.call_result_site`/`codomain_site`, the `k (Literal (Int 0))` probes
+and the probe-only continuations are deleted (`Coerce.position_cpp_ty`
+stays as "the stated type, else the threaded `~ret`").  `Declare (Auto, _)` in the
+lowered phase is `Declare_deduced (value type, binder)`, which frames and
+`View_args` read.
+
+**Invariants enforced** (all under `CRANE_CHECK_IR`, set for every test
+folder):
+- every Core form is lowered with a type (`Typed_checks.typed_lowering`);
+  a Core `coerce` form is typed;
+- a declared binder agrees with its value (`Typed_checks.agreement`);
+- every adapter an origin builds agrees with `Coerce.decide`
+  (`Coerce.shadow`, "coercion shadow");
+- no lowered declaration is `Declare (Auto, _)`
+  (`Pipeline.check_deduced_bindings`); `Coerce` and `Declare_deduced`
+  exist only in the lowered phase (GADT);
+- no `Coerce` survives finishing (`Unlowered_coercion` obligation);
+- only `core_to_cpp/coerce.ml` and `cpp_passes/coercions.ml` build the
+  adapter vocabulary (`scripts/check-module-deps.sh`, strict);
+- typed fit: a value put in a destination or argument slot needs no
+  adapter by `decide` and has a type related to the slot's, except the
+  pairs in `unit_tests/typed_fit_allowlist.txt`, which may only shrink
+  (a new pair fails extraction; `scripts/check-typed-fit-allowlist.sh`
+  reports stale entries from a census log).
+
+**What remains in the allowlist** (211 entries: 210 from the suite, 1
+only the Loopify-everywhere census reaches; all type reconstruction
+defects; by kind): erased or boxed components 47 (handlers
+and rank-2 callables typed at their own signature against an erased slot,
+`erased` values at itree slots); higher-kinded carriers and monad instances
+against their unfolding 34 (`app(EOU_monad<>)<T>` vs `EOU<T>`); promoted
+variables and instance members 29 (`PointerV<_tcI0>::ptr` vs its
+definition, `prom:Obj` vs `nat`); other 29 (dead-branch and match results
+typed at a sibling's type, `st<nat>` vs its pair); event families named
+unapplied 25 (`getE` vs `app(getE)<nat>`); callables grouped or typed
+otherwise 22 (lambdas typed at their own type variables, flat vs curried
+`convert`/`regroup`/`eta`); `itreeF` against `itree` 12; type variables
+against concrete types 8; `stateT` by name 4.
+
+**Phase E (future).**  `View_args` reading `Declare_deduced`/`Call.yields`
+and view conversions as `Coercion` plans at `Slot_type.View`; optionally
+`Regroup` as `crane::regroup<Into>`.  Also open: `Typed.expansion` stays a
+forward reference (see 8, eighth session), and the allowlist's kinds are
+the next type-reconstruction work.
+
+Originally: design. Branch `typed-cppir`, from `typed-mappings` d7c3f9fdc.
 Goals: elegant, DRY, nanopass (small passes with explicit input/output
 languages and invariants, phase-indexed IR), and illegal states
 unrepresentable. All non-wip tests keep passing, byte-identical unless a
@@ -425,10 +487,10 @@ callable_crossing_matrix.
 ## 7. Progress
 
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
-- [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
+- [x] Phase B1 (see 8, B1 sessions; typed-fit fatal landed in D, eighth session)
 - [x] Phase B2 (see 8, B2: plans carry their expansion data; `coercions` pass; `Typed.head` is the look-through)
-- [ ] Phase C (in progress: steps 1 and 2 done, the ambient return type deleted (threaded `~ret`); step 3 done except the shape-reading lowering sites listed in §4; the result site moved to `Coerce.result_site`, see 8, C/D fourth session)
-- [ ] Phase D (in progress: one non-optional slot at the knot and the form functions; `Not_yet_typed` deleted (`Typed.carried`, `of_node ~fallback`); `gen_expr` shim deleted; `Call.yields` is a `Value_type` with `Deduced` reasons; `Declare_deduced` with frame and view readers ported; coercion-builder rule strict (no lowering file outside `Coerce` builds the vocabulary); `Coerce.coerce ?value` for the `Ue` operands that had a value; the `Param` operands, the two `result_site` reads, `Typed.expansion`, typed-fit fatal not done; see 8, phase D seventh session)
+- [x] Phase C (see 8; left by design: `Coerce.position_cpp_ty`, now only "the stated type, else the threaded `~ret`"; one `Custom` destination, `Local_functions`' reified monadic let, which is a real destination, not a probe)
+- [x] Phase D (see 8, D sessions; `Typed.expansion` stays a forward reference and `cod_site` stays, both explained in 8, eighth session)
 - [ ] Phase E (optional)
 
 ## 8. Findings
@@ -2065,3 +2127,77 @@ Next: type the Core `coerce` of a lambda as the closure it builds, then
 the `Param` operands (`/tmp/tcppirI/param.py`); `Typed.applied` consuming
 empty groups, then `filled_ty` from the name's type; the typed-fit
 allowlist ratchet.
+
+### Phase D, eighth session (2026-11-23): done
+
+- **A Core `coerce` of a lambda is the closure it builds.**
+  `Typed_checks.of_built`: a lowered `Lambda` whose Core type (the
+  coercion's target, `sem`, a value-indexed family at a function index)
+  has no arrows is typed `Closure {groups = [its params]; result = Auto}`
+  where the Core form is a `Coerce`, instead of the opaque target.  The
+  coercion built no box, so the target's type was the lie.  With it,
+  `/tmp/tcppirI/param.py` (`at_param ?value`, values kept at the four
+  callers) is byte-identical (`type_level_fun_apply` keeps its
+  `crane_erase_fn`: from a closure into the erased slot `decide` answers
+  `box`, which `Param` builds).  `typed-shadow erase_fn_arg_for_param`:
+  unchecked (untyped value) 88 -> 4, agree 180, 0 disagree.
+- **`Typed.applied` consumes a leading empty group** (a nullary group's
+  call is the call itself, as `Typed.apply` takes it); `eta_fun`'s
+  `filled_ty` is `applied (Function_name (id, name_arrows id doms cod))
+  arity` with `doms` the first `arity` declared domains.  Byte-identical.
+  Finding: the switch moves the `result_site` read into `name_arrows`
+  (where the name's typing owns it); it removes no decision.
+- **`cod_site` stays.**  `excess_groups` spells a Core codomain the group
+  loop re-expands one alias at a time (`expand_core_fun_alias`,
+  `core_drop_arrows`) as it peels groups off; reading the callee's
+  `Value_type` there needs `Arrows` to expand Core aliases, which it cannot
+  (it is a CppIR type, the alias a Core definition), so the change is not
+  small: the codomain would have to be lowered once per peeled group in
+  Core and handed over as `Arrows` -- a rewrite of `excess_groups`, not a
+  read.  `result_site` is now read in two places (`name_arrows`,
+  `cod_site`), both the spelling of a global's result.
+- **typed-fit fatal, with a shrink-only allowlist.**  The comparison
+  normalises a promoted variable's alias against the instance member it
+  stands for (`Promoted_member x` vs `Member (Instance _, x)`), which
+  removed that kind.  The other "spelling-only" kind of the fifth session,
+  namespace qualification, turned out not to be one: `normal` already
+  strips a qualification of the same inductive, and the lines counted
+  there (`memory_bit` vs `Params` in `class_arg_in_method`, `EOU` vs
+  `EOU_monad`) are different types (a receiver typed as the class it is
+  passed, a carrier against its instance).  `Typed_checks.fit` fails
+  extraction under `CRANE_CHECK_IR` on an `unrelated` or adapter-needing
+  pair not on `unit_tests/typed_fit_allowlist.txt` (tab-separated
+  library, declaration, position, verdict, from, into; built into the
+  plugin by `src/core_to_cpp/dune`).  210 entries from the suite (166
+  `unrelated`, 22 `erase`, 11 `unbox`, 5 `eta`, 3 `convert`, 2 `box`, 1
+  `regroup`), grouped by kind with a comment each, plus 1 only the
+  Loopify-everywhere census reaches (`dep_record mfold`, the same defect as
+  `deque_any_cast mfold`), in its own section.  An allowed pair is counted
+  under `CRANE_PROBE` as `typed-fit-allowed`;
+  `scripts/check-typed-fit-allowlist.sh <log>` lists entries a full census
+  no longer hits (it skips the census-only section).
+- **Cleanup.**  Probe-only census removed: `typed`, `typed-untyped`,
+  `typed-expected`, `typed-derived`, `typed-declined`, `typed-agree`,
+  `typed-shadow` and the `typed-fit` census line (with `kind_name`,
+  `node_name`, `verdict_line`); kept: the fatal checks (typed lowering,
+  binder agreement, coercion shadow, typed fit) and `typed-fit-allowed`.
+  `Typed_checks.census` is `typed_lowering`.  Comments that said "until
+  phase C" or "the census" describe the final design.
+  `docs/Compiler-Pipeline.md` (local, untracked) describes typed lowering,
+  the coercion decision, the `coercions` pass and the typed-fit check.
+- **`Typed.expansion` stays a forward reference.**  `Typed.head` (in
+  `cpp_ir`) must see what a coercion expands to, and the expansion builds
+  with finishing's vocabulary (`Cpp_passes.Erasure`), which `cpp_ir` may
+  not read; `Coercions` installs itself.  Removing it means typing a
+  `Coerce` node by its plan instead of its expansion, which changes what
+  `carried` answers for some plans (`Ue` boxes typed by the slot instead of
+  the expansion's node) -- a behaviour change for its own round.
+
+
+Verification at the end of the session (from clean, `make test`): 1526
+passed, 16 failed, all `tests/wip` (as at the base); extraction 2 errors,
+both wip, as at the base; `git status --short tests` empty (byte-identical
+throughout); unit tests and `scripts/check-module-deps.sh` pass; loopify
+census unchanged, 0 findings in 1623 units.  Commits: the two `Typed CppIR
+D:` commits after `718c6dc7e` (Param operands and `filled_ty`; typed-fit
+fatal) and the cleanup commit with this note.

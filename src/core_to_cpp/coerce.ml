@@ -279,30 +279,16 @@ let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slo
     | None -> not (undecided (normal al t')) )
   | _ -> false
 
-(** Under [CRANE_PROBE], the boundary shadow check: [after], what the
-    adapter named [adapter] built from [before] for a slot of type [into],
-    held to what {!decide} plans for a value of type [from] there.  An
-    adapter that built nothing is not compared: its caller may adapt the
-    value otherwise. *)
+(** The boundary shadow check, fatal under [CRANE_CHECK_IR]: [after], what
+    the adapter named [adapter] built from [before] for a slot of type
+    [into], held to what {!decide} plans for a value of type [from] there
+    ([kind] names what was built).  An adapter that built nothing is not
+    compared: its caller may adapt the value otherwise; nor is one whose
+    value or slot states no type {!decide} reads. *)
 let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t)
     ~(before : Cpp_ir.Lowered.Expr.t) (after : Cpp_ir.Lowered.Expr.t) =
-  (* The other direction, counted: an adapter that built nothing where
-     {!decide} plans a coercion C++ does not perform by itself, at a slot
-     both sides can be compared at. *)
-  if Base.Probe.enabled () && (after == before || after = before) then begin
-    match (decide_with al from into, into) with
-    | Some p, Exactly t
-      when (not (implicit ~al from p))
-           && (not (Cpp_ir.Value_type.unstated from))
-           && (not (contains_tvar t))
-           && not (Cpp_ir.Types.exists (fun t -> t = Auto) t) ->
-      Base.Probe.hit "typed-declined" (fun () ->
-          adapter ^ " " ^ Cpp_ir.Coercion.decision_name p ^ " in " ^ Base.Probe.library () ^ " from "
-          ^ Binders.show_value_type from ^ " into " ^ Binders.type_shape t )
-    | _ -> Base.Probe.hit "typed-declined" (fun () -> adapter ^ " none")
-  end;
   (* An adapter may rebuild what it was given unchanged. *)
-  if (Base.Probe.enabled () || Base.Probe.checking ()) && after != before && after <> before then begin
+  if Base.Probe.checking () && after != before && after <> before then begin
     let planned = Option.map Cpp_ir.Coercion.decision_name (decide_with al from into) in
     let agrees = match planned with Some p -> List.mem p kind | None -> List.mem "none" kind in
     let variables = function
@@ -333,7 +319,6 @@ let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t
           ^ Binders.show_value_type from ^ " into "
           ^ match into with Exactly t -> Binders.type_shape t | _ -> "?"
     in
-    Base.Probe.hit "typed-shadow" (fun () -> adapter ^ verdict);
     if String.starts_with ~prefix:" disagree" verdict then
       Base.Probe.violation "coercion shadow" Pp.(str adapter ++ str verdict)
   end;
@@ -789,7 +774,7 @@ type origin =
           ({!Cpp_ir.Typed.apply}), regrouped by nesting its own
           parameters rather than wrapped *)
 
-(** The adapter an origin names, for the census. *)
+(** The adapter an origin names, for the shadow check. *)
 let origin_name = function
   | Rg -> "regroup_value"
   | Ee _ -> "eta_expand_to_expected"
@@ -827,7 +812,7 @@ let builds = function
     (the two may number them differently), the slot no generic one, and not
     a callable said to fill a slot no callable fills (a position describing
     the aggregate the value goes into).  Where it does not, the adapter's
-    own test still decides; phase C removes those. *)
+    own test decides, from the term. *)
 let decides al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   match into with
   | Exactly t ->
@@ -875,20 +860,21 @@ let plan_of origin (x : Cpp_ir.Typed.t) ~(value : Cpp_ir.Lowered.Expr.t) (into :
 (** [into_slot ~origin x into]: [x] put in the slot [into] through the
     adapter [origin] names.  Where {!decide} answers ({!decides}), its plan
     decides whether the adapter is built at all; elsewhere the adapter's own
-    test does.  Held to {!decide} under [CRANE_PROBE] ({!shadow}). *)
+    test does.  Held to {!decide} under [CRANE_CHECK_IR] ({!shadow}). *)
 let into_slot ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   let al =
     match origin with
     | Ec {cx; _} | Ue {cx; _} | Param {cx; _} | Any_slot {cx; _} | Family_list {cx; _} -> aliases_in cx
     | _ -> as_written
   in
-  (* The adapters folded in by phase C keep their own test: {!decide} does
-     not gate them. *)
+  (* The adapters that decide from the Core term (a box for an erased slot,
+     a deep box, a carrier result) and a site's own cast keep their own
+     test: {!decide} does not gate them, {!shadow} holds them to it. *)
   let own_test = match origin with Any_slot _ | Family_list _ | Carrier_result _ | Built _ -> true | _ -> false in
   (* [std::any] built from what is a [std::any] already, once aliases are
      followed, is the box itself (C++'s converting constructor excludes the
-     box's own type): an identity {!coerce} still spells, kept until phase
-     C so that output does not change. *)
+     box's own type): an identity {!coerce} still spells, kept because
+     output relies on it. *)
   let box_of_box =
     match (origin, x.ty) with
     | Ue _, Typed t -> al.spells_as_any (normal al t) || Cpp_ir.Types.prints_as_any (normal al t)
@@ -915,8 +901,7 @@ let into_slot ~origin (x : Cpp_ir.Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
       | _ -> ["other"] )
     (* A value already of a nameable type, or one only C++ knows the type
        of, is named all the same: the text keeps it in an [auto], and the
-       copy is an identity C++ performs, kept until phase C so that output
-       does not change. *)
+       copy is an identity C++ performs, kept because output relies on it. *)
     | Mapping_name -> ( match x.ty with Typed _ | Deduced _ -> ["name"; "none"] | _ -> builds origin )
     | _ -> builds origin
   in
@@ -1028,7 +1013,7 @@ let eta_global cx env ?expected_ty ?(callee_site = Cpp_ir.Types.Declared) ?(exac
 
 (** [built plan x into]: [x] adapted to [into] as its site decides
     ([plan]), through {!into_slot}: the site's own test stands, and the
-    census holds the plan to {!decide}. *)
+    shadow check holds the plan to {!decide}. *)
 let built plan (x : Cpp_ir.Typed.t) into = into_slot ~origin:(Built plan) x into
 
 (** [unbox ?tolerant into e]: [e], which its site knows is a box, read at

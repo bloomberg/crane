@@ -113,7 +113,7 @@ let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
     position that opens a new slot (a let-bound right-hand side, a
     non-tail statement) does not take it. *)
 let rec gen_expr_typed cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
-  Typed_checks.census cx ?expected_ty:(Slot.expected slot) core_e (gen_form cx slot env core_e)
+  Typed_checks.typed_lowering cx core_e (gen_form cx slot env core_e)
 
 (** The typed lowering of [core_e], by its form. *)
 and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =

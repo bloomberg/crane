@@ -743,11 +743,11 @@ and collect_stmts check ~in_visitor stmts =
      Pattern A — [Expression call; Return None]:
      In C++, a void function can end with [f(); return;] which is
      semantically [return f();] — the call is in tail position.
-     Translation ({!Core_to_cpp.Stmts.gen_stmts}) emits it when
-     current_cpp_return_type is Void.
+     Translation ({!Core_to_cpp.Stmts.gen_stmts}) emits it when the
+     enclosing function's return type is Void.
 
      Pattern B — [Expression call; Return (Some val)]:
-     Same situation but generated when current_cpp_return_type is a unit
+     Same situation but generated when the enclosing return type is a unit
      type (not Void), e.g. for ITree-unit-returning fixpoints whose
      return is threaded through the nat-match continuation [k].  The
      generated code is [f(); return Unit::e_TT;] which is semantically
