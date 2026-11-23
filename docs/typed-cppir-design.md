@@ -428,7 +428,7 @@ callable_crossing_matrix.
 - [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
 - [x] Phase B2 (see 8, B2: plans carry their expansion data; `coercions` pass; `Typed.head` is the look-through)
 - [ ] Phase C (in progress: steps 1 and 2 done, the ambient return type deleted (threaded `~ret`); step 3 done except the shape-reading lowering sites listed in §4; the result site moved to `Coerce.result_site`, see 8, C/D fourth session)
-- [ ] Phase D (in progress: one non-optional slot at the knot and the form functions; `Not_yet_typed` deleted (`Typed.carried`, `of_node ~fallback`); `gen_expr` shim deleted; `Call.yields` is a `Value_type` with `Deduced` reasons; `Declare_deduced` with frame and view readers ported; coercion-builder ratchet 41 -> 1 (`Cast_box`, `Built` origin); the last ratchet site, real types for `Unannotated` operands, the call's own result at the two `result_site` reads, `Typed.expansion`, typed-fit fatal not done; see 8, phase D sixth session)
+- [ ] Phase D (in progress: one non-optional slot at the knot and the form functions; `Not_yet_typed` deleted (`Typed.carried`, `of_node ~fallback`); `gen_expr` shim deleted; `Call.yields` is a `Value_type` with `Deduced` reasons; `Declare_deduced` with frame and view readers ported; coercion-builder rule strict (no lowering file outside `Coerce` builds the vocabulary); `Coerce.coerce ?value` for the `Ue` operands that had a value; the `Param` operands, the two `result_site` reads, `Typed.expansion`, typed-fit fatal not done; see 8, phase D seventh session)
 - [ ] Phase E (optional)
 
 ## 8. Findings
@@ -1950,3 +1950,118 @@ cast's differently (start from `tvar_subst_stmt` / the phantom handling in
 `Inductives` around the method body, and `Erasure.materialise`), convert
 the last site and make the rule strict (delete
 `COERCION_BUILDERS_PENDING`); then steps 3-5 as above.
+
+### Phase D, seventh session (2026-11-23)
+
+Done:
+- **The last ratchet site; the rule is strict.**  The rewrite that treated a
+  `Cast_box` plan's type differently from a raw cast's was
+  `Core_plan.Head_relaxation.apply`'s `Unmentioned` case: it erases the
+  type variables a function's head no longer mentions (`T2 = void` in
+  `wrap_rect`) to `std::any` throughout the body, but leaves a raw
+  `Any_cast`'s and `Tolerant_any_cast`'s target alone ("the cast's target
+  is left alone; its operand is not").  `Map` reaches a coercion plan's
+  types, so the `Cast_box`'s `into` became `std::any` and its expansion
+  dropped the cast.  Found with a backtrace hook in `Map`'s `Cast_box` case
+  (a named variable mapped to `Any`).  The rewrite now leaves a `Cast_box`
+  coercion whole (`Coerce (({plan = Cast_box _; _} as c), e') -> Coerce (c,
+  fe e')`), the same rule as for a cast; only `Cast_box`, since erasing the
+  other plans' types there is what today's output relies on.  `match.ml`'s
+  wholesale-erased field substitution builds `Coerce.unbox`;
+  `COERCION_BUILDERS_PENDING` is deleted and `scripts/check-module-deps.sh`
+  fails on any coercion builder in `core_to_cpp`/`control_to_cpp` outside
+  `coerce.ml`.  Census: `typed-shadow site agree` 1196, 59 unchecked (no
+  slot type), 0 disagree.
+- **`Ue` operands typed where the caller had the value.**
+  `Coerce.coerce ?value` takes the `Typed.t` the operand was lowered as:
+  the value's type is `from` where the caller states the box, else
+  `value`'s where `value.expr == expr` (the operand unchanged since), else
+  what the node carries (a lambda always the latter, as before).
+  `Construction.gen_stored_value_typed` keeps the value
+  (`gen_stored_value` is its expression); passed at a constructor argument
+  (`gen_expr_custom_cons`), a record field (`erased_domain_fun_ty` field),
+  and an argument boxed for a type-variable parameter
+  (`Application.gen_call_args`, `arg_typed`).  Census: `coerce unchecked
+  (untyped value)` 40 -> 28, `coerce agree` 2294 -> 2306, 0 disagree.
+  The 28 left are operands whose callers never had a `Typed.t` (built by
+  hand: `recover_boxed_result`, `unbox_into`, `functions.ml`'s
+  `needs_any_cast`, ...), each `~from:Any` callers' operand a node with no
+  carried type.
+
+Tried and reverted:
+- **`Param` (`erase_fn_arg_for_param`) operands typed.**  The same change
+  (`at_param ?value`, values kept at all four callers) moved 84 of the 88
+  `unchecked (untyped value)` lines to `agree` but changed
+  `type_level_fun_apply`: `app(..., crane_erase_fn([](Nat n) { return n;
+  }), ...)` lost its adapter, which breaks the program (`app` reads `sem`
+  as an erased callable).  Cause: the argument is a Core `Coerce` to `sem`
+  (a value-indexed family at a function index) of a lambda, and
+  `Typed_checks.of_built` types a lambda whose Core type has no arrows at
+  that type (`Lambda l, Typed t, _` with `Arrows.of_type t = None` returns
+  `Typed derived`), here `sem`, an opaque box; `decide` from an opaque
+  source answers `none`, so the gate withholds the adapter.  The lambda's
+  node carries no type either (`closure_arrows`: no return type, and
+  `return n` is not read off its node).  Typing the lambda as unannotated
+  in `of_built` instead fails the `CRANE_CHECK_IR` rule that a Core
+  `coerce` form is typed.  So the value's type is a lie the lowering of
+  the coerce tells (the Core coerce says `sem`, no box was built), not
+  something `at_param` can repair.  Next: have the Core `Coerce`'s lowering
+  type what it built (a closure, where it builds no box: params from the
+  node, result `Deduced`), or give `closure_arrows` the body's type (the
+  bound variable's `read_value_type`) so the node carries a closure; then
+  redo `at_param ?value` (the script is `/tmp/tcppirI/param.py`).
+
+Not done, and why:
+- **The two `Coerce.result_site` reads in `Application`.**
+  `filled_ty` (`eta_fun`, ~l.1488): the call `filled` always fills the
+  callee exactly (`k = arity - |args|` eta parameters), so reading the
+  callee's own type instead is `Typed.applied (Function_name (id,
+  name_arrows id dom (Function (surplus, cod)))) arity`, and `name_arrows`
+  spells the result at `result_site`: equal by construction
+  (`Arrows.of_type`/`to_type` round-trip exactly), so the switch only moves
+  the read into `name_arrows`, where the name's typing already owns it.
+  One case differs: `arity = 0` (a constant whose codomain is a type
+  variable, or an inline mapping with no `%aN`), where the name's type has
+  an empty first group that `Typed.applied f 0` does not consume while
+  `Typed.apply` does (`given >= n` with `n = 0` calls).  Smallest
+  follow-up: make `applied` consume leading empty groups (as `apply`
+  does), then switch `filled_ty` to the name's type (domain: the first
+  `arity` of `decl_doms`).  `cod_site` (`excess_groups`, ~l.915) is not a
+  call result: it spells a Core codomain the group loop re-expands per
+  alias (`expand_core_fun_alias`, `core_drop_arrows`), so it needs the
+  callee's `Value_type` with alias expansion in `Arrows`, not a probe.
+- **typed-fit fatal: no.**  Census at `e149faefe` (`/tmp/tcppirI/p2.log`,
+  same counts as the fifth session): `unrelated` 484 destination + 427
+  argument (180 distinct lines), `erase` 96, `unbox` 48, `eta` 20, `box`
+  12, `convert` 12, `regroup` 4.  The distinct `unrelated` lines by kind:
+  a callable whose grouping or parameter types the value states
+  differently (21; `coind_guard`'s `closure (T1,T2)->T3` into `fn(nat,
+  nat)->nat`: a lambda typed at its own variables); a namespace
+  qualification on one side only (13; a class's alias `memory_bit` against
+  the class); an erased or boxed component (9); a promoted variable's
+  alias against its instance member (`prom:addr` into `inst:_tcI0::addr`,
+  8); a monad transformer by name against its unfolding (`stateT`, 8);
+  `itreeF` against `itree` (the `observe` unfolding, 6); a type variable
+  against a concrete type or carrier (5); 40 others (dead-branch
+  `string` into `uint64_t`, `nat` into a record in `get_pair_bound_prop`,
+  section aliases under `PIV call/2(scope)`), and 70 lines in the
+  fixed-width form.  Each is a separate reconstruction defect (the value's
+  type, the slot's, or the comparison's normalisation), none a census
+  artefact one change removes.  Smallest follow-up: normalise the two
+  spelling-only kinds in the comparison (namespace qualification, promoted
+  alias against its member) and make typed-fit fatal under
+  `CRANE_CHECK_IR` with a checked-in allowlist of the remaining (library,
+  declaration, verdict) triples that may only shrink, the ratchet that
+  closed the coercion builders.
+
+Commits: `6776b455b` (last ratchet site, rule strict), `e149faefe`
+(`Coerce.coerce ?value`).  Extraction byte-identical after each (`git
+status --short tests` empty, 2 wip extraction errors as at the base);
+unit tests and `scripts/check-module-deps.sh` pass.  Full `make test` from
+clean at `6776b455b` and again at `e149faefe`: 1526 passed, 16 failed (all
+`tests/wip`, as at the base), `git status --short tests` empty.
+
+Next: type the Core `coerce` of a lambda as the closure it builds, then
+the `Param` operands (`/tmp/tcppirI/param.py`); `Typed.applied` consuming
+empty groups, then `filled_ty` from the name's type; the typed-fit
+allowlist ratchet.
