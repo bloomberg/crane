@@ -368,7 +368,7 @@ let type_mapping env sigma ~instance ~source (m : type_mapping) =
       | Integer_token (prefix, suffix) ->
         if not (allowed "_()<>:, +-" prefix && allowed "_()<>:, +-" suffix) then
           failf
-            "the IntegerToken emitter's prefix or suffix contains a character              that does not build a numeric literal or a wrapping macro or cast"
+            "the IntegerToken emitter's prefix or suffix contains a character that does not build a numeric literal or a wrapping macro or cast"
       | Decimal_constructor callee ->
         if callee = "" || not (allowed "_:<>, " callee) then
           failf "the DecimalConstructor emitter's callee %s is not a qualified C++ name" (quote callee) );
