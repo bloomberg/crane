@@ -221,5 +221,5 @@ let gen_return_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) ~use ~
       (* Void-returning function: discard the value and return. *)
       [Return None]
     else
-      [Destination.finish cx k (Knot.gen_expr_typed cx ?expected_ty:(Coerce.position_cpp_ty cx None) env t)]
+      [Destination.finish cx k (Knot.gen_expr_typed cx ?expected_ty:(current_cpp_return_type cx ()) env t)]
   end

@@ -2021,7 +2021,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
                    Representation_plan.check ~as_bound:true cx.ctx ~site:(Branch (case_occ, 0)) ~field:i
                      ~live:(Binders.binder_is_boxed cx (n - i)) () )
                  ids;
-             with_iife_return_type cx expected_ty (fun () ->
+             with_cpp_return_type cx expected_ty (fun () ->
                  with_fields_plan cx core_e asgns (fun () ->
                      gen_stmts cx ~slot env' (Destination.return_ cx) body ) ) ) ) )
   (* Known limitation: simultaneous pattern matching on record fields is not
@@ -2044,7 +2044,7 @@ let gen_record_match_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) 
     (* Simple body: gen_expr handles these as direct field access (no IIFE),
        so delegate to the default path. *)
     let value =
-      gen_expr_typed cx ?expected_ty:(Coerce.position_cpp_ty cx None) env ast
+      gen_expr_typed cx ?expected_ty:(current_cpp_return_type cx ()) env ast
     in
     (* A function value returned into an erased ([std::any]) return type --
        e.g. the [nat -> nat] branch of a dependent [if ... then nat else

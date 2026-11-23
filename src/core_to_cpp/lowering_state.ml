@@ -1084,12 +1084,3 @@ let with_escape_analysis cx f =
       threaded = {match_param_counter = 0; cs_counter = 0} };
   f ()
 
-(** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
-    fixpoint, or a record destructure in argument position).  The lambda
-    returns THIS expression's value, not the enclosing function's, so the
-    ambient return type must be re-based on the expression's own expected type
-    ([None] wherever the context imposes none).  Without this the enclosing
-    function's return type leaks into the IIFE body and its tail expression is
-    cast to it — e.g. [any_cast<uint64_t>] on an erased record field that the
-    caller then projects with [.first.first]. *)
-let with_iife_return_type cx (expected_ty : Cpp_ir.Lowered.Type.t option) f = with_cpp_return_type cx expected_ty f

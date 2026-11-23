@@ -1429,7 +1429,7 @@ let gen_applied_fix cx ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
           Cpp_ir.Typed.apply ~first:(Cpp_ir.Build.call fix_id) ~prefix:"_pa" (Cpp_ir.Typed.typed member fix_id)
             (List.rev_map Cpp_ir.Typed.of_node args)
         in
-        let into = Coerce.position_cpp_ty cx None in
+        let into = current_cpp_return_type cx () in
         decls @ defs
         @ deref_subst
             [ Destination.finish cx k

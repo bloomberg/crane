@@ -457,7 +457,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
       | _ -> false
     in
     if is_void_tail then begin
-      let e = gen_expr cx ~slot ?expected_ty:(Coerce.position_cpp_ty cx None) env t in
+      let e = gen_expr cx ~slot ?expected_ty:(current_cpp_return_type cx ()) env t in
       if returns_void cx then
         [Expression e; Return None]
       else if Destination.discards k then
@@ -470,7 +470,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Destination.t) ast : 
         @ Destination.finish_inlined cx k (Cpp_ir.Typed.of_node (Monadic.mk_tt_expr ()))
     end
     else begin
-      let e = gen_expr_typed cx ~slot ?expected_ty:(Coerce.position_cpp_ty cx None) env t in
+      let e = gen_expr_typed cx ~slot ?expected_ty:(current_cpp_return_type cx ()) env t in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
          time even though its Core type is concrete.  In tail position that value
          is the result, so cast it back to the declared return type -- the same
