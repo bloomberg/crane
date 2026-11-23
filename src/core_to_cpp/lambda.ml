@@ -43,7 +43,8 @@ let owned_flags passing = List.rev_map (fun p -> p = Cpp_ir.Param_mode.Owned) (L
     position states a function type: its binders split where the expected
     type returns a function, the parameters it takes and how, its captures,
     and its body as statements returning its result. *)
-let gen_lambda cx ~ret ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t =
+let gen_lambda cx (slot : Slot.slot) env (a : Core.Expr.t) : Cpp_ir.Typed.t =
+  let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
   (* What the lambda takes by move as it is made. *)
   let moved_captures = moved_names env (Ownership_ir.Region.captures cx.ctx.lexical.move_plan a) in
   (* Whether a binder becomes a C++ parameter: see

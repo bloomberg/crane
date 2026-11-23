@@ -17,7 +17,8 @@ open Knot
 (** [ret] of an effect monad, the global [use] (at [r]) applied to [a1 :: l],
     in expression position: the returned value in sequential mode, an
     [ITree<R>::ret] in reified mode. *)
-let gen_return_expr cx ~ret env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
+let gen_return_expr cx (slot : Slot.slot) env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
+  let ret = slot.Slot.ret in
   let ret_tys = Base.Core_util.written_type_args use in
   if not (Monadic.is_sequential_effect cx Core_plan.Effects.Return use) then begin
     (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
@@ -50,7 +51,8 @@ let gen_return_expr cx ~ret env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
 (** [bind] of an effect monad in sequential mode, the application [a], in
     expression position: an immediately invoked lambda over the statements
     that sequence it. *)
-let gen_bind_expr cx ~ret env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
+let gen_bind_expr cx (slot : Slot.slot) env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  let ret = slot.Slot.ret in
   (* Sequential mode: bind in expression context (e.g., nested inside
      another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
   with_escape_analysis cx ~ret (fun ret -> with_region cx ~ret a (fun () ->
@@ -60,8 +62,9 @@ let gen_bind_expr cx ~ret env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
     [a1 :: a2 :: l], in statement position ending in [k]: the action's
     statements, its result bound for the continuation in sequential mode, the
     [bind] call as an expression in reified mode. *)
-let gen_bind_stmts cx ~ret ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2
+let gen_bind_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2
   ~l : Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.Slot.ret in
   let bind_tys = Base.Core_util.written_type_args use in
   (* The action's result type: the argument written for the variable the
      continuation takes, [A] in [bind : forall A B, M A -> (A -> M B) -> M
@@ -208,8 +211,9 @@ let gen_bind_stmts cx ~ret ~slot env (k : Destination.t) (ast : Core.Expr.t) ~r 
     position ending in [k]: [k] of the returned value (a bare [return;] in a
     function returning [void]) in sequential mode, [k] of the whole term
     lowered as an [ITree<R>::ret] in reified mode. *)
-let gen_return_stmts cx ~ret ~slot env (k : Destination.t) (ast : Core.Expr.t) ~use ~a1 ~l :
+let gen_return_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : Core.Expr.t) ~use ~a1 ~l :
   Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.Slot.ret in
   if not (Monadic.is_sequential_effect cx Core_plan.Effects.Return use) then begin
     (* Reified mode: Ret is a constructor call, not desugared. *)
     Destination.finish_inlined cx k (Knot.gen_expr_typed cx (Slot.at ~ret ~slot ()) env ast)

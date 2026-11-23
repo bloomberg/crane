@@ -96,8 +96,9 @@ let singleton_call cx env i occ =
    concrete, so the term is an ordinary application and not the single-branch
    match a projection through an instance {e variable} extracts to; the C++ is
    the same either way. *)
-let project_through_instance cx ~ret env (use : Core.Global_use.t) args (projection : Core_plan.Elaborated_call.static_projection) :
+let project_through_instance cx (slot : Slot.slot) env (use : Core.Global_use.t) args (projection : Core_plan.Elaborated_call.static_projection) :
   Cpp_ir.Lowered.Expr.t =
+  let ret = slot.Slot.ret in
   let inst = List.nth args projection.instance in
   let x = use.callee and tys = Base.Core_util.written_type_args use in
   let operands =
@@ -160,8 +161,9 @@ let project_through_instance cx ~ret env (use : Core.Global_use.t) args (project
 (** [gen_call_args ~slot ?expected_ty env id plan] -- the C++ arguments of
     the call of the global [id] that [plan] describes, each generated against
     the parameter it is passed at.  The dictionaries' promoted variables are in scope for them. *)
-let gen_call_args cx ~ret ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~written_by_var env id plan :
+let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
     Typed.t list =
+  let ret = slot.Slot.ret in
   let {
     Calls.instantiated =
       {
@@ -606,8 +608,9 @@ let gen_call_args cx ~ret ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~w
     [std::function<std::any(std::any...)>] adapter where the callee's type
     erases to [std::any], and its result recovered from a box where the
     callee's codomain is erased. *)
-let eta_fun cx ~ret ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) env f args :
+let eta_fun cx (slot : Slot.slot) env f args :
     Typed.t =
+  let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
   let core_args = args in
 
   let rec get_eta_args dom args =
@@ -674,7 +677,7 @@ let eta_fun cx ~ret ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Typ
     let typed_args =
       let slot = if closed_head then {slot with Slot.building_constant = true} else slot in
       with_promoted_var_map cx (instance_promoted_map @ cx.ctx.lexical.promoted_var_map)
-        (fun () -> gen_call_args cx ~ret ~slot ?expected_ty ~written_by_var:lowered.Calls.written_by_var env id plan)
+        (fun () -> gen_call_args cx (Slot.at ~ret ~slot ?expected_ty ()) ~written_by_var:lowered.Calls.written_by_var env id plan)
     in
     let args = List.map (fun (a : Typed.t) -> a.expr) typed_args in
     let ty = lowered.Calls.callee_type
@@ -2207,7 +2210,8 @@ let eta_fun cx ~ret ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Typ
     applied to [args]: the body of the class's projection, which calls the
     method on the instance -- a template parameter, so a static member -- at
     the method's own type variables. *)
-let gen_singleton_dictionary_call cx ~ret env ~i ~occ ~args : Cpp_ir.Typed.t =
+let gen_singleton_dictionary_call cx (slot : Slot.slot) env ~i ~occ ~args : Cpp_ir.Typed.t =
+  let ret = slot.Slot.ret in
   let inst, class_ref, method_ref = Option.get (singleton_call cx env i occ) in
   (* What the method returns: its declared type at the dictionary's
      carrier, its own variables the projection's. *)
@@ -2235,14 +2239,15 @@ let gen_singleton_dictionary_call cx ~ret env ~i ~occ ~args : Cpp_ir.Typed.t =
 (** A class field projected through the instance [use] applied to [args]
     names, as Core decided it ({!Core_plan.Elaborate.static_projection_call}); a
     projection missing arguments is eta-expanded over them first. *)
-let gen_instance_projection cx ~ret ~expected_ty ~slot env ~use ~args : Cpp_ir.Typed.t =
+let gen_instance_projection cx (slot : Slot.slot) env ~use ~args : Cpp_ir.Typed.t =
+  let ret = slot.Slot.ret in
   let projection =
     Option.get (Core_plan.Elaborate.static_projection_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args) in
   match projection.missing with
   | [] ->
     Cpp_ir.Typed.v
       ~ty:(Typed_checks.core_value_type cx env projection.codomain)
-      (project_through_instance cx ~ret env use args projection)
+      (project_through_instance cx (Slot.at ~ret ()) env use args projection)
   | missing ->
     let k = List.length missing in
     let call =
@@ -2250,7 +2255,7 @@ let gen_instance_projection cx ~ret ~expected_ty ~slot env ~use ~args : Cpp_ir.T
                        arguments = List.map (Base.Core_util.ast_lift k) args
                          @ List.init k (fun i -> Core.Expr.fresh_rel (k - i))}
     in
-    Knot.gen_expr_typed cx (Slot.at ~ret ?expected_ty ~slot ()) env
+    Knot.gen_expr_typed cx slot env
       (Base.Core_util.named_lams
          (List.rev (List.mapi (fun i t -> (Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i)), t)) missing))
          call )
@@ -2259,11 +2264,12 @@ let gen_instance_projection cx ~ret ~expected_ty ~slot env ~use ~args : Cpp_ir.T
     call, partial or saturated ({!eta_fun}), its result recovered from a box
     where only a type index pins it down, and the call node recording its
     signature. *)
-let gen_application cx ~ret ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t list) : Typed.t =
+let gen_application cx (slot : Slot.slot) env (f : Core.Expr.t) (args : Core.Expr.t list) : Typed.t =
+  let expected_ty = Slot.expected slot in
   (* A partial application is a callable this position may expect at a
      different currying than the callee's own arrows give it, so the slot's
      type travels with it. *)
-  let call = eta_fun cx ~ret ?expected_ty ~slot env f args in
+  let call = eta_fun cx slot env f args in
   let result = call.expr in
   (* A callee whose result is only pinned down by a type index hands back a
      [std::any] (see {!result_is_index_only_tvar}); recover it at the type

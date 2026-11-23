@@ -71,9 +71,9 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
     and ids = Core.Recursion.Group.functions rec_group
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
-    Local_functions.gen_let_fix cx ~ret ~slot env k ~let_ty ~x ~ids ~funs ~occ ~fix_term ~b ~let_occ
+    Local_functions.gen_let_fix cx (Slot.at ~ret ~slot ()) env k ~let_ty ~x ~ids ~funs ~occ ~fix_term ~b ~let_occ
   | Core.Expr.Let {binder = x; binder_type = t; value = (Core.Expr.Lambda _ as a); body = b; occurrence = let_occ} ->
-    Local_functions.gen_let_lambda cx ~ret ~slot env k ~x ~t ~a ~b ~let_occ
+    Local_functions.gen_let_lambda cx (Slot.at ~ret ~slot ()) env k ~x ~t ~a ~b ~let_occ
   | Core.Expr.Let {binder = x; binder_type = t; value = a; body = b; occurrence = let_occ} ->
     let x' = cpp_id_of_id (id_of_binder_name x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in
@@ -374,25 +374,25 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
     and ids = Core.Recursion.Group.functions rec_group
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
-    Local_functions.gen_applied_fix cx ~ret ~slot env k ~x ~ids ~funs ~occ ~fix_term ~args
+    Local_functions.gen_applied_fix cx (Slot.at ~ret ~slot ()) env k ~x ~ids ~funs ~occ ~fix_term ~args
   | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group as fix_term ->
     let x = rec_group.selected
     and ids = Core.Recursion.Group.functions rec_group
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
-    Local_functions.gen_standalone_fix cx ~ret env k ~x ~ids ~funs ~occ ~fix_term
+    Local_functions.gen_standalone_fix cx (Slot.at ~ret ()) env k ~x ~ids ~funs ~occ ~fix_term
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
                      arguments = a1 :: a2 :: l} when Monadic.is_effect cx Core_plan.Effects.Bind use ->
-    Effects.gen_bind_stmts cx ~ret ~slot env k ast ~r ~use ~a1 ~a2 ~l
+    Effects.gen_bind_stmts cx (Slot.at ~ret ~slot ()) env k ast ~r ~use ~a1 ~a2 ~l
   | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = a1 :: l}
     when Monadic.is_effect cx Core_plan.Effects.Return use ->
-    Effects.gen_return_stmts cx ~ret ~slot env k ast ~use ~a1 ~l
+    Effects.gen_return_stmts cx (Slot.at ~ret ~slot ()) env k ast ~use ~a1 ~l
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
                      occurrence = case_occ}
                        when Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Core_plan.Match_kind.Custom ->
-    gen_custom_cpp_case cx ~ret ~slot env k typ t pv case_occ
+    gen_custom_cpp_case cx (Slot.at ~ret ~slot ()) env k typ t pv case_occ
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Base.Table.is_tt_constructor r
       && (ret = Some Cpp_ir.Type.Void) ->
     (* tt (unit constructor) in tail position of a void-returning function *)
@@ -421,7 +421,7 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
                      branches = pv;
                      occurrence = case_occ}
                        when Core_plan.Match_kind.is_record (Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
-    Match.gen_record_match_stmts cx ~ret ~slot env k ast ~typ ~t ~pv ~case_occ
+    Match.gen_record_match_stmts cx (Slot.at ~ret ~slot ()) env k ast ~typ ~t ~pv ~case_occ
   | t ->
     (* Tail position.  No deref_reified needed: in sequential mode, monadic
        variables are direct values (bind desugars to let-binding); in

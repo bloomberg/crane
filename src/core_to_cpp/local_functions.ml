@@ -488,7 +488,8 @@ let lifted_definition ~binders ~modes ~ret r params body tparams : Cpp_ir.Lowere
     every parameter is owned (the group holds copies); [local] or [lifted]
     names the occurrence or the helper whose machine plans the frames the
     body saves. *)
-let gen_fix cx ~ret env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx (n, ty) f =
+let gen_fix cx (slot : Slot.slot) env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx (n, ty) f =
+  let ret = slot.Slot.ret in
   let ids, f = collect_lams f in
   let ids = List.map (fun (x, ty) -> (cpp_id_of_id (id_of_binder_name x), ty)) ids in
   (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints). For
@@ -590,9 +591,10 @@ let gen_fix cx ~ret env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~
     the fixpoint lifted as template helpers where it has type variables of
     its own, otherwise declared in place, as a loop, a by-reference group or
     a Y-combinator closure. *)
-let gen_let_fix cx ~ret ~slot env (k : Destination.t) ~let_ty ~x ~ids ~funs ~occ
+let gen_let_fix cx (slot : Slot.slot) env (k : Destination.t) ~let_ty ~x ~ids ~funs ~occ
   ~fix_term ~b
   ~let_occ : Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.Slot.ret in
   (* Special case for let-fix: the let binding name is the fix function name *)
   Core_passes.Local_types.check_minted ids;
   let ids, funs = Core_passes.Local_types.recover_fix_codomains (Calls.local_types_lowering cx) ids funs in
@@ -644,7 +646,7 @@ let gen_let_fix cx ~ret ~slot env (k : Destination.t) ~let_ty ~x ~ids ~funs ~occ
           Array.to_list
             (Array.mapi
                (fun i f ->
-                 gen_fix cx ~ret env ~all_fix_ids:all_fix_ids_list ~lifted:member_refs.(i) ~fix_idx:i ids.(i)
+                 gen_fix cx (Slot.at ~ret ()) env ~all_fix_ids:all_fix_ids_list ~lifted:member_refs.(i) ~fix_idx:i ids.(i)
                    f )
                funs ) )
     in
@@ -749,7 +751,7 @@ let gen_let_fix cx ~ret ~slot env (k : Destination.t) ~let_ty ~x ~ids ~funs ~occ
       Array.to_list
         (Array.mapi
            (fun i f ->
-             gen_fix cx ~ret env ~all_fix_ids:all_fix_ids_list ~by_value:closures ~local:occ ~fix_idx:i ids.(i) f )
+             gen_fix cx (Slot.at ~ret ()) env ~all_fix_ids:all_fix_ids_list ~by_value:closures ~local:occ ~fix_idx:i ids.(i) f )
            funs )
     in
     let renamed_ids =
@@ -808,8 +810,9 @@ let gen_let_fix cx ~ret ~slot env (k : Destination.t) ~let_ty ~x ~ids ~funs ~occ
 
 (** [let x = a in b] with [a] a lambda, ending in [k]: a polymorphic lambda
     lifted out of the body as a helper, the others bound as closures. *)
-let gen_let_lambda cx ~ret ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
+let gen_let_lambda cx (slot : Slot.slot) env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
   Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.Slot.ret in
   (* Check if this is a polymorphic lambda that should be lifted to a
      top-level template function. *)
   let outer_tvars = get_current_type_vars cx in
@@ -1236,9 +1239,10 @@ let gen_let_lambda cx ~ret ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
 (** A local fixpoint [fix_term] applied to [args] in place, ending in [k]:
     lifted as template helpers where it has type variables of its own,
     otherwise declared in place and called. *)
-let gen_applied_fix cx ~ret ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
+let gen_applied_fix cx (slot : Slot.slot) env (k : Destination.t) ~x ~ids ~funs ~occ
   ~fix_term ~args :
   Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.Slot.ret in
   Core_passes.Local_types.check_minted ids;
   let ids, funs = Core_passes.Local_types.recover_fix_codomains (Calls.local_types_lowering cx) ids funs in
   register_erased_members occ ids;
@@ -1324,7 +1328,7 @@ let gen_applied_fix cx ~ret ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
             Array.to_list
               (Array.mapi
                  (fun i f ->
-                   gen_fix cx ~ret env ~all_fix_ids:all_fix_ids_list ~lifted:member_refs.(i) ~fix_idx:i ids.(i)
+                   gen_fix cx (Slot.at ~ret ()) env ~all_fix_ids:all_fix_ids_list ~lifted:member_refs.(i) ~fix_idx:i ids.(i)
                      f )
                  funs ) )
       in
@@ -1385,7 +1389,7 @@ let gen_applied_fix cx ~ret ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
         Array.to_list
           (Array.mapi
              (fun i f ->
-               gen_fix cx ~ret env ~all_fix_ids:all_fix_ids_list ~by_value:(escapes || partial) ~local:occ
+               gen_fix cx (Slot.at ~ret ()) env ~all_fix_ids:all_fix_ids_list ~by_value:(escapes || partial) ~local:occ
                  ~fix_idx:i ids.(i) f )
              funs )
       in
@@ -1492,8 +1496,9 @@ let gen_applied_fix cx ~ret ~slot env (k : Destination.t) ~x ~ids ~funs ~occ
 
 (** A local fixpoint [fix_term] not applied, ending in [k]: it escapes, so
     it is a Y-combinator closure. *)
-let gen_standalone_fix cx ~ret env (k : Destination.t) ~x ~ids ~funs ~occ ~fix_term :
+let gen_standalone_fix cx (slot : Slot.slot) env (k : Destination.t) ~x ~ids ~funs ~occ ~fix_term :
   Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.Slot.ret in
   (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
      RHS of a let-binding.  Since the fixpoint value itself is returned (not
      called in place), it will always escape.  Use the Y-combinator pattern:
@@ -1505,7 +1510,7 @@ let gen_standalone_fix cx ~ret env (k : Destination.t) ~x ~ids ~funs ~occ ~fix_t
     Array.to_list
       (Array.mapi
          (fun i f ->
-           gen_fix cx ~ret env ~all_fix_ids:all_fix_ids_list ~by_value:true ~local:occ ~fix_idx:i ids.(i) f )
+           gen_fix cx (Slot.at ~ret ()) env ~all_fix_ids:all_fix_ids_list ~by_value:true ~local:occ ~fix_idx:i ids.(i) f )
          funs )
   in
   let renamed_ids =
