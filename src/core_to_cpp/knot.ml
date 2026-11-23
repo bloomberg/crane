@@ -19,10 +19,11 @@
     are the only knot: a module that needs anything else from a later one is
     in the wrong place.
 
-    Both take [~ret], the result type of the function or lambda whose body
-    is being lowered ([None] where C++ deduces it), next to the position's
-    own [?expected_ty]: a form passes on the [ret] it was given, or the
-    one its own body returns at. *)
+    Both take a {!Slot.slot}: the result type of the function or lambda
+    whose body is being lowered ([Slot.ret], [None] where C++ deduces it)
+    and the type the position states ([Slot.into]), with the position's
+    other properties.  A form passes on the [ret] it was given, or the one
+    its own body returns at, and restates [into] ({!Slot.at}). *)
 
 open Base.Common
 
@@ -31,16 +32,13 @@ open Base.Common
 type lowering = {
   expr_typed :
     Lowering_state.t ->
-    ret:Cpp_ir.Lowered.Type.t option ->
-    ?expected_ty:Cpp_ir.Lowered.Type.t ->
-    ?slot:Slot.slot ->
+    Slot.slot ->
     env ->
     Core.Expr.t ->
     Cpp_ir.Typed.t;
   stmts :
     Lowering_state.t ->
-    ret:Cpp_ir.Lowered.Type.t option ->
-    ?slot:Slot.slot ->
+    Slot.slot ->
     env ->
     Destination.t ->
     Core.Expr.t ->
@@ -61,11 +59,11 @@ let get () =
   | None -> CErrors.anomaly (Pp.str "Crane: expression lowering ran before Translation installed it.")
 
 (** {!Expr.gen_expr_typed}. *)
-let gen_expr_typed cx ~ret ?expected_ty ?slot env e = (get ()).expr_typed cx ~ret ?expected_ty ?slot env e
+let gen_expr_typed cx slot env e = (get ()).expr_typed cx slot env e
 
 (** {!gen_expr_typed}'s expression alone, for a caller that does not read
     the type yet. *)
-let gen_expr cx ~ret ?expected_ty ?slot env e = (gen_expr_typed cx ~ret ?expected_ty ?slot env e).expr
+let gen_expr cx slot env e = (gen_expr_typed cx slot env e).expr
 
 (** {!Stmts.gen_stmts}. *)
-let gen_stmts cx ~ret ?slot env d e = (get ()).stmts cx ~ret ?slot env d e
+let gen_stmts cx slot env d e = (get ()).stmts cx slot env d e

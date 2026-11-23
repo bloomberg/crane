@@ -778,7 +778,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
            types. *)
         with_method_ns_for_locals cx ~base:method_ns (fun () ->
             with_region cx ~ret ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
-                gen_stmts cx ~ret env method_k inner_body ) ) )
+                gen_stmts cx (Slot.at ~ret ()) env method_k inner_body ) ) )
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves

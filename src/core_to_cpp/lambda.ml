@@ -520,8 +520,7 @@ let gen_lambda cx ~ret ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t
           (fun () ->
             with_lam_return_type (fun ret return_ ->
               with_region cx ~ret ~owned:lambda_owned a (fun () ->
-                gen_stmts cx ~ret
-                  ~slot:{slot with Slot.expected_core_ty = body_expected_core_ty}
+                gen_stmts cx (Slot.at ~ret ~slot:{slot with Slot.expected_core_ty = body_expected_core_ty} ())
                   env
                   return_
                   a ) ) )
@@ -696,7 +695,7 @@ let gen_lambda cx ~ret ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t
                  [return], which have no common type to deduce. *)
               let core_ty = match body_expected_core_ty with Some _ as t -> t | None -> infer_core_body_type a in
               Option.bind core_ty (fun t ->
-                match Match_types.iife_closure_return_at ~several:true ~returned cx env t raw_body with
+                match Match_types.join ~several:true ~own:Free ~returned cx env t raw_body with
                 | Some ty when Types.names_only_scoped_tvars cx ty -> Some ty
                 | _ -> None ) ) )
       in
@@ -778,7 +777,7 @@ let gen_lambda cx ~ret ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t
              so no forwarding lambda can name it.  Emit the plain reference
              and let the printer wrap it in the method-calling lambda it
              already builds for method values. *)
-          gen_expr cx ~ret env a
+          gen_expr cx (Slot.at ~ret ()) env a
         else
         let arg_ids = List.init n field_param_id in
         let arg_vars = List.map (fun id : Cpp_ir.Lowered.Expr.t -> Local id) arg_ids in
@@ -949,7 +948,7 @@ let gen_lambda cx ~ret ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t
             (Cpp_ir.Build.call (mk_cppglob r (Calls.written_at_variables cx r by_var)) fwd_args)
       else
         (* Every binder was a type: the body is the value the slot takes. *)
-        gen_expr cx ~ret ?expected_ty ~slot env a
+        gen_expr cx (Slot.at ~ret ?expected_ty ~slot ()) env a
     | _ ->
       (* Body is not a template function ref — wrap in void thunk (old
          behavior). gen_expr env a might produce lambdas with [&] capture

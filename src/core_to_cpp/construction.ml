@@ -76,8 +76,8 @@ let gen_stored_value cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot
   match e with
   | Core.Expr.Erased_value _ -> Cpp_passes.Erasure.empty_box
   | e when Monadic.core_value_is_void_call cx e ->
-    Monadic.wrap_void_call_as_value (gen_expr cx ~ret ~slot env e)
-  | _ -> gen_expr cx ~ret ?expected_ty ~slot env e
+    Monadic.wrap_void_call_as_value (gen_expr cx (Slot.at ~ret ~slot ()) env e)
+  | _ -> gen_expr cx (Slot.at ~ret ?expected_ty ~slot ()) env e
 
 (** The constructor [r] of a custom-extracted inductive at [ty] applied to
     [ts]: the user's constructor template instantiated at the type arguments

@@ -17,6 +17,13 @@ open Base.Type_util
     stored value.  A position that opens a new slot (a let-bound right-hand
     side, a non-tail statement) starts again from {!empty_slot}. *)
 type slot = {
+  ret : Cpp_ir.Lowered.Type.t option;
+      (** The result type of the function or lambda whose body the position
+          is in ([None] where C++ deduces it). *)
+  into : Cpp_ir.Lowered.Slot_type.t;
+      (** The type the position itself states: [Exactly t], or [Free] where
+          it states none.  Restated by every position ({!at}), never
+          inherited. *)
   repr : slot_repr;
       (** How the value is represented in the slot.  [Boxed]: the slot is
           really [std::any], so a constructor built for it has to use the
@@ -61,7 +68,9 @@ type slot = {
 
 (** The slot properties of a position that constrains nothing. *)
 let empty_slot =
-  { repr = Native;
+  { ret = None;
+    into = Free;
+    repr = Native;
     expected_core_ty = None;
     in_ctor_arg = false;
     eta_keep_moves = false;
@@ -76,3 +85,12 @@ let boxed slot = match slot.repr with Boxed _ -> true | Native -> false
 (** [slot], its value boxed as [kind] says unless it already is: an erasure
     the slot already carries is kept, being the outer and earlier one. *)
 let into_box kind slot = if boxed slot then slot else { slot with repr = Boxed kind }
+
+(** The slot of a position inside a body returning [ret], stating
+    [expected_ty] where it states a type, with [slot]'s other properties
+    (none by default). *)
+let at ~ret ?expected_ty ?(slot = empty_slot) () : slot =
+  { slot with ret; into = (match expected_ty with Some t -> Exactly t | None -> Free) }
+
+(** The type the position states, if any. *)
+let expected (s : slot) : Cpp_ir.Lowered.Type.t option = match s.into with Exactly t -> Some t | _ -> None

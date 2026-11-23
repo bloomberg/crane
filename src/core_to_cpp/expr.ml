@@ -91,9 +91,9 @@ let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
         in
         Some (Cpp_ir.Build.lambda (List.map fst params) None body ~capture:Stored)
 
-(** [gen_expr ?expected_ty ?slot env core_e] -- the CppIR expression for the
-    Core expression [core_e], generated against [expected_ty] where the
-    position states one.  A global that is called when named
+(** [gen_expr slot env core_e] -- the CppIR expression for the
+    Core expression [core_e], generated against the type [slot] states
+    ([Slot.into]), inside a body returning [slot.ret].  A global that is called when named
     ({!Suspension.naming_calls}: a definition that only throws, emitted as a
     zero-parameter function) becomes a call of no arguments in the
     [Core.Expr.Global] case.
@@ -112,13 +112,13 @@ let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
     expression, the body of a lambda that is itself the stored value.  A
     position that opens a new slot (a let-bound right-hand side, a
     non-tail statement) does not take it. *)
-let rec gen_expr_typed cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.empty_slot) env
-    (core_e : Core.Expr.t) : Typed.t =
+let rec gen_expr_typed cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
+  let ret = slot.ret and expected_ty = Slot.expected slot in
   Typed_checks.census cx ?expected_ty core_e (gen_form cx ~ret ?expected_ty ~slot env core_e)
 
 (** {!gen_expr_typed}'s expression alone: the entry point for a caller that
     does not read the type yet. *)
-and gen_expr cx ~ret ?expected_ty ?slot env core_e = (gen_expr_typed cx ~ret ?expected_ty ?slot env core_e).expr
+and gen_expr cx slot env core_e = (gen_expr_typed cx slot env core_e).expr
 
 (** The typed lowering of [core_e], by its form. *)
 and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (core_e : Core.Expr.t) : Typed.t =
@@ -294,7 +294,7 @@ and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (co
   | (Core.Expr.Apply _ | Core.Expr.Construct _) as e when Base.Probe.checking ()
     && not (Core_passes.Spines.canonical_application e) ->
     Base.Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
-    gen_expr_typed cx ~ret ?expected_ty ~slot env (Core_passes.Spines.spine e)
+    gen_expr_typed cx (Slot.at ~ret ?expected_ty ~slot ()) env (Core_passes.Spines.spine e)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
                      arguments = a1 :: l} when Monadic.is_effect cx Core_plan.Effects.Return use ->
     form @@ Effects.gen_return_expr cx ~ret env ~r ~use ~a1 ~l
@@ -309,7 +309,7 @@ and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (co
        Wrap in an IIFE, delegating to gen_stmts which handles Core.Expr.Apply(Core.Expr.Fixpoint
        ...). *)
     form @@ with_escape_analysis cx ~ret (fun ret -> with_region cx ~ret a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (fun into -> gen_stmts cx ~ret env (Destination.Return into) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (fun into -> gen_stmts cx (Slot.at ~ret ()) env (Destination.Return into) a) ) )
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries, as Core decided it
      ({!Core_plan.Elaborate.static_projection_call}). *)
@@ -326,7 +326,7 @@ and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (co
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use); arguments = args} as e
     when (not slot.Slot.building_constant)
          && Core_plan.Elaborate.closed_instance_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args -> (
-    let built = gen_expr_typed cx ~ret ?expected_ty ~slot:{slot with Slot.building_constant = true} env e in
+    let built = gen_expr_typed cx (Slot.at ~ret ?expected_ty ~slot:{slot with Slot.building_constant = true} ()) env e in
     (* Kept, it is the value it builds. *)
     match Cpp_passes.Coercions.head built.expr with
     | Call _ ->
@@ -532,7 +532,7 @@ and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (co
   | Core.Expr.Construct {arguments = ts; _} as e
     when (not slot.Slot.building_constant) && Core_plan.Elaborate.shared_constant ~walk:(elaborations cx) e
          && not (takes_reuse_token cx e) -> form @@ (
-    let built = gen_expr cx ~ret ?expected_ty ~slot:{slot with Slot.building_constant = true} env e in
+    let built = gen_expr cx (Slot.at ~ret ?expected_ty ~slot:{slot with Slot.building_constant = true} ()) env e in
     match Cpp_passes.Coercions.head built with
     | Call (_, Type_member (Entity_application (n, _, _), _), _)
       when Base.Table.is_shared_variant n && ts <> [] ->
@@ -569,12 +569,12 @@ and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (co
            type is what the caller converts to, which need not be a type the
            lambda's returns share. *)
         Match_types.value_iife ?ret:expected_ty cx env (infer_core_body_type a) (fun into ->
-            gen_stmts cx ~ret ~slot env (Destination.Return into) a ) ) ) )
+            gen_stmts cx (Slot.at ~ret ~slot ()) env (Destination.Return into) a ) ) ) )
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ as a ->
     (* Bare fixpoint in expression context: wrap in IIFE, delegate to
        gen_stmts. *)
     form @@ with_escape_analysis cx ~ret (fun ret -> with_region cx ~ret a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (fun into -> gen_stmts cx ~ret env (Destination.Return into) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (fun into -> gen_stmts cx (Slot.at ~ret ()) env (Destination.Return into) a) ) )
   | Core.Expr.String s -> Typed.v ~ty:(Typed_checks.primitive_type cx env "strings.pstring.type") (Literal (String s))
   | Core.Expr.UInt63 x -> Typed.v ~ty:(Typed_checks.primitive_type cx env "num.int63.type") (Literal (Uint63 x))
   | Core.Expr.Numeral {inductive = ind; value = n} ->
@@ -585,8 +585,8 @@ and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (co
       CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
   | Core.Expr.Float64 f -> Typed.v ~ty:(Typed_checks.primitive_type cx env "num.float.type") (Literal (Float f))
   | Core.Expr.Persistent_array {elements = elems; default = def} ->
-    form @@ let elems = Array.map (gen_expr cx ~ret env) elems in
-    let def = gen_expr cx ~ret env def in
+    form @@ let elems = Array.map (gen_expr cx (Slot.at ~ret ()) env) elems in
+    let def = gen_expr cx (Slot.at ~ret ()) env def in
     Persistent_array (elems, def)
   | Core.Expr.Coerce {source_type = from; target_type = into; value = t; occurrence = occ} ->
     form @@ gen_crossing cx ~ret ?expected_ty ~slot env ~coercion:(Some (from, into)) ~boxed:false t occ
@@ -640,10 +640,8 @@ and gen_crossing cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env
      arity are the slot's -- and a coercion cannot reshape a callable after
      the fact. *)
   let inner_typed =
-    gen_expr_typed cx ~ret
-      ?expected_ty:(match t with Core.Expr.Lambda _ -> expected_ty | _ -> None)
-      ~slot:
-        (match into_box_kind with Some kind -> Slot.into_box kind slot | None -> slot)
+    gen_expr_typed cx (Slot.at ~ret ?expected_ty:(match t with Core.Expr.Lambda _ -> expected_ty | _ -> None) ~slot:
+        (match into_box_kind with Some kind -> Slot.into_box kind slot | None -> slot) ())
       env t
   in
   let inner = inner_typed.expr in

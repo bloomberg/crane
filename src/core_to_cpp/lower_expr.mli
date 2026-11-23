@@ -31,19 +31,17 @@ open Names
     {!Cpp_build}). *)
 
 (** Generate a C++ expression from a Core expression
-    ({!Expr.gen_expr}).  [ret] is the result type of the function whose
-    body it is in; [slot] describes the position; callers outside lowering
-    leave it at {!Slot.empty_slot}. *)
-val gen_expr :
-  Lowering_state.t -> ret:Cpp_ir.Lowered.Type.t option -> ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:Slot.slot -> env ->
-    Core.Expr.t -> Cpp_ir.Lowered.Expr.t
+    ({!Expr.gen_expr}) at the position [slot] describes ({!Slot.at}: the
+    result type of the function whose body it is in, the type the position
+    states). *)
+val gen_expr : Lowering_state.t -> Slot.slot -> env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t
 
 (** Generate C++ statements from a Core expression
     ({!Stmts.gen_stmts}).  The final value goes to the {!Destination}
-    (a return, an assignment); [ret] is the result type of the function
-    whose body they are in. *)
+    (a return, an assignment); [slot]'s [ret] is the result type of the
+    function whose body they are in. *)
 val gen_stmts :
-  Lowering_state.t -> ret:Cpp_ir.Lowered.Type.t option -> ?slot:Slot.slot ->
+  Lowering_state.t -> Slot.slot ->
   env ->
   Destination.t ->
   Core.Expr.t ->

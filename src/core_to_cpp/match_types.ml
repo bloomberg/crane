@@ -162,25 +162,6 @@ let iife_void_return cx env typ pv : Cpp_ir.Lowered.Type.t option =
     Some Void
   else None
 
-(** The function type a lambda whose returns are written under the return
-    type in force, [ret], and which computes a value annotated [r], is
-    declared at: [ret], where it is [r] with its arrows grouped otherwise --
-    curried, as a type variable instantiated at [r] takes it -- and [r]
-    where [ret] is no such regrouping, the enclosing declaration's own
-    return type, say, reaching a position that does not install one. *)
-let joined_at ~(ret : Cpp_ir.Lowered.Type.t option) (r : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t option =
-  let rec uncurried (t : Cpp_ir.Lowered.Type.t) =
-    match t with
-    | Function (doms, cod) ->
-      let ds, c = uncurried cod in
-      (doms @ ds, c)
-    | t -> ([], t)
-  in
-  match (ret, r) with
-  | Some (Function _ as f), Function _ when f <> r && uncurried f = uncurried r -> Some f
-  | _, Function _ -> Some r
-  | _ -> None
-
 (** The types of the values [stmts] return at their own level (the
     [return]s of a nested lambda are its own), each as lowering synthesised
     it where it was returned ([returned], {!Lowering_state.with_returns}),
@@ -201,58 +182,67 @@ let returned_types ~returned (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lower
   in
   List.rev (List.fold_left stmt [] stmts)
 
-(** [iife_closure_return env typ pv ~returned stmts] is the return type to
-    annotate the IIFE wrapping a match with, given the branches already
-    generated, [returned] what they returned.
+(** The function type a lambda computing a value annotated [r] is declared
+    at where its returns need one, the lambda standing in the slot [own]:
+    [own]'s function type where that is [r] with its arrows grouped
+    otherwise -- curried, as a type variable instantiated at [r] takes it --
+    and [r] otherwise (the enclosing declaration's own return type, say,
+    reaching a position that states none); [None] where [r] is not a
+    function type. *)
+let declared_at ~(own : Cpp_ir.Lowered.Slot_type.t) (r : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t option =
+  match (own, Cpp_ir.Arrows.of_type r) with
+  | Exactly (Function _ as f), Some a
+    when f <> r && (match Cpp_ir.Arrows.of_type f with Some b -> Cpp_ir.Arrows.same_function a b | None -> false) ->
+    Some f
+  | _, Some _ -> Some r
+  | _, None -> None
 
-    Distinct closures have no common type, so a match that returns one from
-    some branch needs the [std::function] they all convert to.  Otherwise
-    [None]: deducing beats annotating, because the branch's recorded Core type
-    can outlive the term it described -- a motive's arrow surviving the
-    application that consumed it -- and because it may still mention type
-    variables that mean nothing in a non-template context.
+(** The return type to annotate a lambda with whose return type C++ would
+    deduce -- an IIFE, a match's, or a function value ({!Lambda.gen_lambda})
+    -- computing a value of the Core type [rty], given its body [stmts]
+    already generated, [returned] what they returned, the lambda standing
+    in the slot [own]; [~several] where only one returning from more than
+    one place is asked it: a single closure returned deduces its own type,
+    which converts wherever it goes.
+
+    Distinct closures have no common type, so a lambda that returns one
+    from some [return] needs the [std::function] they all convert to
+    ({!declared_at}).  Otherwise [None]: deducing beats annotating, because
+    the recorded Core type can outlive the term it described -- a motive's
+    arrow surviving the application that consumed it -- and because it may
+    still mention type variables that mean nothing in a non-template
+    context.
 
     The question is asked of the types of the values returned
     ({!Cpp_ir.Value_type.deduces_none}), not of the Core terms: a branch
     returns a closure whether it was written as a lambda or arose from a
     partial application, a global function named is a function's name, a
     class method [I::m] among them, and two function-typed parameters are
-    two deduced template parameters.
-
-    The type joined at is the one the branches were written under, [ret],
-    where that is a function type ({!Match.branch_return}): a lambda in a
-    branch tail takes its arguments grouped as [ret] groups them -- curried
-    where the match is handed to a parameter that is a type variable at a
-    function type -- and the annotation, read off Core, groups them flat. *)
-let rec iife_closure_return ?ret ~returned cx env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
-  let branch_rty =
-    match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ
-  in
-  iife_closure_return_at ?ret ~returned cx env branch_rty stmts
-
-(** The same question of any lambda whose return type C++ would deduce --
-    an IIFE, or a function value ({!Lambda.gen_lambda}) -- computing a value
-    of the Core type [rty], [~several] where only one returning from more
-    than one place is asked it: a single closure returned deduces its own
-    type, which converts wherever it goes. *)
-and iife_closure_return_at ?(several = false) ?ret ~returned cx env rty (stmts : Cpp_ir.Lowered.Stmt.t list) :
+    two deduced template parameters. *)
+let join ?(several = false) ~own ~returned cx env rty (stmts : Cpp_ir.Lowered.Stmt.t list) :
     Cpp_ir.Lowered.Type.t option =
   let types = returned_types ~returned stmts in
   if (several && List.length types < 2) || not (Cpp_ir.Value_type.deduces_none types) then None
-  else match Types.cpp_of_core cx env rty with Function _ as r -> joined_at ~ret r | _ -> None
+  else declared_at ~own (Types.cpp_of_core cx env rty)
+
+(** {!join} for the lambda a match [typ]/[pv] is lowered in, at the type
+    its branches compute.  A lambda in a branch tail takes its arguments
+    grouped as [own] groups them ({!Match.branch_return}). *)
+let join_branches ~own ~returned cx env typ pv stmts =
+  let branch_rty = match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ in
+  join ~own ~returned cx env branch_rty stmts
 
 (** An immediately invoked lambda over the body [gen] lowers, computing a
     value annotated [rty] -- the Core type of the term it stands for --
     whose returns are written under [ret]: declared at the type its
-    callables join at ({!iife_closure_return_at}), deduced where they need
-    none.  Every lambda of the kind that returns from more than one place
+    callables join at ({!join}), deduced where they need none.  Every lambda of the kind that returns from more than one place
     goes through it. *)
-and value_iife ?ret cx env (rty : Core.Type.t option) (gen : Cpp_ir.Lowered.Slot_type.t -> Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Expr.t =
+let value_iife ?ret cx env (rty : Core.Type.t option) (gen : Cpp_ir.Lowered.Slot_type.t -> Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Expr.t =
   (* Its returns are at its own slot: the type the caller states for
      them, else the join C++ deduces. *)
   let slot : Cpp_ir.Lowered.Slot_type.t = match ret with Some t -> Exactly t | None -> Join in
   let body, returned = Lowering_state.with_returns cx (fun () -> gen slot) in
-  Cpp_ir.Build.iife (Option.bind rty (fun rty -> iife_closure_return_at ~several:true ?ret ~returned cx env rty body)) body
+  Cpp_ir.Build.iife (Option.bind rty (fun rty -> join ~several:true ~own:slot ~returned cx env rty body)) body
 
 (** [pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     ~non_erased_def_site_field_tys] -- what a pattern-match branch pins down
