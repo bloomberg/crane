@@ -1370,10 +1370,12 @@ a bisecting harness must change the `.v`'s digest each run
 (`/tmp/tcppir8/many.sh` appends a unique comment, `git checkout tests`
 restores).  Two of the early bisections here silently measured nothing.
 
-Commits: `6c64774c3` (plans carry their data, eager), the next commit
+Commits: `6c64774c3` (plans carry their data, eager), `142448616`
 (node survives to finishing).  Extraction byte-identical after each
 (`git status --short tests` empty), no `CRANE_CHECK_IR` violation;
 `dune build @unit_tests/runtest` and `scripts/check-module-deps.sh` pass.
+Full `make test` from clean at the second: 1526 passed, 16 failed (all
+`tests/wip`, as at the base).
 
 Next: phase C.  Start with the standalone row functions (`regroup_value`,
 `eta_expand_to_expected`, ... are now one-line `into_slot` calls whose
