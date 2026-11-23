@@ -209,17 +209,23 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
           let rest = List.filteri (fun i _ -> i >= n) doms in
           let result = List.fold_right (fun d r -> Cpp_ir.Type.Function ([d], r)) rest result in
           Typed.v ~ty:(Closure {groups = [List.map fst l.params]; result}) x
+      (* A coercion whose target is no callable (a value-indexed family at
+         a function index) builds no box of its lambda: what it built is
+         the closure, its result written nowhere. *)
+      | None when (match e with Coerce _ -> true | _ -> false) ->
+        Typed.v ~ty:(Closure {groups = [List.map fst l.params]; result = Auto}) x
       | None -> Typed.v ~ty:derived x )
     | _ -> Typed.v ~ty:derived x )
   | Some ty, None -> Typed.v ~ty x
 
 (** Where lowering is, for a census line: the library and the declaration
     whose body is lowered. *)
-let site cx =
-  Base.Probe.library () ^ " "
-  ^ match cx.Lowering_state.ctx.input.body_owner with
-    | Some r -> Names.Id.to_string (Names.Label.to_id (Base.Common.label_of_r r))
-    | None -> "-"
+let declaration cx =
+  match cx.Lowering_state.ctx.input.body_owner with
+  | Some r -> Names.Id.to_string (Names.Label.to_id (Base.Common.label_of_r r))
+  | None -> "-"
+
+let site cx = Base.Probe.library () ^ " " ^ declaration cx
 
 (** A short description of [e]'s head, for a census line. *)
 let rec describe : Core.Expr.t -> string = function

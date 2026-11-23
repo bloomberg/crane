@@ -106,7 +106,8 @@ let applied (f : Lowered.Value_type.t) n : Lowered.Value_type.t option =
     | g :: rest -> Some (rest_type (List.filteri (fun i _ -> i >= n) g :: rest) result)
     | [] -> ( match Arrows_.of_type result with Some a -> take a.groups a.result n | None -> None )
   in
-  Option.map (fun t -> Value_type_.Typed t) (Option.bind (Value_type_.arrows f) (fun a -> take a.groups a.result n))
+  let start (a : Lowered.Arrows.t) = match a.groups with [] :: rest -> take rest a.result n | groups -> take groups a.result n in
+  Option.map (fun t -> Value_type_.Typed t) (Option.bind (Value_type_.arrows f) start)
 
 let apply ?first ?(prefix = "_sat") f args =
   let rec go (call : Lowered.Expr.t list -> Lowered.Expr.t) ~pending (ty : Lowered.Value_type.t) fe args =

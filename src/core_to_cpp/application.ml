@@ -45,13 +45,13 @@ let erased_member cx i =
    erased a domain ({!erased_member_types}), adapted to it -- unless it is
    a variable already of that type, which an adapter would only wrap again at
    every call that passes it on. *)
-let adapt_to_erased_param cx env param_ty a expr =
+let adapt_to_erased_param cx env ?value param_ty a expr =
   match a with
   | Core.Expr.Bound_variable {index = j; _}
     when (match get_env_type_opt cx j with
           | Some t -> Types.cpp_of_core cx env t = Types.cpp_of_core cx env param_ty
           | None -> false) -> expr
-  | _ -> Coerce.at_param cx env param_ty a expr
+  | _ -> Coerce.at_param cx env ?value param_ty a expr
 
 (** [stmts] with the declaration of the local [id] standing for the Core
    binder [b]. *)
@@ -276,7 +276,7 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
     let expr : Cpp_ir.Lowered.Expr.t =
       match param_core_ty with
       | Some param_ty when not deduced_callable ->
-        Coerce.at_param cx env param_ty core_arg expr
+        Coerce.at_param cx env ~value:arg_typed param_ty core_arg expr
       | _ -> expr
     in
     (* A callable at an inline mapping's parameter declared at a type
@@ -1482,13 +1482,20 @@ let eta_fun cx (slot : Slot.slot) env f args :
               let filled =
                 made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call ?yields cglob (passed (args @ fill)))
               in
-              (* The surplus goes to the result in the groups its spelling
-                 takes them in ({!Coerce.result_site}). *)
-              let filled_ty =
-                Cpp_ir.Types.spell_arrows (Coerce.result_site id)
-                  (Function (List.map fst (List.filteri (fun i _ -> i >= k) eta_args), cod))
+              (* The surplus goes to the result in the groups the callee's
+                 own type takes them in: its name's, the [arity] declared
+                 domains filled. *)
+              let name_ty : Cpp_ir.Lowered.Value_type.t =
+                match
+                  Coerce.name_arrows id
+                    (List.filteri (fun i _ -> i < arity) decl_doms)
+                    (Function (List.map fst (List.filteri (fun i _ -> i >= k) eta_args), cod))
+                with
+                | Some a -> Function_name (id, a)
+                | None -> Cpp_ir.Typed.unannotated
               in
-              (Cpp_ir.Typed.apply (Cpp_ir.Typed.typed filled_ty filled) surplus).expr
+              let filled_ty = Option.default Cpp_ir.Typed.unannotated (Cpp_ir.Typed.applied name_ty arity) in
+              (Cpp_ir.Typed.apply (Cpp_ir.Typed.v ~ty:filled_ty filled) surplus).expr
             | None -> made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob (passed call_args))
           in
           let ret_ty, (body : Cpp_ir.Lowered.Stmt.t list) =
@@ -1983,10 +1990,11 @@ let eta_fun cx (slot : Slot.slot) env f args :
     in
     let args =
       List.mapi (fun i x ->
-      let expr =
+      let value : Cpp_ir.Typed.t =
         match x with
         | e when Monadic.core_value_is_void_call cx e ->
-          Monadic.wrap_void_call_as_value ((gen_expr_typed cx (Slot.at ~ret ~slot:arg_slot ()) env x).expr)
+          Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated
+            (Monadic.wrap_void_call_as_value ((gen_expr_typed cx (Slot.at ~ret ~slot:arg_slot ()) env x).expr))
         (* A lambda is written against the parameter's Core type as well
            as its C++ one: the binders a flat parameter takes that the term
            does not write become its own ({!Lambda.gen_lambda}), so that it
@@ -1999,19 +2007,20 @@ let eta_fun cx (slot : Slot.slot) env f args :
             | Some t when not (core_type_contains_erased ~in_arrows:true t) -> Some t
             | _ -> None
           in
-          (gen_expr_typed cx (Slot.at ~ret ?expected_ty:(declared_dom i) ~slot:{arg_slot with Slot.expected_core_ty} ()) env x).expr
+          gen_expr_typed cx (Slot.at ~ret ?expected_ty:(declared_dom i) ~slot:{arg_slot with Slot.expected_core_ty} ()) env x
         | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ ->
           let expected = Types.param_expected_cpp_ty cx env callee_param_tys i in
-          (gen_expr_typed cx (Slot.at ~ret ?expected_ty:expected ~slot:arg_slot ()) env x).expr
+          gen_expr_typed cx (Slot.at ~ret ?expected_ty:expected ~slot:arg_slot ()) env x
         | Core.Expr.Bound_variable {index = j; occurrence = occ} when Binders.read_is_boxed cx j occ ->
           let inner = (gen_expr_typed cx (Slot.at ~ret ~slot:arg_slot ()) env x).expr in
           let expected = Types.param_expected_cpp_ty cx env callee_param_tys i in
-          ( match expected with
-            | Some ty ->
-              Coerce.unbox (Erasure.erase_type_args_to_any ty) inner
-            | None ->
-              has_unresolved_boxed_arg := true;
-              inner )
+          Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated
+            ( match expected with
+              | Some ty ->
+                Coerce.unbox (Erasure.erase_type_args_to_any ty) inner
+              | None ->
+                has_unresolved_boxed_arg := true;
+                inner )
         (* A value built anywhere in the argument -- at its top, in a
            branch of a match or a let's body, under another constructor --
            is spelled there for the first time, and its annotation may say
@@ -2020,11 +2029,12 @@ let eta_fun cx (slot : Slot.slot) env f args :
            The parameter's Core type says, and the slot, which every form
            hands on to the positions whose value is the argument's, refines
            the erased parts by it. *)
-        | _ -> (gen_expr_typed cx (Slot.at ~ret ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} ()) env x).expr
+        | _ -> gen_expr_typed cx (Slot.at ~ret ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} ()) env x
       in
+      let expr = value.expr in
       match List.nth_opt callee_param_tys i with
-      | Some param_ty when erased_callee -> adapt_to_erased_param cx env param_ty x expr
-      | Some param_ty -> Coerce.at_param cx env param_ty x expr
+      | Some param_ty when erased_callee -> adapt_to_erased_param cx env ~value param_ty x expr
+      | Some param_ty -> Coerce.at_param cx env ~value param_ty x expr
       | None -> expr) args
     in
     (* Detect over-application: when a local variable's C++ type has fewer

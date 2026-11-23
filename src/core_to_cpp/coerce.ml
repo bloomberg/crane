@@ -1007,9 +1007,15 @@ let param_slot cx env param_core_ty : Cpp_ir.Lowered.Slot_type.t =
   | exception e when CErrors.noncritical e -> Free
 
 (** The argument [e], lowered as [expr], at the parameter the callee
-    declares at [param_core_ty]. *)
-let at_param cx env param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  into_slot ~origin:(Param {cx; env; param_core_ty; term = e}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr) (param_slot cx env param_core_ty)
+    declares at [param_core_ty]: of [value]'s type where [value] is [expr]
+    itself, else of the type [expr] carries. *)
+let at_param cx env ?(value : Cpp_ir.Typed.t option) param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  let x =
+    match value with
+    | Some v when v.expr == expr -> v
+    | _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr
+  in
+  into_slot ~origin:(Param {cx; env; param_core_ty; term = e}) x (param_slot cx env param_core_ty)
 
 (** A global or variable named at the Core type [core_ty] put in the slot
     [expected_ty] states ({!eta_global_plan}). *)

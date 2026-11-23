@@ -1874,7 +1874,8 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
           under_branch_binders @@ fun () ->
           List.mapi
             (fun j a ->
-              let e = gen_stored_value cx (Slot.at ~ret ~slot ()) env' a in
+              let value = gen_stored_value_typed cx (Slot.at ~ret ~slot ()) env' a in
+              let e = value.expr in
               match List.nth_opt fld_param_tys j with
               | Some (Core.Type.Variable_app _ as pt) when not is_typeclass ->
                 (* The dictionary's method is stored monomorphically, over
@@ -1884,7 +1885,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
                    [Nat].  Box the elements on the way in, as the result is
                    unboxed on the way out. *)
                 Cpp_ir.Expr.Container_cast (Types.cpp_of_core cx env' pt, e, false)
-              | Some pt -> Coerce.at_param cx env' pt a e
+              | Some pt -> Coerce.at_param cx env' ~value pt a e
               | None -> e )
             value_args
         in

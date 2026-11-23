@@ -52,10 +52,11 @@ val carried : Lowered.Expr.t -> Lowered.Value_type.t option
 val rewrap : (Lowered.Expr.t -> Lowered.Expr.t) -> t -> t
 
 (** [applied f n] is what a callable of type [f] yields given [n]
-    arguments, taken group by group as its type takes them: the rest of a
-    group they straddle and the groups after it, a function of what is left;
-    past its last group, the result's own groups.  [None] where [f] or a
-    result the arguments reach is no callable. *)
+    arguments in a call, taken group by group as its type takes them, as
+    {!apply} takes them: a leading empty group is the call itself; the rest
+    of a group they straddle and the groups after it, a function of what is
+    left; past its last group, the result's own groups.  [None] where [f] or
+    a result the arguments reach is no callable. *)
 val applied : Lowered.Value_type.t -> int -> Lowered.Value_type.t option
 
 (** [apply ?first ?prefix f args] is [f] applied to [args], in source order,
