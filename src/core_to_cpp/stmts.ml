@@ -51,7 +51,6 @@ let declared_in_scope (stmts : Cpp_ir.Lowered.Stmt.t list) =
     argument of a call, and every variable it reads beneath one left pushed
     would read the binder one further in. *)
 let rec gen_stmts cx ~ret ?slot env (k : Destination.t) ast : Cpp_ir.Lowered.Stmt.t list =
-  check_ret cx ~site:"statements" ret;
   let saved = cx.ctx.lexical.env_types in
   Fun.protect ~finally:(fun () -> restore_env_types cx saved) (fun () -> gen_stmts_scoped cx ~ret ?slot env k ast)
 
@@ -281,14 +280,13 @@ and gen_stmts_scoped cx ~ret ?(slot = Slot.empty_slot) env (k : Destination.t) a
            whatever family the function returns into. *)
         let rhs_result = Types.let_value_result cx env t_effective in
         let afun = Destination.Assign (x_renamed, Destination.slot_of rhs_result) in
-        with_cpp_return_type cx rhs_result (fun ret ->
-          gen_stmts cx ~ret
-            ~slot:
-              { slot with
-                Slot.repr = Native;
-                expected_core_ty = Some t_effective;
-                eta_keep_moves = is_single_use_partial_app }
-            env_rhs afun a )
+        gen_stmts cx ~ret:rhs_result
+          ~slot:
+            { slot with
+              Slot.repr = Native;
+              expected_core_ty = Some t_effective;
+              eta_keep_moves = is_single_use_partial_app }
+          env_rhs afun a
       in
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]

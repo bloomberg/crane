@@ -247,11 +247,11 @@ and iife_closure_return_at ?(several = false) ?ret ~returned cx env rty (stmts :
     callables join at ({!iife_closure_return_at}), deduced where they need
     none.  Every lambda of the kind that returns from more than one place
     goes through it. *)
-and value_iife ?ret cx env (rty : Core.Type.t option) (gen : unit -> Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Expr.t =
+and value_iife ?ret cx env (rty : Core.Type.t option) (gen : Cpp_ir.Lowered.Slot_type.t -> Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Expr.t =
   (* Its returns are at its own slot: the type the caller states for
      them, else the join C++ deduces. *)
   let slot : Cpp_ir.Lowered.Slot_type.t = match ret with Some t -> Exactly t | None -> Join in
-  let body, returned = Lowering_state.with_returns cx (fun () -> Lowering_state.with_own_return cx slot gen) in
+  let body, returned = Lowering_state.with_returns cx (fun () -> gen slot) in
   Cpp_ir.Build.iife (Option.bind rty (fun rty -> iife_closure_return_at ~several:true ?ret ~returned cx env rty body)) body
 
 (** [pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields

@@ -579,9 +579,8 @@ let gen_fix cx ~ret env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~
   let result =
     ( (renamed_n, ty),
       ids,
-      with_cpp_return_type cx fix_return_type (fun ret ->
-          with_region cx ~ret ~owned:owned_params ?resumes ?certain f
-            (fun () -> gen_stmts cx ~ret env return_ f) ),
+      with_region cx ~ret:fix_return_type ~owned:owned_params ?resumes ?certain f
+        (fun () -> gen_stmts cx ~ret:fix_return_type env return_ f),
       parameter_binders cx env ids )
   in
   restore_env_types cx saved_env_types;
@@ -889,10 +888,10 @@ let gen_let_lambda cx ~ret ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
       let into = Types.let_value_result cx env t in
       let afun = Destination.Assign (x_renamed, Destination.slot_of into) in
       let asgn =
-        match Option.map (Types.unfold_cpp_typedef cx env) (ret) with
-        | Some (Function _) -> with_cpp_return_type cx into (fun ret -> gen_stmts cx ~ret env afun a)
-        (* The ambient return type is left for the right-hand side's legacy
-           readers; the destination is the binder's. *)
+        match Option.map (Types.unfold_cpp_typedef cx env) ret with
+        | Some (Function _) -> gen_stmts cx ~ret:into env afun a
+        (* [ret] is left for the right-hand side's legacy readers; the
+           destination is the binder's. *)
         | _ -> gen_stmts cx ~ret env afun a
       in
       (* When the RHS was a pair accessor on an erased argument (e.g.
@@ -1138,7 +1137,7 @@ let gen_let_lambda cx ~ret ~slot env (k : Destination.t) ~x ~t ~a ~b ~let_occ :
              the lambda's binders. *)
           let compiled_body =
             with_escape_analysis cx ~ret (fun ret -> with_region cx ~ret body (fun () ->
-                with_own_return cx Join (fun () -> gen_stmts cx ~ret lam_env (Destination.Return Join) body) ) )
+                gen_stmts cx ~ret lam_env (Destination.Return Join) body ) )
           in
           restore_env_types cx saved_env_types;
           (free_var_params, lam_param_ids, lam_env, compiled_body) )

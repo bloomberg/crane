@@ -15,7 +15,7 @@ let gen_expr = Expr.gen_expr
 let gen_stmts = Stmts.gen_stmts
 
 let () = Knot.install {expr_typed = Expr.gen_expr_typed; stmts = Stmts.gen_stmts}
-let () = Types.type_term_arg := fun cx env a -> gen_expr cx ~ret:(Lowering_state.current_cpp_return_type cx ()) env a
+let () = Types.type_term_arg := fun cx env a -> gen_expr cx ~ret:None env a
 let () = Lowering_state.plan_representation := Representation_plan.region
 let () = Lowering_state.plan_positions := Position_plan.region
 

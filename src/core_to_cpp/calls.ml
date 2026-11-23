@@ -1130,7 +1130,7 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
 
      In both cases, if the callee's Core return type is a Core.Type.Variable that refers to
      one of those erased type params, and we know the concrete return type
-     from the enclosing function context (current_cpp_return_type), we can
+     from the enclosing function context ([ret]), we can
      supply it as an explicit C++ template arg.
 
      This is needed because C++ cannot deduce template type params from lambda

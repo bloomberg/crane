@@ -38,13 +38,9 @@ let slot_of (t : Cpp_ir.Lowered.Type.t option) : Slot_type.t =
 let result_slot (t : Cpp_ir.Lowered.Type.t option) : Slot_type.t =
   match t with Some t -> Exactly t | None -> Join
 
-(** A [return] from the function or deduced lambda whose body is being
-    lowered: at the lambda's own slot ({!Lowering_state.with_own_return}),
-    else at the result type lowering has for the function. *)
-let return_ ~ret cx =
-  match Lowering_state.own_return cx with
-  | Some s -> Return s
-  | None -> Return (result_slot ret)
+(** A [return] from the function whose body is being lowered, its result
+    type [ret]. *)
+let return_ ~ret = Return (result_slot ret)
 
 (** [Return] at [t], or [Return_void] where [t] is [void]. *)
 let return_at (t : Cpp_ir.Lowered.Type.t option) =
@@ -84,23 +80,9 @@ let rec build d (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Stmt.t =
   | Adapted (f, d) -> build d (f e)
   | Custom c -> c.build e
 
-(** Under [CRANE_PROBE], whether the slot [d] states agrees with the
-    ambient return type ({!Lowering_state.current_cpp_return_type}) at the
-    tail: the two describe one position while both exist. *)
-let check_ambient cx d =
-  if Base.Probe.enabled () then
-    match d with
-    | Discard -> ()
-    | _ ->
-      let ambient = result_slot (Lowering_state.current_cpp_return_type cx ()) in
-      Base.Probe.hit "dest-ambient" (fun () ->
-          if slot d = ambient then "agree"
-          else "disagree in " ^ Typed_checks.site cx)
-
 (** The statement the typed value [x] becomes at [d], [x] checked against
     [d]'s slot ({!Typed_checks.fit}). *)
 let finish cx d (x : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Stmt.t =
-  check_ambient cx d;
   Typed_checks.fit cx ~site:(if discards d then "discard" else "destination") x (slot d);
   let s = build d x.expr in
   (* A value returned is recorded for the join of the lambda returning it

@@ -157,7 +157,7 @@ let gen_expr_custom_cons cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?
       let a = custom_field cx env c ~ret ~slot r i e in
       let e = a.term and new_expected = a.expected_core and erased_fn_slot = a.erased_fn_slot in
       let result =
-        with_cpp_return_type cx a.ret (fun ret -> gen_ctor_arg ~ret ?expected_ty:a.expected ~slot:a.slot e)
+        gen_ctor_arg ~ret:a.ret ?expected_ty:a.expected ~slot:a.slot e
       in
 
       (* Where this argument is stored, as far as its representation goes:
@@ -1375,8 +1375,8 @@ let gen_construction cx ~ret ~expected_ty ~slot env ~ty ~r ~ts (construction : C
     let gen_and_wrap i e =
       let ft_opt, expr =
         (* A constructor argument returns its own value, not the enclosing
-           function's, so the ambient return type must not reach it. *)
-        with_cpp_return_type cx None (fun ret ->
+           function's, so the enclosing [ret] must not reach it. *)
+        (let ret = None in
         let ft_opt =
           try Some (List.nth field_types i)
           with Failure _ | Invalid_argument _ -> None

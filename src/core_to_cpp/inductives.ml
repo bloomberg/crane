@@ -769,7 +769,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
      exposed to the body as [gen_dfun] exposes a function's, so a result
      recovered from a box is recovered at it. *)
   let stmts =
-    with_cpp_return_type cx (Some ret_cpp) @@ fun ret ->
+    let ret = Some ret_cpp in
     with_type_vars cx (vars @ extra_tvar_names) (fun () ->
         (* Include all local value-type inductives with recursive fields in the
            method ns.  This ensures that when the method body constructs or

@@ -114,7 +114,6 @@ let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
     non-tail statement) does not take it. *)
 let rec gen_expr_typed cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.empty_slot) env
     (core_e : Core.Expr.t) : Typed.t =
-  check_ret cx ~site:"expression" ret;
   Typed_checks.census cx ?expected_ty core_e (gen_form cx ~ret ?expected_ty ~slot env core_e)
 
 (** {!gen_expr_typed}'s expression alone: the entry point for a caller that
@@ -310,7 +309,7 @@ and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (co
        Wrap in an IIFE, delegating to gen_stmts which handles Core.Expr.Apply(Core.Expr.Fixpoint
        ...). *)
     form @@ with_escape_analysis cx ~ret (fun ret -> with_region cx ~ret a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (fun () -> gen_stmts cx ~ret env (Destination.return_ ~ret cx) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (fun into -> gen_stmts cx ~ret env (Destination.Return into) a) ) )
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries, as Core decided it
      ({!Core_plan.Elaborate.static_projection_call}). *)
@@ -561,7 +560,7 @@ and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (co
        region is planned at that return type too: planned under the
        enclosing function's, a coercion at the let's tail would be planned
        against a position lowering does not give it. *)
-    form @@ with_escape_analysis cx ~ret (fun ret -> with_cpp_return_type cx expected_ty (fun ret ->
+    form @@ with_escape_analysis cx ~ret (fun _ -> (let ret = expected_ty in
       with_region cx ~ret a (fun () ->
         (* Returning a closure from one path and another closure, or a
            function-typed local, from the next, the lambda deduces no
@@ -569,13 +568,13 @@ and gen_form cx ~ret ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env (co
            type where that only regroups its arrows.  Otherwise the expected
            type is what the caller converts to, which need not be a type the
            lambda's returns share. *)
-        Match_types.value_iife ?ret:expected_ty cx env (infer_core_body_type a) (fun () ->
-            gen_stmts cx ~ret ~slot env (Destination.return_ ~ret cx) a ) ) ) )
+        Match_types.value_iife ?ret:expected_ty cx env (infer_core_body_type a) (fun into ->
+            gen_stmts cx ~ret ~slot env (Destination.Return into) a ) ) ) )
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ as a ->
     (* Bare fixpoint in expression context: wrap in IIFE, delegate to
        gen_stmts. *)
     form @@ with_escape_analysis cx ~ret (fun ret -> with_region cx ~ret a (fun () ->
-      Match_types.value_iife cx env (infer_core_body_type a) (fun () -> gen_stmts cx ~ret env (Destination.return_ ~ret cx) a) ) )
+      Match_types.value_iife cx env (infer_core_body_type a) (fun into -> gen_stmts cx ~ret env (Destination.Return into) a) ) )
   | Core.Expr.String s -> Typed.v ~ty:(Typed_checks.primitive_type cx env "strings.pstring.type") (Literal (String s))
   | Core.Expr.UInt63 x -> Typed.v ~ty:(Typed_checks.primitive_type cx env "num.int63.type") (Literal (Uint63 x))
   | Core.Expr.Numeral {inductive = ind; value = n} ->

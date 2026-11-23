@@ -835,7 +835,7 @@ let custom_refined_annotation cx env ~ret ~(expected_ty : Cpp_ir.Lowered.Type.t 
      C++ type with a Core reading to take back. *)
   let ty =
     (* With no slot of its own, a constructor in a tail statement lands in
-       the enclosing function's result ({!with_cpp_return_type}, as
+       the enclosing function's result ([ret], as
        {!Coerce.position_cpp_ty} reads it). *)
     let expected =
       match expected_ty with

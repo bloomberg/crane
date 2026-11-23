@@ -237,17 +237,6 @@ type lexical = {
   (* Template type variables for the function currently being translated:
       lexical because a lifted helper or polymorphic lambda has its own. *)
   current_type_vars : Id.t list;
-  (** C++ return type of the enclosing function, set by the function and
-     instance generators ({!with_cpp_return_type}). Used to recover erased
-     template type args at call sites where C++ can't deduce them from lambda
-     arguments ({!current_cpp_return_type}).  Lexical: a lambda's body has
-     its own return type. *)
-  current_cpp_return_type : Cpp_ir.Lowered.Type.t option;
-  (** The slot a [return] in the body being lowered fills, where that body
-      is a lambda C++ deduces the result of nested in the enclosing
-      function ({!with_own_return}); [None] where it is the enclosing
-      function's, at {!current_cpp_return_type}.  Lexical. *)
-  own_return : Cpp_ir.Lowered.Slot_type.t option;
   (** The values returned so far in the body a join is decided for
       ({!with_returns}), each with the type lowering synthesised for it;
       [None] outside such a body.  Lexical: a nested body that decides its
@@ -406,8 +395,6 @@ let create ~pp_cpp_type () =
           unit = no_unit_facts };
       lexical =
         { current_type_vars = [];
-          current_cpp_return_type = None;
-          own_return = None;
           returned = None;
           env_types = Core.Lexenv.empty;
           cpp_binder_types = IntMap.empty;
@@ -520,39 +507,6 @@ let with_hkt_resolutions cx r f =
     against the wrong function. *)
 let with_type_vars cx (tvars : Id.t list) (f : unit -> 'a) : 'a =
   with_field cx (fun c -> c.lexical.current_type_vars) (set_current_type_vars cx) tvars f
-
-(** [with_cpp_return_type ty f] runs [f] with [ty] as the enclosing
-    function's C++ return type -- the type a tail expression is cast to. *)
-let with_cpp_return_type cx (ty : Cpp_ir.Lowered.Type.t option) (f : Cpp_ir.Lowered.Type.t option -> 'a) : 'a =
-  with_field cx
-    (fun c -> (c.lexical.current_cpp_return_type, c.lexical.own_return))
-    (fun (t, o) -> set_lexical cx (fun l -> { l with current_cpp_return_type = t; own_return = o }))
-    (ty, None) (fun () -> f ty)
-
-(** [with_own_return slot f] runs [f], lowering the body of a lambda C++
-    deduces the result of, with its returns at [slot]: the enclosing
-    function's return type stays in force for what reads it
-    ({!current_cpp_return_type}), but is not the slot of these returns. *)
-let with_own_return cx (slot : Cpp_ir.Lowered.Slot_type.t) (f : unit -> 'a) : 'a =
-  with_field cx
-    (fun c -> c.lexical.own_return)
-    (fun o -> set_lexical cx (fun l -> { l with own_return = o }))
-    (Some slot) f
-
-(** The slot of a [return] in the body being lowered, where it is not the
-    enclosing function's ({!with_own_return}). *)
-let own_return cx = cx.ctx.lexical.own_return
-
-(** The enclosing function's C++ return type
-    ({!lexical.current_cpp_return_type}). *)
-let current_cpp_return_type cx () : Cpp_ir.Lowered.Type.t option = cx.ctx.lexical.current_cpp_return_type
-
-(** Under [CRANE_CHECK_IR], that [ret], the enclosing result type a
-    lowering entry point was handed, is the ambient one: the two describe
-    one position while both exist. *)
-let check_ret cx ~site (ret : Cpp_ir.Lowered.Type.t option) =
-  if Base.Probe.checking () && ret <> cx.ctx.lexical.current_cpp_return_type then
-    Base.Probe.violation "threaded return type" (Pp.str site)
 
 (** [with_returns f] runs [f] collecting the values returned in the body it
     lowers ({!record_return}), and gives them back with its result: what a
@@ -1081,8 +1035,7 @@ let with_escape_analysis cx ~(ret : Cpp_ir.Lowered.Type.t option) (f : Cpp_ir.Lo
       lexical =
         { cx.ctx.lexical with
           move_plan = Ownership_ir.Region.empty;
-          in_constructor_expr = false;
-          current_cpp_return_type = inner_return_type };
+          in_constructor_expr = false };
       threaded = {match_param_counter = 0; cs_counter = 0} };
   f inner_return_type
 

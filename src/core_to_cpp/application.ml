@@ -154,8 +154,7 @@ let project_through_instance cx ~ret env (use : Core.Global_use.t) args (project
          let slot =
            {Slot.empty_slot with Slot.expected_core_ty = List.nth_opt operand_core_tys i}
          in
-         with_cpp_return_type cx expected (fun ret ->
-             gen_expr cx ~ret ?expected_ty:expected ~slot env a ) )
+         gen_expr cx ~ret:expected ?expected_ty:expected ~slot env a )
        operands )
 
 (** [gen_call_args ~slot ?expected_ty env id plan] -- the C++ arguments of
@@ -255,14 +254,13 @@ let gen_call_args cx ~ret ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~w
       | _ -> slot.Slot.expected_core_ty
     in
     let arg_typed =
-      with_cpp_return_type cx ret (fun ret ->
-          Knot.gen_expr_typed cx ~ret ?expected_ty:arg_expected_ty
-            ~slot:
-              { slot with
-                Slot.expected_core_ty = arg_expected_core_ty;
-                call_result = expected_result;
-                stated_core_ty = param_core_ty }
-            env core_arg )
+      Knot.gen_expr_typed cx ~ret ?expected_ty:arg_expected_ty
+        ~slot:
+          { slot with
+            Slot.expected_core_ty = arg_expected_core_ty;
+            call_result = expected_result;
+            stated_core_ty = param_core_ty }
+        env core_arg
     in
     let expr = arg_typed.expr in
     (* The slot the argument fills: the parameter at the call's

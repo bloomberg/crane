@@ -470,7 +470,7 @@ let gen_lambda cx ~ret ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t
       in
       let with_lam_return_type f =
         match Option.map (Types.unfold_cpp_typedef cx env) expected_ty with
-        | _ when binderless_result <> None -> with_cpp_return_type cx binderless_result (fun ret -> f ret (Destination.Return (Destination.result_slot binderless_result)))
+        | _ when binderless_result <> None -> f binderless_result (Destination.Return (Destination.result_slot binderless_result))
         | _ when carrier <> None ->
           (* A polymorphic function object returns at the type its own
              parameter fixes, so the enclosing function's return type is
@@ -488,7 +488,7 @@ let gen_lambda cx ~ret ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t
               cx) core_ty)
             | None, _ -> None
           in
-          with_cpp_return_type cx ret (fun ret -> f ret (Destination.Return (Destination.result_slot ret)))
+          f ret (Destination.Return (Destination.result_slot ret))
         | Some (Function (_, cod)) when cod <> Void ->
           (* Read in this scope: a variable of the callee's the slot names
              ([tfmap]'s [T2]) is erased where it sits, as the binders'
@@ -506,11 +506,11 @@ let gen_lambda cx ~ret ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Typed.t
                 | t -> t )
               cod
           in
-          with_cpp_return_type cx (Some cod) (fun ret -> f ret (Destination.Return (Exactly cod)))
-        (* The ambient return type is left alone for the body's legacy
+          f (Some cod) (Destination.Return (Exactly cod))
+        (* [ret] stays the enclosing function's for the body's legacy
            readers, but it is not this lambda's: its return type is the
            join of what it returns. *)
-        | _ -> with_own_return cx Join (fun () -> f ret (Destination.Return Join))
+        | _ -> f ret (Destination.Return Join)
       in
       let body_stmts, returned =
         with_returns cx @@ fun () ->

@@ -1490,10 +1490,9 @@ let gen_dfun cx ~minted n b cty ty temps =
       ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) scope.ids)
       ~ty:(fun i -> snd (List.nth all_params i))
   in
-  (* Expose the C++ return type to inner call sites so they can recover erased
-     template type args (see try_recover_erased_return_type). *)
-  let saved_return_type = cx.ctx.lexical.current_cpp_return_type in
-  set_lexical cx (fun l -> { l with current_cpp_return_type = Some scope.cod });
+  (* The body returns at the declared result type, which inner call sites
+     read to recover erased template type args (see
+     try_recover_erased_return_type). *)
   let ret = Some scope.cod in
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
@@ -1561,7 +1560,6 @@ let gen_dfun cx ~minted n b cty ty temps =
       set_current_parameters cx [];
       definition b
   in
-  set_lexical cx (fun l -> { l with current_cpp_return_type = saved_return_type });
   Base.Table.current_decl_ref := saved_decl_ref;
   set_lexical cx (fun l -> { l with promoted_var_map = saved_promoted_var_map });
   set_current_template_head cx saved_template_head;
@@ -1814,7 +1812,8 @@ let gen_decl__inner cx n b ty =
     | _ ->
       begin_body cx ~owner:n ~all_locals:true ();
       let body_expr =
-        with_cpp_return_type cx (Some cty_ir) (fun ret -> with_region cx ~ret b (fun () -> gen_constant_value cx ~ret b))
+        let ret = Some cty_ir in
+        with_region cx ~ret b (fun () -> gen_constant_value cx ~ret b)
       in
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the
@@ -2000,7 +1999,7 @@ let gen_spec__inner cx n b ty =
          erased template type args (see try_recover_erased_return_type). Without
          this, calls like pick<natBoxed>() inside a constant body cannot deduce
          the missing type parameter. *)
-      with_cpp_return_type cx (Some ty_ir) @@ fun ret ->
+      let ret = Some ty_ir in
       (* Strip a coercion wrapper and track whether a type coercion from std::any
          is needed.  Core.Expr.Coerce wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int).  The body

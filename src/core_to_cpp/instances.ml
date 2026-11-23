@@ -90,7 +90,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
      ({!plan_instance_methods}), decided by the very code that generates
      them. *)
   let gen_body ~ret env e =
-    if bodies then gen_stmts cx ~ret env (Destination.return_ ~ret cx) e
+    if bodies then gen_stmts cx ~ret env (Destination.return_ ~ret) e
     else []
   in
   let inner_ty, inner_body, tc_temps, lam_params = instance_layers cx ty body in
@@ -484,7 +484,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
-            with_cpp_return_type cx (Some method_ret_ty) @@ fun ret ->
+            let ret = Some method_ret_ty in
             if bodies then begin_body cx ~owner:name ();
             if List.for_all (fun b -> b.kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
