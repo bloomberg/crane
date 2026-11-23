@@ -467,7 +467,7 @@ let gen_match_branch cx (slot : Slot.slot) env (typ : Core.Type.t) rty cname ids
                    else Entity_application (g, [erased_elem], [])
                  in
                  Coerce.unbox cast_ty (Cpp_ir.Expr.Local binding_name)
-               | _ -> Cpp_passes.Erasure.unbox bare_ty (Cpp_ir.Expr.Local binding_name))
+               | _ -> Coerce.unbox bare_ty (Cpp_ir.Expr.Local binding_name))
             else
               Local binding_name
           in
