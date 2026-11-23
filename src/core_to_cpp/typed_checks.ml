@@ -325,12 +325,47 @@ let census cx ?expected_ty e (x : Typed.t) =
   end;
   x
 
-(** The fit check, counted under [CRANE_PROBE] as [typed-fit]: [x], as it
-    is put in the slot [into] at [site] -- a destination of statements, an
-    argument at its parameter -- needs no adapter by {!Coerce.decide}. *)
+(** The pairs the fit check lets through: [unit_tests/typed_fit_allowlist.txt],
+    one tab-separated [library, declaration, position, verdict, from, into]
+    per line, built into the plugin.  Each is a type reconstruction defect
+    still open; the list may only shrink. *)
+let fit_allowlist =
+  lazy
+    (let t = Hashtbl.create 512 in
+     List.iter
+       (fun l -> if l <> "" && l.[0] <> '#' then Hashtbl.replace t l ())
+       (String.split_on_char '\n' Typed_fit_allowlist.text);
+     t)
+
+(** [s] on one line, its whitespace runs one space: a type's shape as
+    {!fit_allowlist} keys it. *)
+let one_line s =
+  String.concat " " (List.filter (( <> ) "") (String.split_on_char ' ' (String.map (function '\n' | '\t' -> ' ' | c -> c) s)))
+
+(** The fit check, fatal under [CRANE_CHECK_IR] and counted under
+    [CRANE_PROBE] as [typed-fit]: [x], as it is put in the slot [into] at
+    [site] -- a destination of statements, an argument at its parameter --
+    needs no adapter by {!Coerce.decide}, and its type is related to the
+    slot's.  A pair on {!fit_allowlist} is let through and counted as
+    [typed-fit-allowed], so that a census finds the entries no longer hit. *)
 let fit cx ~site (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   if Base.Probe.enabled () then
-    Base.Probe.hit "typed-fit" (fun () -> site ^ " " ^ verdict_line cx ~what:(node_name x.expr) x into)
+    Base.Probe.hit "typed-fit" (fun () -> site ^ " " ^ verdict_line cx ~what:(node_name x.expr) x into);
+  if Base.Probe.checking () then
+    match verdict cx x into with
+    | (`Unrelated | `Plan _) as verdict ->
+      let slot = match into with Exactly t -> Binders.type_shape t | _ -> "?" in
+      let key =
+        String.concat "\t"
+          (List.map one_line [Base.Probe.library (); declaration cx; site; verdict_name verdict; Binders.show_value_type x.ty; slot])
+      in
+      if Hashtbl.mem (Lazy.force fit_allowlist) key then Base.Probe.hit "typed-fit-allowed" (fun () -> key)
+      else
+        Base.Probe.violation "typed fit"
+          Pp.(str "a value of type " ++ str (Binders.show_value_type x.ty) ++ str " put in a slot of type "
+              ++ str slot ++ str " (" ++ str site ++ str ", " ++ str (verdict_name verdict) ++ str ") in "
+              ++ str (Base.Probe.library ()) ++ str " " ++ str (declaration cx) ++ str "; not in unit_tests/typed_fit_allowlist.txt as: " ++ str key)
+    | _ -> ()
 
 (** The declaration agreement check, fatal under [CRANE_CHECK_IR] and
     counted under [CRANE_PROBE]: [x], put as it is

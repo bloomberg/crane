@@ -260,6 +260,9 @@ let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slo
     | Variant (k, xs), Variant (k', ys) -> k = k' && all xs ys
     | Foreign f, Foreign f' -> GlobRef.CanOrd.equal f.custom f'.custom && all f.types f'.types
     | Apply (f, xs), Apply (g, ys) -> agree f g && all xs ys
+    (* A promoted variable's alias is the member of the instance it was
+       promoted from, spelled from inside the instance. *)
+    | Promoted_member x, Member (Instance _, y) | Member (Instance _, y), Promoted_member x -> Id.equal x y
     | _ -> false
   and all xs ys = List.compare_lengths xs ys = 0 && List.for_all2 agree xs ys in
   let curried_agree a b =

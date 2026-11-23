@@ -1,0 +1,11 @@
+; The typed-fit allowlist, built into the plugin
+; ({!Core_to_cpp.Typed_checks.fit}).
+(rule
+ (target typed_fit_allowlist.ml)
+ (deps (:list %{project_root}/unit_tests/typed_fit_allowlist.txt))
+ (action
+  (with-stdout-to %{target}
+   (progn
+    (echo "let text = {allowlist|")
+    (cat %{list})
+    (echo "|allowlist}\n")))))
