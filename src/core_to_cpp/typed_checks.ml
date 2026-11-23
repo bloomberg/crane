@@ -264,7 +264,7 @@ let verdict_name = function
   | `Unrelated -> "unrelated"
   | `Fits -> "fits"
   | `Fits_implicitly -> "fits-implicitly"
-  | `Plan p -> Cpp_ir.Coercion.plan_name p
+  | `Plan p -> Cpp_ir.Coercion.decision_name p
 
 let verdict cx (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   match into with
@@ -293,7 +293,7 @@ let verdict_line cx ~what (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
     "unrelated" ^ detail () ^ " NORMAL " ^ n ^ " INTO " ^ m
   | `Fits -> "fits"
   | `Fits_implicitly -> "fits-implicitly"
-  | `Plan p -> Cpp_ir.Coercion.plan_name p ^ detail ()
+  | `Plan p -> Cpp_ir.Coercion.decision_name p ^ detail ()
 
 (** [census ?expected_ty e x] is [x], the typed lowering of [e], counted by
     [e]'s form and the kind of type [x] has, and where the caller passed an
@@ -340,7 +340,7 @@ let agreement cx ~site (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
     | Some p when not (Coerce.implicit ~al:(Coerce.aliases_in cx) x.ty p) ->
       Base.Probe.violation "binder agreement"
         Pp.(str site ++ str ": a value of type " ++ str (Binders.show_value_type x.ty) ++ str " declared at "
-            ++ str slot ++ str " without the " ++ str (Cpp_ir.Coercion.plan_name p) ++ str " it needs")
+            ++ str slot ++ str " without the " ++ str (Cpp_ir.Coercion.decision_name p) ++ str " it needs")
     | _ -> () );
   if Base.Probe.enabled () then
     let verdict =
@@ -350,7 +350,7 @@ let agreement cx ~site (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
       | Some p when Coerce.implicit ~al:(Coerce.aliases_in cx) x.ty p -> "fits-implicitly"
       | Some p ->
         let slot = match into with Exactly t -> Binders.type_shape t | _ -> "?" in
-        Cpp_ir.Coercion.plan_name p ^ " in " ^ Base.Probe.library () ^ " from " ^ Binders.show_value_type x.ty
+        Cpp_ir.Coercion.decision_name p ^ " in " ^ Base.Probe.library () ^ " from " ^ Binders.show_value_type x.ty
         ^ " into " ^ slot
     in
     Base.Probe.hit "typed-agree" (fun () -> site ^ " " ^ verdict)

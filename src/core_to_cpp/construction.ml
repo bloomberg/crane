@@ -552,9 +552,9 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
     else begin
       let ct = Types.cpp_of_core cx env core_ft in
       let clean_ct =
-        Convert.clean_self_ns ct
+        Cpp_passes.Convert.clean_self_ns ct
       in
-      match Convert.strip_ns_global_app clean_ct with
+      match Cpp_passes.Convert.strip_ns_global_app clean_ct with
       | Entity_application (g, [elem_ty], _)
         when Base.Type_util.is_custom_list_global g
              && not (Types.resolves_to_any_type cx elem_ty) ->
@@ -1358,7 +1358,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
             | t -> t
           in
           let ret_ty = Types.cpp_of_core cx env (codomain ft) in
-          let expr = Coerce.erased_fn_instantiation expr in
+          let expr = Cpp_passes.Coercions.erased_fn_instantiation expr in
           Erase_callable (At_signature (if Cpp_ir.Types.prints_as_any ret_ty then Cpp_ir.Type.Any else ret_ty), expr)
         (* A field erased whole -- [den t], whatever [t] the call names --
            holds a function as the canonical callable it is read back as. *)
@@ -1509,7 +1509,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                   | None -> expr
                 else expr
               in
-              Convert.wrap_storage_expr ~storage_ty ~api_ty expr
+              Cpp_passes.Convert.wrap_storage_expr ~storage_ty ~api_ty expr
             | None -> expr)
           base_args
       | _ -> base_args

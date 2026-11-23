@@ -49,4 +49,7 @@ module Coercion = struct
 
   (** A lowered coercion's plan. *)
   type plan = phase Coercion.plan
+
+  (** A lowered coercion decision. *)
+  type decision = phase Coercion.decision
 end

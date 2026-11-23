@@ -7,8 +7,8 @@
 
 include Grammar.Coercion
 
-(** The name of [p]'s outermost step, for diagnostics and the census. *)
-let rec plan_name : 'p plan -> string = function
+(** The name of [d]'s outermost step, for diagnostics and the census. *)
+let rec decision_name : 'p decision -> string = function
   | Regroup _ -> "regroup"
   | Name _ -> "name"
   | Eta _ -> "eta"
@@ -19,4 +19,4 @@ let rec plan_name : 'p plan -> string = function
   | Recover _ -> "recover"
   | Convert _ -> "convert"
   | Container_cast _ -> "container cast"
-  | Then (a, b) -> plan_name a ^ " then " ^ plan_name b
+  | Then (a, b) -> decision_name a ^ " then " ^ decision_name b

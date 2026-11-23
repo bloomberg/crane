@@ -109,25 +109,36 @@ let slot_type : type p. (p Type.t -> p Type.t) -> p Slot_type.t -> p Slot_type.t
 let coercion ty (c : 'p Coercion.t) : 'p Coercion.t =
   let rec plan (p : 'p Coercion.plan) : 'p Coercion.plan =
     match p with
-    | Regroup (a, b) ->
-      let a = arrows ty a in
-      Regroup (a, arrows ty b)
-    | Name t -> Name (opt ty t)
-    | Eta {declared; into} ->
-      let declared = arrows ty declared in
-      Eta {declared; into = arrows ty into}
-    | Box s -> Box (opt (erase_shape ty) s)
-    | Deep_box -> Deep_box
-    | Unbox u -> Unbox (unbox ty u)
-    | Erase s -> Erase (erase_shape ty s)
-    | Recover (a, b) ->
-      let a = arrows ty a in
-      Recover (a, arrows ty b)
-    | Convert t -> Convert (ty t)
-    | Container_cast (t, b) -> Container_cast (ty t, b)
-    | Then (a, b) ->
-      let a = plan a in
-      Then (a, plan b)
+    | Regroup_curried (a, b) ->
+      let a = ty a in
+      Regroup_curried (a, ty b)
+    | Nest t -> Nest (opt ty t)
+    | Eta_short e -> Eta_short {e with domain = list ty e.domain}
+    | Eta_global e ->
+      let declared = opt ty e.declared in
+      Eta_global {e with declared; into = opt ty e.into}
+    | Name_closure -> Name_closure
+    | Name_at t -> Name_at (opt ty t)
+    | Erase_as s -> Erase_as (erase_shape ty s)
+    | Convert_to t -> Convert_to (ty t)
+    | Represent (a, b) ->
+      let a = ty a in
+      Represent (a, ty b)
+    | Box_value b -> Box_value b
+    | Recover_box r ->
+      let into = ty r.into in
+      Recover_box
+        { into;
+          lambda =
+            opt
+              (fun (cod, p) ->
+                let cod = ty cod in
+                (cod, opt plan p) )
+              r.lambda }
+    | Recover_call r ->
+      let domain = list ty r.domain in
+      let args = list (opt plan) r.args in
+      Recover_call {domain; args; result = opt plan r.result}
   in
   let from = value_type ty c.from in
   let into = slot_type ty c.into in

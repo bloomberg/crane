@@ -320,7 +320,7 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
             if non_erased_def_site_field_tys <> []
                && not (field_is_self_or_mutual_ref_at_def i)
                && not (field_has_nested_self_ref_at_def i)
-               && Convert.contains_shared_ptr storage_field_cpp_ty
+               && Cpp_passes.Convert.contains_shared_ptr storage_field_cpp_ty
             then bare_field_cpp_ty
             else storage_field_cpp_ty
         in
@@ -438,11 +438,11 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
               let deref : Cpp_ir.Lowered.Expr.t = Dereference (Local binding_name) in
               (match field_ty with
                | Shared_pointer storage_inner when storage_inner <> bare_ty ->
-                 Convert.gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
+                 Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
                | _ -> deref)
             else if field_ty <> bare_ty
-                    && Convert.contains_shared_ptr field_ty then
-              Convert.gen_type_conversion_expr ~src_ty:field_ty ~dst_ty:bare_ty
+                    && Cpp_passes.Convert.contains_shared_ptr field_ty then
+              Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:field_ty ~dst_ty:bare_ty
                 (Cpp_ir.Expr.Local binding_name)
             else if field_is_wholesale_erased i
                     && not (Types.resolves_to_any_type cx bare_ty) then
@@ -453,7 +453,7 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
                  value directly, and casting a [std::any] holding a container to
                  [std::any] would throw at runtime.  Only genuinely concrete
                  target types are unwrapped here. *)
-              (match Convert.strip_ns_global_app bare_ty with
+              (match Cpp_passes.Convert.strip_ns_global_app bare_ty with
                | Entity_application (g, [_], _) when is_list_global g && not (Base.Table.is_custom g) ->
                  let list_any_ty : Cpp_ir.Lowered.Type.t =
                    match bare_ty with
@@ -505,7 +505,7 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
             let rhs =
               match field_ty' with
               | Shared_pointer storage_inner when storage_inner <> bare_ty ->
-                Convert.gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
+                Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
               | _ -> deref
             in
             (* The value is what the branch body reads for the pattern
@@ -1339,7 +1339,7 @@ let gen_custom_cpp_case cx ?slot env (k : Destination.t) (typ : Core.Type.t) t p
           List.fold_left
             (fun stmts ({name = name; type_ = cpp_ty; _} : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Custom_match.param) ->
                if not (Cpp_ir.Types.prints_as_any cpp_ty) then
-                 let stripped = Convert.strip_ns_global_app cpp_ty in
+                 let stripped = Cpp_passes.Convert.strip_ns_global_app cpp_ty in
                  let cast_expr : Cpp_ir.Lowered.Expr.t =
                    match stripped with
                    | Entity_application (g, _, _) when is_prod_global g ->
@@ -1629,7 +1629,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
         Types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton record_ref) tvars core_ty
       in
       let api_ty = Types.cpp_of_core cx env core_ty in
-      Convert.wrap_api_expr ~storage_ty ~api_ty access
+      Cpp_passes.Convert.wrap_api_expr ~storage_ty ~api_ty access
     | _ -> access
   in
   (* For type classes, use qualified access (::) instead of arrow (->) since
@@ -1995,7 +1995,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
                 Types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton record_ref) [] ty
               in
               let api_ty = Types.cpp_ir_of_core_type cx env [] ty in
-              Convert.wrap_api_expr ~storage_ty ~api_ty e
+              Cpp_passes.Convert.wrap_api_expr ~storage_ty ~api_ty e
             | _ -> e
           in
           let decl_ty =
@@ -2101,7 +2101,7 @@ let gen_record_match_stmts cx ~slot env (k : Destination.t) (ast : Core.Expr.t) 
                 Types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton record_ref) tvars ty
               in
               let api_ty = Types.cpp_of_core cx env ty in
-              Convert.wrap_api_expr ~storage_ty ~api_ty e
+              Cpp_passes.Convert.wrap_api_expr ~storage_ty ~api_ty e
             | _ -> e
           in
           let api_ty_for_decl =

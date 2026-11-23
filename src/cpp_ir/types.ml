@@ -174,13 +174,8 @@ let rec substitute : type p. (int -> p Type.t option) -> p Type.t -> p Type.t =
   | Carrier_parameter | Erased _ | Obligation _ ->
     t
 
-(** The site a function type stands at, which decides how its chain of
-    arrows is spelled: flat where a declaration writes it
-    ([crane::fn<R(A, B)>]), curried where a type variable stands for it
-    ([crane::fn<crane::fn<R(B)>(A)>]), or flat for the first [n] parameters
-    a declaration wrote and curried for the rest.  [Declared_at 0] is
-    [Through_tvar]. *)
-type arrow_site = Declared | Through_tvar | Declared_at of int
+(** {!Grammar.Arrow_site}. *)
+type arrow_site = Grammar.Arrow_site.t = Declared | Through_tvar | Declared_at of int
 
 (** [spell_arrows site t] respells every function type in [t] as [site]
     spells it. *)

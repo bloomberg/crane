@@ -80,7 +80,7 @@ let () =
                   let got =
                     match Core_to_cpp.Coerce.decide_with Core_to_cpp.Coerce.as_written from into with
                     | None -> "none"
-                    | Some p -> Cpp_ir.Coercion.plan_name p
+                    | Some p -> Cpp_ir.Coercion.decision_name p
                   in
                   let want = expected s from into in
                   if not (String.equal got want) then (

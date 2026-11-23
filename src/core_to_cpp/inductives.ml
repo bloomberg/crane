@@ -2877,14 +2877,14 @@ let gen_ind_header_v2 cx
                         let arg_var : Cpp_ir.Lowered.Expr.t = Local (Id.of_string ("x" ^ string_of_int k)) in
                         if _storage_arg = api_arg then arg_var
                         else
-                          Convert.gen_type_conversion_expr ~src_ty:_storage_arg ~dst_ty:api_arg
+                          Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:_storage_arg ~dst_ty:api_arg
                             arg_var )
                       (List.combine storage_args api_args)
                   in
                   let call = B.call var call_args in
                   let ret =
                     if storage_ret = api_ret then call
-                    else Convert.gen_type_conversion_expr ~src_ty:api_ret ~dst_ty:storage_ret call
+                    else Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:api_ret ~dst_ty:storage_ret call
                   in
                   (* The lambda's result is the storage-side type by
                      construction -- [ret] is the call converted into it.  Say
@@ -2895,13 +2895,13 @@ let gen_ind_header_v2 cx
                 | _ when storage_ty = api_ty -> E.Move local
                 | _ ->
                   sink_converted api_ty var
-                    (Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
+                    (Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
               end
               | Shared_pointer inner ->
                 let arg = if is_coinductive then var else E.Move var in
                 let converted =
                   if inner = api_ty then arg
-                  else Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
+                  else Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
                 (* A single factory call.  For arena-eligible types this is
                    the runtime-arena-aware factory ([Arena_scoped]:
@@ -2917,7 +2917,7 @@ let gen_ind_header_v2 cx
                 else E.Move local
               | _ ->
                 sink_converted api_ty var
-                  (Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
+                  (Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
             cpp_tys
         in
         (* A field holding the inductive itself takes a [crane::child_slot]
@@ -3218,7 +3218,7 @@ let gen_ind_header_v2 cx
                       in
                       (* A translation result, converted where the branch
                          takes it. *)
-                      Convert.gen_type_conversion_expr
+                      Cpp_passes.Convert.gen_type_conversion_expr
 
                         (* Every inductive generated into this same scope --
                            the type itself, its mutual siblings, and any other

@@ -280,7 +280,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
       | _ -> expr
     in
     (* A callable at an inline mapping's parameter declared at a type
-       variable arrives named ({!Coerce.mapping_name_built}), at the
+       variable arrives named ({!Cpp_passes.Coercions.name_at}), at the
        instantiation where it can be spelled here, as a type argument
        spells it. *)
     let expr : Cpp_ir.Lowered.Expr.t =
@@ -416,7 +416,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
            && Types.erase_unresolved_tvars (Types.cpp_of_core cx env param_ty)
               = Types.cpp_of_core cx env param_ty ->
       let cpp_ty = Types.cpp_of_core cx env param_ty in
-      ( match Convert.strip_ns_global_app cpp_ty with
+      ( match Cpp_passes.Convert.strip_ns_global_app cpp_ty with
       | Entity_application (g, [_], _) when is_list_global g && not (Base.Table.is_custom g) ->
         let list_any_ty : Cpp_ir.Lowered.Type.t =
           match cpp_ty with
@@ -440,7 +440,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
         | v ->
           Cpp_passes.Erasure.converting_ctor cpp_ty [Cpp_passes.Erasure.unbox list_any_ty v] )
       | Entity_application (g, [_], _) when Base.Type_util.is_custom_list_global g ->
-        let clean_cpp_ty = Convert.clean_self_ns cpp_ty in
+        let clean_cpp_ty = Cpp_passes.Convert.clean_self_ns cpp_ty in
         (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
            with fully-erased elements at runtime ([deque<pair<any,any>>]).
            Cast the inner value to that erased representation, matching what
@@ -485,7 +485,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~writte
         let needs_concrete =
           (not (Base.Table.is_inline_custom id))
           &&
-          match Convert.strip_ns_global_app clean_cpp_ty with
+          match Cpp_passes.Convert.strip_ns_global_app clean_cpp_ty with
           | Entity_application (_, [et], _) ->
             et <> Cpp_passes.Erasure.erase_type_to_any et
           | _ -> false
@@ -1009,7 +1009,7 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
                                                         occurrence = occ}) when Cpp_ir.Types.prints_as_any d -> (
                 let unfolded =
                   Option.map (fun t ->
-                      Convert.strip_ns_global_app (Types.unfold_cpp_typedef cx env t) )
+                      Cpp_passes.Convert.strip_ns_global_app (Types.unfold_cpp_typedef cx env t) )
                 in
                 let is_any (a : Cpp_ir.Lowered.Type.t) = match a with Any -> true | _ -> false in
                 (* Read for the inductive, its arity and namespace, and

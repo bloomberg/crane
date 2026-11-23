@@ -303,9 +303,21 @@ and Slot_type : sig
 end =
   Slot_type
 
+and Arrow_site : sig
+  (** The site a function type stands at, which decides how its chain of
+      arrows is spelled: flat where a declaration writes it
+      ([crane::fn<R(A, B)>]), curried where a type variable stands for it
+      ([crane::fn<crane::fn<R(B)>(A)>]), or flat for the first [n]
+      parameters a declaration wrote and curried for the rest.
+      [Declared_at 0] is [Through_tvar]. *)
+  type t = Declared | Through_tvar | Declared_at of int
+end =
+  Arrow_site
+
 and Coercion : sig
-  (** How a value is adapted to the slot it is put in. *)
-  type 'p plan =
+  (** What a value's type and its slot's call for, as {!Core_to_cpp.Coerce}
+      decides it from the two types alone. *)
+  type 'p decision =
     | Regroup of 'p Arrows.t * 'p Arrows.t
         (** a callable taken at one grouping, called at another *)
     | Name of 'p Type.t option
@@ -323,7 +335,61 @@ and Coercion : sig
         (** a callable with an erased codomain read at a concrete one *)
     | Convert of 'p Type.t
     | Container_cast of 'p Type.t * bool
-    | Then of 'p plan * 'p plan  (** the first, then the second *)
+    | Then of 'p decision * 'p decision  (** the first, then the second *)
+
+  (** How a value is adapted to its slot, with everything its expansion
+      ({!Cpp_passes.Coercions.expand}) reads: the expansion is a function of
+      the plan and the value alone.  Each adapter keeps the parameter prefix
+      it is written with. *)
+  type 'p plan =
+    | Regroup_curried of 'p Type.t * 'p Type.t
+        (** a callable of the first type applied group by group inside an
+            adapter of the second, which takes more at once ([_rg]) *)
+    | Nest of 'p Type.t option
+        (** a closure built for a slot, its parameters nested as the given
+            function type groups them *)
+    | Eta_short of {
+        domain : 'p Type.t list;
+        arity : int;
+      }
+        (** a lambda taking [arity] of its slot's parameters, [domain],
+            applied to the rest of them by an adapter ([_ee]) *)
+    | Eta_global of {
+        declared : 'p Type.t option;
+        into : 'p Type.t option;
+        site : Arrow_site.t;
+        exact : bool;
+      }
+        (** a function name, declared at [declared] and called at the
+            grouping [site] spells, eta-expanded to the slot's grouping
+            ([_ec]); [exact] keeps an erased callable parameter at its
+            signature *)
+    | Name_closure  (** a lambda given its [crane::fn] type *)
+    | Name_at of 'p Type.t option
+        (** a callable named at the given type where spellable, else at the
+            [crane::fn] it deduces *)
+    | Erase_as of 'p Erase_shape.t
+    | Convert_to of 'p Type.t  (** a converting construction ({!Expr.Convert}) *)
+    | Represent of 'p Type.t * 'p Type.t
+        (** a value of the first type at the second, which differs from it in
+            its pointer dimension or its elements *)
+    | Box_value of bool
+        (** a value boxed, a callable erased whole first where [true]; one
+            boxed already is left alone *)
+    | Recover_box of {
+        into : 'p Type.t;
+        lambda : ('p Type.t * 'p plan option) option;
+      }
+        (** a boxed value read at [into], unless cast already; a lambda's
+            returns read at its codomain by the plan given instead *)
+    | Recover_call of {
+        domain : 'p Type.t list;
+        args : 'p plan option list;
+        result : 'p plan option;
+      }
+        (** a callable with an erased codomain called through an adapter
+            taking [domain] ([_ue]), each argument and the result adapted
+            as given *)
 
   (** A coercion: the value's type, the slot's, and the plan between them. *)
   type 'p t = {
