@@ -428,7 +428,7 @@ callable_crossing_matrix.
 - [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
 - [x] Phase B2 (see 8, B2: plans carry their expansion data; `coercions` pass; `Typed.head` is the look-through)
 - [ ] Phase C (in progress: steps 1 and 2 done, the ambient return type deleted (threaded `~ret`); step 3 done except the shape-reading lowering sites listed in §4; the result site moved to `Coerce.result_site`, see 8, C/D fourth session)
-- [ ] Phase D (in progress: the knot and every form function take one non-optional slot; coercion-builder ratchet in `check-module-deps.sh`; `Not_yet_typed`, the `gen_expr` shim, `Declare_deduced`, `Call.result` reasons not started; see 8, C/D fourth session)
+- [ ] Phase D (in progress: one non-optional slot at the knot and the form functions; coercion-builder ratchet; `Not_yet_typed` deleted (`Typed.carried`, `of_node ~fallback`); `gen_expr` shim deleted; `Call.yields` is a `Value_type` with `Deduced` reasons; `Declare_deduced`, the call's own result at the two `result_site` reads, `Typed.expansion`, ratchet to zero, typed-fit fatal not done; see 8, phase D fifth session)
 - [ ] Phase E (optional)
 
 ## 8. Findings
@@ -1739,4 +1739,99 @@ fallback split above), then `Call.yields` as a `Value_type` so the
 excess groups read the call's result; then the shim, `Declare_deduced`,
 and lowering the ratchet's counts by routing each site through
 `into_slot`.
+
+
+### Phase D, fifth session (2026-11-23)
+
+Done:
+- **No `Not_yet_typed`.**  `Typed.node_type` became `Typed.carried :
+  Expr.t -> Value_type.t option`, total over the nodes that carry their
+  type (casts, boxes, conversions, a call whose `yields` is `Typed`, an
+  abort, a lambda whose grouping its parameters and returns give, foreign
+  text, runtime helpers, requirements) and `None` elsewhere.
+  `Typed.of_node ~fallback e` takes the type its caller knows;
+  `Typed.untyped`, `Typed.or_type` and `Typed.not_yet` are gone
+  (`or_type ty (of_node e)` was `of_node ~fallback:ty e` at all five
+  sites).  `Typed.applied` returns an option; `Typed.apply` takes the
+  argument expressions (it never read their types), which removed 9
+  `of_node` wrappers, and `excess_groups` reads `carried` of each excess
+  argument.  `Typed_checks.of_built` matches `carried x = None` instead of
+  the placeholder.
+  Deviation: `Not_yet_typed` did not disappear into real types
+  everywhere.  It split into two honest reasons, and
+  `Value_type.unstated` (replacing `not_yet_typed`) names both where a
+  decision falls to the adapter's own test (`Coerce.decides`,
+  `shadow`, the census, `Expr.gen_form`'s `typed_form`):
+  - `Untranslated`: Core infers no type for the term, or
+    `Types.cpp_of_core` fails on it (`core_value_type`,
+    `Binders.read_value_type`, `named_value`, the instance method of a
+    field with no type, `of_built`'s bound-variable call).
+  - `Unannotated`: a node built without stating its type, read either
+    by an adapter that decides from Core (its origin) or as C++ deduces
+    it (a join).  This is the fallback of 37 `of_node` calls, of
+    `Typed_checks.adapted_to None`, of `Typed.apply`'s call of a callee
+    whose type gives no grouping, and of the four application results
+    and the bound-variable callee that `Typed.untyped` typed before.
+  Giving those values a real type changes what `Coerce.decides`
+  answers at `into_slot` (an origin with its own test today), so each
+  needs the probe round the shadow check gives: the census (unchanged
+  from before) has 337 `typed-fit` lines and 146 `typed-shadow` lines
+  at an unstated value (`erase_fn_arg_for_param` 88, `coerce` 40,
+  `recover_carrier_result` 18).  Each such origin deleted (phase C rows)
+  deletes its `Unannotated` operands.
+- **The `gen_expr` shim is deleted.**  `Knot`, `Expr` and `Lower_expr`
+  export only `gen_expr_typed`; 37 callers read `.expr` at the call (two
+  partial applications became `fun e -> ...`).  A script
+  (`/tmp/tcppirG/shim.py`) did the rewrite; same function, so
+  byte-identical by construction.
+- **`Call.yields` is a `Value_type`** (steps 2 and 5 together).
+  `Call.result` is gone: `Yields t` is `Typed t`, `Untyped` is a
+  `Deduced` reason: `Unannotated` at `Build.signature`/`Build.call`
+  without `?yields`, `Analysis.call_opaque`, `Erasure.call`,
+  `Depth.invoked_in_place`, `Lifting`'s self call; `Runtime_helper
+  Immortal` for the call `Constants` builds of `crane::immortal`.  Map,
+  Children and Resolve carry it (`Resolve.value_type`/`arrows`).
+  Readers match `Typed t` where they matched `Yields t`, so no
+  consumer changed.
+  Not done: the two `Application` reads of `Coerce.result_site`
+  (`cod_site` for the excess groups, `filled_ty` of a partial
+  application) still read the rule.  Reading the call's result instead
+  needs the call built with `yields` at the result spelled at the
+  instantiation, which is that same rule: `Typed.applied` of the name's
+  `Function_name` type gives a different spelling (`take` leaves the rest
+  of a straddled group flat, where `spell_arrows Through_tvar` curries
+  it), so the change is not mechanical and needs a probe comparing the
+  two.
+
+Not done, and why:
+- `Declare_deduced`: a new `Binding` constructor reaches all 162
+  `Declare (` match sites (48 in `frame.ml`, 17 in `inductives.ml`, 12 in
+  `tmc.ml`, ...), most of which read `Declare (t, _)` uniformly with
+  `t = Auto`.  The 29 `Declare (Auto, _)` builders, 22 of them in
+  `control_to_cpp`/`cpp_passes`, have no `Typed.t`; `Frame.collect_type_env`
+  reads a lambda's own parameters and return type there, which is what
+  `Typed.carried` would give.  Plan: add `Declare_deduced of 'p
+  Value_type.t * Core.Binder.t option`, have `Resolve` turn it into
+  `Declare (Auto, b)` (so passes after resolution and the printer never
+  see it), and port the lowered-phase readers (`frame.ml`, `tmc.ml`,
+  `loopify.ml`, `view_args.ml`, `local_closures.ml`,
+  `deduced_literals.ml`) one file at a time.
+- `Typed.expansion`: `Typed.head` (read by `closure_arrows` and
+  `carried`'s `Coerce` case) expands a coercion with finishing's
+  vocabulary (`Cpp_passes.Erasure`), which `cpp_ir` may not read.
+  Removing the hook needs either the expansion in `cpp_ir` or
+  `carried` reading the coercion's own result type, which differs from
+  the expansion's for an adapter lambda (`Closure` versus the slot's
+  `Typed`), so it changes decisions.
+- The ratchet's 41 sites: a direct `Erasure.unbox t e` is not
+  `into_slot ~origin:Ue ~from:Any`: `ue_plan`'s `Recover_box` unboxes a
+  list at its erased shape and leaves an `Any_cast` alone, and
+  `into_slot` returns a `Coerce` node that the shape-reading code after
+  several sites (`lifting.ml`'s match on `Any_cast`) would not see
+  through.  Each site needs a plan whose expansion is exactly what it
+  builds, and an extraction round.
+- typed-fit fatal: no.  The census still has `unrelated` (911),
+  `erase` (96), `unbox` (48), `eta`, `box`, `convert`, `regroup` verdicts
+  at destinations and arguments (from `/tmp/tcppirF/p2.log`, unchanged
+  this session), each a latent mis-typing or a missing adapter.
 

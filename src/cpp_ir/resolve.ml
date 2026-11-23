@@ -73,10 +73,20 @@ and custom (c : l Foreign.custom) : r Foreign.custom = {inline = c.inline; custo
 
 (** [signature s] is a call's signature at the resolved phase. *)
 and signature (s : l Call.signature) : r Call.signature =
-  { yields = (match s.yields with Yields t -> Yields (type_ t) | Untyped -> Untyped);
+  { yields = value_type s.yields;
     params = (match s.params with Types ts -> Types (list type_ ts) | Unknown -> Unknown);
     constructs = s.constructs;
     occurrence = s.occurrence }
+
+(** [value_type v] is what a call yields at the resolved phase. *)
+and value_type : l Value_type.t -> r Value_type.t = function
+  | Typed t -> Typed (type_ t)
+  | Closure a -> Closure (arrows a)
+  | Function_name (g, a) -> Function_name (g, arrows a)
+  | Never -> Never
+  | Deduced d -> Deduced d
+
+and arrows (a : l Arrows.t) : r Arrows.t = {groups = list (list type_) a.groups; result = type_ a.result}
 
 (** [capture c] is a written capture; raises {!Owed} at one not yet
     decided ({!Capture.Runs_in_place}, {!Capture.Stored}). *)

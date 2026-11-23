@@ -564,7 +564,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
   in
   let find_self_id id = Option.map fst (find_self id) in
   let call occurrence f args : Cpp_ir.Lowered.Expr.t =
-    Call ({yields = Untyped; params = Unknown; constructs = None; occurrence}, f, args)
+    Call ({yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence}, f, args)
   in
   (* The self id this application spine calls, with every argument along it
      in one source-order list -- an inner application's arguments come

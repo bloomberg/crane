@@ -154,7 +154,7 @@ let declared_holdings params modes body =
       match (mapped_type t, t, borrowed_call init, init) with
       | Some (r, tys), _, _, _ -> note x (Canonical (r, tys))
       | None, Auto, Some (c, tys), _ -> note x (Borrowed (c, tys))
-      | None, Auto, None, Call ({yields = Yields yt; _}, _, _) -> (
+      | None, Auto, None, Call ({yields = Typed yt; _}, _, _) -> (
         match mapped_type yt with Some (r, tys) -> note x (Canonical (r, tys)) | None -> note x Unknown )
       | _ -> note x Unknown )
     | Declare (x, t, _) | Declare_value_initialized (x, t) -> (
@@ -274,7 +274,7 @@ let transform_body u params modes (body : stmt list) : stmt list =
       | Some (c, tys) -> Borrowed (c, tys)
       | None -> (
         match e with
-        | Call ({yields = Yields t; _}, _, _) -> (
+        | Call ({yields = Typed t; _}, _, _) -> (
           match mapped_type t with Some (r, tys) -> Canonical (r, tys) | None -> Unknown )
         | _ -> Unknown ) )
   in

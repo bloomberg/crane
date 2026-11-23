@@ -69,7 +69,10 @@ let expr : type p. p visitor -> p Expr.t -> unit =
     each v.type_ ts;
     opt (fun (c : p Foreign.custom) -> opt v.type_ c.custom_yields) custom
   | Call (s, f, args) ->
-    (match s.yields with Yields t -> v.type_ t | Untyped -> ());
+    (match s.yields with
+     | Typed t -> v.type_ t
+     | Closure a | Function_name (_, a) -> each (each v.type_) a.groups; v.type_ a.result
+     | Never | Deduced _ -> ());
     (match s.params with Types ts -> each v.type_ ts | Unknown -> ());
     v.expr f;
     each v.expr args

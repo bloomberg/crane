@@ -167,7 +167,7 @@ let expr : type p. p t -> p Expr.t -> p Expr.t =
     let c = opt (fun (c : p Foreign.custom) -> {c with custom_yields = opt ty c.custom_yields}) c in
     Entity (r, list ty ts, c)
   | Call (s, f, args) ->
-    let yields : p Call.result = match s.yields with Yields t -> Yields (ty t) | Untyped -> Untyped in
+    let yields = value_type ty s.yields in
     let params : p Call.params = match s.params with Types ts -> Types (list ty ts) | Unknown -> Unknown in
     let args = arguments m args in
     let f = ex f in

@@ -425,20 +425,15 @@ end =
 and Call : sig
   (** What lowering knew about a call. *)
   type 'p signature = {
-    yields : 'p result;
+    yields : 'p Value_type.t;
+        (** what the call yields: a type C++ deduces, with the reason,
+            where lowering states none *)
     params : 'p params;
     constructs : GlobRef.t option;
         (** the constructor a factory call builds *)
     occurrence : Core.Occurrence.t option;
         (** the Core call the call is made of *)
   }
-
-  (** What a call yields. *)
-  and 'p result =
-    | Yields of 'p Type.t
-    | Untyped
-        (** the callee has no Crane-level type; a consumer defers to C++
-            deduction *)
 
   (** The callee's parameter types, aligned with the arguments. *)
   and 'p params =

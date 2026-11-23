@@ -1725,7 +1725,7 @@ let deduce_erased_domains : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = fun
 let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (e : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   match (e, callee_ty) with
-  | Call ({yields = Untyped; params = Unknown; _}, f, args), Some core_ty ->
+  | Call ({yields = Deduced _; params = Unknown; _}, f, args), Some core_ty ->
     (* A callee typed by a function alias ([Id_ obj c]) takes the
        arguments the alias's arrows do. *)
     let core_ty = if args = [] then core_ty else expand_core_fun_alias core_ty in
@@ -1743,7 +1743,7 @@ let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (
          to: what is left of the type once its arguments are taken. *)
       let f : Cpp_ir.Lowered.Expr.t =
         match f with
-        | Call ({yields = Untyped; params = Unknown; _}, g, inner_args) -> (
+        | Call ({yields = Deduced _; params = Unknown; _}, g, inner_args) -> (
           match cpp_of (Base.Type_util.core_drop_arrows (List.length inner_args) core_ty) with
           | exception e' when CErrors.noncritical e' -> f
           | Any | Obligation Opaque_type -> f

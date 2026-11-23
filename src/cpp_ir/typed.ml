@@ -65,7 +65,7 @@ and carried : Lowered.Expr.t -> Lowered.Value_type.t option = fun e ->
   | Container_cast (t, _, _)
   | Baked_value (t, _)
   | Unbox ((To t | Or_keep t | List (t, _)), _)
-  | Call ({yields = Yields t; _}, _, _)
+  | Call ({yields = Typed t; _}, _, _)
   | Call (_, Lambda {params = []; return_type = Some t; _}, []) ->
     Some (Typed t)
   | Call (_, Lambda ({params = []; _} as l), []) when not (generic l) -> (

@@ -95,7 +95,7 @@ let rec hoist_body (body : stmt list) : stmt list =
           ( id,
             Declare_static (Const Auto),
             Call
-              ( {yields = Untyped; params = Unknown; constructs = None; occurrence = None},
+              ( {yields = Deduced (Runtime_helper Cpp_ir.Crane_rt.Immortal); params = Unknown; constructs = None; occurrence = None},
                 Runtime Cpp_ir.Crane_rt.Immortal,
                 [init] ) ) )
       !hoisted

@@ -132,7 +132,7 @@ let cell_value_type = function
     them. *)
 let is_ctor_factory_call ~unit = function
   | Call ({constructs = Some c; yields; _}, (Type_member (qualifier, _) as factory), args) ->
-    let ty = match yields with Yields t -> t | Untyped -> qualifier in
+    let ty = match yields with Typed t -> t | _ -> qualifier in
     let struct_name = Base.Type_util.ctor_struct_name_of_ref c in
     (* A TMC-wrapping constructor has a field behind the pointer -- the hole
        the recursion writes into -- so it has pointer fields ({!pointer_fields_of});

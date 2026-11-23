@@ -42,13 +42,13 @@ type field = phase Cpp_ir.Field.t
 type local_fixpoint = Cpp_ir.Expr.Local_fixpoint.t
 
 (** The signature of a call nothing is known about. *)
-let call_opaque : signature = {yields = Untyped; params = Unknown; constructs = None; occurrence = None}
+let call_opaque : signature = {yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence = None}
 
 (** [Core.Signature.t ?yields ?params ?constructs ~nargs ()] is what a builder knows
     about a call on [nargs] arguments; [params] is kept only where it is one
     type per argument. *)
 let signature ?yields ?params ?constructs ~nargs () : signature =
-  { yields = (match yields with Some t -> Yields t | None -> Untyped);
+  { yields = (match yields with Some t -> Typed t | None -> Deduced Unannotated);
     params = (match params with Some ts when List.length ts = nargs -> Types ts | _ -> Unknown);
     constructs;
     occurrence = None }

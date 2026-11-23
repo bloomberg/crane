@@ -64,7 +64,7 @@ let children expr : Cpp_ir.Lowered.phase Cpp_ir.Map.t = Cpp_ir.Map.make ~expr ~s
     once. *)
 let invoked_in_place body : expr =
   Call
-    ( {yields = Untyped; params = Unknown; constructs = None; occurrence = None},
+    ( {yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence = None},
       Lambda
         { params = [];
           type_params = [];
