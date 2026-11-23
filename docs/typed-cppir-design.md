@@ -427,7 +427,7 @@ callable_crossing_matrix.
 - [x] Phase A (see 8: `typed-fit` stays a census until B1, by design deviation)
 - [ ] Phase B1 (in progress: Destination, real-slot fit census, coercion_decide, callable_crossing_matrix, written call types and yields, argument slots, typed local fixpoints, deduced call types, HKT carriers and nested aliases in decide, `Coerce.into_slot` for rows 1, 2, 4, 7, 8, 9, 11, 12, `Typed.apply` for rows 3, 5, 6 and the bound-variable call, rows 10, 13 and 17 done, `Join` slots; census tail and typed-fit fatal not yet; see 8, seventh session)
 - [x] Phase B2 (see 8, B2: plans carry their expansion data; `coercions` pass; `Typed.head` is the look-through)
-- [ ] Phase C
+- [ ] Phase C (in progress: step 1 done; step 2 done for planning and the shared Calls/Constructors/Ctor_args functions, 41 lowering readers left; step 3 blocked on step 2; see 8, C)
 - [ ] Phase D
 - [ ] Phase E (optional)
 
@@ -1383,3 +1383,110 @@ callers can name the origin and slot) and `box_for_any_slot` /
 `deep_box_list` as plans; then the ambient return type
 (`current_cpp_return_type`, 57 uses; `with_cpp_return_type`, 28), which
 needs destinations threaded to every reader, the bulk of C.
+
+### Phase C, first session (2026-11-23)
+
+Done:
+- **Row adapters are `into_slot` calls.**  `regroup_value`,
+  `eta_expand_to_expected`, `regroup_crossing`,
+  `name_fn_arg_for_tvar_param`, `unbox_value` deleted; callers name the
+  origin and the slot.  What was logic in the remaining wrappers stays,
+  named for what it computes: `named_value` (the typed value of a name,
+  `Function_name` for a global) plus `eta_global` (origin `Ec`, 4
+  callers), `param_slot` (the slot of a declared parameter) plus
+  `at_param` (origin `Param`).  `into_slot` takes its aliases from the
+  origin (`Ec`/`Ue`/`Param`/`Any_slot`/`Family_list` carry `cx`), so no
+  caller passes `~al`.  `coerce` (row 12's entry, 28 callers) stays: it
+  derives `from` from the operand (a lambda is a closure whatever box the
+  caller names), which is the typed value's job until phase D makes every
+  operand a `Typed.t`.
+- **Box and carrier adapters are plans.**  `box_for_any_slot`,
+  `deep_box_list`, `recover_carrier_result` become planners
+  (`any_slot_plan`, `deep_box_plan`, `carrier_result_plan`) behind new
+  origins `Any_slot`, `Family_list`, `Carrier_result`, with two new plans
+  `Box_list_deep` (`crane_deep_box`) and `Recast_carrier`
+  (`Container_cast`), expanded by `coercions`.  Their slot is the box's
+  declared type (or the position's type for the carrier).  These origins
+  keep their own test (`own_test` in `into_slot`): `decide` does not gate
+  them, but the shadow still compares.
+- Deviation: `apply_erased_curried` / `apply_erased_callee` are not
+  coercions.  They apply a boxed callee (`Erased_call` per argument,
+  each argument boxed); there is no value-into-slot step to plan.  They
+  belong with `Typed.apply` (a boxed callee's `Arrows` are one unary group
+  per argument); left in `coerce.ml` until then.
+- **Planning no longer reads the ambient return type.**
+  `Position_plan.region` and `Representation_plan.region` take `~ret`
+  (`with_region` passes the region's), and the functions they share with
+  lowering take it too: `Constructors.regular`, `custom`, `custom_field`,
+  `custom_refined_annotation`, `into_erased_return`, `temps_from_slot`,
+  `Ctor_args.expected_type_args_from_return`, `Calls.plan_call`,
+  `argument_position`, `call_type_args`, `hkt_carrier_type_args`,
+  `lifted_call_type_args`.  `Position_plan` had six
+  `with_cpp_return_type` brackets whose only job was to hand its own
+  explicit `ret` to those functions through the ambient; all six are gone
+  (three were around calls that, once the shared functions took `~ret`,
+  reached no reader).  Lowering callers read the ambient once per
+  function (`Construction.gen_expr_custom_cons`, `gen_construction`,
+  `Calls.lower_call`) and pass it.  `with_iife_return_type` (an alias)
+  deleted; `Coerce.position_cpp_ty cx None` (the ambient by another name)
+  replaced by `current_cpp_return_type cx ()` at its five sites.
+
+Finding: `decide` sees a `Family_box` slot (`den<>`, an alias of the box)
+as a plain box and answers `box` where `deep_box_plan` builds a deep box
+(3 regression tests: `den_value_not_deep_erased`,
+`family_call_result_deep_shape`, `family_call_result_mapped_list`).  A
+deep box is a box at every level; the shadow accepts either name for
+the two box origins.  A `Family_box` slot type would let `decide` say it.
+
+Where the ambient stands: 41 reads (`match.ml` 10, `local_functions.ml`
+7, `lowering_state.ml` 6 incl. `with_region`, `with_escape_analysis`,
+`returns_void`; `stmts.ml` 5, `effects.ml` 3, `application.ml` 2,
+`construction.ml` 2, `coerce.ml` 2 (`position_cpp_ty`, now only under
+`recover_boxed_result` and the carrier slot), `destination.ml` 2,
+`calls.ml` 1, `functions.ml` 1) and 19 `with_cpp_return_type` brackets
+plus three direct `set_lexical`s (`match.ml` 1130, `functions.ml` 1496,
+`with_escape_analysis`).  Why the rest is not a mechanical thread: the
+ambient means two things.  (a) The result type of the function or lambda
+whose body is lowered: read at tail positions (`stmts.ml` 460-480,
+`effects.ml`, `match.ml` 2047/2054, `returns_void`).  It is not the
+destination's slot: inside a deduced lambda the destination returns at
+`own_return` (`Join`) while the ambient is still the enclosing type
+(`dest-ambient` disagree 1492), and readers decide on the latter.  (b)
+The type of the value being built where no return is involved: a let
+RHS (`stmts.ml` 283, `Types.let_value_result`), a constructor argument
+(`construction.ml` 159, `a.ret`), a call argument (`application.ml` 157,
+258, `argument_position`'s `ret`), an IIFE (`expr.ml` 563, `match.ml`
+2024).  (b) is a second, undeclared `expected_ty` that survives the
+`?expected_ty` of the knot's entry points; threading it means a `~ret`
+on `Knot.lowering`'s functions next to `?expected_ty`, or better, the
+phase D non-optional slot carrying it.  A `ret` field on `Slot.slot` is not a
+drop-in: slots are rebuilt from `Slot.empty_slot` at many sites, while
+the ambient is lexical (it survives every call that does not bracket
+it), so the two diverge wherever a form starts a fresh slot.  Order that
+keeps each commit byte-identical: (1) for each (b) bracket, find the
+readers reached under it (a probe that tags the ambient with the bracket
+that set it and records the tag at each read), and where every read
+under a bracket is in the shared functions already taking `~ret`, pass
+it and drop the bracket, as was done for `Position_plan`; (2) the
+readers left under (b) brackets read a `ret` added to the form
+functions they sit in, passed down from the bracket site, one reader per
+commit with the bisect harness; (3) (a)-readers read a `Destination`
+that carries the enclosing result type next to its slot; (4) delete the
+brackets, `current_cpp_return_type`, `position_cpp_ty`,
+`let_value_result`.  Step 3 of phase C
+(`call_result_site`/`codomain_site`, `joined_at`,
+`iife_closure_return_at`) reads `~ret` from (a) and follows it.
+`Binding.Declare_deduced` is not introduced yet: it needs the RHS
+`Value_type` at the 29 `Declare (Auto, _)` builders, which is phase D's
+"only `Typed.t` crosses lowering modules".
+
+Commits: `a0e318ff1` (row adapters, box/carrier plans), `7b7a370ff`
+(planning takes the return type), `0523c5e54` (ambient read under its
+own name).  Extraction byte-identical after each (`git status --short
+tests` empty, no `CRANE_CHECK_IR` violation); unit tests and
+`scripts/check-module-deps.sh` pass.  Full `make test` from clean at
+`0523c5e54`: 1526 passed, 16 failed (all `tests/wip`, as at the base),
+`git status --short tests` empty.
+
+Next: phase C step 2 from (1) above (the bracket-tag probe, then the
+(b) brackets), then step 3.  Phase D not started.
