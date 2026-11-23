@@ -184,7 +184,7 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
   let leading_params = Core_plan.Elaborated_call.leading_params call in
   List.mapi (fun i core_arg : Typed.t ->
     match strip_magic core_arg with
-    | Core.Expr.Erased_value _ -> Typed.of_node @@ (
+    | Core.Expr.Erased_value _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated @@ (
       (* An erased value, boxed.  At a function-typed parameter it is an
          erased function -- [bif : obj -> obj -> obj] is [sum1] once [obj]
          is [Type -> Type] -- which is called, so it is a callable of the
@@ -297,7 +297,7 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
                 Some f
               | _ -> None
             in
-            let value = if expr == arg_typed.expr then arg_typed else Typed.of_node expr in
+            let value = if expr == arg_typed.expr then arg_typed else Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr in
             Coerce.into_slot ~origin:Mapping_name value (Template_parameter spelled)
           | _ -> expr )
         | _ -> expr
@@ -968,7 +968,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
            arguments of the arrows the name stands for, and what is left
            after them may be another such name.  The last group takes
            whatever is left. *)
-        let rec excess_groups cod (excess : Cpp_ir.Typed.t list) : Cpp_ir.Lowered.Type.t list list =
+        let rec excess_groups cod (excess : Cpp_ir.Lowered.Expr.t list) : Cpp_ir.Lowered.Type.t list list =
           if excess = [] then []
           else
             let cod = Option.map expand_core_fun_alias cod in
@@ -979,11 +979,10 @@ let eta_fun cx (slot : Slot.slot) env f args :
               dom :: excess_groups (Option.map (core_drop_arrows n) cod) (List.filteri (fun i _ -> i >= n) excess)
             | _ ->
               [ List.map
-                  (fun (a : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Type.t -> match a.ty with Typed t -> t | _ -> Auto)
+                  (fun a : Cpp_ir.Lowered.Type.t -> match Cpp_ir.Typed.carried a with Some (Typed t) -> t | _ -> Auto)
                   excess ]
         in
         let chain_excess base cod excess =
-          let excess = List.map Cpp_ir.Typed.of_node excess in
           match excess_groups cod excess with
           | [] -> base
           | groups -> (Cpp_ir.Typed.apply (Cpp_ir.Typed.typed (Cpp_ir.Arrows.to_type {groups; result = Auto}) base) excess).expr
@@ -1488,7 +1487,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
                 Cpp_ir.Types.spell_arrows (Coerce.result_site id)
                   (Function (List.map fst (List.filteri (fun i _ -> i >= k) eta_args), cod))
               in
-              (Cpp_ir.Typed.apply (Cpp_ir.Typed.typed filled_ty filled) (List.map Cpp_ir.Typed.of_node surplus)).expr
+              (Cpp_ir.Typed.apply (Cpp_ir.Typed.typed filled_ty filled) surplus).expr
             | None -> made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob (passed call_args))
           in
           let ret_ty, (body : Cpp_ir.Lowered.Stmt.t list) =
@@ -1730,15 +1729,15 @@ let eta_fun cx (slot : Slot.slot) env f args :
       in
       let cod = match deduced_fn_ty with Some (Function (_, cod)) -> cod | _ -> written_cod in
       match (crossed, Cpp_passes.Coercions.head result) with
-      | Some c, _ -> Typed.of_node c
+      | Some c, _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated c
       | None, Call _ -> Typed.typed cod result
-      | None, _ -> Typed.untyped result )
+      | None, _ -> Typed.v ~ty:Typed.unannotated result )
     | _ -> (
       match (deduced_fn_ty, Cpp_passes.Coercions.head result) with
       | Some (Function (doms, cod)), Call _ when excess_args = [] && List.length doms = List.length args ->
         Typed.typed cod result
-      | _ -> Typed.untyped result ) )
-  | _ -> Typed.untyped @@
+      | _ -> Typed.v ~ty:Typed.unannotated result ) )
+  | _ -> Typed.v ~ty:Typed.unannotated @@
     (* Non-global callee (e.g., a local variable from Core.Expr.Bound_variable). Filter out Core.Expr.Erased_value
        args — these are erased type/prop parameters that have no runtime
        representation. Unlike the Core.Expr.Global case above, there is no use to
@@ -2125,7 +2124,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
            [_pa]; what the call reads, the function included, is read where
            the closure is made, and taken by move there when the plan moves
            it. *)
-        ( match (Cpp_ir.Typed.apply ~prefix:"_pa" (callee_typed max_int core_ty) (List.map Cpp_ir.Typed.of_node args)).expr with
+        ( match (Cpp_ir.Typed.apply ~prefix:"_pa" (callee_typed max_int core_ty) args).expr with
           | Lambda l ->
             Lambda
               {l with moved = moved_names env (Ownership_ir.Region.eta_captures cx.ctx.lexical.move_plan (f :: core_args))}
@@ -2137,9 +2136,9 @@ let eta_fun cx (slot : Slot.slot) env f args :
       let callee =
         match binder_core_type with
         | Some core_ty -> callee_typed n_value_dom core_ty
-        | None -> Cpp_ir.Typed.untyped (gen_callee ())
+        | None -> Cpp_ir.Typed.v ~ty:Cpp_ir.Typed.unannotated (gen_callee ())
       in
-      (Cpp_ir.Typed.apply callee (List.map Cpp_ir.Typed.of_node args)).expr
+      (Cpp_ir.Typed.apply callee args).expr
     else
       (* When the callee is a local variable whose Core type is a bare type
          variable (Core.Type.Variable/Core.Type.Unknown), its C++ type is std::any.  std::any
@@ -2203,7 +2202,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
       let result = Coerce.recover_boxed_result cx ~ret ~boxed:erased_cod ~expected:expected_ty result in
       Coerce.into_slot
         ~origin:(Carrier_result {fun_ty = callee_fun_core_ty; n_args = n})
-        (Cpp_ir.Typed.of_node result)
+        (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated result)
         (Coerce.slot_of_expected (Coerce.position_cpp_ty ~ret expected_ty))
 
 (** The dictionary of a singleton class, the variable [i] read at [occ],

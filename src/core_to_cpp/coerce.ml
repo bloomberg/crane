@@ -290,7 +290,7 @@ let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t
     match (decide_with al from into, into) with
     | Some p, Exactly t
       when (not (implicit ~al from p))
-           && (not (Cpp_ir.Value_type.not_yet_typed from))
+           && (not (Cpp_ir.Value_type.unstated from))
            && (not (contains_tvar t))
            && not (Cpp_ir.Types.exists (fun t -> t = Auto) t) ->
       Base.Probe.hit "typed-declined" (fun () ->
@@ -309,7 +309,7 @@ let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t
     let verdict =
         if agrees then " agree"
         else if into = Free then " unchecked (no slot type)"
-        else if Cpp_ir.Value_type.not_yet_typed from then " unchecked (untyped value)"
+        else if Cpp_ir.Value_type.unstated from then " unchecked (untyped value)"
         else if (match into with Exactly t -> Cpp_ir.Types.exists (fun t -> t = Auto) t | _ -> false) then
           " unchecked (generic slot)"
         else if planned = None && variables into then " unchecked (slot at type variables)"
@@ -820,7 +820,7 @@ let builds = function
 let decides al (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   match into with
   | Exactly t ->
-    (not (Cpp_ir.Value_type.not_yet_typed from))
+    (not (Cpp_ir.Value_type.unstated from))
     && (not (contains_tvar t))
     && (not (Cpp_ir.Types.exists (fun t -> t = Auto) t))
     && (match from with
@@ -935,7 +935,7 @@ let named_value cx env core_ty (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Typed.t 
       | Some a -> Function_name (r, a)
       | None -> Typed (Function (dom, cod)) )
     | _, Some t -> Typed t
-    | _, None -> Deduced Not_yet_typed
+    | _, None -> Deduced Untranslated
   in
   Cpp_ir.Typed.v ~ty:from cglob
 
@@ -945,7 +945,7 @@ let coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lower
   (* A lambda is a closure, whatever box the caller says it comes from. *)
   let from_ty : Cpp_ir.Lowered.Value_type.t =
     match (from, Cpp_ir.Typed.head expr) with
-    | _, Lambda _ | None, _ -> Cpp_ir.Typed.node_type expr
+    | _, Lambda _ | None, _ -> Option.default Cpp_ir.Typed.unannotated (Cpp_ir.Typed.carried expr)
     | Some t, _ -> Typed t
   in
   into_slot ~origin:(Ue {cx; term; from}) (Cpp_ir.Typed.v ~ty:from_ty expr) (Exactly into)
@@ -996,7 +996,7 @@ let param_slot cx env param_core_ty : Cpp_ir.Lowered.Slot_type.t =
 (** The argument [e], lowered as [expr], at the parameter the callee
     declares at [param_core_ty]. *)
 let at_param cx env param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  into_slot ~origin:(Param {cx; env; param_core_ty; term = e}) (Cpp_ir.Typed.of_node expr) (param_slot cx env param_core_ty)
+  into_slot ~origin:(Param {cx; env; param_core_ty; term = e}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr) (param_slot cx env param_core_ty)
 
 (** A global or variable named at the Core type [core_ty] put in the slot
     [expected_ty] states ({!eta_global_plan}). *)

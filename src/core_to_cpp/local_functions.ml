@@ -995,7 +995,7 @@ let gen_let_lambda cx (slot : Slot.slot) env (k : Destination.t) ~x ~t ~a ~b ~le
       List.mapi
         (fun i a ->
           match List.nth_opt param_core_tys i with
-          | Some ty -> Coerce.into_slot ~origin:(Tvar_name ty) (Cpp_ir.Typed.of_node a) (Template_parameter None)
+          | Some ty -> Coerce.into_slot ~origin:(Tvar_name ty) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated a) (Template_parameter None)
           | None -> a )
         args
     in
@@ -1020,7 +1020,7 @@ let gen_let_lambda cx (slot : Slot.slot) env (k : Destination.t) ~x ~t ~a ~b ~le
         (Cpp_ir.Typed.apply
            ~first:(fun here -> Call (opaque (), lifted, List.rev (free_args @ List.rev (name_lifted_args here))))
            (Cpp_ir.Typed.typed lifted_type lifted)
-           (List.map (fun a -> Cpp_ir.Typed.of_node (sub a)) args) )
+           (List.map sub args) )
           .expr
       | Local id when Id.equal id target ->
         (* Bare reference to lifted function: generate a properly-typed
@@ -1261,7 +1261,7 @@ let gen_applied_fix cx (slot : Slot.slot) env (k : Destination.t) ~x ~ids ~funs 
   let applied_type n =
     Typed_checks.core_value_type cx env (Base.Type_util.strip_arrows_n n (snd ids.(x)))
   in
-  let fix_value n (e : Cpp_ir.Lowered.Expr.t) = Cpp_ir.Typed.or_type (applied_type n) (Cpp_ir.Typed.of_node e) in
+  let fix_value n (e : Cpp_ir.Lowered.Expr.t) = Cpp_ir.Typed.of_node ~fallback:(applied_type n) e in
   (* The arguments the plan reads before the call, its parameters being
      bound to them in order ({!Ownership_ir.Region.evaluated_first}), each
      evaluated into a local of its own ahead of everything the call
@@ -1428,14 +1428,13 @@ let gen_applied_fix cx (slot : Slot.slot) env (k : Destination.t) ~x ~ids ~funs 
            stands for the function type, a fold's accumulator. *)
         let closure =
           Cpp_ir.Typed.apply ~first:(Cpp_ir.Build.call fix_id) ~prefix:"_pa" (Cpp_ir.Typed.typed member fix_id)
-            (List.rev_map Cpp_ir.Typed.of_node args)
+            (List.rev args)
         in
         let into = ret in
         decls @ defs
         @ deref_subst
             [ Destination.finish cx k
-                (Cpp_ir.Typed.or_type (applied_type n_provided)
-                   (Typed_checks.adapted_or_node into
+                ((Typed_checks.adapted_or_node ~fallback:(applied_type n_provided) into
                       (Coerce.into_slot ~origin:Pa closure (Coerce.slot_of_expected into)) ) ) ]
       end
       else
@@ -1479,7 +1478,7 @@ let gen_applied_fix cx (slot : Slot.slot) env (k : Destination.t) ~x ~ids ~funs 
                (Cpp_ir.Typed.apply
                   ~first:(fun a -> Call (Cpp_ir.Build.signature ~nargs:0 (), callee, a))
                   (Cpp_ir.Typed.typed member callee)
-                  (List.rev_map Cpp_ir.Typed.of_node args) )
+                  (List.rev args) )
                  .expr )
         in
         let suspended = in_suspended_tail cx occ in
@@ -1533,4 +1532,4 @@ let gen_standalone_fix cx (slot : Slot.slot) env (k : Destination.t) ~x ~ids ~fu
     | Typed t -> ( match Cpp_ir.Arrows.of_type t with Some a -> Closure a | None -> Typed t )
     | v -> v
   in
-  decls @ defs @ [Destination.finish cx k (Cpp_ir.Typed.or_type closure (Cpp_ir.Typed.of_node (Local fix_id)))]
+  decls @ defs @ [Destination.finish cx k (Cpp_ir.Typed.of_node ~fallback:closure (Local fix_id))]

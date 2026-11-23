@@ -138,8 +138,8 @@ let finish cx d (x : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Stmt.t =
      returned, else what the node says. *)
   ( match (s, d) with
   | Return (Some e), Return _ -> Lowering_state.record_return cx e x.ty
-  | Return (Some e), _ -> Lowering_state.record_return cx e (Cpp_ir.Typed.node_type e)
-  | Bind_variable (_, Existing, e), _ -> record_assigned d (if e == x.expr then x else Cpp_ir.Typed.of_node e)
+  | Return (Some e), _ -> Lowering_state.record_return cx e (Option.default Cpp_ir.Typed.unannotated (Cpp_ir.Typed.carried e))
+  | Bind_variable (_, Existing, e), _ -> record_assigned d (if e == x.expr then x else Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated e)
   | _ -> () );
   s
 
@@ -159,7 +159,7 @@ let finish_inlined cx d (x : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Stmt.t list =
       let returned v =
         match Lowering_state.returned_type cx v with
         | Some ty -> Cpp_ir.Typed.v ~ty v
-        | None -> Cpp_ir.Typed.or_type x.ty (Cpp_ir.Typed.of_node v)
+        | None -> Cpp_ir.Typed.of_node ~fallback:x.ty v
       in
       match Cpp_build.inline_returns (fun v -> finish cx d (returned v)) body with
       | Some stmts -> stmts

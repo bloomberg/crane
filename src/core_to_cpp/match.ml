@@ -1937,9 +1937,9 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
               (Function
                  ( List.map (Types.cpp_of_core cx env') fld_param_tys,
                    Types.cpp_of_core cx env' (snd (get_args_and_ret [] ft)) ))
-          | None -> Deduced Not_yet_typed
+          | None -> Deduced Untranslated
         in
-        (Cpp_ir.Typed.apply ~first:(Cpp_ir.Build.call callee) (Cpp_ir.Typed.v ~ty:method_ty callee) (List.map Cpp_ir.Typed.of_node arg_exprs)).expr
+        (Cpp_ir.Typed.apply ~first:(Cpp_ir.Build.call callee) (Cpp_ir.Typed.v ~ty:method_ty callee) arg_exprs).expr
       in
       let n_value_args = List.length value_args in
       let erased_cod =
@@ -1950,7 +1950,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
       let call = Coerce.recover_boxed_result cx ~ret ~boxed:erased_cod ~expected:expected_ty call in
       Coerce.into_slot
         ~origin:(Carrier_result {fun_ty = (if is_typeclass then None else fld_ty_opt); n_args = n_value_args})
-        (Cpp_ir.Typed.of_node call) (Coerce.slot_of_expected expected_ty)
+        (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated call) (Coerce.slot_of_expected expected_ty)
     | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
   | Destructure, _ | Projection _, _ ->
     (* Destructure record fields into local variables, then evaluate the body

@@ -232,7 +232,7 @@ let eta_global ~declared ~(into : Cpp_ir.Lowered.Type.t option) ~site ~exact (cg
           stored_adapter ps
             (Cpp_ir.Typed.apply
                (Cpp_ir.Typed.typed ty (Local (Option.get id)))
-               (List.map (fun p -> Cpp_ir.Typed.of_node (adapter_arg p)) ps) )
+               (List.map adapter_arg ps) )
               .expr
         | _ -> adapter_arg (ty, id) )
       | _ -> adapter_arg (ty, id)
@@ -242,7 +242,7 @@ let eta_global ~declared ~(into : Cpp_ir.Lowered.Type.t option) ~site ~exact (cg
     let call =
       let callee_ty = Cpp_ir.Types.spell_arrows site (Function (decl_dom, Option.default Cpp_ir.Type.Auto decl_cod)) in
       (Cpp_ir.Typed.apply (Cpp_ir.Typed.typed callee_ty cglob)
-         (List.mapi (fun i p -> Cpp_ir.Typed.of_node (passed i p)) params) )
+         (List.mapi passed params) )
         .expr
     in
     let into =

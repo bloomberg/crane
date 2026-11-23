@@ -262,9 +262,13 @@ and Deduction : sig
     | Runtime_helper of Crane_rt.helper  (** a runtime helper, named *)
     | Generic_lambda  (** a polymorphic function object *)
     | Requirement  (** a requires expression's subject or constraint *)
-    | Not_yet_typed
-        (** lowering does not synthesise this form's type yet (typed CppIR
-            phases A to C) *)
+    | Untranslated
+        (** a term Core infers no type for, or one lowering cannot convert *)
+    | Unannotated
+        (** a node lowering built without stating its type (a variable read,
+            a member, a call without its yield), which its reader decides
+            from Core (an adapter keeping its own test) or takes as C++
+            deduces it (a join) *)
 end =
   Deduction
 

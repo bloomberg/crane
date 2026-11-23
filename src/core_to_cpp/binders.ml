@@ -304,7 +304,7 @@ let push_parameters cx ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
 let read_value_type cx env i : Cpp_ir.Lowered.Value_type.t =
   let derived () = Option.map (Types.cpp_of_core cx env) (get_env_type_opt cx i) in
   match Option.map strip_param_wrappers (binder_cpp_type cx i) with
-  | Some Auto | None -> ( match derived () with Some t -> Typed t | None -> Deduced Not_yet_typed )
+  | Some Auto | None -> ( match derived () with Some t -> Typed t | None -> Deduced Untranslated )
   | Some t -> Typed t
 
 (** A value type, roughly, for diagnostics. *)

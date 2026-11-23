@@ -1046,7 +1046,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
                    (unbox each argument, box the result). *)
                 (* Wrap via the [crane_erase_fn] runtime helper (emitted as
                    [#include "crane_fn.h"] in the header preamble). *)
-                Coerce.into_slot ~origin:(Any_slot {cx; kind = Var_box; term = core_e}) (Cpp_ir.Typed.of_node expr)
+                Coerce.into_slot ~origin:(Any_slot {cx; kind = Var_box; term = core_e}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr)
                   (Exactly Any)
               end )
           | Function (param_tys, ret_ty) when List.exists (fun t -> t = Cpp_ir.Type.Any) param_tys ->
@@ -1370,7 +1370,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
           let slot = Types.cpp_of_core cx env ft in
           Coerce.into_slot
             ~origin:(Any_slot {cx; kind = Types.box_kind_of_cpp_type slot; term = core_e})
-            (Cpp_ir.Typed.of_node expr) (Exactly slot)
+            (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr) (Exactly slot)
         | _ -> expr )
     in
     let gen_and_wrap i e =
@@ -1512,7 +1512,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
                   | Some e ->
                     Coerce.into_slot
                       ~origin:(Any_slot {cx; kind = Types.box_kind_of_cpp_type declared_ty; term = e})
-                      (Cpp_ir.Typed.of_node expr) (Exactly declared_ty)
+                      (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr) (Exactly declared_ty)
                   | None -> expr
                 else expr
               in

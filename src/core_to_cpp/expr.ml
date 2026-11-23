@@ -124,7 +124,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
   let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
   let form = Typed_checks.of_built cx env core_e in
   (* A form module that types its result; where it could not, as [form]. *)
-  let typed_form (x : Typed.t) = if Cpp_ir.Value_type.not_yet_typed x.ty then form x.expr else x in
+  let typed_form (x : Typed.t) = if Cpp_ir.Value_type.unstated x.ty then form x.expr else x in
   match core_e with
   (* [unit] has one value, so a read of a [unit] binder is that value: the
      binder may have no C++ parameter at all ({!Base.Type_util.declaration_drops_binder}). *)
@@ -176,7 +176,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
     let read_ty : Cpp_ir.Lowered.Value_type.t =
       match Binders.read_value_type cx env i with
       | Typed t when boxed_read && not (Cpp_ir.Types.prints_as_any t) -> Typed Any
-      | Deduced Not_yet_typed when boxed_read -> Typed Any
+      | Deduced Untranslated when boxed_read -> Typed Any
       (* A binder no C++ type was decided for whose Core type is opaque
          holds the box an erased value is represented by: only a binder
          declared opaque is an admission. *)
@@ -218,7 +218,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
             | Entity_application (g, _ :: _, _) -> is_list_global g
             | _ -> false
           in
-          let unbox_at t = Typed.of_node (Cpp_passes.Erasure.unbox t result) in
+          let unbox_at t = Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Cpp_passes.Erasure.unbox t result) in
           if ty_is_list ty then
              (* Canonical erased shape is [deque<std::any>] -- every element
                 boxed as a single [std::any] (see [gen_expr_custom_cons]'s
@@ -346,7 +346,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
     let ty = Types.cpp_of_core cx env core_ty in
     ( match ty with
     | Function (dom, cod) ->
-      Typed_checks.adapted_or_node expected_ty (eta_fun cx (Slot.at ~ret ?expected_ty ()) env (Core.Expr.Global use) []).expr
+      Typed_checks.adapted_or_node ~fallback:Cpp_ir.Typed.unannotated expected_ty (eta_fun cx (Slot.at ~ret ?expected_ty ()) env (Core.Expr.Global use) []).expr
     | _ ->
       let yields = Calls.glob_yields cx env x (Base.Core_util.instantiate_written ~reader:"glob_yields" use) in
       Typed.v ~ty:(match yields with Some t -> Typed t | None -> Deduced Foreign_text) @@ mk_cppglob
@@ -430,7 +430,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
     (* A custom constant with no Core type is the text it maps to: C++
        alone knows its type. *)
     let or_foreign (v : Cpp_ir.Lowered.Value_type.t) : Cpp_ir.Lowered.Value_type.t =
-      if Cpp_ir.Value_type.not_yet_typed v && is_custom x then Deduced Foreign_text else v
+      if Cpp_ir.Value_type.unstated v && is_custom x then Deduced Foreign_text else v
     in
     if Suspension.naming_calls cx ~cpp_of:(Types.cpp_of_core cx env) x then
       (* A function of no parameters named is called, a call made of this
@@ -480,7 +480,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
            one is not ({!Functions.gen_dfun}) -- and a template is no
            value a conversion can take whole: an adapter at the declared
            signature, at this use's type arguments, is. *)
-        let named = if cglob == named.expr then named else Typed.untyped cglob in
+        let named = if cglob == named.expr then named else Typed.v ~ty:Typed.unannotated cglob in
         let cglob =
           match from with
           | Function (dom, _)
@@ -500,7 +500,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
         | None -> named )
       | _ -> (
         match unit_parameter_adapter cx x cglob with
-        | Some adapter -> Typed.of_node adapter
+        | Some adapter -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated adapter
         | None -> Typed_checks.adapted ~before:named expected_ty (Calls.curry_to_expected cx env ?expected_ty use cglob) ) )
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} when is_custom r ->
     form @@ gen_expr_custom_cons cx slot env ty r ts
@@ -578,7 +578,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
   | Core.Expr.String s -> Typed.v ~ty:(Typed_checks.primitive_type cx env "strings.pstring.type") (Literal (String s))
   | Core.Expr.UInt63 x -> Typed.v ~ty:(Typed_checks.primitive_type cx env "num.int63.type") (Literal (Uint63 x))
   | Core.Expr.Numeral {inductive = ind; value = n} ->
-    Typed.or_type (Typed_checks.core_value_type cx env (Some (Typed_checks.inductive_type ind))) @@ Typed.of_node @@ (
+    Cpp_ir.Typed.of_node ~fallback:(Typed_checks.core_value_type cx env (Some (Typed_checks.inductive_type ind))) @@ (
     match Base.Table.get_numeral_info ind with
     | Some info -> Cpp_build.render_numeral info n
     | None ->
@@ -598,11 +598,11 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
     (* An erased proof or type reaching an expression position: a dead one,
        an absurd branch.  Where it is a value a constructor stores it is the
        empty box instead, see {!gen_stored_value}. *)
-    Typed.of_node @@ Abort ("unreachable", Cpp_build.abort_ty expected_ty)
+    Cpp_ir.Typed.v ~ty:Never @@ Abort ("unreachable", Cpp_build.abort_ty expected_ty)
   | Core.Expr.Runtime_error msg ->
     (* Unreachable/absurd case - e.g., match on empty type *)
-    Typed.of_node @@ Abort (msg, Cpp_build.abort_ty expected_ty)
-  | Core.Expr.Axiom_value s -> Typed.of_node @@ Abort ("unrealized axiom: " ^ s, Cpp_build.abort_ty expected_ty)
+    Cpp_ir.Typed.v ~ty:Never @@ Abort (msg, Cpp_build.abort_ty expected_ty)
+  | Core.Expr.Axiom_value s -> Cpp_ir.Typed.v ~ty:Never @@ Abort ("unrealized axiom: " ^ s, Cpp_build.abort_ty expected_ty)
   | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
 
 (** A term crossing a type gap erasure opened: a [Core.Expr.Coerce] with its

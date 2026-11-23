@@ -13,8 +13,7 @@ type t = {
 
 let v ~ty expr = {expr; ty}
 let typed t expr = {expr; ty = Typed t}
-let not_yet : Lowered.Value_type.t = Deduced Not_yet_typed
-let untyped expr = {expr; ty = not_yet}
+let unannotated : Lowered.Value_type.t = Deduced Unannotated
 
 (** The grouping a lambda's own type has: its parameters, then those of the
     lambda it returns, if its body is only that, and so on; [None] where its
@@ -44,9 +43,9 @@ and joined_returns body : Lowered.Type.t option =
   let rec stmt (s : Lowered.Stmt.t) =
     match s with
     | Return (Some e) -> (
-      match node_type e with
-      | Typed t -> types := t :: !types
-      | Never -> ()
+      match carried e with
+      | Some (Typed t) -> types := t :: !types
+      | Some Never -> ()
       | _ -> unknown := true )
     | Return None -> unknown := true
     | s -> Subterms.stmt ~expr:(fun _ -> ()) ~stmts:(List.iter stmt) s
@@ -56,7 +55,7 @@ and joined_returns body : Lowered.Type.t option =
   | t :: rest when (not !unknown) && List.for_all (( = ) t) rest -> Some t
   | _ -> None
 
-and node_type : Lowered.Expr.t -> Lowered.Value_type.t = fun e ->
+and carried : Lowered.Expr.t -> Lowered.Value_type.t option = fun e ->
   match e with
   | Converting_construct (t, _)
   | Box (t, _)
@@ -68,39 +67,38 @@ and node_type : Lowered.Expr.t -> Lowered.Value_type.t = fun e ->
   | Unbox ((To t | Or_keep t | List (t, _)), _)
   | Call ({yields = Yields t; _}, _, _)
   | Call (_, Lambda {params = []; return_type = Some t; _}, []) ->
-    Typed t
+    Some (Typed t)
   | Call (_, Lambda ({params = []; _} as l), []) when not (generic l) -> (
-    match closure_arrows l with Some {groups = [[]]; result} -> Typed result | _ -> not_yet )
-  | Abort _ -> Never
-  | Foreign_text _ -> Deduced Foreign_text
-  | Runtime h -> Deduced (Runtime_helper h)
-  | Requires _ | Concept_application _ | Convertible_to _ -> Deduced Requirement
-  | Move e | Forward (_, e) -> node_type e
+    match closure_arrows l with Some {groups = [[]]; result} -> Some (Typed result) | _ -> None )
+  | Abort _ -> Some Never
+  | Foreign_text _ -> Some (Deduced Foreign_text)
+  | Runtime h -> Some (Deduced (Runtime_helper h))
+  | Requires _ | Concept_application _ | Convertible_to _ -> Some (Deduced Requirement)
+  | Move e | Forward (_, e) -> carried e
   | Function_value e -> (
-    match node_type e with
-    | Closure a | Function_name (_, a) -> Typed (Arrows_.to_type a)
-    | Typed (Function _) as t -> t
-    | _ -> not_yet )
-  | Erase_callable (Boxed_whole, _) | Erased_call _ -> Typed Any
-  | Erase_callable (At_signature cod, e) -> (
-    match Value_type_.arrows (node_type e) with
-    | Some a -> Typed (Function (List.map (fun _ -> Type.Any) (List.concat a.groups), cod))
-    | None -> not_yet )
-  | Coerce _ -> node_type (head e)
-  | Lambda l when generic l -> Deduced Generic_lambda
-  | Lambda l -> ( match closure_arrows l with Some a -> Closure a | None -> not_yet )
-  | _ -> not_yet
+    match carried e with
+    | Some (Closure a | Function_name (_, a)) -> Some (Typed (Arrows_.to_type a))
+    | Some (Typed (Function _)) as t -> t
+    | _ -> None )
+  | Erase_callable (Boxed_whole, _) | Erased_call _ -> Some (Typed Any)
+  | Erase_callable (At_signature cod, e) ->
+    Option.map
+      (fun (a : Lowered.Arrows.t) -> Value_type_.Typed (Function (List.map (fun _ -> Type.Any) (List.concat a.groups), cod)))
+      (Option.bind (carried e) Value_type_.arrows)
+  | Coerce _ -> carried (head e)
+  | Lambda l when generic l -> Some (Deduced Generic_lambda)
+  | Lambda l -> Option.map (fun a -> Value_type_.Closure a) (closure_arrows l)
+  | _ -> None
 
-let of_node expr = {expr; ty = node_type expr}
+let of_node ~fallback expr = {expr; ty = Option.default fallback (carried expr)}
 let rewrap f x = {x with expr = f x.expr}
-let or_type ty x = if Value_type_.not_yet_typed x.ty then {x with ty} else x
 
 (** The type left once [groups] of a callable returning [result] are still
     to come: [result] itself where none is. *)
 let rest_type groups result : Lowered.Type.t =
   match groups with [] -> result | groups -> Arrows_.to_type {groups; result}
 
-let applied (f : Lowered.Value_type.t) n : Lowered.Value_type.t =
+let applied (f : Lowered.Value_type.t) n : Lowered.Value_type.t option =
   let rec take (groups : Lowered.Type.t list list) result n : Lowered.Type.t option =
     match groups with
     | _ when n = 0 -> Some (rest_type groups result)
@@ -108,9 +106,7 @@ let applied (f : Lowered.Value_type.t) n : Lowered.Value_type.t =
     | g :: rest -> Some (rest_type (List.filteri (fun i _ -> i >= n) g :: rest) result)
     | [] -> ( match Arrows_.of_type result with Some a -> take a.groups a.result n | None -> None )
   in
-  match Value_type_.arrows f with
-  | Some a -> ( match take a.groups a.result n with Some t -> Typed t | None -> not_yet )
-  | None -> not_yet
+  Option.map (fun t -> Value_type_.Typed t) (Option.bind (Value_type_.arrows f) (fun a -> take a.groups a.result n))
 
 let apply ?first ?(prefix = "_sat") f args =
   let rec go (call : Lowered.Expr.t list -> Lowered.Expr.t) ~pending (ty : Lowered.Value_type.t) fe args =
@@ -131,10 +127,10 @@ let apply ?first ?(prefix = "_sat") f args =
           let body = call (args @ List.map (fun (_, id) : Lowered.Expr.t -> Local (Option.get id)) waiting) in
           { expr = Build.lambda waiting None [Return (Some body)] ~capture:Stored;
             ty = Closure {groups = [List.map fst waiting]; result = rest_type rest result} }
-      | _ -> {expr = call args; ty = not_yet}
+      | _ -> {expr = call args; ty = unannotated}
   in
   let call, pending = match first with Some c -> (c, true) | None -> (Build.call f.expr, false) in
-  go call ~pending f.ty f.expr (List.map (fun a -> a.expr) args)
+  go call ~pending f.ty f.expr args
 
 let rec const_type : Lowered.Type.t -> bool = function
   | Const _ -> true

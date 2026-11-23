@@ -22,12 +22,13 @@ val v : ty:Lowered.Value_type.t -> Lowered.Expr.t -> t
 (** [typed t e] is [e] of exactly the nameable type [t]. *)
 val typed : Lowered.Type.t -> Lowered.Expr.t -> t
 
-(** [untyped e] is [e], whose form lowering does not type yet. *)
-val untyped : Lowered.Expr.t -> t
+(** [of_node ~fallback e] is [e] at the type its outermost node carries
+    ({!carried}), and at [fallback], the type its builder knows, where the
+    node carries none. *)
+val of_node : fallback:Lowered.Value_type.t -> Lowered.Expr.t -> t
 
-(** [of_node e] is [e] at the type its outermost node carries, or not yet
-    typed where the node does not carry one. *)
-val of_node : Lowered.Expr.t -> t
+(** [Deduced Unannotated]: the type of a node built without one. *)
+val unannotated : Lowered.Value_type.t
 
 (** How a coercion expands ({!Cpp_passes.Coercions.expand}, which installs
     itself here: the expansion builds with finishing's vocabulary, which
@@ -38,24 +39,24 @@ val expansion : (Lowered.Coercion.plan -> Lowered.Expr.t -> Lowered.Expr.t) ref
     reads the form of the value it adapts. *)
 val head : Lowered.Expr.t -> Lowered.Expr.t
 
-(** The type [of_node] reads off [e]'s outermost node, a coercion's off
-    what it expands to. *)
-val node_type : Lowered.Expr.t -> Lowered.Value_type.t
+(** The type [e]'s outermost node carries, a coercion's what it expands
+    to: a cast, a box, a conversion, a call stating what it yields, an
+    abort, a lambda whose grouping its parameters and returns say, foreign
+    text, a runtime helper, a requirement.  [None] for a node that carries
+    none (a variable, a global, a member, a call without its yield). *)
+val carried : Lowered.Expr.t -> Lowered.Value_type.t option
 
 (** [rewrap f x] is [f x.expr] at [x]'s type: for a rewrite that does not
     change what the value is, such as recording the Core occurrence it is
     made of. *)
 val rewrap : (Lowered.Expr.t -> Lowered.Expr.t) -> t -> t
 
-(** [x], typed as [ty] where it is not yet typed. *)
-val or_type : Lowered.Value_type.t -> t -> t
-
 (** [applied f n] is what a callable of type [f] yields given [n]
     arguments, taken group by group as its type takes them: the rest of a
     group they straddle and the groups after it, a function of what is left;
-    past its last group, the result's own groups.  Not yet typed where [f]
-    or a result the arguments reach is no callable. *)
-val applied : Lowered.Value_type.t -> int -> Lowered.Value_type.t
+    past its last group, the result's own groups.  [None] where [f] or a
+    result the arguments reach is no callable. *)
+val applied : Lowered.Value_type.t -> int -> Lowered.Value_type.t option
 
 (** [apply ?first ?prefix f args] is [f] applied to [args], in source order,
     as its type groups its parameters: one C++ call per group.  A group the
@@ -63,11 +64,11 @@ val applied : Lowered.Value_type.t -> int -> Lowered.Value_type.t
     parameters named [prefix] (default ["_sat"]) and a position.  Arguments
     past [f]'s last group apply to its result, group by group at the
     result's own type; all at once where that is no callable, or [f]'s type
-    is unknown.  [first] builds the call of the first group in place of
+    gives no grouping (the call then {!unannotated}).  [first] builds the call of the first group in place of
     calling [f.expr] (a callee that takes more than the arguments, such as a
     lifted function's captured variables); a callee given [first] is called
     even with no arguments.  No arguments is [f] itself otherwise. *)
-val apply : ?first:(Lowered.Expr.t list -> Lowered.Expr.t) -> ?prefix:string -> t -> t list -> t
+val apply : ?first:(Lowered.Expr.t list -> Lowered.Expr.t) -> ?prefix:string -> t -> Lowered.Expr.t list -> t
 
 (** The value category of [x], from its node: a variable is an lvalue,
     [const] where its type is, a move an xvalue, anything else a

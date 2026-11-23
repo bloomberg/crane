@@ -719,25 +719,25 @@ let gen_lambda cx (slot : Slot.slot) env (a : Core.Expr.t) : Cpp_ir.Typed.t =
         let folded = List.length l.params - List.length filtered_args in
         Typed_checks.core_value_type cx env
           (Option.bind (Typed_checks.core_type_of cx a) (Base.Type_util.strip_arrows_n folded))
-      | _ -> Deduced Not_yet_typed )
+      | _ -> Deduced Unannotated )
   in
   let body_result = Lazy.force body_result in
   restore_env_types cx saved_env_types;
   (* The lambda built is a closure over its parameters, returning what C++
      deduces from its [return]s, or failing that, the body's own type. *)
   let typed (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Typed.t =
-    match (Cpp_ir.Typed.node_type e, e, f) with
-    | Deduced Not_yet_typed, Lambda l, Lambda l' when l.params == l'.params -> (
+    match (Cpp_ir.Typed.carried e, e, f) with
+    | None, Lambda l, Lambda l' when l.params == l'.params -> (
       match body_result with
       | Typed result -> Cpp_ir.Typed.v ~ty:(Closure {groups = [List.map fst l.params]; result}) e
       | Closure a | Function_name (_, a) ->
         Cpp_ir.Typed.v ~ty:(Closure {groups = [List.map fst l.params]; result = Cpp_ir.Arrows.to_type a}) e
-      | _ -> Cpp_ir.Typed.of_node e )
-    | Deduced Not_yet_typed, Call (_, Lambda l, []), Lambda l' when l.params == l'.params -> (
+      | _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated e )
+    | None, Call (_, Lambda l, []), Lambda l' when l.params == l'.params -> (
       match Cpp_ir.Value_type.as_function_type body_result with
       | Some t -> Cpp_ir.Typed.typed t e
       | None -> Cpp_ir.Typed.v ~ty:body_result e )
-    | _ -> Cpp_ir.Typed.of_node e
+    | _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated e
   in
   typed @@ ( match filtered_args with
   | [] ->
@@ -994,4 +994,4 @@ let gen_lambda cx (slot : Slot.slot) env (a : Core.Expr.t) : Cpp_ir.Typed.t =
     in
     Coerce.into_slot
       ~origin:(Ee {core_arity; returns_a_lambda; arity = List.length filtered_args})
-      (Cpp_ir.Typed.of_node f) (Coerce.slot_of_expected expected_ty) )
+      (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated f) (Coerce.slot_of_expected expected_ty) )

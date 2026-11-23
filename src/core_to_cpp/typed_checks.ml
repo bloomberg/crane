@@ -48,24 +48,25 @@ let adapted_to (t : Cpp_ir.Lowered.Type.t option) e =
     match Cpp_ir.Arrows.of_type t with
     | Some a -> Typed.v ~ty:(Closure a) e
     | None -> Typed.typed t e )
-  | None -> Typed.untyped e
+  | None -> Typed.v ~ty:Typed.unannotated e
 
 (** [adapted ~before into e]: [e], built from the typed value [before] to
     fill a slot of type [into]: [before] itself where nothing was built,
     and otherwise the adapter, at the slot's type. *)
 let adapted ~(before : Typed.t) into e = if e == before.expr then before else adapted_to into e
 
-(** [adapted_or_node into e]: [e], an adapter built for a slot of type
-    [into] where there is one, and otherwise at the type its node carries. *)
-let adapted_or_node into e = match into with Some _ -> adapted_to into e | None -> Typed.of_node e
+(** [adapted_or_node ~fallback into e]: [e], an adapter built for a slot of
+    type [into] where there is one, and otherwise at the type its node
+    carries, or [fallback]. *)
+let adapted_or_node ~fallback into e = match into with Some _ -> adapted_to into e | None -> Typed.of_node ~fallback e
 
 (** The type of a value whose Core type is [t], converted in the scope of
     [env]. *)
 let core_value_type cx env (t : Core.Type.t option) : Cpp_ir.Lowered.Value_type.t =
   match t with
   | Some t -> (
-    try Typed (Types.cpp_of_core cx env t) with e when CErrors.noncritical e -> Deduced Not_yet_typed )
-  | None -> Deduced Not_yet_typed
+    try Typed (Types.cpp_of_core cx env t) with e when CErrors.noncritical e -> Deduced Untranslated )
+  | None -> Deduced Untranslated
 
 (** The type of the global [x] named as a value, its Core type instantiated
     at the use as [t]: a function's name, its parameters in the one group
@@ -76,7 +77,7 @@ let global_value_type cx env x (t : Core.Type.t option) : Cpp_ir.Lowered.Value_t
   | Typed (Function (dom, cod)) -> (
     match Coerce.name_arrows x dom cod with
     | Some a -> Function_name (x, a)
-    | None -> Deduced Not_yet_typed )
+    | None -> Deduced Untranslated )
   | v -> v
 
 (** The Core type the inductive or type constant [r] is, unapplied. *)
@@ -172,22 +173,23 @@ let sequential_action (e : Core.Expr.t) =
     that at the conversion of [e]'s Core type -- a closure grouped as the
     lambda it is, where [x] is one.  The census counts the second kind. *)
 let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
-  match (Typed.of_node x, sequential_action e) with
+  match (Typed.carried x, sequential_action e) with
   | _, Some result -> Typed.v ~ty:(core_value_type cx env (Some result)) x
-  | {ty = Deduced Not_yet_typed; _}, None -> (
+  | None, None -> (
     let derived =
       match (core_value_type cx env (core_type_of cx e), e) with
-      | Deduced Not_yet_typed, Apply {callee = Bound_variable {index; _}; arguments} ->
+      | Deduced Untranslated, Apply {callee = Bound_variable {index; _}; arguments} ->
         let callee : Cpp_ir.Lowered.Value_type.t =
           match Binders.read_value_type cx env index with
           | Typed t -> Typed (Types.unfold_cpp_typedef cx env t)
           | v -> v
         in
-        Cpp_ir.Typed.applied callee (Base.Type_util.count_real_core_args arguments)
+        Option.default (Deduced Untranslated : Cpp_ir.Lowered.Value_type.t)
+          (Cpp_ir.Typed.applied callee (Base.Type_util.count_real_core_args arguments))
       (* [tt] applied: only an impossible branch of a dependent match
          writes it, and the crossing it stands under is an abort
          ({!Coerce.absurd_coercion}). *)
-      | Deduced Not_yet_typed, Apply {callee; _}
+      | Deduced Untranslated, Apply {callee; _}
         when (match core_type_of cx callee with Some t -> Base.Type_util.core_type_is_unit t | None -> false) ->
         Never
       | v, _ -> v
@@ -209,7 +211,7 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
           Typed.v ~ty:(Closure {groups = [List.map fst l.params]; result}) x
       | None -> Typed.v ~ty:derived x )
     | _ -> Typed.v ~ty:derived x )
-  | typed, None -> typed
+  | Some ty, None -> Typed.v ~ty x
 
 (** Where lowering is, for a census line: the library and the declaration
     whose body is lowered. *)
@@ -268,7 +270,7 @@ let verdict_name = function
 
 let verdict cx (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   match into with
-  | _ when Cpp_ir.Value_type.not_yet_typed x.ty -> `Unchecked "untyped value"
+  | _ when Cpp_ir.Value_type.unstated x.ty -> `Unchecked "untyped value"
   | Exactly t when Base.Type_util.contains_tvar t ->
     `Unchecked ("slot at type variables: " ^ verdict_name (exact_verdict cx x into))
   | Exactly _ -> exact_verdict cx x into
@@ -301,13 +303,13 @@ let verdict_line cx ~what (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
     ([typed-expected]: an expected type is not always the slot the value
     fills, so this is a census, never a check; {!fit} is the check). *)
 let census cx ?expected_ty e (x : Typed.t) =
-  if Base.Probe.checking () && Cpp_ir.Value_type.not_yet_typed x.ty then
+  if Base.Probe.checking () && Cpp_ir.Value_type.unstated x.ty then
     Base.Probe.violation "typed lowering"
       Pp.(str "a " ++ str (form_name e) ++ str " lowered without a type, in " ++ str (site cx) ++ str ": "
           ++ str (describe e));
   if Base.Probe.enabled () then begin
     Base.Probe.hit "typed" (fun () -> form_name e ^ " " ^ kind_name x.ty);
-    if Cpp_ir.Value_type.not_yet_typed x.ty then
+    if Cpp_ir.Value_type.unstated x.ty then
       Base.Probe.hit "typed-untyped" (fun () -> form_name e ^ " " ^ site cx ^ " " ^ describe e ^ " " ^ node_name x.expr);
     Option.iter
       (fun t ->

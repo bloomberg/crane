@@ -21,8 +21,10 @@ let arrows : 'p t -> 'p Arrows.t option = function
   | Closure a | Function_name (_, a) -> Some a
   | Never | Deduced _ -> None
 
-(** Whether lowering has not synthesised the type yet. *)
-let not_yet_typed = function Deduced Not_yet_typed -> true | _ -> false
+(** Whether lowering states no type for the value: its Core type converts
+    to none, or the node was built without one.  A decision falls to the
+    adapter's own test there. *)
+let unstated = function Deduced (Untranslated | Unannotated) -> true | _ -> false
 
 (** The reason a deduced type is deduced, for the census. *)
 let deduction_name : Deduction.t -> string = function
@@ -30,7 +32,8 @@ let deduction_name : Deduction.t -> string = function
   | Runtime_helper _ -> "runtime helper"
   | Generic_lambda -> "generic lambda"
   | Requirement -> "requirement"
-  | Not_yet_typed -> "not yet typed"
+  | Untranslated -> "untranslated"
+  | Unannotated -> "unannotated"
 
 (** Whether a lambda returning values of the types [returned] leaves C++ no
     return type to deduce: a closure or a function's name has none it can

@@ -396,7 +396,7 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Base.Table.is_tt_constructor r
       && (ret = Some Cpp_ir.Type.Void) ->
     (* tt (unit constructor) in tail position of a void-returning function *)
-    if cx.ctx.input.itree_mode = Reified then [Destination.finish cx k (Cpp_ir.Typed.of_node (Monadic.mk_itree_ret Void []))]
+    if cx.ctx.input.itree_mode = Reified then [Destination.finish cx k (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Monadic.mk_itree_ret Void []))]
     else
       [Return None]
   | Core.Expr.Global {callee = r; _} when is_ghost r ->
@@ -404,7 +404,7 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
       (* Reified mode: ghost (void value) at tail position must produce
          ITree<void>::ret() rather than bare return, since the function
          returns shared_ptr<ITree<void>>. *)
-      [Destination.finish cx k (Cpp_ir.Typed.of_node (Monadic.mk_itree_ret Void []))]
+      [Destination.finish cx k (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Monadic.mk_itree_ret Void []))]
     else
       [Return None]
   | Core.Expr.Runtime_error msg ->
@@ -458,7 +458,7 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
         [Expression e]
       else
         [(Expression e : Cpp_ir.Lowered.Stmt.t)]
-        @ Destination.finish_inlined cx k (Cpp_ir.Typed.of_node (Monadic.mk_tt_expr ()))
+        @ Destination.finish_inlined cx k (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated (Monadic.mk_tt_expr ()))
     end
     else begin
       let e = gen_expr_typed cx (Slot.at ~ret ~slot ?expected_ty:(ret) ()) env t in
@@ -473,7 +473,7 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
           let adapt f = Typed_checks.adapted ~before:e (Some rt) (f e.expr) in
           match Types.slot_repr_of_cpp_type cx rt with
           | Boxed Family_box ->
-            adapt (fun v -> Coerce.into_slot ~origin:(Family_list {cx; term = t}) (Cpp_ir.Typed.of_node v) (Exactly rt))
+            adapt (fun v -> Coerce.into_slot ~origin:(Family_list {cx; term = t}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated v) (Exactly rt))
           | Boxed Var_box -> e
           | Native -> adapt (Coerce.recover_boxed_component cx rt) )
         | _ -> e

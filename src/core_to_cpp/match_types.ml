@@ -170,7 +170,7 @@ let returned_types ~returned (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lower
   let typed_of (e : Cpp_ir.Lowered.Expr.t) =
     match List.find_map (fun (e', ty) -> if e' == e then Some ty else None) returned with
     | Some ty -> ty
-    | None -> Cpp_ir.Typed.node_type e
+    | None -> Option.default Cpp_ir.Typed.unannotated (Cpp_ir.Typed.carried e)
   in
   let rec stmt acc (s : Cpp_ir.Lowered.Stmt.t) =
     match s with

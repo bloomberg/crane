@@ -1830,7 +1830,7 @@ let gen_decl__inner cx n b ty =
       let body_expr =
         match Types.slot_repr_of_cpp_type cx cty_ir with
         | Boxed kind ->
-          Coerce.into_slot ~origin:(Any_slot {cx; kind; term = b}) (Cpp_ir.Typed.of_node body_expr) (Exactly cty_ir)
+          Coerce.into_slot ~origin:(Any_slot {cx; kind; term = b}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated body_expr) (Exactly cty_ir)
         | Native -> body_expr
       in
       let body_expr = baked_initialiser n cty_ir body_expr in
@@ -2069,7 +2069,7 @@ let gen_spec__inner cx n b ty =
       let b_expr =
         match Types.slot_repr_of_cpp_type cx ty_ir with
         | Boxed kind ->
-          Coerce.into_slot ~origin:(Any_slot {cx; kind; term = inner_body}) (Cpp_ir.Typed.of_node b_expr) (Exactly ty_ir)
+          Coerce.into_slot ~origin:(Any_slot {cx; kind; term = inner_body}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated b_expr) (Exactly ty_ir)
         | Native -> b_expr
       in
       (* A type naming a class field this scope cannot resolve would spell
