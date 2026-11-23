@@ -700,7 +700,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
     let written_fn_ty =
       let subst i = Core.Scheme.Var.assoc_tvar i written_tvar_args in
       (* An inline custom has no signature its type arguments instantiate:
-         its text reads the values as they are ({!Calls.call_result_site}). *)
+         its text reads the values as they are ({!Coerce.result_site}). *)
       if written_tvar_args = [] || is_inline_custom id then None
       else Option.map (Cpp_ir.Types.substitute subst) (Lazy.force live_fn_ty)
     in
@@ -911,7 +911,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
           | Some core_ty -> Some (instantiated_codomain core_ty)
           | None -> None
         in
-        let cod_site = Calls.call_result_site id in
+        let cod_site = Coerce.result_site id in
         (* A codomain that stays curried in C++ -- a [std::function] whose
            result is another [std::function] -- takes only the arguments of
            its own arrow, so applying every excess arg in one call would
@@ -1405,7 +1405,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
             | Some _ as a -> a
             | None -> (
               match find_type_opt id with
-              | Some core_ty when Calls.codomain_site core_ty = Cpp_ir.Types.Through_tvar ->
+              | Some core_ty when core_codomain_is_tvar core_ty ->
                 Some (count_core_value_arrows core_ty)
               | _ -> None )
           in
@@ -1483,9 +1483,9 @@ let eta_fun cx (slot : Slot.slot) env f args :
                 made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call ?yields cglob (passed (args @ fill)))
               in
               (* The surplus goes to the result in the groups its spelling
-                 takes them in ({!Calls.call_result_site}). *)
+                 takes them in ({!Coerce.result_site}). *)
               let filled_ty =
-                Cpp_ir.Types.spell_arrows (Calls.call_result_site id)
+                Cpp_ir.Types.spell_arrows (Coerce.result_site id)
                   (Function (List.map fst (List.filteri (fun i _ -> i >= k) eta_args), cod))
               in
               (Cpp_ir.Typed.apply (Cpp_ir.Typed.typed filled_ty filled) (List.map Cpp_ir.Typed.of_node surplus)).expr
@@ -2066,7 +2066,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
                    ~agree:(fun p l -> Int.equal (declared p) (declared l))
                    i occ )
             in
-            if n < List.length args && Calls.codomain_site ty = Cpp_ir.Types.Through_tvar then
+            if n < List.length args && core_codomain_is_tvar ty then
               List.length args
             else n )
       | None -> List.length args

@@ -74,7 +74,7 @@ let core_value_type cx env (t : Core.Type.t option) : Cpp_ir.Lowered.Value_type.
 let global_value_type cx env x (t : Core.Type.t option) : Cpp_ir.Lowered.Value_type.t =
   match core_value_type cx env t with
   | Typed (Function (dom, cod)) -> (
-    match Cpp_ir.Arrows.of_type (Function (dom, Cpp_ir.Types.spell_arrows Through_tvar cod)) with
+    match Coerce.name_arrows x dom cod with
     | Some a -> Function_name (x, a)
     | None -> Deduced Not_yet_typed )
   | v -> v

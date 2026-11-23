@@ -359,37 +359,6 @@ let glob_is_nullary_function cx x =
 let apply_global cx x (cglob : Cpp_ir.Lowered.Expr.t) args =
   if args = [] && not (glob_is_nullary_function cx x) then cglob else Cpp_ir.Build.call cglob args
 
-(** The site a callee's {e result} is spelled at ({!Cpp_ir.Types.arrow_site}): a
-    codomain that is a type variable takes its C++ shape from the template
-    argument instantiating it, so it is curried; one the declaration writes
-    out is flat there. *)
-let codomain_site core_ty : Cpp_ir.Types.arrow_site = if core_codomain_is_tvar core_ty then Through_tvar else Declared
-
-(** {!codomain_site} for a call to the global [id].  An inline custom
-    constant has no template argument: what it yields is whatever its text
-    reads -- [fst]'s [%a0.first] is the pair's component, stored flat --
-    except that an argument at a parameter declared as the very type
-    variable the result is arrives named at that variable's curried
-    spelling (the [crane::fn] {!Application.gen_call_args} wraps it in),
-    and the text yields it or a value assigned to it: a fold's
-    accumulator. *)
-let call_result_site id : Cpp_ir.Types.arrow_site =
-  match find_type_opt id with
-  | None -> Declared
-  | Some core_ty when not (is_inline_custom id) -> codomain_site core_ty
-  | Some core_ty ->
-    let rec split acc (t : Core.Type.t) =
-      match t with
-      | Core.Type.Arrow {parameter; result} -> split (resolve_meta parameter :: acc) result
-      | Core.Type.Meta {contents = Some t} -> split acc t
-      | t -> (acc, t)
-    in
-    ( match split [] core_ty with
-    | params, Core.Type.Variable {variable = v; _} ->
-      if List.exists (function Core.Type.Variable {variable = w; _} -> w = v | _ -> false) params then Through_tvar
-      else Declared
-    | _ -> Declared )
-
 (** [result_cpp_via_receiver env callee_ty args] is the C++ type a call's
     result really has, where the callee's declared codomain is one of the type
     variables its first argument's type instantiates -- the field a projection
