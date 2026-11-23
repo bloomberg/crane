@@ -8,10 +8,9 @@ it is. The authoritative pass order is
 printed from the pass lists the driver runs; a test fails when the two
 disagree.
 
-Related documents: [typed mappings](typed-mappings-design.md) (how a Rocq type
-or operation is mapped to C++), [typed CppIR](typed-cppir-design.md) (typed
-lowering and the single coercion), [Crane Bake](Crane-Bake.md) (constants
-computed at extraction time).
+The user-facing side of typed mappings and `Crane Bake` is in the
+[Reference Manual](Reference-Manual.md#typed-mappings); the image format of
+a baked constant is described in `theories/cpp/crane_bake.h`.
 
 ## Overview
 
@@ -94,7 +93,8 @@ what happens to a typed mapping after discovery.
 Separate extraction also fixes the module order used for includes, and
 `Base.Mapping_interface.check` compares the typed mappings recorded by the
 units whose headers this unit includes against this extraction's own
-resolution (design section 20 of the typed mappings design).
+resolution, so that import order cannot silently give a header two
+signatures.
 
 ## 2. Rocq to Core
 
@@ -489,8 +489,23 @@ driver whose `main` is `crane::bake::main`, runs it, and records the image
 it prints (C++ data) with the constant, together with the digests of every
 file the compiler read, `clang++ --version` and `CRANE_BAKE_FLAGS`
 (`Driver.Bake_inputs`). A later extraction lowers `c`'s body as usual but
-initialises `c` with `crane::bake::read<T>(image)` (CppIR `Baked_value`).
-See [Crane-Bake.md](Crane-Bake.md).
+initialises `c` with `crane::bake::read<T>(image)` (CppIR `Baked_value`),
+on both the definition and the header-specification path, so the unit plans
+and includes what it would without the image. A declaration whose type is
+`auto` takes the proxy `crane::bake::value{image}` instead.
+
+Crane runs the generated C++ once because the alternatives fail: C++
+`constexpr` evaluation cannot leave a heap allocation in a constant,
+`vm_compute` does not finish on large builders (the ParseALot DFA), and the
+value written as constructor calls compiles slowly and hits Clang's
+expression nesting limit. Two mechanisms keep an image current, since none
+of its inputs (runtime headers, the compiler, `CRANE_BAKE_FLAGS`) is a
+dependency a build system sees of the `.vo`: `Driver.Bake_inputs` records
+the digest of every file the compiler's `-MD` output lists and refuses a
+stale image at use, and `theories/RuntimeHeaders.v`
+(`scripts/runtime-headers-digest.sh`, a rule in `theories/dune`) carries the
+runtime headers' digest in a definition's name, so every file that requires
+`Crane.Extraction` is rebuilt when a header changes.
 
 ## 10. Checking, tracing and layering
 

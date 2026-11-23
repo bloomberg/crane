@@ -29,6 +29,6 @@ compiles and runs one.
   [`libraries/parse-a-lot-bench`](https://github.com/bloomberg/crane/tree/main/libraries/parse-a-lot-bench)
   is its benchmark harness, comparing the extracted C++ with the OCaml
   extraction of the same source; its extraction computes the lexers' DFA
-  tables at extraction time with [`Crane Bake`](Crane-Bake.md).
+  tables at extraction time with [`Crane Bake`](Reference-Manual.md#crane-bake).
 - [`theories/Examples/ConcurrentHashTable.v`](https://github.com/bloomberg/crane/blob/main/theories/Examples/ConcurrentHashTable.v):
   a concurrent hash table built on Crane's STM effects.

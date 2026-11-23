@@ -135,8 +135,17 @@ Because typed instances activate on `Import`, a bare
 
 The descriptor library is `Crane.Mapping.Descriptor`. It contains inductive
 types and records only. Strings are `PrimString.string`, so a mapping file
-opens `pstring_scope`. The design and its rationale are in
-[typed-mappings-design.md](typed-mappings-design.md).
+opens `pstring_scope`. How the pipeline compiles and uses a mapping is in
+[Compiler-Pipeline.md](Compiler-Pipeline.md#7-typed-mappings-in-the-pipeline).
+
+A typed mapping separates questions a C++ type string cannot answer: what a
+copy costs (`type_copy`), how the canonical value is read, written and
+replaced (`type_access`), which cheaper non-owning views exist
+(`type_views`), whether copies share one identity (`type_model`), and who
+releases the resource (`type_lifetime`). Every mapped type has one canonical
+C++ type, used for stored fields, owned locals and parameters, results and
+captures; references and views are added by Crane where a function's use of
+a value allows them.
 
 ### Example
 
@@ -231,11 +240,11 @@ the parameter it instantiates.
 | `type_headers` | Headers the C++ type needs, included wherever a unit uses the type. |
 | `type_cpp` | The canonical C++ type, structured: `Crane.Cpp.Name "std::string"`, `Crane.Cpp.Apply "std::optional" [Crane.Cpp.TypeArg t]`, `Crane.Cpp.Pointer t`, `Crane.Cpp.Const t`, `Crane.Cpp.StoredComponent "c"` (the C++ type Crane chose for component `c`), `Crane.Cpp.SourceType T` (the C++ type of a Rocq type), `Crane.Cpp.UnsafeVerbatim "..."` (raw text; warns). `Crane.Cpp.ValueArg "..."` is a non-type template argument. Must not be a reference. |
 | `type_components` | Named parts of the value, each `{\| component_name := "c"; component_type := ... \|}`: `KnownType A` (a type parameter) or `FieldType (Ref ctor) i` (field `i`, from 0 after the parameters, of a constructor). Templates refer to them with `%stored(c)`. |
-| `type_copy` | What a copy costs: `BitCopy` (scalar or raw handle), `RetainIdentity` (shares one identity, as `shared_ptr`), `DuplicateValue` (independent copy, possibly expensive), `CopyComponents ["c"; ...]` (a bounded aggregate that costs what the named components cost), `UnknownCopy`. Replaces `Crane TriviallyCopyable`. |
+| `type_copy` | What a copy costs: `BitCopy` (scalar or raw handle), `RetainIdentity` (shares one identity, as `shared_ptr`), `DuplicateValue` (independent copy, possibly expensive), `CopyComponents ["c"; ...]` (a bounded aggregate that costs what the named components cost, as `std::optional` or `std::pair`; not a container such as `std::vector` or `std::deque`, which copies every element and is `DuplicateValue`), `UnknownCopy`. Replaces `Crane TriviallyCopyable`. |
 | `type_access` | How the canonical value may be read, written and passed (below). |
 | `type_views` | `NoViews T`, `ReadViews r`, or `ReadWriteViews r w read_from_write` (below). |
-| `type_interface` | `AbstractInterface` (no constructors visible), or `AlgebraicInterface [ctor mappings]`: how each constructor is built and matched (below). |
-| `type_model` | `Structural` (copies are the same value), `Identity` (copies alias one mutable identity), `Unspecified`. |
+| `type_interface` | `AbstractInterface` (no constructors visible: building or matching the type in source is an error, so it is used only through mapped operations), or `AlgebraicInterface [ctor mappings]`: how each constructor is built and matched (below). `AlgebraicInterface []` is an empty type. |
+| `type_model` | `Structural` (copies are the same value), `Identity` (copies alias one mutable identity), `Unspecified`. Independent of `type_copy`: a small integer handle is `BitCopy` and `Identity`. |
 | `type_lifetime` | `NativeRAII` (the C++ value owns its resource), `RegionOwned (Ref r)`, `ExternallyOwned`, `ManualShared (Ref retain) (Ref release)`. A raw pointer with `NativeRAII` is rejected. |
 | `type_release` | `OrdinaryRelease` or `DrainWith "..."`. |
 | `type_numerals` | How a literal of the type is written (below), or `None`. |
@@ -260,13 +269,36 @@ them.
 `ExplicitAccess {| explicit_read := ...; explicit_write := ...;
 explicit_replace := ... |}` gives each form directly (`CanonicalByValue`,
 `CanonicalByConstReference`, `CanonicalByMutableReference`, or
-`ExactParameter "..."`, which warns). Crane picks each generated function's
-parameter form from what the function does with the parameter (the access
-analysis) and the type's access model: a function that only reads a
-`ReadByConstReference` value takes `const T&`, one that writes through a
-`MutableHandle HandleByConstReference` handle takes `const T&` too, one that
-replaces it takes `T&`, and one that keeps it takes `T`. A function named as
-a value (passed, stored, partially applied) keeps canonical forms.
+`ExactParameter "..."`, which warns).
+
+Writing through a value and replacing it are different capabilities. A raw
+pointer handle (`MutableHandle HandleByValue`) is passed as `T*` to write
+its pointee, which costs one word, and as `T*&` only to a function that may
+reseat the caller's pointer. A `const std::shared_ptr<V>&`
+(`MutableHandle HandleByConstReference`) cannot be reseated, but its `V` can
+be written, and passing it avoids a reference-count update.
+
+Crane picks each generated function's parameter form from what the function
+does with the parameter, joined over its uses and across the functions it
+calls (the access analysis), and from the type's access model. In order:
+
+1. a parameter the function keeps (owns) is taken as `T`;
+2. one it replaces takes the replace form (`T&`);
+3. one it writes takes the writable view, where the type has one and no use
+   needs the canonical representation (`WriteCanonical`), else the
+   write-through form;
+4. one it only reads takes the read view, where the type has one and no use
+   needs the canonical representation (`ReadCanonical`), else the canonical
+   read form.
+
+So a function that only reads a `ReadByConstReference` value takes
+`const T&`, one that writes through a `MutableHandle HandleByConstReference`
+handle takes `const T&` too, one that replaces it takes `T&`, and one that
+keeps it takes `T`. Views and mutable references are given only to top-level
+generated functions that are called directly. A function named as a value
+(passed, stored, partially applied) or generated as a method keeps canonical
+forms, and takes a copy by value of a parameter it writes or replaces;
+lambdas and local fixpoints keep canonical forms.
 
 #### Views
 
@@ -290,6 +322,24 @@ operation stays a view while its owner lives; where it escapes (returned,
 stored, passed canonically) it is materialised by `MaterialiseView`, or
 refused under `BorrowOnly`. A view passed beside an argument the callee may
 invalidate views of is taken of a copy, or refused.
+
+`BorrowOnly` is for a view whose owner has an identity: copying the elements
+of an ST array's span into a new array would make a different array. A view
+does not keep its owner alive.
+
+At a call Crane converts only with the declared conversions: a canonical
+value with `view_from_canonical`, a writable view to the read view with
+`read_from_write`; a view of the kind taken is passed as it is. A
+`MaterialiseView` construction must be an `Expr`. The read view of a type
+with literals (a string) must be constructible from a C++ string literal and
+from a literal and its length: a literal passed as a view is the view of the
+literal.
+
+Element assignment (`InvalidatesElementBorrows`) and reallocation
+(`InvalidatesViews`, a resize) are distinct facts: assigning an element
+leaves a span over the array valid. An operation that may reallocate takes
+its argument `ReadCanonical`, `WriteCanonical` or `Replace`; validation
+refuses `InvalidatesViews` on an argument given as a view.
 
 The standard string mapping (`Mapping/Std.v`) declares a
 `std::string_view` read view materialised as `std::string`, so a generated
@@ -335,7 +385,13 @@ Record NumeralSpec (T : Type) : Type := {
 `Mapping/NatIntStd.v` maps `nat` to `uint64_t` with
 `IntegerToken "UINT64_C(" ")"`, so `S (S (S O))` is written `UINT64_C(3)`.
 A typed type's literals come from its descriptor; an extraction where the
-type also has a `Crane Extract Numeral` fails.
+type also has a `Crane Extract Numeral` fails. The actions name no
+constructor Crane knows: each constructor has at most one case, a
+successor or doubling action's field is of the mapped type, an identity or
+negation action's field is of another inductive (whose own numeral it
+reads), the emitter's text only wraps a numeric literal (`IntegerToken`) or
+is a qualified name (`DecimalConstructor`), and every converter returns the
+mapped type.
 
 ### `OperationMapping (Ref op)`
 
@@ -407,12 +463,28 @@ binding one out of a pair binds it by `const` reference.
 | `%scrut` | the value matched | `case_test`, projections |
 | `%value` | the canonical value a view is made from | `view_from_canonical` |
 | `%view` | the view being converted or materialised | `read_from_write`, `MaterialiseView` |
-| `%tmpN` | a fresh local name | everywhere |
+| `%tmpN` | a fresh local name | reserved: accepted by validation, but compiling a constructor, match, view or operation template that uses it is an error (not supported yet; use `WithBody` and `%result`) |
 
 Holes are found outside C++ comments and string and character literals
 (raw string literals are not recognised). A hole not allowed in its context,
 or a `%stored(c)` naming an undeclared component, is an error when the
 mapping is resolved.
+
+### Restrictions
+
+* An instance must apply to every instantiation of its head's parameters:
+  `Instance m (A : Type) : TypeMapping (option A)` is accepted,
+  `TypeMapping (option nat)` is not (a plan is compiled once per head, from
+  the instance at fresh variables).
+* A component's type, and every `SourceType`, must be one of the mapped
+  type's parameters (`KnownType A`, or a `FieldType` declared at one), so
+  that its C++ type is the one Crane chose for that type argument.
+* In an operation, `%stored(c)` is resolved against the mapped types of the
+  arguments in source order, then of the result (looking inside it, so a
+  monadic result counts); the first one declaring `c` decides, and `c`'s
+  type there must be a type parameter of the operation.
+* A constant reachable under two names is one head: `PeanoNat.Nat.add` is
+  `Nat.add` (an `Include`), so mapping both is an ambiguity.
 
 ### Selection and errors
 
@@ -431,6 +503,11 @@ rule broken (an argument list that does not match the retained arguments,
 `ReadWriteViews` on a read-only access model, a constructor listed twice, a
 field index out of range, ...). `UnsafeVerbatim` and `ExactParameter` are
 accepted with the warning `crane-mapping-unsafe`.
+
+Crane checks a mapping's shape, its holes and the capabilities its contract
+claims, and Clang checks the emitted types. The C++ text itself is trusted
+to do what the contract says: nothing checks that a `Read` operation does not
+write or that a `const T&` argument is not retained.
 
 ### `Crane Show Mapping` and `Crane Check Mapping`
 
@@ -471,6 +548,21 @@ Monads (`Crane Extract Monad`), effect events, `Crane Extract Skip` and
 `Crane Extract Void` have no typed counterpart; the effect libraries and
 `External/` use the legacy commands. The legacy commands are not deprecated
 until they do.
+
+To migrate a legacy mapping, remove the legacy command (a head mapped both
+ways is an error) and write:
+
+| Legacy | Typed |
+| --- | --- |
+| `Crane Extract Inductive T => "..." [ctors] "match"` | `TypeMapping T` with `type_cpp`, and `AlgebraicInterface` with one `ConstructorMapping` per constructor (its build template and, for matching, a `ConstructorView`) |
+| `Crane Extract Inlined Constant` of a type constant | `TypeMapping` with `AbstractInterface` |
+| `Crane Extract Inlined Constant f => "..."` | `OperationMapping (Ref f)` with named arguments and a contract |
+| `Crane TriviallyCopyable T` | `type_copy := BitCopy` or `CopyComponents [...]` |
+| `Crane Extract Numeral T => "..."` | `type_numerals` |
+| `From "header"` | `type_headers`, `operation_headers` |
+
+Import the module that declares the instances where the legacy file was
+only `Require`d.
 
 ---
 
@@ -800,8 +892,32 @@ it.
   `Crane Bake` command. `Crane.Extraction` requires
   `Crane.RuntimeHeaders`, generated with a digest of the runtime headers, so
   under dune a changed runtime header rebuilds every file that loads Crane.
+  The check does not re-bake, and does not compare `Set Crane Bake Flags`
+  (it is in the document, which the build system sees) or libraries linked
+  into the bake (BDE's).
 
-Details, the image format and limits: [Crane-Bake.md](Crane-Bake.md).
+A refused constant is reported as `Crane Bake: <c> is a function, which is
+not data.` (or `<c> holds, in a constructor field, ...` for a field). The
+type checks pass for every type with a typed or legacy mapping, but the
+image must also be able to write the mapped C++ type. It can write
+generated inductives and records, `crane::list`, integers, characters,
+booleans, enumerations, `float` and `double`, strings (`std::string`,
+`bsl::string`), pairs, tuples, optionals, `std::vector`, `std::deque`,
+`persistent_array`, `crane::shared_array` and `mpz_class`; so every shipped
+mapping except `Mapping.Real` (a `long double`). A type it cannot write
+fails when the bake compiles: `crane::bake: a scalar wider than a word ...`
+for `long double` or a 128-bit integer, `crane::bake: no way to write a
+value of this type` for anything else (`immer` containers, the erased
+`crane::obj`).
+
+The image is portable across byte orders but not across data models: it
+asserts that the target has the widths of `short`, `int`, `long`,
+`long long`, `wchar_t` and `size_t` it was baked with, so cross-compiling a
+baked unit is unsupported. Baking costs a compile at `-O1` of the
+constant's unit per baked constant, at extraction time. Inductive nodes and
+list cells are rebuilt (once, at static initialisation) rather than
+constant-initialised; only arrays of scalars are static. The image format is
+described in `theories/cpp/crane_bake.h`.
 
 ---
 
