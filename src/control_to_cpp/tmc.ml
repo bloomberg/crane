@@ -338,7 +338,7 @@ let place_value ty v =
 let place_base storage e =
   match storage with
   | Value_root ty ->
-    [ Bind_variable (id_value, Declare (Auto, None), e);
+    [ Cpp_ir.Typed.bind_deduced id_value (e);
       Expression (place_value ty (Move (Local id_value))) ]
   | Boxed_root ty ->
     [Expression (Binary (Assign, Dereference (Local id_write), alloc_value ty e))]
@@ -528,7 +528,7 @@ let read_before_step (step : Reuse_cursor.step) varying shadow_params cells args
   let bind e =
     let n = List.length !decls in
     let id = Id.of_string (if n = 0 then "_read" else "_read" ^ string_of_int n) in
-    decls := Bind_variable (id, Declare (Auto, None), e) :: !decls;
+    decls := Cpp_ir.Typed.bind_deduced id (e) :: !decls;
     Move (Local id)
   in
   let cells_read_first = match step.action with Recycle {cells_read_first} -> cells_read_first | Release -> [] in
@@ -646,10 +646,7 @@ let cursor_step ~(cursor : Reuse_cursor.t) ~derefs varying shadow_params call ar
     first, then [reuse_step], which takes the token and the field. *)
 let step_stmts reads field =
   reads
-  @ [ Bind_variable
-        ( id_rstep,
-          Declare (Auto, None),
-          Call (call_opaque, Runtime Cpp_ir.Crane_rt.Reuse_step, [Local id_own; Local id_uniq; field]) ) ]
+  @ [ Cpp_ir.Typed.bind_deduced id_rstep (Call (call_opaque, Runtime Cpp_ir.Crane_rt.Reuse_step, [Local id_own; Local id_uniq; field]) ) ]
 
 (** The shadow updates [updates] of a turn the cursor steps at, its own
     shadow [cursor_id] advanced through [_own] instead: the field has been
@@ -764,7 +761,7 @@ let build_tmc_branch_stmts ~unit ?(cursor_used = ref false) ?cursor ?(derefs = [
       let inner_decls =
         List.map
           (fun (cell_id, cell) ->
-            Bind_variable (cell_id, Declare (Auto, None), build_cell_call ~unit ~vt_ret cell))
+            Cpp_ir.Typed.bind_deduced cell_id (build_cell_call ~unit ~vt_ret cell))
           (List.combine inner_names inner_cells)
       in
       let inner_links = List.rev (link_cells inner_cells inner_names) in
@@ -775,10 +772,8 @@ let build_tmc_branch_stmts ~unit ?(cursor_used = ref false) ?cursor ?(derefs = [
       in
       let outer = List.hd br.cells in
       inner_decls @ inner_links
-      @ [ Bind_variable
-            ( List.hd cell_names,
-              Declare (Auto, None),
-              build_cell_call ~unit ~rec_arg ~allocate:false ~vt_ret outer );
+      @ [ Cpp_ir.Typed.bind_deduced (List.hd cell_names)
+            (build_cell_call ~unit ~rec_arg ~allocate:false ~vt_ret outer);
           Bind_variable
             ( id_node,
               Declare (Reference (Lvalue, ty), None),
@@ -791,7 +786,7 @@ let build_tmc_branch_stmts ~unit ?(cursor_used = ref false) ?cursor ?(derefs = [
         List.mapi
           (fun i (cell_id, cell) ->
             let token = if i = 0 then token else None in
-            Bind_variable (cell_id, Declare (Auto, None), build_cell_call ~unit ?token ~vt_ret cell))
+            Cpp_ir.Typed.bind_deduced cell_id (build_cell_call ~unit ?token ~vt_ret cell))
           (List.combine cell_names br.cells)
       in
       let link_stmts = List.rev (link_cells br.cells cell_names) in
@@ -925,7 +920,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
             if has_custom_init then strip_ref_type shadow.ty
             else strip_ref_and_const_type shadow.ty
         in
-        Bind_variable (shadow.name, Declare (decl_ty, None), init_expr) )
+        Cpp_ir.Typed.bind (shadow.name) (decl_ty) (init_expr) )
       (List.combine varying_params varying_modes)
       shadow_params
   in
@@ -998,7 +993,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
   let cursor_decls =
     if not cursor_used then []
     else
-      [ Bind_variable (id_own, Declare (head_ty, None), converting_ctor head_ty []);
+      [ Cpp_ir.Typed.bind (id_own) (head_ty) (converting_ctor head_ty []);
         (* [Named] is the *user-defined* type constructor, so the printer
            namespace-qualifies it ("Mod::bool").  This is the builtin, which
            must never be qualified. *)

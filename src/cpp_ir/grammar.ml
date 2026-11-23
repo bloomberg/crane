@@ -765,11 +765,16 @@ end =
 
 and Binding : sig
   (** Whether an assignment to a variable also declares it. *)
-  type 'p t =
-    | Declare of 'p Type.t * Core.Binder.t option
+  type _ t =
+    | Declare : 'p Type.t * Core.Binder.t option -> 'p t
         (** [T x = e;], with the Core binder [x] stands for, if any *)
-    | Existing  (** [x = e;] *)
-    | Declare_static of 'p Type.t  (** [static T x = e;] *)
+    | Declare_deduced : lowered Value_type.t * Core.Binder.t option -> lowered t
+        (** [auto x = e;]: C++ deduces the variable's type, and lowering
+            records what it synthesised for [e] so that a pass reading the
+            variable's type reads it rather than reconstructing it from [e].
+            Resolution writes it [Declare (Auto, b)]. *)
+    | Existing : 'p t  (** [x = e;] *)
+    | Declare_static : 'p Type.t -> 'p t  (** [static T x = e;] *)
 end =
   Binding
 

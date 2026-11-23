@@ -678,7 +678,7 @@ let local_loop ~unit ~owner ~all_locals ~lifted ~member ~tparams ~name (lam : la
           let loop = {lam with body = body; moved = []} in
           let moved = List.filter (fun x -> List.mem x (Analysis.free_vars_expr (Lambda loop))) lam.moved in
           Verdicts.record member_loop Lowered;
-          Some (Bind_variable (name, Declare (Auto, None), Lambda {loop with moved = moved}))
+          Some (Cpp_ir.Typed.bind_deduced name (Lambda {loop with moved = moved}))
         end )
   (* A loop no call continues is none: every call is where no loop takes
      it, and declines it, where Loopify reaches the fixpoint -- in a body it

@@ -142,3 +142,10 @@ let category x : Value_category.t =
   | Local _ -> ( match x.ty with Typed t when const_type t -> Const_lvalue | _ -> Mutable_lvalue )
   | Move _ -> Xvalue
   | _ -> Prvalue
+
+let deduced ?binder (x : t) : lowered Binding.t = Declare_deduced (x.ty, binder)
+let deduced_of_node ?binder e : lowered Binding.t =
+  Declare_deduced (Option.default unannotated (carried e), binder)
+let bind_deduced ?binder x e : Lowered.Stmt.t = Bind_variable (x, deduced_of_node ?binder e, e)
+let bind ?binder x (t : Lowered.Type.t) e : Lowered.Stmt.t =
+  match t with Auto -> bind_deduced ?binder x e | t -> Bind_variable (x, Declare (t, binder), e)

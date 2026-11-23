@@ -174,7 +174,7 @@ let stmt : type p. p visitor -> p Stmt.t -> unit =
   | Return e -> opt v.expr e
   | Declare (_, t, _) | Local_type_alias (_, t) | Declare_value_initialized (_, t) -> v.type_ t
   | Bind_variable (_, b, e) ->
-    (match b with Declare (t, _) | Declare_static t -> v.type_ t | Existing -> ());
+    (match b with Declare (t, _) | Declare_static t -> v.type_ t | Declare_deduced _ | Existing -> ());
     v.expr e
   | Expression e | Structured_binding (_, e) -> v.expr e
   | Custom_match m ->

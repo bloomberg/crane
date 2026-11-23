@@ -60,6 +60,7 @@ let declaring id b stmts =
     (fun (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t ->
       match s with
       | Bind_variable (x, Declare (ty, None), e) when Id.equal x id -> Bind_variable (x, Declare (ty, b), e)
+      | Bind_variable (x, Declare_deduced (v, None), e) when Id.equal x id -> Bind_variable (x, Declare_deduced (v, b), e)
       | s -> s )
     stmts
 
@@ -1431,7 +1432,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
                 else begin
                   let id = Id.of_string (Printf.sprintf "_pa%d" i) in
                   eta_hoisted :=
-                    (Bind_variable (id, Declare (Auto, None), a) : Cpp_ir.Lowered.Stmt.t) :: !eta_hoisted;
+                    (Cpp_ir.Typed.bind_deduced id (a) : Cpp_ir.Lowered.Stmt.t) :: !eta_hoisted;
                   Local id
                 end )
               args

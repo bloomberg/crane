@@ -291,8 +291,11 @@ let stmt : type p. p t -> p Stmt.t -> p Stmt.t =
   | Declare (x, t, b) -> Declare (x, ty t, b)
   | Bind_variable (x, b, e) ->
     let b : p Binding.t =
-      match b with Declare (t, c) -> Declare (ty t, c) | Declare_static t -> Declare_static (ty t)
-        | Existing -> Existing
+      match b with
+      | Declare (t, c) -> Declare (ty t, c)
+      | Declare_deduced (v, c) -> Declare_deduced (value_type ty v, c)
+      | Declare_static t -> Declare_static (ty t)
+      | Existing -> Existing
     in
     Bind_variable (x, b, ex e)
   | Expression e -> Expression (ex e)

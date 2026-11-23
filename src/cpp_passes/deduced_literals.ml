@@ -25,7 +25,7 @@ let transform_decl (d : Cpp_ir.Lowered.Decl.t) : Cpp_ir.Lowered.Decl.t =
     and fs ~deduced (s : stmt) : stmt =
       match s with
       | Return (Some (Literal (String s))) when deduced -> Return (Some (object_of s))
-      | Bind_variable (x, (Declare (Auto, _) as b), Literal (String s)) -> Bind_variable (x, b, object_of s)
+      | Bind_variable (x, (Declare_deduced _ as b), Literal (String s)) -> Bind_variable (x, b, object_of s)
       | _ -> Cpp_ir.Map.stmt (rw ~deduced) s
     and rw ~deduced = Cpp_ir.Map.make ~expr:fe ~stmt:(fs ~deduced) ~type_:Fun.id () in
     Cpp_ir.Map.decl (rw ~deduced:false) d

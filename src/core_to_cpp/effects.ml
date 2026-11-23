@@ -142,7 +142,7 @@ let gen_bind_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : Core.Exp
         else if core_type_is_unit core_ty && not (is_cpp_unit_type cpp_ty) then
           []
         else if core_type_is_unit core_ty then
-          [Bind_variable (x, Declare (cpp_ty, bound_by_bind env), Monadic.mk_tt_expr ())]
+          [Cpp_ir.Typed.bind ?binder:(bound_by_bind env) (x) (cpp_ty) (Monadic.mk_tt_expr ())]
         else
           []
       in
@@ -161,7 +161,7 @@ let gen_bind_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : Core.Exp
         :: gen_stmts cx (Slot.at ~ret ~slot ()) env k f
       | None ->
         Typed_checks.agreement cx ~site:"bind result" action (Exactly ty);
-        (Bind_variable (x, Declare (ty, bound_by_bind env), a) : Cpp_ir.Lowered.Stmt.t) :: gen_stmts cx (Slot.at ~ret ~slot ()) env k f
+        (Cpp_ir.Typed.bind ?binder:(bound_by_bind env) (x) (ty) (a) : Cpp_ir.Lowered.Stmt.t) :: gen_stmts cx (Slot.at ~ret ~slot ()) env k f
     end
   | _ ->
     (* No lambda parameters (eta-reduced continuation like bare Ret).
@@ -201,7 +201,7 @@ let gen_bind_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : Core.Exp
         let result : Cpp_ir.Lowered.Expr.t = if worth_moving then Move (Local temp_id) else Local temp_id in
         let app = Cpp_ir.Build.call f_typed.expr [result] in
         Typed_checks.agreement cx ~site:"bind temporary" action (Exactly cpp_ty);
-        [ Bind_variable (temp_id, Declare (cpp_ty, None), a);
+        [ Cpp_ir.Typed.bind (temp_id) (cpp_ty) (a);
           Destination.finish cx k
             (Cpp_ir.Typed.v ~ty:(Option.default Cpp_ir.Typed.unannotated (Cpp_ir.Typed.applied f_typed.ty 1)) app) ]
       | None ->

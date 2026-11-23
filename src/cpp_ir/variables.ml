@@ -86,7 +86,7 @@ and free_in_body : type p. p Stmt.t list -> Id.t list =
     | (s : p Stmt.t) :: rest ->
       let declared =
         match s with
-        | Bind_variable (x, Declare _, _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
+        | Bind_variable (x, (Declare _ | Declare_deduced _), _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
         | Foreign_block b -> [b.result]
         | Structured_binding (xs, _) -> xs
         | _ -> []
@@ -124,7 +124,7 @@ let declared : type p. p Stmt.t list -> Id.t list =
   let rec visitor = {Children.expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = (fun _ -> ())}
   and stmt (s : p Stmt.t) =
     ( match s with
-    | Bind_variable (x, Declare _, _)
+    | Bind_variable (x, (Declare _ | Declare_deduced _), _)
     | Declare (x, _, _)
     | Declare_value_initialized (x, _)
     | If_declaration {name = x; _}
@@ -204,7 +204,7 @@ let lambda_needs_capture : type p. (p Type.t * Id.t option) list -> p Stmt.t lis
     | Bind_variable (id, binding, e) -> (
       let refs', decls' = collect_from_expr (refs, decls) e in
       match binding with
-      | Declare _ | Declare_static _ -> (refs', Id.Set.add id decls')
+      | Declare _ | Declare_deduced _ | Declare_static _ -> (refs', Id.Set.add id decls')
       | Existing -> (Id.Set.add id refs', decls') )
     | Assign (lhs, e) ->
       let refs', decls' = collect_from_expr (refs, decls) lhs in

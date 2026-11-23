@@ -198,6 +198,7 @@ and expr : l Expr.t -> r Expr.t = function
 (** [binding b] is the binding [b] at the resolved phase. *)
 and binding : l Binding.t -> r Binding.t = function
   | Declare (t, b) -> Declare (type_ t, b)
+  | Declare_deduced (_, b) -> Declare (Auto, b)
   | Existing -> Existing
   | Declare_static t -> Declare_static (type_ t)
 

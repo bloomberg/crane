@@ -468,6 +468,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
                Bind_variable (x, Existing, Move (Local v))
              | Bind_variable (x, (Declare (ty, _) as d), Local v) when (not (pointer ty)) && last v ->
                Bind_variable (x, d, Move (Local v))
+             | Bind_variable (x, (Declare_deduced _ as d), Local v) when last v -> Bind_variable (x, d, Move (Local v))
              | s -> s
            in
            let reads = match s with Bind_variable (_, _, e) | Expression e -> free_vars_expr e | _ -> [] in
@@ -544,10 +545,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
         (fun ((shadow_id, ty), arg) ->
           if needs_temp shadow_id then
             Some
-              (Bind_variable
-                 ( temp_name shadow_id,
-                   Declare (strip_ref_and_const_type ty, None),
-                   make_rhs ty arg ))
+              (Cpp_ir.Typed.bind (temp_name shadow_id) (strip_ref_and_const_type ty) (make_rhs ty arg))
           else
             None)
         non_trivial
@@ -781,13 +779,13 @@ let rewrite_visit_stmts ?(last_reads = fun _ _ -> []) ~jumped check varying shad
 (** Returns true if the statement declares a new variable or type binding. *)
 let declares_variable = function
   | Declare _ | Declare_value_initialized _ | Structured_binding _ | Local_struct _ | Local_type_alias _ -> true
-  | Bind_variable (_, Declare _, _) -> true (* typed assignment = declaration *)
+  | Bind_variable (_, (Declare _ | Declare_deduced _), _) -> true (* typed assignment = declaration *)
   | _ -> false
 
 (** Names declared directly by a statement (not recursing into sub-statements). *)
 let direct_decl_ids = function
   | Declare (id, _, _) | Declare_value_initialized (id, _) -> [ id ]
-  | Bind_variable (id, Declare _, _) -> [ id ]
+  | Bind_variable (id, (Declare _ | Declare_deduced _), _) -> [ id ]
   | Local_type_alias (id, _) -> [ id ]
   | Structured_binding (ids, _) -> ids
   | _ -> []
@@ -1215,10 +1213,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~unit ~v
           | Some custom -> custom
           | None -> tail_shadow_init orig_id shadow mode ty
         in
-        Bind_variable
-          ( shadow.name,
-            Declare ((if shadow.hold = In_place then shadow.ty else strip_ref_and_const_type shadow.ty), None),
-            init_expr ) )
+        Cpp_ir.Typed.bind (shadow.name) ((if shadow.hold = In_place then shadow.ty else strip_ref_and_const_type shadow.ty)) (init_expr) )
       (List.combine varying_params varying_modes)
       shadow_params
   in

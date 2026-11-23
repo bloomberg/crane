@@ -974,8 +974,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
               ) (List.mapi (fun idx p -> (idx, p)) new_params) in
               let new_body =
                 List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                  let cast_stmt = Cpp_ir.Stmt.Bind_variable (orig_id, Declare (concrete_ty, None),
-                    Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
+                  let cast_stmt = Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
                   cast_stmt :: stmts
                 ) body_stmts (List.rev cast_bindings)
               in
@@ -1144,8 +1143,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
               ) (List.mapi (fun idx p -> (idx, p)) new_params) in
               let new_body =
                 List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                  let cast_stmt = Cpp_ir.Stmt.Bind_variable (orig_id, Declare (concrete_ty, None),
-                    Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
+                  let cast_stmt = Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
                   cast_stmt :: stmts
                 ) body_stmts (List.rev cast_bindings)
               in
@@ -1336,8 +1334,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
             | None -> (ty, id)
           ) new_params in
           let cast_stmts = List.map (fun (_, orig_id, any_id, concrete_ty) ->
-            Cpp_ir.Stmt.Bind_variable (orig_id, Declare (concrete_ty, None),
-              Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id))
+            Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id))
           ) cast_bindings in
           let new_body = cast_stmts @ body_stmts in
           let new_ret_ty = match ret_ty_opt with

@@ -2262,8 +2262,7 @@ let gen_ind_header_v2 cx
               @ body_for on_spine e
               @ [S.While (
                    E.Unary (Not, dot0 (E.Local wl_id) "empty"),
-                   [ S.Bind_variable (pv, S.Binding.Declare (T.Auto, None),
-                       E.Move (dot0 (E.Local wl_id) "back"));
+                   [ Cpp_ir.Typed.bind_deduced pv (E.Move (dot0 (E.Local wl_id) "back"));
                      S.Expression (dot0 (E.Local wl_id) "pop_back");
                      S.If {condition = E.Binary (Or, E.Unary (Not, E.Local pv),
                          E.Binary (Not_equal, dot0 (E.Local pv) "use_count",
@@ -2366,7 +2365,7 @@ let gen_ind_header_v2 cx
                      a tail is not uniquely owned -- the remaining cells then
                      die with their real owner. *)
                   sole_owner fe
-                    [ S.Bind_variable (lp, S.Binding.Declare (T.Auto, None), dot0 fe "get");
+                    [ Cpp_ir.Typed.bind_deduced lp (dot0 fe "get");
                       S.While (
                         B.call
                           (E.Holds_alternative (T.Member (ls, cons_id)))
@@ -2516,9 +2515,8 @@ let gen_ind_header_v2 cx
                 ~capture:Runs_in_place
             in
             let body =
-              [ S.Bind_variable (next_id, S.Binding.Declare (T.Auto, None), next_lambda);
-                S.Bind_variable (_cur_id, S.Binding.Declare (ptr_ty, None),
-                  B.call (E.Local next_id) [B.call (E.Local (Id.of_string "v_mut")) []]);
+              [ Cpp_ir.Typed.bind_deduced next_id (next_lambda);
+                Cpp_ir.Typed.bind (_cur_id) (ptr_ty) (B.call (E.Local next_id) [B.call (E.Local (Id.of_string "v_mut")) []]);
                 S.While (E.Local _cur_id,
                   [ S.Bind_variable (_cur_id, S.Binding.Existing,
                       B.call (E.Local next_id)
@@ -2600,23 +2598,21 @@ let gen_ind_header_v2 cx
             in
             let body =
               early_returns @
-              [ S.Bind_variable (_stack_id, S.Binding.Declare (stack_ty, None),
-                  E.Braced []);
+              [ Cpp_ir.Typed.bind (_stack_id) (stack_ty) (E.Braced []);
                 (* Most drains only ever hold a handful of pending nodes at
                    once (worklist depth tracks tree height, not size), so
                    [crane::small_vector] keeps the first 8 elements inline
                    with no heap allocation at all, spilling to a heap
                    std::vector only if a destructor happens to drain a
                    worklist deeper than that. *)
-                S.Bind_variable (_drain_id, S.Binding.Declare (T.Auto, None), drain_lambda);
+                Cpp_ir.Typed.bind_deduced _drain_id (drain_lambda);
                 S.Expression (B.call (E.Local _drain_id)
                   [B.call (E.Local (Id.of_string "v_mut")) []]);
                 S.While (
                   E.Unary (Not,
                     E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "empty", [])),
-                  [ S.Bind_variable (_cur_id, S.Binding.Declare (T.Auto, None),
-                      E.Move (E.Access_call (Dot, E.Local _stack_id,
+                  [ Cpp_ir.Typed.bind_deduced _cur_id (E.Move (E.Access_call (Dot, E.Local _stack_id,
                         Id.of_string "back", [])));
                     S.Expression (E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "pop_back", []));
@@ -2704,16 +2700,15 @@ let gen_ind_header_v2 cx
                     else_ = build_if_chain partner_branches}]
             in
             let body =
-              [ S.Bind_variable (_stack_id, S.Binding.Declare (stack_ty, None), E.Braced []);
-                S.Bind_variable (_drain_self_id, S.Binding.Declare (T.Auto, None), drain_self_lambda);
+              [ Cpp_ir.Typed.bind (_stack_id) (stack_ty) (E.Braced []);
+                Cpp_ir.Typed.bind_deduced _drain_self_id (drain_self_lambda);
                 S.Expression (B.call (E.Local _drain_self_id)
                   [B.call (E.Local (Id.of_string "v_mut")) []]);
                 S.While (
                   E.Unary (Not,
                     E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "empty", [])),
-                  S.Bind_variable (_cur_id, S.Binding.Declare (T.Auto, None),
-                    E.Move (E.Access_call (Dot, E.Local _stack_id,
+                  Cpp_ir.Typed.bind_deduced _cur_id (E.Move (E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "back", [])))
                   :: S.Expression (E.Access_call (Dot, E.Local _stack_id,
                        Id.of_string "pop_back", []))
@@ -3001,10 +2996,7 @@ let gen_ind_header_v2 cx
                 [E.Move (E.Local alt_id)] )
           in
           let body =
-            [ S.Bind_variable
-                ( alt_id,
-                  S.Binding.Declare (T.Auto, None),
-                  E.Local_aggregate {struct_ = Id.of_string cname; type_args = []; values = ctor_args} );
+            [ Cpp_ir.Typed.bind_deduced alt_id (E.Local_aggregate {struct_ = Id.of_string cname; type_args = []; values = ctor_args} );
               S.If {condition = reused; then_ = [S.Return (Some (E.Local tok_id))]; else_ = []};
               S.Return (Some (build i cname [E.Move (E.Local alt_id)])) ]
           in

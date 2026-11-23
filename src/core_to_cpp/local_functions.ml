@@ -200,10 +200,7 @@ let gen_local_fix_ycomb cx env ~binders ~passing ~captures renamed_ids funs_with
               (Types.cpp_of_core cx env ty, Some id))
             args
         in
-        Bind_variable
-          ( impl_id,
-            Declare (Auto, None),
-            Lambda
+        Cpp_ir.Typed.bind_deduced impl_id (Lambda
               { type_params = [];
                 fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
                 binders = fixpoint_parameters binder;
@@ -269,10 +266,7 @@ let gen_local_fix_ycomb cx env ~binders ~passing ~captures renamed_ids funs_with
           | None -> [Expression call]
           | _ -> [Return (Some call)]
         in
-        Bind_variable
-          ( fix_id,
-            Declare (Auto, None),
-            Lambda
+        Cpp_ir.Typed.bind_deduced fix_id (Lambda
               { params = List.rev orig_params;
               type_params = [];
               fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
@@ -358,10 +352,7 @@ let gen_local_fix_by_ref cx env ~binders ~passing ~captures renamed_ids funs_wit
                  ((cpp_ty, Some id), (id, mode)) )
                args owned_flags )
         in
-        Bind_variable
-          ( impl_id,
-            Declare (Auto, None),
-            Lambda
+        Cpp_ir.Typed.bind_deduced impl_id (Lambda
               { params = List.rev (orig_params @ self_params);
               type_params = [];
               fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
@@ -400,10 +391,7 @@ let gen_local_fix_by_ref cx env ~binders ~passing ~captures renamed_ids funs_wit
           | None -> [Expression call]
           | _ -> [Return (Some call)]
         in
-        Bind_variable
-          ( fix_id,
-            Declare (Auto, None),
-            Lambda
+        Cpp_ir.Typed.bind_deduced fix_id (Lambda
               { params = List.rev orig_params;
               type_params = [];
               fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
@@ -876,7 +864,7 @@ let gen_let_lambda cx (slot : Slot.slot) env (k : Destination.t) ~x ~t ~a ~b ~le
         gen_stmts cx (Slot.at ~ret ~slot ()) env' k b
       in
       (* Generate the assignment with reified type *)
-      [(Bind_variable (x_renamed, Declare (reified_ty, core_binder cx ~site:(Binding let_occ) env' 1), iife) :
+      [(Cpp_ir.Typed.bind ?binder:(core_binder cx ~site:(Binding let_occ) env' 1) (x_renamed) (reified_ty) (iife) :
           Cpp_ir.Lowered.Stmt.t)] @ cont
     end else
       (* The lambda's slot is its binder's, not the position the let stands
@@ -908,10 +896,7 @@ let gen_let_lambda cx (slot : Slot.slot) env (k : Destination.t) ~x ~t ~a ~b ~le
       let gen_cont () = gen_stmts cx (Slot.at ~ret ~slot ()) env' k b in
       match asgn with
       | [Bind_variable (_, Existing, e)] ->
-        Bind_variable
-          ( x_renamed,
-            Declare (Types.cpp_of_core cx env t, core_binder cx ~site:(Binding let_occ) env' 1),
-            e )
+        Cpp_ir.Typed.bind ?binder:(core_binder cx ~site:(Binding let_occ) env' 1) (x_renamed) (Types.cpp_of_core cx env t) (e)
         :: gen_cont ()
       | _ ->
         (Declare (x_renamed, Types.cpp_of_core cx env t, core_binder cx ~site:(Binding let_occ) env' 1)
@@ -1294,7 +1279,7 @@ let gen_applied_fix cx (slot : Slot.slot) env (k : Destination.t) ~x ~ids ~funs 
            | true, Some (_, ty) ->
              let id = Id.of_string (Printf.sprintf "_arg%d" i) in
              evaluated := !evaluated
-               @ [ ( Bind_variable (id, Declare (Types.cpp_of_core cx env ty, None), e)
+               @ [ ( Cpp_ir.Typed.bind (id) (Types.cpp_of_core cx env ty) (e)
                      : Cpp_ir.Lowered.Stmt.t ) ];
              if Ownership_ir.Region.worth_moving ty then (Move (Local id) : Cpp_ir.Lowered.Expr.t) else Local id
            | _ -> e )

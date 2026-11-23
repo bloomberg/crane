@@ -39,6 +39,7 @@ let drop_return_moves d =
     | s :: rest -> stmt env s :: stmts (declare env s) rest
   and declare env : stmt -> _ = function
     | Bind_variable (id, Declare (ty, _), _) -> hold env [id] (by_type ty)
+    | Bind_variable (id, Declare_deduced _, _) -> hold env [id] (by_type Auto)
     | Declare (id, _, _) | Declare_value_initialized (id, _) -> hold env [id] Moved_on_return
     | Structured_binding (ids, _) -> hold env ids Copied_on_return
     | _ -> env

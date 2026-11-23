@@ -791,7 +791,7 @@ and instantiated_stmt ~boxing (s : stmt) : stmt =
   | Foreign_block b ->
     let value : expr =
       Foreign (Statements, instantiated_block ~boxing b.custom b.template b.type_args b.values (Some b.result_type)) in
-    Bind_variable (b.result, Declare (instantiated_type ~boxing b.result_type, b.binder), value)
+    Cpp_ir.Typed.bind ?binder:(b.binder) (b.result) (instantiated_type ~boxing b.result_type) (value)
   | s -> Map.stmt (instantiating ~boxing) s
 
 and instantiating ~boxing =
@@ -977,10 +977,10 @@ let held_scrutinee ~avoid (scrut : phase Match.scrutinee) (branches : phase Matc
   | [{field_bindings = []; var = None; _}], None, _ -> None
   | _, _, Access_call (Arrow, obj, v, []) when is_v v && not (is_named_object obj) ->
     let x = local () in
-    Some (Bind_variable (x, Declare (forwarding, None), obj), Access_call (Arrow, Local x, v, []))
+    Some (Cpp_ir.Typed.bind (x) (forwarding) (obj), Access_call (Arrow, Local x, v, []))
   | _, _, Call (sg, Access (Dot, obj, v), []) when is_v v && not (is_named_object obj) ->
     let x = local () in
-    Some (Bind_variable (x, Declare (forwarding, None), obj), Call (sg, Access (Dot, Local x, v), []))
+    Some (Cpp_ir.Typed.bind (x) (forwarding) (obj), Call (sg, Access (Dot, Local x, v), []))
   | _, _, (Access_call (Arrow, _, v, []) | Call (_, Access (Dot, _, v), [])) when is_v v -> None
   | _, _, (Local _ | Dereference This) -> None
   | _, _, e ->
@@ -993,7 +993,7 @@ let held_scrutinee ~avoid (scrut : phase Match.scrutinee) (branches : phase Matc
    statements are the enclosing scope's. *)
 let rec declared_in_scope (s : stmt) : Id.t list =
   match s with
-  | Bind_variable (x, Declare _, _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
+  | Bind_variable (x, (Declare _ | Declare_deduced _), _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
   | Structured_binding (xs, _) -> xs
   | Match (_, [br], None) ->
     (match br.var with Some x -> [x] | None -> [])
@@ -1356,6 +1356,7 @@ and copy_const_captures (d : settled) : settled =
         match s with
         | Declare (x, ty, _) | Declare_value_initialized (x, ty) | Bind_variable (x, Declare (ty, _), _) ->
           declare consts x ty
+        | Bind_variable (x, Declare_deduced _, _) -> declare consts x Auto
         | _ -> consts
       in
       s :: block consts rest

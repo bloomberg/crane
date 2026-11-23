@@ -27,7 +27,7 @@ let declared_in_scope (stmts : Cpp_ir.Lowered.Stmt.t list) =
   List.concat_map
     (fun (s : Cpp_ir.Lowered.Stmt.t) ->
       match s with
-      | Bind_variable (x, Declare _, _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
+      | Bind_variable (x, (Declare _ | Declare_deduced _), _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
       | Structured_binding (xs, _) -> xs
       | Foreign_block b -> [b.result]
       | Custom_match m ->
@@ -111,10 +111,7 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
       let decl : Cpp_ir.Lowered.Stmt.t list =
         if Lifting.stmts_reference_var x_renamed body then
           let cpp_ty = Types.cpp_of_core cx env t in
-          [ Bind_variable
-              ( x_renamed,
-                Declare (cpp_ty, core_binder cx ~site:(Binding let_occ) env' 1),
-                Monadic.mk_tt_expr () ) ]
+          [ Cpp_ir.Typed.bind ?binder:(core_binder cx ~site:(Binding let_occ) env' 1) (x_renamed) (cpp_ty) (Monadic.mk_tt_expr ()) ]
         else []
       in
       rhs @ decl @ body )
@@ -349,7 +346,7 @@ and gen_stmts_scoped cx (slot : Slot.slot) env (k : Destination.t) ast : Cpp_ir.
                   binder = core_binder cx ~site:(Binding let_occ) env' 1 } : Cpp_ir.Lowered.Stmt.t)
               :: gen_stmts cx (Slot.at ~ret ~slot ()) env' k b
             | None ->
-              (Bind_variable (x_renamed, Declare (cpp_ty, core_binder cx ~site:(Binding let_occ) env' 1), e) :
+              (Cpp_ir.Typed.bind ?binder:(core_binder cx ~site:(Binding let_occ) env' 1) (x_renamed) (cpp_ty) (e) :
                 Cpp_ir.Lowered.Stmt.t)
               :: gen_stmts cx (Slot.at ~ret ~slot ()) env' k b
             end

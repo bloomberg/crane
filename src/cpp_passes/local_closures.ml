@@ -51,7 +51,7 @@ let named_params (l : lambda) =
 let declared_here (stmts : stmt list) =
   List.concat_map
     (function
-      | (Bind_variable (id, Declare _, _) | Declare (id, _, _) | Declare_value_initialized (id, _) : stmt) -> [id]
+      | (Bind_variable (id, (Declare _ | Declare_deduced _), _) | Declare (id, _, _) | Declare_value_initialized (id, _) : stmt) -> [id]
       | Structured_binding (ids, _) -> ids
       | Foreign_block b -> [b.result]
       | _ -> [] )
@@ -143,7 +143,7 @@ let expand fresh (l : lambda) args =
       List.concat
         (List.map2
            (fun ((p, ty), unnamed) a : stmt list ->
-             if unnamed && V.pure a then [] else [Bind_variable (f p, Declare (ty, None), a)] )
+             if unnamed && V.pure a then [] else [Cpp_ir.Typed.bind (f p) (ty) (a)] )
            (List.combine params unnamed) args )
     in
     Some {bindings; body = rename_ids f l.body}
@@ -235,7 +235,7 @@ let rec same_type (a : ty) (b : ty) =
     The lambda must return what the function does. *)
 let inline_tail_call fresh ret_ty (stmts : stmt list) =
   match List.rev stmts with
-  | Return (Some (Call (_, Local f', args))) :: Bind_variable (f, Declare (Auto, _), Lambda l) :: rev_before
+  | Return (Some (Call (_, Local f', args))) :: Bind_variable (f, Declare_deduced _, Lambda l) :: rev_before
     when Id.equal f f'
          && (match (l.return_type, ret_ty) with Some a, Some b -> same_type a b | None, _ -> true | _ -> false)
          && (not (mentions f l.body))
@@ -252,8 +252,8 @@ let inline_tail_call fresh ret_ty (stmts : stmt list) =
 let inline_iife_initializers fresh stmts =
   let rec go : stmt list -> stmt list = function
     | [] -> []
-    | (Bind_variable (x, (Declare (t, _) as tgt), Call (_, Lambda l, [])) as s) :: rest
-      when t <> Auto || l.return_type = None -> (
+    | (Bind_variable (x, ((Declare _ | Declare_deduced _) as tgt), Call (_, Lambda l, [])) as s) :: rest
+      when (match tgt with Declare (t, _) -> t <> Auto | _ -> false) || l.return_type = None -> (
       match Option.bind (expand fresh l []) straight_line with
       | Some (body, e) -> go (body @ (Bind_variable (x, tgt, e) :: rest))
       | None -> s :: go rest )
@@ -273,7 +273,7 @@ let inline_iife_initializers fresh stmts =
 let specialize_local_records fresh stmts =
   let rec go : stmt list -> stmt list = function
     | [] -> []
-    | (Bind_variable (p, Declare _, Aggregate {struct_ = record; values = fields; _}) as decl) :: rest -> (
+    | (Bind_variable (p, (Declare _ | Declare_deduced _), Aggregate {struct_ = record; values = fields; _}) as decl) :: rest -> (
       let lambdas = List.map (function (Lambda l : expr) -> Some l | _ -> None) fields in
       (* An aggregate holds the record's non-erased fields, in declaration
          order, so a projection reaches the one at its position among

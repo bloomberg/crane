@@ -35,6 +35,7 @@ let writable_names params visit =
   and fs (s : stmt) =
     ( match s with
     | Bind_variable (x, Declare (t, _), _) | Declare (x, t, _) | Declare_value_initialized (x, t) -> note x t
+    | Bind_variable (x, Declare_deduced _, _) -> note x Auto
     | Bind_variable (x, Declare_static t, _) -> note x t
     | If_declaration {name; type_; _} -> note name type_
     | For_range (x, _, _) -> not_writable x

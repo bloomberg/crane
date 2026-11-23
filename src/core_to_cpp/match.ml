@@ -945,7 +945,7 @@ and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_oc
                    (fun (i, (var_name, core_ty)) read ->
                      let binder = local_binder cx ~site:(Branch (case_occ, branch_idx)) env' var_name in
                      let bind e : Cpp_ir.Lowered.Stmt.t list =
-                       [Bind_variable (var_name, Declare (Types.cpp_of_core cx env core_ty, binder), e)]
+                       [Cpp_ir.Typed.bind ?binder:(binder) (var_name) (Types.cpp_of_core cx env core_ty) (e)]
                      in
                      match read with
                      | Some `Unused | None -> []
@@ -1217,7 +1217,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
       match Cpp_build.lift_iife_assignment cache_id None t with
       | Some stmts -> (Cpp_ir.Expr.Local cache_id, stmts)
       | None ->
-        (Cpp_ir.Expr.Local cache_id, [(Bind_variable (cache_id, Declare (Auto, None), t) : Cpp_ir.Lowered.Stmt.t)])
+        (Cpp_ir.Expr.Local cache_id, [(Cpp_ir.Typed.bind_deduced cache_id (t) : Cpp_ir.Lowered.Stmt.t)])
     end else begin
       (t, [])
     end
@@ -1544,7 +1544,7 @@ let record_read_once cx (slot : Slot.slot) env ~is_typeclass t : Cpp_ir.Lowered.
     ( Move (Local cache_id),
       match Cpp_build.lift_iife_assignment cache_id None scrut with
       | Some stmts -> stmts
-      | None -> [Bind_variable (cache_id, Declare (Auto, None), scrut)] )
+      | None -> [Cpp_ir.Typed.bind_deduced cache_id (scrut)] )
 
 (** The custom match of [t] at [typ] with branches [pv] at [case_occ], in
     expression position: an immediately invoked lambda over its template's
@@ -2005,7 +2005,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
               Cpp_build.lift_iife_assignment renamed_name (Some decl_ty) e
             with
             | Some stmts -> stmts
-            | None -> [Cpp_ir.Stmt.Bind_variable (renamed_name, Declare (decl_ty, binder), e)]
+            | None -> [Cpp_ir.Typed.bind ?binder:(binder) (renamed_name) (decl_ty) (e)]
           in
           (stmts, taken || (is_typeclass && match decl_ty with Reference _ -> false | _ -> true)) )
         (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
@@ -2120,7 +2120,7 @@ let gen_record_match_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : 
               Cpp_build.lift_iife_assignment renamed_name (Some decl_ty) e
             with
             | Some stmts -> stmts
-            | None -> [Bind_variable (renamed_name, Declare (decl_ty, binder), e)]
+            | None -> [Cpp_ir.Typed.bind ?binder:(binder) (renamed_name) (decl_ty) (e)]
           in
           (* A class instance's field is a static member: the local copies
              it, and is its own. *)

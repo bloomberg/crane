@@ -74,3 +74,21 @@ val apply : ?first:(Lowered.Expr.t list -> Lowered.Expr.t) -> ?prefix:string -> 
     [const] where its type is, a move an xvalue, anything else a
     prvalue. *)
 val category : t -> Grammar.Value_category.t
+
+(** [deduced ?binder x] declares an [auto] variable initialised with [x],
+    recording [x]'s type ({!Grammar.Binding.Declare_deduced}). *)
+val deduced : ?binder:Core.Binder.t -> t -> Grammar.lowered Grammar.Binding.t
+
+(** [deduced_of_node ?binder e]: {!deduced} for an initialiser built
+    without a typed value, at the type its node carries ({!carried}), or
+    {!unannotated}. *)
+val deduced_of_node : ?binder:Core.Binder.t -> Lowered.Expr.t -> Grammar.lowered Grammar.Binding.t
+
+(** [bind_deduced ?binder x e] is [auto x = e;], [e]'s type recorded as
+    {!deduced_of_node} records it. *)
+val bind_deduced : ?binder:Core.Binder.t -> Names.Id.t -> Lowered.Expr.t -> Lowered.Stmt.t
+
+(** [bind ?binder x t e] is [t x = e;], {!bind_deduced} where [t] is
+    [auto]: how every lowered declaration whose type is computed is built,
+    so that no lowered [Declare (Auto, _)] is left. *)
+val bind : ?binder:Core.Binder.t -> Names.Id.t -> Lowered.Type.t -> Lowered.Expr.t -> Lowered.Stmt.t

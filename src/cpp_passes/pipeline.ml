@@ -363,6 +363,20 @@ let spell_type t =
    The parameter modes the declaration records are checked against its
    declared types as lowering leaves it and as the printer is handed it
    ({!Ownership_ir.Move_check.check_modes}). *)
+(* Under [CRANE_CHECK_IR]: lowering declares every [auto] variable with
+   what it synthesised for the initialiser ({!Cpp_ir.Typed.bind}), so a
+   lowered declaration holds no [Declare (Auto, _)]. *)
+let check_deduced_bindings (d : Cpp_ir.Lowered.Decl.t) =
+  let rec fs (s : Cpp_ir.Lowered.Stmt.t) =
+    ( match s with
+    | Bind_variable (x, Declare (Auto, _), _) ->
+      Base.Probe.violation "deduced binding"
+        Pp.(str "the lowered variable " ++ Names.Id.print x ++ str " is declared auto without its type")
+    | _ -> () );
+    Cpp_ir.Map.stmt (rw ()) s
+  and rw () = Cpp_ir.Map.make ~expr:(fun e -> Cpp_ir.Map.expr (rw ()) e) ~stmt:fs ~type_:Fun.id () in
+  ignore (Cpp_ir.Map.decl (rw ()) d)
+
 let finish ~check_control u decl =
   let trace = traced decl in
   let steps = ref [] in
@@ -383,8 +397,12 @@ let finish ~check_control u decl =
       d passes
   in
   let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
-  if checking then Ownership_ir.Move_check.check_modes decl;
+  if checking then begin
+    Ownership_ir.Move_check.check_modes decl;
+    check_deduced_bindings decl
+  end;
   let decl = run Fun.id (lowered_passes ~check_control u) decl in
+  if checking then check_deduced_bindings decl;
   let settled = Erasure.materialise decl in
   let inj (d : Erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
   note seam decl (inj settled);

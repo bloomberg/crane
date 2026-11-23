@@ -5,7 +5,16 @@
     names. *)
 
 include Grammar.Stmt
-module Binding = Grammar.Binding
+module Binding = struct
+  include Grammar.Binding
+
+  (** The type a declaring, non-static, binding writes and the Core binder
+      it stands for: [auto] for a deduced one. *)
+  let written : type p. p t -> (p Grammar.Type.t * Core.Binder.t option) option = function
+    | Declare (t, b) -> Some (t, b)
+    | Declare_deduced (_, b) -> Some (Auto, b)
+    | Existing | Declare_static _ -> None
+end
 module Match = Grammar.Match
 module Custom_match = Grammar.Custom_match
 module Foreign_block = Grammar.Foreign_block

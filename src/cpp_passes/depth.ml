@@ -97,7 +97,7 @@ let rec flatten_expr e =
       else begin
         let id = Id.of_string (Printf.sprintf "_lit%d" !next) in
         incr next;
-        stmts := (Bind_variable (id, Declare (Auto, None), e) : Cpp_ir.Lowered.Stmt.t) :: !stmts;
+        stmts := (Cpp_ir.Typed.bind_deduced id (e) : Cpp_ir.Lowered.Stmt.t) :: !stmts;
         Move (Local id)
       end
     end

@@ -161,6 +161,9 @@ let invocations ~params ?(modes = []) (body : stmt list) tparam (dom : ty list) 
     | Bind_variable (x, Declare (ty, _), e) ->
       expr env e;
       bind env x (declared ty)
+    | Bind_variable (x, Declare_deduced _, e) ->
+      expr env e;
+      bind env x (declared Auto)
     | Bind_variable (_, Existing, e) ->
       expr env e;
       env
