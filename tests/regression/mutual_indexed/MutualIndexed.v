@@ -44,5 +44,5 @@ Definition test_tree2_val : nat := even_val tree2.
 End MutualIndexed.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "mutual_indexed" MutualIndexed.

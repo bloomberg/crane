@@ -3,6 +3,11 @@
 From Crane Require Extraction.
 From Crane Require Export Mapping.NInt Mapping.NatIntStd.
 From Stdlib Require Import BinInt.
+From Crane Require Import Mapping.Descriptor.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
+Local Open Scope pstring_scope.
 
 (** Extraction of [Z] (binary integers) to [int64_t].
 
@@ -12,13 +17,46 @@ From Stdlib Require Import BinInt.
     Maps [Z] to [int64_t] with native C++ arithmetic.
 *)
 
-Crane Extract Inductive Z =>
-  "int64_t"
-  [ "INT64_C(0)" "static_cast<int64_t>(%a0)" "(-static_cast<int64_t>(%a0))" ]
-  "if (%scrut == 0) { %br0 } else if (%scrut > 0) { unsigned int %b1a0 = static_cast<unsigned int>(%scrut); %br1 } else { unsigned int %b2a0 = static_cast<unsigned int>(-%scrut); %br2 }"
-  From "cstdint".
-
-Crane Extract Numeral Z => "INT64_C(%n)".
+(** [Z] is an [int64_t]: [Z0] is [0], [Zpos p] is [p], [Zneg p] is [-p]
+    (the [positive] of [NInt] is an [unsigned int]); a numeral is an
+    [INT64_C] literal. *)
+#[export] Instance std_z_mapping : TypeMapping Z :=
+  {| type_headers := ["cstdint"];
+     type_cpp := Crane.Cpp.Name "int64_t";
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews Z;
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref Z0;
+             ctor_build := Expr "INT64_C(0)";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut == 0";
+                       case_fields := [] |} |};
+          {| ctor_source := Ref Zpos;
+             ctor_build := Expr "static_cast<int64_t>(%a0)";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut > 0";
+                       case_fields := [(0, OwnedProjection "static_cast<unsigned int>(%scrut)")] |} |};
+          {| ctor_source := Ref Zneg;
+             ctor_build := Expr "(-static_cast<int64_t>(%a0))";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut < 0";
+                       case_fields := [(0, OwnedProjection "static_cast<unsigned int>(-%scrut)")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals :=
+       Some {| numeral_cases :=
+                 [{| numeral_constructor := Ref Z0; numeral_action := NumeralZero |};
+                  {| numeral_constructor := Ref Zpos; numeral_action := NumeralIdentity 0 |};
+                  {| numeral_constructor := Ref Zneg; numeral_action := NumeralNegate 0 |}];
+               numeral_emitter := IntegerToken "INT64_C(" ")";
+               numeral_converters := [Ref Z.of_num_int; Ref Z.of_num_uint] |} |}.
 
 (* Z operations.
 
@@ -33,55 +71,199 @@ Crane Extract Numeral Z => "INT64_C(%n)".
    inputs whose true result fits in int64_t this is identical to native signed
    arithmetic; only the out-of-range cases differ, and there they wrap
    deterministically instead of being UB. *)
-Crane Extract Inlined Constant Z.add =>
-  "static_cast<int64_t>(static_cast<uint64_t>(%a0) + static_cast<uint64_t>(%a1))".
-Crane Extract Inlined Constant Z.sub =>
-  "static_cast<int64_t>(static_cast<uint64_t>(%a0) - static_cast<uint64_t>(%a1))".
-Crane Extract Inlined Constant Z.mul =>
-  "static_cast<int64_t>(static_cast<uint64_t>(%a0) * static_cast<uint64_t>(%a1))".
+#[export] Instance std_z_add_mapping : OperationMapping (Ref Z.add) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>(static_cast<uint64_t>(%arg(x)) + static_cast<uint64_t>(%arg(y)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_sub_mapping : OperationMapping (Ref Z.sub) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>(static_cast<uint64_t>(%arg(m)) - static_cast<uint64_t>(%arg(n)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "m"; argument_use := Read |};
+          {| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_mul_mapping : OperationMapping (Ref Z.mul) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>(static_cast<uint64_t>(%arg(x)) * static_cast<uint64_t>(%arg(y)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
 (* Rocq's Z.div / Z.modulo use *floored* division (the remainder takes the sign
    of the divisor), whereas C++ / and % truncate toward zero. We compute the
    truncated quotient/remainder once and apply the flooring correction so the
    results match Rocq for negative operands, and follow Rocq's a/0 = 0 and
    a mod 0 = a conventions for a zero divisor (CWE-682). The [_b == -1] case is
    handled separately because INT64_MIN / -1 and INT64_MIN % -1 are UB. *)
-Crane Extract Inlined Constant Z.div =>
-"[](int64_t _a, int64_t _b) -> int64_t {
+#[export] Instance std_z_div_mapping : OperationMapping (Ref Z.div) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "[](int64_t _a, int64_t _b) -> int64_t {
   if (_b == 0) return INT64_C(0);
   if (_b == -1) return static_cast<int64_t>(-static_cast<uint64_t>(_a));
   int64_t _q = _a / _b;
   int64_t _r = _a % _b;
   if (_r != 0 && ((_r < 0) != (_b < 0))) return _q - 1;
   return _q;
-}(%a0, %a1)".
-Crane Extract Inlined Constant Z.modulo =>
-"[](int64_t _a, int64_t _b) -> int64_t {
+}(%arg(a), %arg(b))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "a"; argument_use := Read |};
+          {| argument_name := "b"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_modulo_mapping : OperationMapping (Ref Z.modulo) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "[](int64_t _a, int64_t _b) -> int64_t {
   if (_b == 0) return _a;
   if (_b == -1) return INT64_C(0);
   int64_t _r = _a % _b;
   if (_r != 0 && ((_r < 0) != (_b < 0))) return _r + _b;
   return _r;
-}(%a0, %a1)".
-Crane Extract Inlined Constant Z.opp => "static_cast<int64_t>(-static_cast<uint64_t>(%a0))".
-Crane Extract Inlined Constant Z.abs =>
-  "(%a0 < 0 ? static_cast<int64_t>(-static_cast<uint64_t>(%a0)) : %a0)".
-Crane Extract Inlined Constant Z.succ => "static_cast<int64_t>(static_cast<uint64_t>(%a0) + 1)".
-Crane Extract Inlined Constant Z.pred => "static_cast<int64_t>(static_cast<uint64_t>(%a0) - 1)".
-Crane Extract Inlined Constant Z.eqb => "%a0 == %a1".
-Crane Extract Inlined Constant Z.ltb => "%a0 < %a1".
-Crane Extract Inlined Constant Z.leb => "%a0 <= %a1".
-Crane Extract Inlined Constant Z.gtb => "%a0 > %a1".
-Crane Extract Inlined Constant Z.geb => "%a0 >= %a1".
-Crane Extract Inlined Constant Z.compare =>
-  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
-Crane Extract Inlined Constant Z.eq_dec => "%a0 == %a1".
-Crane Extract Inlined Constant Z.min => "std::min(%a0, %a1)" From "algorithm".
-Crane Extract Inlined Constant Z.max => "std::max(%a0, %a1)" From "algorithm".
+}(%arg(a), %arg(b))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "a"; argument_use := Read |};
+          {| argument_name := "b"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_opp_mapping : OperationMapping (Ref Z.opp) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>(-static_cast<uint64_t>(%arg(x)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_abs_mapping : OperationMapping (Ref Z.abs) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(z) < 0 ? static_cast<int64_t>(-static_cast<uint64_t>(%arg(z))) : %arg(z))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "z"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_succ_mapping : OperationMapping (Ref Z.succ) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>(static_cast<uint64_t>(%arg(x)) + 1)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_pred_mapping : OperationMapping (Ref Z.pred) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>(static_cast<uint64_t>(%arg(x)) - 1)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_eqb_mapping : OperationMapping (Ref Z.eqb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) == %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_ltb_mapping : OperationMapping (Ref Z.ltb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) < %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_leb_mapping : OperationMapping (Ref Z.leb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) <= %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_gtb_mapping : OperationMapping (Ref Z.gtb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) > %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_geb_mapping : OperationMapping (Ref Z.geb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) >= %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_compare_mapping : OperationMapping (Ref Z.compare) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) < %arg(y) ? %ret::LT : (%arg(y) < %arg(x) ? %ret::GT : %ret::EQ))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_eq_dec_mapping : OperationMapping (Ref Z.eq_dec) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) == %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_min_mapping : OperationMapping (Ref Z.min) :=
+  {| operation_headers := ["algorithm"];
+     operation_cpp := Expr "std::min(%arg(n), %arg(m))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_max_mapping : OperationMapping (Ref Z.max) :=
+  {| operation_headers := ["algorithm"];
+     operation_cpp := Expr "std::max(%arg(n), %arg(m))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
 
 (* Conversions *)
-Crane Extract Inlined Constant Z.of_nat => "static_cast<int64_t>(%a0)".
-Crane Extract Inlined Constant Z.to_nat => "static_cast<uint64_t>(%a0 < 0 ? 0 : %a0)".
-Crane Extract Inlined Constant Z.of_N => "static_cast<int64_t>(%a0)".
-Crane Extract Inlined Constant Z.to_N => "static_cast<unsigned int>(%a0 < 0 ? 0 : %a0)".
-Crane Extract Inlined Constant Z.abs_N =>
-  "static_cast<unsigned int>(%a0 < 0 ? -static_cast<uint64_t>(%a0) : static_cast<uint64_t>(%a0))".
+#[export] Instance std_z_of_nat_mapping : OperationMapping (Ref Z.of_nat) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>(%arg(n))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_to_nat_mapping : OperationMapping (Ref Z.to_nat) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<uint64_t>(%arg(z) < 0 ? 0 : %arg(z))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "z"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_of_N_mapping : OperationMapping (Ref Z.of_N) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>(%arg(n))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_to_N_mapping : OperationMapping (Ref Z.to_N) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<unsigned int>(%arg(z) < 0 ? 0 : %arg(z))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "z"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_z_abs_N_mapping : OperationMapping (Ref Z.abs_N) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<unsigned int>(%arg(z) < 0 ? -static_cast<uint64_t>(%arg(z)) : static_cast<uint64_t>(%arg(z)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "z"; argument_use := Read |}]
+         ReturnValue [] |}.

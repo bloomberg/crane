@@ -42,13 +42,13 @@ type field = phase Cpp_ir.Field.t
 type local_fixpoint = Cpp_ir.Expr.Local_fixpoint.t
 
 (** The signature of a call nothing is known about. *)
-let call_opaque : signature = {yields = Untyped; params = Unknown; constructs = None; occurrence = None}
+let call_opaque : signature = {yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence = None}
 
 (** [Core.Signature.t ?yields ?params ?constructs ~nargs ()] is what a builder knows
     about a call on [nargs] arguments; [params] is kept only where it is one
     type per argument. *)
 let signature ?yields ?params ?constructs ~nargs () : signature =
-  { yields = (match yields with Some t -> Yields t | None -> Untyped);
+  { yields = (match yields with Some t -> Typed t | None -> Deduced Unannotated);
     params = (match params with Some ts when List.length ts = nargs -> Types ts | _ -> Unknown);
     constructs;
     occurrence = None }
@@ -107,12 +107,21 @@ let rec is_reference_type : ty -> bool = function
   | Const t -> is_reference_type t
   | _ -> false
 
-(** Whether a parameter declared at [ty] is a reference the body does not
-    own: a [const T &], or the [F &&] a deduced callable is. *)
-let rec declared_by_reference : ty -> bool = function
-  | Reference _ | Const _ -> true
-  | In_namespace (_, t) -> declared_by_reference t
-  | _ -> false
+(** How each of the parameters [params] of [what] is passed, as the
+    declaration records it by name in [recorded] ({!Cpp_ir.Param_mode}),
+    parallel to [params].  One recorded nowhere is a producer that declared
+    the parameter without deciding its mode: under [CRANE_CHECK_IR] a
+    violation, and otherwise read off its declared type. *)
+let param_modes ~what (recorded : (Id.t * Cpp_ir.Param_mode.t) list) (params : (Id.t * ty) list) =
+  List.map
+    (fun (x, ty) ->
+      match List.assoc_opt x recorded with
+      | Some m -> m
+      | None ->
+        Base.Probe.violation "parameter mode"
+          Pp.(str "the parameter " ++ Id.print x ++ str " of " ++ str what ++ str " records no mode");
+        Cpp_ir.Param_mode.spelled ty )
+    params
 
 (** Whether [ty] mentions a [std::shared_ptr] anywhere. *)
 let contains_shared_ptr (t : ty) = Cpp_ir.Children.exists_type (function Shared_pointer _ -> true | _ -> false) t
@@ -127,12 +136,7 @@ let named_tvar x : ty = Variable (Named x)
 
 (** [converting_ctor ty args]: [ty(args)], a box where [ty] is written
     [std::any] -- of what a box holds, where [args] is one. *)
-let converting_ctor (ty : ty) (args : expr list) : expr =
-  match args with
-  | [inner] when Cpp_ir.Types.prints_as_any ty ->
-    let inner = match inner with Box (_, x) -> x | x -> x in
-    Box (ty, inner)
-  | _ -> Converting_construct (ty, args)
+let converting_ctor : ty -> expr list -> expr = Cpp_passes.Erasure.converting_ctor
 
 (** {2 Named Constants}
 
@@ -293,6 +297,9 @@ let rec is_trivially_copyable_type = function
   | Variable _ -> true
   | Named (id, ts) -> is_trivially_copyable_named (Id.to_string id) ts
   | External (s, ts) -> is_trivially_copyable_named s ts
+  | Entity_application (r, ts, _) when Base.Mapping_plan.is_type_head r ->
+    Base.Mapping_plan.copies_cheaply (Base.Mapping_plan.find r) ~argument:(fun i ->
+        match List.nth_opt ts i with Some t -> is_trivially_copyable_type t | None -> false)
   | Entity_application (r, ts, _) ->
     Base.Table.is_enum_inductive r || Base.Table.is_custom_scalar_ref r
     || Base.Table.is_trivially_copyable_ref r
@@ -352,6 +359,13 @@ let pointer_fields_of (u : Unit_plan.Context.t) key = Core_plan.Pointer_fields.f
 let constructor_pointer_fields u c =
   Option.map (List.map ptr_field_index)
     (pointer_fields_of u (Base.Common.ctor_owner_key c, Base.Type_util.ctor_struct_name_of_ref c))
+
+(** Of those, the arguments whose value lies in a cell the field points at,
+    which a copy of the field shares ({!Core_plan.Pointer_fields.cells}): not
+    one a shared variant holds in the field itself. *)
+let constructor_cell_fields u c =
+  Core_plan.Pointer_fields.cells u.Unit_plan.Context.pointer_fields
+    (Base.Common.ctor_owner_key c, Base.Type_util.ctor_struct_name_of_ref c)
 
 (** Check the pointer fields read off a generated constructor struct against
     the ones planned before rendering, under [CRANE_CHECK_IR]. *)
@@ -729,11 +743,11 @@ and collect_stmts check ~in_visitor stmts =
      Pattern A — [Expression call; Return None]:
      In C++, a void function can end with [f(); return;] which is
      semantically [return f();] — the call is in tail position.
-     Translation ({!Core_to_cpp.Stmts.gen_stmts}) emits it when
-     current_cpp_return_type is Void.
+     Translation ({!Core_to_cpp.Stmts.gen_stmts}) emits it when the
+     enclosing function's return type is Void.
 
      Pattern B — [Expression call; Return (Some val)]:
-     Same situation but generated when current_cpp_return_type is a unit
+     Same situation but generated when the enclosing return type is a unit
      type (not Void), e.g. for ITree-unit-returning fixpoints whose
      return is threaded through the nat-match continuation [k].  The
      generated code is [f(); return Unit::e_TT;] which is semantically
@@ -851,6 +865,7 @@ let rec count_calls_expr (check : call_checker) expr =
   | Aggregate {values = args; _}
    |Local_aggregate {values = args; _} ->
     List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
+  | Coerce _ -> count_calls_expr check (Cpp_ir.Typed.head expr)
   | _ -> 0
 
 (** Count recursive calls in a statement list. *)

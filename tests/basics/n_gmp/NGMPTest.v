@@ -3,7 +3,7 @@
 From Stdlib Require Import BinNat BinPos.
 
 Require Crane.Extraction.
-Require Crane.Mapping.NGMP.
+Require Import Crane.Mapping.NGMP.
 
 Module NGMPTest.
 

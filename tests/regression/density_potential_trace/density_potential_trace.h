@@ -3,19 +3,18 @@
 #include <crane_real.h>
 #include <cstdint>
 #include <type_traits>
-#include <utility>
 
 struct DensityPotentialTraceCase {
   template <typename F0, typename F1>
     requires std::is_invocable_r_v<Real, F0 &, Real> &&
-             std::is_invocable_r_v<Real, F1 &, Real &&>
+             std::is_invocable_r_v<Real, F1 &, Real &>
   static Real lapse(F0 &&f, F1 &&mu, Real x) {
-    return f(mu(std::move(x)));
+    return f(mu(x));
   }
 
   template <typename F0, typename F1>
   static Real proper_time_static(F0 &&f, F1 &&mu, Real x, Real t) {
-    return (lapse(f, mu, std::move(x)) * std::move(t));
+    return (lapse(f, mu, x) * t);
   }
 
   template <typename F0, typename F1, typename F2, typename F3>
@@ -35,7 +34,7 @@ struct DensityPotentialTraceCase {
   }
 
   template <typename F0> static Real V_eff_massive(F0 &&n, Real m, Real x) {
-    return (r_pow(std::move(m), UINT64_C(2)) * V_eff(n, std::move(x)));
+    return (r_pow(m, UINT64_C(2)) * V_eff(n, x));
   }
 
   static Real sample_activation(Real z);

@@ -20,5 +20,5 @@ Definition t : nat := chip_port (upd_port_in_chip (mkChip 0) 31).
 End PortWriteNibbleMask.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "port_write_nibble_mask" PortWriteNibbleMask.

@@ -78,6 +78,17 @@ public:
         return default_;
     }
 
+    // The element out-of-bounds reads give. Matches PrimArray.default.
+    T default_value() const { return default_; }
+
+    // The element at `i` (default_ out of bounds) in place, not a copy: for
+    // a reader that tells elements apart by address (crane::bake's writer).
+    const T &ref(int64_t i) const {
+        if (i >= 0 && i < static_cast<int64_t>(data_->size()))
+            return (*data_)[static_cast<size_t>(i)];
+        return default_;
+    }
+
     // Lvalue overload: called on named variables (e.g. arr.set(i, v) where
     // arr is a persistent_array that the caller keeps using afterward).
     // Always deep-copies to preserve the original — this is the core

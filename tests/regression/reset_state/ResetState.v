@@ -52,5 +52,5 @@ Definition t : nat * nat := (memory_preserve_test, pc_clear_test).
 End ResetState.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "reset_state" ResetState.

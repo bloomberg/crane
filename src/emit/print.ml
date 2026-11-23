@@ -49,12 +49,15 @@ type tparams = I.Resolved.phase I.Template.parameters
     three-digit octal escape ([\\ooo]) — octal is bounded to three digits, so
     unlike [\\x…] it cannot swallow a following hex digit. Note this differs from
     OCaml's [String.escaped], whose [\\ddd] escapes are decimal and would be
-    misread by C++ as octal. *)
+    misread by C++ as octal. A [?] after a [?] is escaped as [\\?]: an
+    unescaped [??=] is a trigraph, which C++17 ignores but clang warns about
+    ([-Wtrigraphs]). *)
 let escape_cpp_string (s : string) : string =
   let buf = Buffer.create (String.length s + 2) in
-  String.iter
-    (fun c ->
+  String.iteri
+    (fun i c ->
       match c with
+      | '?' when i > 0 && s.[i - 1] = '?' -> Buffer.add_string buf "\\?"
       | '"' -> Buffer.add_string buf "\\\""
       | '\\' -> Buffer.add_string buf "\\\\"
       | '\n' -> Buffer.add_string buf "\\n"
@@ -472,7 +475,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       writes_obj ();
       cpp_angle Cpp_ir.Crane_rt.rebind (pp_list (pp_rec false) [ h; x ])
     | Carrier_parameter -> str ctor_alias_tvar
-    | Reference (Forwarding, t) -> pp_rec false t ++ str "&&"
+    | (Reference _ | Pointer _ | Const _) as t -> pp_declarator t (mt ())
     | Type_of e -> str "decltype(" ++ pp_cpp_expr ctx ([], Id.Set.empty) [] e ++ str ")"
     | Decltype_auto -> str "decltype(auto)"
     | External (id_s, args) ->
@@ -521,9 +524,6 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       cpp_angle
         Cpp_ir.Crane_rt.fn
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
-    | Reference (Lvalue, t) -> pp_rec false t ++ str "&"
-    | Pointer t -> pp_rec false t ++ str "*"
-    | Const t -> str "const " ++ pp_rec false t
     | In_namespace (r, t) ->
       ( match (r, t) with
       | GlobRef.IndRef _, Entity_application (r', args, _)
@@ -628,6 +628,26 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
     | Decay t ->
       writes_standard "type_traits";
       cpp_angle "std::decay_t" (pp_rec false t)
+  (* A compound type around a declarator hole [hole]: a pointer or reference
+     wraps the hole and leaves the declarator to its referent, and a [const]
+     on a pointer or reference qualifies the declarator ([T* const]), while
+     one on any other type stays in front of it ([const T&]).  So
+     [Const (Pointer t)] is [t* const] and [Pointer (Const t)] [const t*]. *)
+  and pp_declarator (t : ty) hole =
+    match t with
+    | Pointer t -> pp_declarator t (str "*" ++ hole)
+    | Reference (Lvalue, t) -> pp_declarator t (str "&" ++ hole)
+    | Reference (Forwarding, t) -> pp_declarator t (str "&&" ++ hole)
+    | Const ((Pointer _ | Reference _) as t) ->
+      (* A reference is never const: a reference to const is
+         [Reference (_, Const t)]. *)
+      ( match t with
+      | Reference _ when Base.Probe.checking () ->
+        CErrors.anomaly (Pp.str "pp_cpp_type: a const reference, not a reference to const")
+      | _ -> () );
+      pp_declarator t (str " const" ++ hole)
+    | Const t -> str "const " ++ pp_rec false t ++ hole
+    | t -> pp_rec false t ++ hole
   (* A type constructor written as a template template argument, and
      whether it is written as a member of a dependent qualifier -- a
      higher-kinded carrier's [_tcI0::template M], or a holder's
@@ -775,10 +795,9 @@ and pp_cpp_expr ctx env args (t : expr) =
       | [_] -> ["_x"]
       | ps -> List.mapi (fun i _ -> "_x" ^ string_of_int i) ps
     in
-    let param name = function
-      | Some ty ->
-        Pp.string_of_ppcmds (str "const " ++ pp_cpp_type ctx false [] ty ++ str (" &" ^ name))
-      | None -> "const auto &" ^ name
+    let param name ty =
+      let ty : ty = Reference (Lvalue, Const (Option.default I.Type.Auto ty)) in
+      Pp.string_of_ppcmds (pp_cpp_type ctx false [] ty ++ str (" " ^ name))
     in
     let params_s = String.concat ", " (List.map2 param names params) in
     let call_args = String.concat ", " (List.filteri (fun i _ -> i <> receiver) names) in
@@ -881,6 +900,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     writes_standard "utility";
     str (sn ctx.unit).move ++ str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | Forward (ty, e) ->
+    writes_standard "utility";
     str (sn ctx.unit).forward
     ++ str "<"
     ++ pp_cpp_type ctx false [] ty
@@ -989,7 +1009,16 @@ and pp_cpp_expr ctx env args (t : expr) =
     | Dereference _ | Foreign_text _ ->
       str "(" ++ pp_cpp_expr ctx env args e ++ str ")." ++ field_name
     | _ -> pp_cpp_expr ctx env args e ++ str "." ++ field_name )
-  | Literal (String s) -> str ("\"" ^ escape_cpp_string (Pstring.to_string s) ^ "\"")
+  | Literal (String s) ->
+    let text = Pstring.to_string s in
+    let quoted = str ("\"" ^ escape_cpp_string text ^ "\"") in
+    (* A NUL ends a character array read as a string: the string is
+       constructed from the array and its length. *)
+    if String.contains text '\000' then (
+      writes_standard "string";
+      str (sn ctx.unit).string ++ str "(" ++ quoted ++ str (", " ^ string_of_int (String.length text) ^ ")") )
+    else quoted
+  | Literal (Characters s) -> str ("\"" ^ escape_cpp_string (Pstring.to_string s) ^ "\"")
   | Persistent_array (elems, _) ->
     str "{" ++ pp_list (pp_cpp_expr ctx env args) (Array.to_list elems) ++ str "}"
   | Literal (Uint63 x) ->
@@ -1123,6 +1152,8 @@ and pp_cpp_expr ctx env args (t : expr) =
   | Declval ty ->
     writes_standard "utility";
     str "std::declval<" ++ pp_cpp_type ctx false [] ty ++ str ">()"
+  | Baked_value (ty, image) ->
+    str "crane::bake::read<" ++ pp_cpp_type ctx false [] ty ++ str ">(" ++ str image ++ str ")"
   | Type_name ty -> pp_cpp_type ctx false [] ty
   (* A helper of Crane's runtime, named after the header declaring it is
      noted as needed. *)
@@ -1134,6 +1165,7 @@ and pp_cpp_expr ctx env args (t : expr) =
      | Cpp_ir.Crane_rt.Apply2 -> writes (Base.Table.Runtime Cpp_ir.Crane_rt.fn_header)
      | Cpp_ir.Crane_rt.Constant _ | Cpp_ir.Crane_rt.Immortal ->
        writes (Base.Table.Runtime Cpp_ir.Crane_rt.shared_block_header)
+     | Cpp_ir.Crane_rt.Writable -> writes (Base.Table.Runtime Cpp_ir.Crane_rt.writable_header)
      | Cpp_ir.Crane_rt.Make_rc_reusing_unchecked | Cpp_ir.Crane_rt.Reuse_step
      | Cpp_ir.Crane_rt.Share_child -> ());
     str (Cpp_ir.Crane_rt.name h)
@@ -1374,7 +1406,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
        | None ->
          str "default:"
          ++ fnl ()
-         ++ str "  std::unreachable();" )
+         ++ str ("  " ^ (sn ctx.unit).unreachable ^ "();") )
     ++ fnl ()
     ++ str "}"
   | Assert precond ->
@@ -1513,7 +1545,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
       | Scrutinee {parenthesised} ->
         let printed = pp_cpp_expr ctx env [] t in
         ( match t with
-        | Literal (String _) -> string_object ctx printed
+        | Literal (String s) -> string_object ctx s printed
         (* A scrutinee carrying a prefix pointer operator binds looser than
            whatever the template appends: the option template's
            [%scrut.has_value()] applied to a recursive occurrence stored
@@ -1587,7 +1619,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
           if scrut.owned then "auto& [" else "const auto& ["
         in
         let pp_field_binding (fb : _ I.Stmt.Match.field_binding) =
-          if fb.used then Id.print fb.name else str "_"
+          if fb.used || not (sn ctx.unit).placeholder then Id.print fb.name else str "_"
         in
         if scrut.flat then
           str binding_qual
@@ -1719,7 +1751,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
         fnl () ++ str "} else {"
         ++ fnl () ++ pp_list_stmt (pp_cpp_stmt ctx env args) stmts
       | None when branches = [] ->
-        str "std::unreachable();"
+        str ((sn ctx.unit).unreachable ^ "();")
       | None ->
         mt ()
     in
@@ -1729,9 +1761,12 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
    the template's operations expect ([std::string("(") + p(a)]).  Spelled as a
    construction rather than with the [s] literal suffix, which would need a
    [using namespace] in every header that splices one. *)
-and string_object ctx printed =
-  writes_standard "string";
-  str (sn ctx.unit).string ++ str "(" ++ printed ++ str ")"
+and string_object ctx (s : Pstring.t) printed =
+  (* One holding a NUL is printed as a string object already. *)
+  if String.contains (Pstring.to_string s) '\000' then printed
+  else (
+    writes_standard "string";
+    str (sn ctx.unit).string ++ str "(" ++ printed ++ str ")" )
 
 (* A block's statements, each written on its own with the semicolon that
    ends it, its [%result] spelled [result]. *)
@@ -1752,7 +1787,7 @@ and pp_spliced ctx env ~followed_by_dot (arg_expr : expr) =
   let arg = pp_cpp_expr ctx env [] arg_expr in
   let arg =
     match arg_expr with
-    | Literal (String _) -> string_object ctx arg
+    | Literal (String s) -> string_object ctx s arg
     | _ -> arg
   in
   (* Parenthesize compound expressions that would bind incorrectly
@@ -1900,20 +1935,21 @@ let pp_requires_of_tparams ctx tparams =
            printing: see {!Cpp_passes.Constraints.settle}. *)
         | Invocable (invs, cod) ->
           writes_standard "type_traits";
-          let operand (cat : I.Template.Value_category.t) ty =
-            match cat with
-            | Mutable_lvalue -> ty ++ str " &"
-            | Const_lvalue -> str "const " ++ ty ++ str " &"
-            | Xvalue -> ty ++ str " &&"
-            | Prvalue -> ty
+          let operand (cat : I.Template.Value_category.t) (ty : ty) =
+            pp_type ctx
+              ( match cat with
+              | Mutable_lvalue -> Reference (Lvalue, ty)
+              | Const_lvalue -> Reference (Lvalue, Const ty)
+              | Xvalue -> Reference (Forwarding, ty)
+              | Prvalue -> ty )
           in
           let clause (inv : _ I.Template.Invocation.t) =
             str invocable_r ++ str "<"
             ++ pp_type ctx cod
             ++ str ", "
-            ++ operand inv.callable (Id.print id)
+            ++ operand inv.callable (Variable (Named id))
             ++ List.fold_left
-                 (fun acc (cat, ty) -> acc ++ str ", " ++ operand cat (pp_type ctx ty))
+                 (fun acc (cat, ty) -> acc ++ str ", " ++ operand cat ty)
                  (mt ()) inv.args
             ++ str ">"
           in

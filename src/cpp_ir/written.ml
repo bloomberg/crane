@@ -72,6 +72,7 @@ and expr : type p. p Expr.t -> Id.t list =
   match e with
   | Local id -> [id]
   | Foreign_text s -> identifiers_of_text s
+  | Baked_value (_, s) -> [Id.of_string s]
   | Call (_, (Entity (_, _, Some {inline = Some t; _}) as f), args) ->
     let spells = inline_spells_arg t in
     expr f @ List.concat (List.mapi (fun i a -> if spells i then expr a else []) args)

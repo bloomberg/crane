@@ -746,10 +746,10 @@ List<uint64_t> LoopifySearch::quicksort_fuel(uint64_t fuel,
         _result = std::move(l);
       } else {
         uint64_t f = fuel - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
           _result = List<uint64_t>::nil();
         } else {
-          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           const List<uint64_t> &a1_value = *a1;
           List<uint64_t> smaller =
               filter_impl([=](uint64_t y) { return y < a0; }, a1_value);
@@ -773,7 +773,8 @@ List<uint64_t> LoopifySearch::quicksort_fuel(uint64_t fuel,
       auto _f = std::move(std::get<_after_quicksort_fuel_in_Cons_2>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = _f._tmp2.app(List<uint64_t>::cons(a0, std::move(_result)));
+      _result =
+          _f._tmp2.app(List<uint64_t>::cons(std::move(a0), std::move(_result)));
     }
   }
   return _result;
@@ -1064,10 +1065,10 @@ LoopifySearch::perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
   };
 
   struct _after_perms_choices_fuel_in_Cons {
-    List<uint64_t> orig;
     uint64_t f;
     uint64_t a0;
     std::shared_ptr<List<uint64_t>> a1;
+    List<uint64_t> orig;
   };
 
   struct _after_perms_choices_fuel_in_Cons_2 {
@@ -1090,7 +1091,7 @@ LoopifySearch::perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
-      const List<uint64_t> &orig = _f.orig;
+      List<uint64_t> orig = std::move(_f.orig);
       const List<uint64_t> &choices = _f.choices;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -1106,10 +1107,10 @@ LoopifySearch::perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
           if (std::holds_alternative<typename List<uint64_t>::Nil>(
                   remaining.v())) {
             _stack.emplace_back(_after_perms_choices_fuel_in_Nil{a0});
-            _stack.emplace_back(_call{orig, *a1, f});
+            _stack.emplace_back(_call{std::move(orig), *a1, f});
           } else {
             _stack.emplace_back(
-                _after_perms_choices_fuel_in_Cons{orig, f, a0, a1});
+                _after_perms_choices_fuel_in_Cons{f, a0, a1, std::move(orig)});
             _stack.emplace_back(_call{remaining, remaining, f});
           }
         }
@@ -1118,10 +1119,10 @@ LoopifySearch::perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
             std::holds_alternative<_after_perms_choices_fuel_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_perms_choices_fuel_in_Cons>(_popped));
       _stack.pop_back();
-      List<uint64_t> orig = std::move(_f.orig);
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       std::shared_ptr<List<uint64_t>> a1 = std::move(_f.a1);
+      List<uint64_t> orig = std::move(_f.orig);
       _stack.emplace_back(
           _after_perms_choices_fuel_in_Cons_2{a0, std::move(_result)});
       _stack.emplace_back(_call{std::move(orig), *a1, f});
@@ -1131,14 +1132,16 @@ LoopifySearch::perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
           std::move(std::get<_after_perms_choices_fuel_in_Cons_2>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = map_cons(a0, std::move(_f._tmp3)).app(std::move(_result));
+      _result =
+          map_cons(std::move(a0), std::move(_f._tmp3)).app(std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_perms_choices_fuel_in_Nil>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result =
-          map_cons(a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
-                                                  List<List<uint64_t>>::nil()))
+          map_cons(std::move(a0),
+                   List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                              List<List<uint64_t>>::nil()))
               .app(std::move(_result));
     }
   }

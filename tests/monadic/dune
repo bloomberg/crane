@@ -250,6 +250,28 @@
   (deps st_arrays.t.exe)
   (action (run ./st_arrays.t.exe))))
 
+(subdir st_array_helpers
+ (rule
+  (targets st_array_helpers.t.exe)
+  (deps StArrayHelpers.vo st_array_helpers.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_array_helpers.t.exe st_array_helpers.t.cpp st_array_helpers.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_array_helpers.t.exe)
+  (action (run ./st_array_helpers.t.exe))))
+
+(subdir st_array_loops
+ (rule
+  (targets st_array_loops.t.exe)
+  (deps StArrayLoops.vo st_array_loops.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_array_loops.t.exe st_array_loops.t.cpp st_array_loops.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_array_loops.t.exe)
+  (action (run ./st_array_loops.t.exe))))
+
 (subdir st_fibonacci
  (rule
   (targets st_fibonacci.t.exe)

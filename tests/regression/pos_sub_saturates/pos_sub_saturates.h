@@ -8,7 +8,5 @@ struct Pos {
 struct PosSubSaturates {
   static unsigned int s(unsigned int x0_, unsigned int x1_);
   static unsigned int p(unsigned int x0_);
-  static inline const unsigned int t =
-      ((2u * 1u) > (2u * (2u * 1u) + 1u) ? (2u * 1u) - (2u * (2u * 1u) + 1u)
-                                         : 1u);
+  static inline const unsigned int t = (2u > 5u ? 2u - 5u : 1u);
 };

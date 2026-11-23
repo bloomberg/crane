@@ -49,6 +49,7 @@ let mk_lambda ?(tparams = []) params (ret : Cpp_ir.Lowered.Type.t option) body ~
           capture;
           moved = [];
           binders = [];
+          modes = [];
           fixpoint = None }
     in
     ( match (params, body) with
@@ -139,7 +140,7 @@ let guard_compare n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_ir.L
     impose, and the lambda's return type is used instead. *)
 let lift_iife_assignment target_var (target_ty : Cpp_ir.Lowered.Type.t option) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Stmt.t list option =
-  match expr with
+  match Cpp_passes.Coercions.head expr with
   | Call
       ( _,
         Lambda
@@ -164,31 +165,12 @@ let lift_iife_assignment target_var (target_ty : Cpp_ir.Lowered.Type.t option) (
       :: lifted_body )
   | _ -> None
 
-(** [inline_iife k expr] checks whether [expr] is an IIFE
-    ([Call(_, Lambda
-      { params = \[\];
-        body;
-        _ }, \[\])]).  If so, it replaces
-    the final [Return(Some v)] in [body] with [k v] and returns the
-    inlined statement list.  Otherwise it falls back to [\[k expr\]].
-
-    Only zero-argument, zero-parameter IIFEs are inlined — parameterised
-    lambdas and those with explicit return-type annotations involving
-    captures are left untouched, since they may have name-scoping or
-    type-deduction side-effects.
-
-    @param k     the statement-level continuation (e.g. [Sreturn], [Sasgn])
-    @param expr  the expression produced by [gen_expr] *)
-let inline_iife (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (e : Cpp_ir.Lowered.Expr.t) :
-    Cpp_ir.Lowered.Stmt.t list =
-  match e with
-  | Call (_, Lambda {params = []; return_type = ret_ty; body; _}, []) when body <> [] ->
-    let k_is_return =
-      match k (Literal (Int 0)) with Return _ -> true | _ -> false
-    in
-    if not k_is_return then
-      [k (Cpp_ir.Build.iife ret_ty body)]
-    else
+(** [inline_returns k body]: [body], an immediately invoked lambda's,
+    with each final [return v] replaced by [k v], where every path ends in
+    one (or a [throw]); [None] otherwise.  {!Destination.finish_inlined}
+    inlines a zero-parameter lambda this way where its value is returned. *)
+let inline_returns (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (body : Cpp_ir.Lowered.Stmt.t list) :
+    Cpp_ir.Lowered.Stmt.t list option =
     let map_all_or_none transform branches =
       let results = List.map transform branches in
       if List.for_all (fun x -> x <> None) results then
@@ -241,10 +223,7 @@ let inline_iife (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (e : Cpp_ir
         Option.map (fun rest' -> stmt :: rest') (replace_last_return rest)
       | _ -> None
     in
-    ( match replace_last_return body with
-    | Some stmts -> stmts
-    | None -> [k (Cpp_ir.Build.iife ret_ty body)] )
-  | expr -> [k expr]
+    replace_last_return body
 
 (** Extract block template info from an inline custom expression.
     Returns [Some(ref, template, args, tyargs)] if the expression is

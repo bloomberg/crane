@@ -53,7 +53,7 @@ struct UnitVoidEdge2 {
       apply<std::monostate, uint64_t>([](const auto &) { return take_unit(); },
                                       std::monostate{});
   static std::optional<std::monostate> make_some_unit(bool b);
-  static uint64_t use_option_unit(const std::optional<std::monostate> &o);
+  static uint64_t use_option_unit(std::optional<std::monostate> o);
   static uint64_t compose_option_unit(bool b1, bool b2);
 
   template <typename A, typename B> struct pair {

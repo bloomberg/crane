@@ -41,6 +41,8 @@ let shared_variant_header = "shared_variant.h"
 let shared_block_header = "shared_block.h"
 let field = "crane::field"
 let field_header = "field.h"
+let writable_header = "writable.h"
+let unreachable_header = "crane_unreachable.h"
 
 (* [CRANE_COUNT_RC]: the measurement-only counting shared pointer (count_rc.h). *)
 let counting_ptr = "crane::counting_ptr"
@@ -59,10 +61,12 @@ type helper =
   | Apply2
   | Constant of string
   | Immortal
+  | Writable
 
 let name = function
   | Constant _ -> "crane::constant"
   | Immortal -> "crane::immortal"
+  | Writable -> "crane::writable"
   | Apply2 -> "crane::apply2"
   | Make_rc_reusing_unchecked -> make_rc_reusing_unchecked
   | Raw -> raw

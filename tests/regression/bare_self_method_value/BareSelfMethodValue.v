@@ -33,6 +33,6 @@ Module BareSelfMethodValue.
 End BareSelfMethodValue.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Extraction "bare_self_method_value" BareSelfMethodValue.

@@ -128,7 +128,8 @@ struct SharedVariantConstant {
   static std::pair<Positive, Positive> pair_of();
   static Positive add_ten(const Positive &p);
   static Positive sum_tens(uint64_t n, Positive acc);
-  static inline const Positive result = sum_tens(UINT64_C(100), Positive::xh());
+  static inline const Positive result =
+      crane::immortal(sum_tens(UINT64_C(100), Positive::xh()));
   /// 2^110: a constant nested deeper than a compiler parses, whose
   /// initialiser is split into bindings that run once.
   static Positive huge();

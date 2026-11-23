@@ -147,6 +147,18 @@ VERNAC COMMAND EXTEND Benchmark CLASSIFIED AS QUERY STATE opaque_access
   -> { Driver.Benchmark.run subjects options }
 END
 
+(* Typed mappings: inspect which instance maps a type or operation *)
+VERNAC COMMAND EXTEND CraneShowMapping CLASSIFIED AS QUERY
+| [ "Crane" "Show" "Mapping" constr(c) ]
+  -> { Base.Mapping_discovery.show c }
+| [ "Crane" "Check" "Mapping" constr(c) "Selects" global(r) ]
+  -> { Base.Mapping_discovery.check_selects c r }
+| [ "Crane" "Check" "Mapping" constr(c) "Unmapped" ]
+  -> { Base.Mapping_discovery.check_unmapped c }
+| [ "Crane" "Check" "Mapping" constr(c) "Fails" "With" string(s) ]
+  -> { Base.Mapping_discovery.check_fails c s }
+END
+
 (* Target Language *)
 VERNAC COMMAND EXTEND ExtractionLanguage CLASSIFIED AS SIDEFF
 | [ "Crane" "Extraction" "Language" crane_language(l) ]
@@ -356,6 +368,12 @@ END
 VERNAC COMMAND EXTEND ExtractionNumeral CLASSIFIED AS SIDEFF
 | [ "Crane" "Extract" "Numeral" global(x) "=>" cppname(fmt) ]
   -> { Base.Table.extract_numeral x fmt }
+END
+
+(* Compute a closed constant at extraction time and extract it as data *)
+VERNAC COMMAND EXTEND CraneBake CLASSIFIED AS SIDEFF STATE opaque_access
+| [ "Crane" "Bake" ne_global_list(l) ]
+  -> { Driver.Bake.bake l }
 END
 
 VERNAC COMMAND EXTEND ExtractionGuardCompare CLASSIFIED AS SIDEFF

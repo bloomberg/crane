@@ -174,12 +174,8 @@ struct PolygonWindingAreaTraceCase {
     Real lambda;
   };
 
-  static inline const Real R_earth_default = Rdefinitions::Q2R(
-      Q{INT64_C(3440065),
-        (2u * (2u * (2u * (2u * (2u *
-                                 (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) +
-                                  1u)) +
-                           1u))))});
+  static inline const Real R_earth_default =
+      Rdefinitions::Q2R(Q{INT64_C(3440065), 1000u});
   [[gnu::used]] static inline const Real R_earth = R_earth_default;
   static Real hav(Real theta);
   static Real distance(const Point &p1, const Point &p2);

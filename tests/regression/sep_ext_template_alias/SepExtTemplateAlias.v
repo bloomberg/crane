@@ -19,6 +19,6 @@ End WFacts_fun.
 Module WFacts := WFacts_fun.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Separate Extraction WFacts_fun WFacts.

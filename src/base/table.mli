@@ -1075,6 +1075,15 @@ val is_inline_custom : GlobRef.t -> bool
     rather than to write it ({!written_custom_text}). *)
 val inline_custom_text : GlobRef.t -> string option
 
+(** The number of arguments a call to the inline custom [r] supplies: one
+    per retained runtime binder of an operation mapping
+    ({!Mapping_operation}), one past the largest [%aN] of a legacy text;
+    [None] when [r] is not an inline custom. *)
+val inline_custom_arity : GlobRef.t -> int option
+
+(** Whether an [OperationMapping] instance maps [r] (design 11). *)
+val is_mapped_operation : GlobRef.t -> bool
+
 (** Check if reference has foreign custom extraction. *)
 val is_foreign_custom : GlobRef.t -> bool
 
@@ -1083,6 +1092,10 @@ val find_callback : GlobRef.t -> string option
 
 (** Find custom extraction code for reference. *)
 val find_custom : GlobRef.t -> string
+
+(** Refuse a type or operation mapped both by a typed instance and by a
+    legacy command, a [Crane Extract Numeral] included (design 22.5).  Run once the typed mappings are discovered. *)
+val check_typed_mapping_conflicts : unit -> unit
 
 (** Find custom extraction code if exists. *)
 val find_custom_opt : GlobRef.t -> string option
@@ -1373,6 +1386,12 @@ type numeral_info = {
   ind : GlobRef.t;
     (** The numeral inductive itself, so a rendering site holding only the
         info can still ask what C++ type the literal has to fit in. *)
+  typed : (int * Mapping_descriptor.numeral_action) list option;
+    (** A typed mapping's numeral cases ({!Mapping_plan.numerals}): the
+        action of each numeral constructor by its index from 1, which
+        decide a constructor term's value.  [None] for [Crane Extract
+        Numeral], whose values are read off [zero_ctor] and [succ_ctor] and
+        the registered binary number constructors. *)
 }
 
 (** Check if inductive is numeric. *)
@@ -1435,3 +1454,34 @@ val add_erased_fix_group : Core.Occurrence.t -> unit
 
 (** Whether {!add_erased_fix_group} recorded [occ]. *)
 val is_erased_fix_group : Core.Occurrence.t -> bool
+
+(** {2 Baked constants ([Crane Bake c])} *)
+
+(** A file the bake driver's compilation read, and its digest then: a
+    runtime header named relative to the directory holding Crane's runtime
+    ([in_runtime]: [cpp/shared_array.h]), any other file by its absolute
+    path. *)
+type bake_input = {file : string; in_runtime : bool; digest : Digest.t}
+
+(** What a baked constant is initialised with: the C++ name its image is
+    declared under, and the image, C++ text the bake driver wrote; and what it
+    was computed from outside the Rocq document, which an extraction checks
+    is unchanged ({!Driver.Bake_inputs.check}): the files the driver's
+    compilation read, the compiler ([clang++ --version]) and
+    [CRANE_BAKE_FLAGS]. *)
+type baked = {symbol : string; image : string; inputs : bake_input list; compiler : string; env_flags : string}
+
+(** Records [r]'s image (a libobject, so it survives [Require]); [r] is then
+    never inlined. *)
+val record_baked : GlobRef.t -> baked -> unit
+
+val baked_image : GlobRef.t -> baked option
+val baked_constants : unit -> (GlobRef.t * baked) list
+
+(** The constant the extraction driving a bake is for, while it runs. *)
+val bake_root : GlobRef.t option ref
+
+val is_bake_root : GlobRef.t -> bool
+
+(** [Set Crane Bake Flags]: extra compiler flags for the bake driver. *)
+val bake_flags : unit -> string

@@ -98,9 +98,15 @@ val instance_promoted_types :
 
 (** The fields of a constructor of the inductive [name], of types [tys], that
     its struct stores behind the smart pointer, each with whether it holds
-    [name] itself; [vars] are the inductive's struct's variables. *)
+    [name] itself and whether its value lies in the slot; [vars] are the
+    inductive's struct's variables. *)
 val constructor_pointer_fields :
-  Lowering_state.t -> name:GlobRef.t -> is_coinductive:bool -> Id.t list -> Core.Type.t list -> (int * bool) list
+  Lowering_state.t ->
+  name:GlobRef.t ->
+  is_coinductive:bool ->
+  Id.t list ->
+  Core.Type.t list ->
+  Core_plan.Pointer_fields.planned list
 
 (** The struct of a record type, in CppIR. *)
 val gen_record_cpp :

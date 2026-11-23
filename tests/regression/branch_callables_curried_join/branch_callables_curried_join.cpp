@@ -69,7 +69,7 @@ uint64_t BranchCallablesCurriedJoin::t2(const List<uint64_t> &l) {
       })(INT64_C(3))(true);
 }
 
-uint64_t BranchCallablesCurriedJoin::v3(const std::optional<uint64_t> &x) {
+uint64_t BranchCallablesCurriedJoin::v3(std::optional<uint64_t> x) {
   std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>> p = [&]() {
     auto &&_sv = [&]() -> BranchCallablesCurriedJoin::tree {
       if (x.has_value()) {

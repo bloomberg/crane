@@ -74,5 +74,5 @@ Definition test_perimeter : nat := rect_perimeter r1.
 End PrimitiveRecTypeclass.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "primitive_rec_typeclass" PrimitiveRecTypeclass.

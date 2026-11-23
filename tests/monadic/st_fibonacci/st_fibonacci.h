@@ -12,6 +12,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -183,7 +184,8 @@ struct StFibonacci {
       return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
     }
 
-    static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
+    constexpr static std::optional<uint64_t> index(uint64_t fp, uint64_t sp,
+                                                   uint64_t i) {
       if ((fp <= i && i <= sp)) {
         return std::make_optional<uint64_t>((((i - fp) > i ? 0 : (i - fp))));
       } else {
@@ -232,13 +234,12 @@ struct StFibonacci {
     if (n < UINT64_C(2)) {
       return n;
     } else {
-      std::shared_ptr<uint64_t> x;
-      x = std::make_shared<decltype(UINT64_C(0))>(UINT64_C(0));
-      std::shared_ptr<uint64_t> y;
-      y = std::make_shared<decltype(UINT64_C(1))>(UINT64_C(1));
+      std::shared_ptr<uint64_t> x = std::make_shared<uint64_t>(UINT64_C(0));
+      std::shared_ptr<uint64_t> y = std::make_shared<uint64_t>(UINT64_C(1));
       auto fib_loop =
-          [](uint64_t k, std::shared_ptr<uint64_t> x0,
-             std::shared_ptr<uint64_t> y0, uint64_t, uint64_t)
+          [](uint64_t k, const std::shared_ptr<uint64_t> &x0,
+             const std::shared_ptr<uint64_t> &y0, uint64_t,
+             uint64_t)
                -> uint64_t {
             // Loop replaces the tail recursion: each recursive call updates the
             // loop variables.

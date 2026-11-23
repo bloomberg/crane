@@ -72,12 +72,17 @@ let constant_name e =
     takes, not the throw a dead position gets, since the constructor runs as
     the value is built; a call returning [unit] is the value its void call
     stands for. *)
-let gen_stored_value cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e : Cpp_ir.Lowered.Expr.t =
+let gen_stored_value_typed cx (slot : Slot.slot) env e : Cpp_ir.Typed.t =
+  let ret = slot.Slot.ret in
   match e with
-  | Core.Expr.Erased_value _ -> Cpp_passes.Erasure.empty_box
+  | Core.Expr.Erased_value _ -> Cpp_ir.Typed.typed Any Cpp_passes.Erasure.empty_box
   | e when Monadic.core_value_is_void_call cx e ->
-    Monadic.wrap_void_call_as_value (gen_expr cx ~slot env e)
-  | _ -> gen_expr cx ?expected_ty ~slot env e
+    let x = Monadic.wrap_void_call_as_value ((gen_expr_typed cx (Slot.at ~ret ~slot ()) env e).expr) in
+    Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated x
+  | _ -> gen_expr_typed cx slot env e
+
+(** {!gen_stored_value_typed}'s expression. *)
+let gen_stored_value cx slot env e = (gen_stored_value_typed cx slot env e).expr
 
 (** The constructor [r] of a custom-extracted inductive at [ty] applied to
     [ts]: the user's constructor template instantiated at the type arguments
@@ -85,10 +90,11 @@ let gen_stored_value cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env 
     field it fills and boxed where that field is erased (never for a
     pass-through constructor such as ["%a0"], which has no field storage),
     and an identity template collapsed to its one argument. *)
-let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.empty_slot) env
+let gen_expr_custom_cons cx (slot : Slot.slot) env
     (ty : Core.Type.t) r ts : Cpp_ir.Lowered.Expr.t =
-  let slot = into_erased_return cx slot in
-  let ty = custom_refined_annotation cx env ~expected_ty ~slot ty r ts in
+  let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
+  let slot = into_erased_return cx ~ret slot in
+  let ty = custom_refined_annotation cx env ~ret ~expected_ty ~slot ty r ts in
   (* Some custom-extracted inductives (e.g. [sum1], registered as
      [Crane Extract Inductive sum1 => "" ["%a0" "%a0"]]) are pure type-level
      erasure markers: their constructor template forwards the argument
@@ -143,21 +149,20 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
     with_in_constructor_expr cx true @@ fun () ->
   (* Convert value arguments to C++ expressions.  An erased proof or type
      argument ([Core.Expr.Erased_value]) is the empty box its erased slot takes; see that
-     case of {!gen_expr}. *)
-  let gen_ctor_arg ?expected_ty ?(slot = slot) e =
-    gen_stored_value cx ?expected_ty ~slot env e
+     case of {!gen_expr_typed}. *)
+  let gen_ctor_arg ~ret ?expected_ty ?(slot = slot) e =
+    gen_stored_value_typed cx (Slot.at ~ret ?expected_ty ~slot ()) env e
   in
-  let c = custom cx env ~expected_ty ~slot ty r in
+  let c = custom cx env ~ret ~expected_ty ~slot ty r in
   let ty_args_for_expected = c.ty_args_for_expected and field_types_for_wrap = c.field_types in
   let ctor_temps_at_slot = c.temps_at_slot and slot_states_unboxed = c.states_unboxed in
   let is_list_cons_ctor = c.list_cons and slot_is_deeply_erased = c.deeply_erased in
   let args =
     List.rev (List.mapi (fun i e ->
-      let a = custom_field cx env c ~slot r i e in
+      let a = custom_field cx env c ~ret ~slot r i e in
       let e = a.term and new_expected = a.expected_core and erased_fn_slot = a.erased_fn_slot in
-      let result =
-        with_cpp_return_type cx a.ret (fun () -> gen_ctor_arg ?expected_ty:a.expected ~slot:a.slot e)
-      in
+      let value = gen_ctor_arg ~ret:a.ret ?expected_ty:a.expected ~slot:a.slot e in
+      let result = value.expr in
 
       (* Where this argument is stored, as far as its representation goes:
          [Some [Any]] when the slot is erased and the value has to be boxed
@@ -236,7 +241,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
       in
       let result =
         match into with
-        | Some into -> Coerce.coerce cx ~term:e ~into result
+        | Some into -> Coerce.coerce cx ~term:e ~value ~into result
         | None -> result
       in
       (* A closure stored as itself at a field the inductive declares at one
@@ -255,7 +260,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
         let all = ref true and any = ref false in
         let rec stmt (s : Cpp_ir.Lowered.Stmt.t) =
           match s with
-          | Return (Some (Lambda l)) when has_signature l -> any := true
+          | Return (Some e) when (match Cpp_ir.Typed.head e with Lambda l -> has_signature l | _ -> false) -> any := true
           | Return _ -> all := false
           | s -> Cpp_ir.Subterms.stmt ~expr:ignore ~stmts:(List.iter stmt) s
         in
@@ -287,7 +292,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
         | Some f -> Cpp_ir.Expr.Converting_construct (f, [result])
         | None -> Function_value result
       in
-      match (into, List.nth_opt field_types_for_wrap i, result) with
+      match (into, List.nth_opt field_types_for_wrap i, Cpp_ir.Typed.head result) with
       | None, Some ft, Lambda l
         when (not (is_passthrough_ctor_arg i)) && has_signature l && Erasure.core_expr_is_function_value cx e ->
         ( match resolve_meta ft with Core.Type.Variable _ -> named ft | _ -> result )
@@ -411,7 +416,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
           if from_expected <> [] then from_expected
           else
             let from_ret =
-              match current_cpp_return_type cx () with
+              match ret with
               | Some (Cpp_ir.Type.Entity_application (ret_r, ret_tys, _))
                 when Names.GlobRef.CanOrd.equal n ret_r
                      && List.length ret_tys = List.length tys ->
@@ -510,8 +515,9 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
     [construction]), not custom, enum or a shared constant: its factory
     call, aggregate or reuse of the token the match freed, each argument
     generated against the field it fills. *)
-let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  let slot = into_erased_return cx slot in
+let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
+  let slot = into_erased_return cx ~ret slot in
   let ty = refined_by_slot slot ty in
   (* Setting [in_constructor_expr] makes unresolvable promoted vars (those
      NOT in [promoted_var_map]) fall back to [Any] = [std::any].
@@ -552,9 +558,9 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
     else begin
       let ct = Types.cpp_of_core cx env core_ft in
       let clean_ct =
-        Convert.clean_self_ns ct
+        Cpp_passes.Convert.clean_self_ns ct
       in
-      match Convert.strip_ns_global_app clean_ct with
+      match Cpp_passes.Convert.strip_ns_global_app clean_ct with
       | Entity_application (g, [elem_ty], _)
         when Base.Type_util.is_custom_list_global g
              && not (Types.resolves_to_any_type cx elem_ty) ->
@@ -567,9 +573,9 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
   let fds = record_fields_of_type ty in
   let cons_result = match fds with
   | [] ->
-    let c = regular cx env ~expected_ty ty r ts in
+    let c = regular cx env ~ret ~expected_ty ty r ts in
     let ts_updated = c.args in
-    let temps_from_slot = temps_from_slot cx env ~expected_ty in
+    let temps_from_slot = temps_from_slot cx env ~ret ~expected_ty in
     let erase_past_type_arg = erase_past_type_arg ts_updated in
     (* Generate: Type<temps>::ctor::Constructor_(args) *)
     let gen_ctor_call (args : Cpp_ir.Lowered.Expr.t list) : Cpp_ir.Lowered.Expr.t =
@@ -659,7 +665,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
         let temps =
           if Base.Table.has_dependent_params n then
             let expected_temps =
-              Ctor_args.expected_type_args_from_return cx env ?slot:expected_ty n
+              Ctor_args.expected_type_args_from_return cx env ~ret ?slot:expected_ty n
                 ~arity:(List.length temps)
             in
             match expected_temps with
@@ -822,8 +828,8 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
     (* [gen_ctor_call] is handed its arguments last first, as the
        [List.rev (List.mapi ...)] at its call builds them, and reverses them
        into the source order a [Call] holds. *)
-    let gen_ctor_arg ?expected_ty ?(slot = slot) e =
-      gen_stored_value cx ?expected_ty ~slot env e
+    let gen_ctor_arg ~ret ?expected_ty ?(slot = slot) e =
+      gen_stored_value cx (Slot.at ~ret ?expected_ty ~slot ()) env e
     in
     (* When a constructor's field type is a type variable (Core.Type.Variable i) that
        resolves to an owning pointer type (because T is in method_self_ns),
@@ -876,7 +882,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               let n_params = List.length params in
               let new_params = List.map (fun (orig_ty, orig_id) ->
                 let bare = strip_cpp_ref_const orig_ty in
-                if bare <> Cpp_ir.Type.Any then (Cpp_ir.Type.Const (Reference (Lvalue, Cpp_ir.Type.Any)), orig_id)
+                if bare <> Cpp_ir.Type.Any then (Cpp_ir.Type.Reference (Lvalue, Const Cpp_ir.Type.Any), orig_id)
                 else (orig_ty, orig_id)
               ) params in
               let core_concrete_param_tys =
@@ -971,8 +977,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               ) (List.mapi (fun idx p -> (idx, p)) new_params) in
               let new_body =
                 List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                  let cast_stmt = Cpp_ir.Stmt.Bind_variable (orig_id, Declare (concrete_ty, None),
-                    Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
+                  let cast_stmt = Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Coerce.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
                   cast_stmt :: stmts
                 ) body_stmts (List.rev cast_bindings)
               in
@@ -1003,7 +1008,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                  non-lambda case below stores.  The lambda keeps its own
                  concrete result type; [crane_erase_fn] deduces it and boxes
                  what it returns. *)
-              Erase_callable (Boxed_whole, new_lambda)
+              Coerce.erase Boxed_whole new_lambda
             | _ ->
               (* When a custom list literal (e.g. deque<Val>) is stored in a
                  std::any field, regenerate it in a [Boxed] slot so
@@ -1021,7 +1026,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                 | _ -> false
               in
               if is_custom_list_cons core_e then begin
-                gen_ctor_arg ~slot:(Slot.into_box Var_box slot) core_e
+                gen_ctor_arg ~ret ~slot:(Slot.into_box Var_box slot) core_e
               end else begin
                 (* A non-lambda FUNCTION value (e.g. a forwarded callback
                    parameter [f]) stored into an erased field must be wrapped
@@ -1043,7 +1048,8 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                    (unbox each argument, box the result). *)
                 (* Wrap via the [crane_erase_fn] runtime helper (emitted as
                    [#include "crane_fn.h"] in the header preamble). *)
-                Coerce.box_for_any_slot cx Var_box core_e expr
+                Coerce.into_slot ~origin:(Any_slot {cx; kind = Var_box; term = core_e}) (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr)
+                  (Exactly Any)
               end )
           | Function (param_tys, ret_ty) when List.exists (fun t -> t = Cpp_ir.Type.Any) param_tys ->
             ( match expr with
@@ -1057,7 +1063,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               let new_params = List.mapi (fun j (orig_ty, orig_id) ->
                 if j < List.length param_tys && List.nth param_tys j = Cpp_ir.Type.Any then
                   let bare = strip_cpp_ref_const orig_ty in
-                  if bare <> Cpp_ir.Type.Any then (Cpp_ir.Type.Const (Reference (Lvalue, Cpp_ir.Type.Any)), orig_id)
+                  if bare <> Cpp_ir.Type.Any then (Cpp_ir.Type.Reference (Lvalue, Const Cpp_ir.Type.Any), orig_id)
                   else (orig_ty, orig_id)
                 else (orig_ty, orig_id)
               ) params in
@@ -1140,8 +1146,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               ) (List.mapi (fun idx p -> (idx, p)) new_params) in
               let new_body =
                 List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                  let cast_stmt = Cpp_ir.Stmt.Bind_variable (orig_id, Declare (concrete_ty, None),
-                    Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
+                  let cast_stmt = Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Coerce.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
                   cast_stmt :: stmts
                 ) body_stmts (List.rev cast_bindings)
               in
@@ -1176,7 +1181,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                callable's signature and unboxes each argument.  The field's
                own codomain stays concrete. *)
             | _ when Erasure.core_expr_is_function_value cx core_e ->
-              Erase_callable (At_signature ret_ty, expr)
+              Coerce.erase (At_signature ret_ty) expr
             | _ -> expr )
           | _ -> expr
           with Failure _ | Invalid_argument _ ->
@@ -1266,7 +1271,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                  && strip_cpp_ref_const orig_ty <> Cpp_ir.Type.Any
               then
                 (* Replace concrete type with std::any, preserving const ref *)
-                Cpp_ir.Type.Const (Reference (Lvalue, Cpp_ir.Type.Any))
+                Cpp_ir.Type.Reference (Lvalue, Const Cpp_ir.Type.Any)
               else orig_ty
             in
             (erased_ty, orig_id)
@@ -1332,8 +1337,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
             | None -> (ty, id)
           ) new_params in
           let cast_stmts = List.map (fun (_, orig_id, any_id, concrete_ty) ->
-            Cpp_ir.Stmt.Bind_variable (orig_id, Declare (concrete_ty, None),
-              Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id))
+            Cpp_ir.Typed.bind (orig_id) (concrete_ty) (Coerce.unbox concrete_ty (Cpp_ir.Expr.Local any_id))
           ) cast_bindings in
           let new_body = cast_stmts @ body_stmts in
           let new_ret_ty = match ret_ty_opt with
@@ -1358,28 +1362,29 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
             | t -> t
           in
           let ret_ty = Types.cpp_of_core cx env (codomain ft) in
-          let expr = Coerce.erased_fn_instantiation expr in
-          Erase_callable (At_signature (if Cpp_ir.Types.prints_as_any ret_ty then Cpp_ir.Type.Any else ret_ty), expr)
+          let expr = Cpp_passes.Coercions.erased_fn_instantiation expr in
+          Coerce.erase (At_signature (if Cpp_ir.Types.prints_as_any ret_ty then Cpp_ir.Type.Any else ret_ty)) expr
         (* A field erased whole -- [den t], whatever [t] the call names --
            holds a function as the canonical callable it is read back as. *)
         | _ when ft_has_erased_tvar ft ->
-          Coerce.box_for_any_slot cx
-            (Types.box_kind_of_cpp_type (Types.cpp_of_core cx env ft))
-            core_e expr
+          let slot = Types.cpp_of_core cx env ft in
+          Coerce.into_slot
+            ~origin:(Any_slot {cx; kind = Types.box_kind_of_cpp_type slot; term = core_e})
+            (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr) (Exactly slot)
         | _ -> expr )
     in
     let gen_and_wrap i e =
       let ft_opt, expr =
         (* A constructor argument returns its own value, not the enclosing
-           function's, so the ambient return type must not reach it. *)
-        with_cpp_return_type cx None (fun () ->
+           function's, so the enclosing [ret] must not reach it. *)
+        (let ret = None in
         let ft_opt =
           try Some (List.nth field_types i)
           with Failure _ | Invalid_argument _ -> None
         in
         let expected_for_arg, arg_slot = regular_field cx env ~is_boxed:(Binders.read_is_boxed cx)
           c ~slot i e in
-        let expr = gen_ctor_arg ~slot:arg_slot ?expected_ty:expected_for_arg e in
+        let expr = gen_ctor_arg ~ret ~slot:arg_slot ?expected_ty:expected_for_arg e in
           (ft_opt, expr) )
       in
       let expr =
@@ -1471,14 +1476,15 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
           (fun i e ->
             let expected_ty, slot = record_field cx env ~is_boxed:(Binders.read_is_boxed cx) ty r
               ~slot i e in
-            gen_stored_value cx ~slot ?expected_ty env e)
+            gen_stored_value_typed cx (Slot.at ~ret ~slot ?expected_ty ()) env e)
           ts
       in
       match ty with
       | Core.Type.Global_app {head = n; _} ->
         let field_types = field_types_rec in
         List.mapi
-          (fun i expr ->
+          (fun i (value : Cpp_ir.Typed.t) ->
+            let expr = value.expr in
             match List.nth_opt field_types i with
             | Some ft ->
               (* An erased list leaf forwarded into a concrete-element list
@@ -1497,22 +1503,24 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                  the canonical callable a field erased whole ([den t] at a
                  [TFun] index) is read back as; [coerce] supplies the
                  [crane_erase_fn] adapter for the one, and
-                 {!Coerce.box_for_any_slot} for the other. *)
+                 {!Coerce.any_slot_plan} for the other. *)
               let declared_ty = declared_field_cpp_ty ft in
               let expr =
                 if erased_domain_fun_ty declared_ty then
-                  Coerce.coerce cx ?term:(List.nth_opt ts i) ~into:declared_ty expr
+                  Coerce.coerce cx ?term:(List.nth_opt ts i) ~value ~into:declared_ty expr
                 else if Cpp_ir.Types.prints_as_any (Types.unfold_cpp_typedef cx env declared_ty) then
                   match List.nth_opt ts i with
                   | Some e ->
-                    Coerce.box_for_any_slot cx (Types.box_kind_of_cpp_type declared_ty) e expr
+                    Coerce.into_slot
+                      ~origin:(Any_slot {cx; kind = Types.box_kind_of_cpp_type declared_ty; term = e})
+                      (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated expr) (Exactly declared_ty)
                   | None -> expr
                 else expr
               in
-              Convert.wrap_storage_expr ~storage_ty ~api_ty expr
+              Cpp_passes.Convert.wrap_storage_expr ~storage_ty ~api_ty expr
             | None -> expr)
           base_args
-      | _ -> base_args
+      | _ -> List.map (fun (v : Cpp_ir.Typed.t) -> v.expr) base_args
     in
     nstempmod record_arg_exprs
   in

@@ -13,7 +13,7 @@ Module ShowExtractionPlanned.
 End ShowExtractionPlanned.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Lemma shown : nat -> nat.
 Proof.

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <crane_string.h>
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -19,13 +21,13 @@ struct CountDown {
   /// Effect in base case too: both branches do IO
   static void announce(uint64_t n);
   /// Multiple arguments: two nat params, recurse on first
-  static void repeat_msg(uint64_t n, std::string msg);
+  static void repeat_msg(uint64_t n, const std::string &msg);
   static void run_fixpoint();
   /// Helper: compare two strings
-  static bool string_eq(std::string s1, std::string s2);
+  static bool string_eq(std::string_view s1, std::string_view s2);
   static void co_count_down();
   static void co_two_prints();
   static void co_echo_loop();
   static void co_announce(uint64_t round);
-  static void co_repeat(std::string msg);
+  static void co_repeat(const std::string &msg);
 };

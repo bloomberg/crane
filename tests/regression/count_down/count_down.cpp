@@ -27,7 +27,9 @@ void CountDown::two_prints(uint64_t n) {
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << std::string("step ") + std::to_string(_loop_n) << '\n';
+      std::cout <<
+      crane::string_capped(std::string("step ") + std::to_string(_loop_n)) <<
+      '\n';
       std::cout << std::string("---") << '\n';
       _loop_n = n_;
     }
@@ -47,7 +49,7 @@ void CountDown::echo_loop(uint64_t n) {
       uint64_t n_ = _loop_n - 1;
       std::string line;
       std::getline(std::cin, line);
-      std::cout << std::string("echo: ") + std::move(line) << '\n';
+      std::cout << crane::string_capped(std::string("echo: ") + line) << '\n';
       _loop_n = n_;
     }
   }
@@ -65,7 +67,9 @@ void CountDown::announce(uint64_t n) {
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << std::string("counting ") + std::to_string(_loop_n) << '\n';
+      std::cout << crane::string_capped(std::string("counting ") +
+                                        std::to_string(_loop_n)) <<
+      '\n';
       _loop_n = n_;
     }
   }
@@ -73,7 +77,7 @@ void CountDown::announce(uint64_t n) {
 }
 
 /// Multiple arguments: two nat params, recurse on first
-void CountDown::repeat_msg(uint64_t n, std::string msg) {
+void CountDown::repeat_msg(uint64_t n, const std::string &msg) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   uint64_t _loop_n = n;
@@ -99,10 +103,8 @@ void CountDown::run_fixpoint() {
 }
 
 /// Helper: compare two strings
-bool CountDown::string_eq(std::string s1, std::string s2) {
-  switch (
-      (s1 == s2 ? Comparison::EQ
-                : (s1 < s2 ? Comparison::LT : Comparison::GT))) {
+bool CountDown::string_eq(std::string_view s1, std::string_view s2) {
+  switch (static_cast<Comparison>(crane::string_compare(s1, s2))) {
   case Comparison::EQ: {
     return true;
   }
@@ -118,7 +120,7 @@ void CountDown::co_count_down() {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(std::move(line), "stop")) {
+    if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       return;
     } else {
       std::cout << std::string("tick") << '\n';
@@ -133,10 +135,10 @@ void CountDown::co_two_prints() {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(line, "stop")) {
+    if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       return;
     } else {
-      std::cout << std::string("got: ") + std::move(line) << '\n';
+      std::cout << crane::string_capped(std::string("got: ") + line) << '\n';
       std::cout << std::string("---") << '\n';
     }
   }
@@ -149,10 +151,10 @@ void CountDown::co_echo_loop() {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(line, "quit")) {
+    if (string_eq(std::string_view{line}, std::string_view("quit"))) {
       return;
     } else {
-      std::cout << std::string("echo: ") + std::move(line) << '\n';
+      std::cout << crane::string_capped(std::string("echo: ") + line) << '\n';
     }
   }
   return;
@@ -165,24 +167,26 @@ void CountDown::co_announce(uint64_t round) {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(std::move(line), "stop")) {
+    if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       std::cout << std::string("done") << '\n';
       return;
     } else {
-      std::cout << std::string("round ") + std::to_string(_loop_round) << '\n';
+      std::cout << crane::string_capped(std::string("round ") +
+                                        std::to_string(_loop_round)) <<
+      '\n';
       _loop_round = (_loop_round + 1);
     }
   }
   return;
 }
 
-void CountDown::co_repeat(std::string msg) {
+void CountDown::co_repeat(const std::string &msg) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(std::move(line), "stop")) {
+    if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       return;
     } else {
       std::cout << msg << '\n';

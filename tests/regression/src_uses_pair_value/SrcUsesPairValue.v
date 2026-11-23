@@ -38,5 +38,5 @@ Definition t : bool :=
 End SrcUsesPairValue.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "src_uses_pair_value" SrcUsesPairValue.

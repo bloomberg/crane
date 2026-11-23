@@ -9,6 +9,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -103,7 +104,7 @@ struct RecursiveMonadic {
   /// 3. Recursive collect: transforms each element with effect
   static List<int64_t> collect_lengths(const List<std::string> &xs);
   /// 4. Recursive with two recursive calls (tree-like)
-  static uint64_t repeat_action(uint64_t n, std::string msg);
+  static uint64_t repeat_action(uint64_t n, const std::string &msg);
 
   /// 5. Recursive with match in the middle
   template <typename F0>

@@ -353,6 +353,6 @@ Definition sample_ledger_all_present : bool :=
 End PendantSumtreeRoundtripCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extraction "pendant_sumtree_roundtrip" PendantSumtreeRoundtripCase.

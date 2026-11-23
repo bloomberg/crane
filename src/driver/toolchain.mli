@@ -23,6 +23,9 @@ exception NoOcamloptFound
     termination code and the compiler's captured stderr. *)
 exception OcamloptError of int * string
 
+(** Whether Crane is targeting the BDE standard library. *)
+val is_bde : unit -> bool
+
 (** [compile_cpp ?shouldlink ?includes ?flags ?outfile ?errfile infile]
     compiles [infile] with [clang++]. By default it emits an object file next to
     [infile]; [shouldlink = true] instead links an executable. [includes] become
@@ -68,3 +71,7 @@ val compile_ocaml :
     @raise Failure when the test executable exits unsuccessfully *)
 val compile_and_test :
   ?outfile:string -> ?errfile:string -> string -> string
+
+(** Crane's C++ runtime header directory ([theories/cpp]), found from the
+    loaded [Crane] theory. *)
+val crane_runtime_include : unit -> string option

@@ -18,7 +18,7 @@ let expr : type p. expr:(p Expr.t -> unit) -> stmts:(p Stmt.t list -> unit) -> p
   let each = List.iter expr in
   match e with
   | Local _ | Entity _ | Method_value _ | Projection_value _ | Allocate _ | Literal _ | Convertible_to _ | Abort _
-  | Enum_value _ | In_place | In_place_index _ | Holds_alternative _ | Declval _ | Type_name _ | Type_member _
+  | Enum_value _ | In_place | In_place_index _ | Holds_alternative _ | Declval _ | Baked_value _ | Type_name _ | Type_member _
   | Numeral _ | Foreign_text _ | Runtime _ | Concept_application _ | This | Shared_from_this _ ->
     ()
   | Call (_, f, args) ->
@@ -50,6 +50,7 @@ let expr : type p. expr:(p Expr.t -> unit) -> stmts:(p Stmt.t list -> unit) -> p
   | Variant_get_if (_, e) ->
     expr e
   | Suspend (_, e) -> expr e
+  | Coerce (_, e) -> expr e
   | Lambda l -> stmts l.body
   | Aggregate a -> each a.values
   | Local_aggregate a -> each a.values

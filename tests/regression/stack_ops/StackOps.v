@@ -109,5 +109,5 @@ Definition t : (nat * bool) * nat * (nat * nat * nat) * nat :=
 End StackOps.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "stack_ops" StackOps.

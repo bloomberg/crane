@@ -108,7 +108,7 @@ MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
 
 /// TEST 4: Closure returned from nested match.
 /// Tests return_captures_by_value through Sif branches.
-uint64_t MemSafetyProbe10::choose_fn(const std::optional<bool> &o, uint64_t v,
+uint64_t MemSafetyProbe10::choose_fn(std::optional<bool> o, uint64_t v,
                                      uint64_t n) {
   if (o.has_value()) {
     const bool &b = *o;

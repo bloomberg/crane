@@ -38,18 +38,15 @@
 #include <utility>
 #include <variant>
 
+#include "aggregate.h"
 #include "shared_block.h"
 
 namespace crane {
 
 CRANE_RC_POLICY_BEGIN
 
-// [f] applied to each field of [x], an alternative: a plain aggregate, its
-// fields bound as a pack (C++26 structured binding packs).
-template <class T, class F> void each_field(T &x, F &&f) {
-  auto &[... fields] = x;
-  (f(fields), ...);
-}
+// [f] applied to each field of [x], an alternative: a plain aggregate.
+template <class T, class F> void each_field(T &x, F &&f) { aggregate::each(x, f); }
 
 template <class... Ts> class shared_variant {
   static_assert(sizeof...(Ts) > 0, "crane::shared_variant: at least one alternative");

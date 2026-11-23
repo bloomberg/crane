@@ -79,7 +79,7 @@ Definition test_error := NatWrapper.get_size NatWrapper.error_result.
 End IndParam.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
-Require Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.Std.
+Require Import Crane.Mapping.NatIntStd.
 
 Crane Extraction "ind_param" IndParam.

@@ -88,10 +88,14 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(concrete_result = false) ?(e
   let sub = local_var_subst_expr ~keep_cast ~concrete_result ~extra_args target repl in
   match e with
   | Any_cast (ty, Local id) when keep_cast && Id.equal id target ->
-    Cpp_passes.Erasure.unbox ty (match repl with Any_cast (_, inner) -> inner | r -> r)
-  | (Any_cast (_, (Call (_, Local id, _) as call)) | Tolerant_any_cast (_, (Call (_, Local id, _) as call)))
+    Coerce.unbox ty (match Cpp_ir.Typed.head repl with Any_cast (_, inner) -> inner | _ -> repl)
+  | Any_cast (_, (Call (_, Local id, _) as call)) | Tolerant_any_cast (_, (Call (_, Local id, _) as call))
     when concrete_result && Id.equal id target ->
     sub call
+  | Coerce _
+    when (keep_cast || concrete_result)
+         && match Cpp_ir.Typed.head e with Any_cast _ | Tolerant_any_cast _ -> true | _ -> false ->
+    sub (Cpp_ir.Typed.head e)
   | Call (o, Local id, args) when extra_args <> [] && Id.equal id target ->
     Call (o, repl, List.map sub args @ extra_args)
   | Local id when Id.equal id target -> repl
@@ -272,37 +276,43 @@ let concrete_results convert ids =
     forwarding-ref template parameters for function-typed params, except
     those at [non_fwd_source_indices] (source order), which keep their
     function type.  A [std::shared_ptr] parameter is taken by [const &],
-    any other by [const] value: ownership is not consulted, unlike
+    any other by [const] value ({!Cpp_ir.Param_mode.const_copied}):
+    ownership is not consulted, unlike
     {!Ownership.wrap_param_by_ownership}, so a lifted helper copies what an owned
     parameter would have moved.
 
     @param convert_fn  converts an [Core.Type.t] to a [cpp_type] (typically
       [convert_core_type_to_cpp_type env tvar_names])
     @param base_temps  the template parameters the callable params are appended to
-    @return [(cpp_params, all_temps_with_funs)] *)
+    @return [(cpp_params, modes, all_temps_with_funs)], [modes] how each
+      parameter is passed, by name *)
 let build_lifted_cpp_params ?(non_fwd_source_indices = []) (convert_fn : _ -> Cpp_ir.Lowered.Type.t)
     (base_temps : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters) params =
   let n_total = List.length params in
   let is_non_fwd_source j = List.mem j non_fwd_source_indices in
   let is_non_fwd_db j = List.mem (n_total - 1 - j) non_fwd_source_indices in
-  let cpp_params =
+  let modes =
     List.map
       (fun (id, ty) ->
         let cpp_ty = convert_fn ty in
-        match cpp_ty with
-        | Shared_pointer _ -> (id, (Reference (Lvalue, Const cpp_ty) : Cpp_ir.Lowered.Type.t))
-        | _ -> (id, Const cpp_ty) )
+        let mode =
+          match cpp_ty with
+          | Shared_pointer _ -> Cpp_ir.Param_mode.lent
+          | _ -> Cpp_ir.Param_mode.const_copied
+        in
+        ((id, Cpp_ir.Param_mode.declare mode.form cpp_ty), (id, mode)) )
       params
   in
-  let unwrap_fun_ty : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t option = function
-    | Const (Function _ as f) -> Some f
+  let cpp_params, modes = List.split modes in
+  let unwrap_fun_ty x ty : Cpp_ir.Lowered.Type.t option =
+    match Cpp_ir.Param_mode.value_type (List.assoc x modes) ty with
     | Function _ as f -> Some f
     | _ -> None
   in
   let fun_tys =
     List.filter_map
       (fun (x, ty, j) ->
-        match unwrap_fun_ty ty with
+        match unwrap_fun_ty x ty with
         | Some (Function (dom, cod_f)) when not (is_non_fwd_source j) ->
           let cod_f : Cpp_ir.Lowered.Type.t = if is_cpp_unit_type cod_f then Void else cod_f in
           Some
@@ -312,20 +322,23 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) (convert_fn : _ -> Cp
       (List.mapi (fun j (x, ty) -> (x, ty, j)) (List.rev cpp_params))
   in
   let n_params = List.length cpp_params in
+  let forwards j (x, ty) =
+    match unwrap_fun_ty x ty with Some (Function _) -> not (is_non_fwd_db j) | _ -> false
+  in
+  let modes = List.mapi (fun j (x, ty) -> (x, if forwards j (x, ty) then Cpp_ir.Param_mode.forwarded else List.assoc x modes)) cpp_params in
   let cpp_params =
     List.mapi
       (fun j (x, ty) ->
-        match unwrap_fun_ty ty with
-        | Some (Function _) when not (is_non_fwd_db j) ->
+        if forwards j (x, ty) then
           (x,
             (Reference (Forwarding, Cpp_ir.Build.named_variable (fun_tparam_id (n_params - j - 1))) :
               Cpp_ir.Lowered.Type.t))
-        | _ -> (x, ty) )
+        else (x, ty) )
       cpp_params
   in
   let extra_temps = List.map (fun (_, t, n) -> (t, n)) fun_tys in
   let all_temps_with_funs = base_temps @ extra_temps in
-  (cpp_params, all_temps_with_funs)
+  (cpp_params, modes, all_temps_with_funs)
 
 (** [generalize_lambda_only_tparams temps params ret body] moves a lifted
     helper's undeducible type parameters into the lambda that is their only
@@ -551,7 +564,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
   in
   let find_self_id id = Option.map fst (find_self id) in
   let call occurrence f args : Cpp_ir.Lowered.Expr.t =
-    Call ({yields = Untyped; params = Unknown; constructs = None; occurrence}, f, args)
+    Call ({yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence}, f, args)
   in
   (* The self id this application spine calls, with every argument along it
      in one source-order list -- an inner application's arguments come
@@ -586,6 +599,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
         Lambda
           { type_params = [];
             binders = [];
+            modes = [];
             fixpoint = None;
             moved = [];
             params = List.rev params_rev;

@@ -72,7 +72,10 @@ proofs and implementation still "match up" in a human's head.
 Crane aims for **safe by construction** code:
 
 - smart pointers and value types, instead of raw `new`/`delete`,
-- carefully controlled sharing and mutation,
+- carefully controlled sharing and mutation: mutable state (the `ST` monad's
+  arrays and references) is passed by reference only to the functions that
+  write it, and a non-owning view (`std::string_view`, `std::span`) that
+  would outlive its owner is copied into an owning value or refused,
 - concurrency built on top of [software transactional memory (STM)](https://en.wikipedia.org/wiki/Software_transactional_memory) style
   abstractions, rather than ad-hoc locking.
 
@@ -117,20 +120,31 @@ Different projects have different C++ "worlds":
 Crane avoids hard-coding mappings from Rocq to C++.
 Instead it provides:
 
-- a **macro language** for custom extraction of Rocq definitions,
+- **typed mappings**: type-class instances, selected by the files a
+  development imports, that give a Rocq type's C++ type as structured data
+  and state how it is copied, read, written and passed, and what each mapped
+  operation does with its arguments;
 - a way to define **effect interfaces** and monadic APIs with user-chosen
-  C++ representations, and
-- a choice of **allocation strategy** — atomic `std::shared_ptr`, a non-atomic
-  reference-counted handle, BDE's allocator-aware pointers, or scoped arenas —
-  selected per extraction without changing the source program, since no
-  generated call site names an allocation directly.
+  C++ representations; and
+- a choice of **representation and allocation strategy** (atomic
+  `std::shared_ptr`, a non-atomic reference-counted handle, BDE's
+  allocator-aware pointers, shared variants, scoped arenas), selected per
+  extraction without changing the source program, since no generated call
+  site names an allocation directly.
 
 This makes Crane **adaptable**:
 
 - you can map Rocq's `option` to `std::optional<T>` or to a house-style
-  optional type,
+  optional type by importing a different mapping file,
 - you can decide how a particular effect (e.g. `IO`, `STM`) should be represented
   and sequenced in C++.
+
+A mapping's contract is what lets the generated code stay efficient without
+giving up safety: because an operation declares that it only reads an
+argument, Crane can pass a `std::string_view` or a `const&`; because one
+declares that it writes in place, Crane passes a mutable reference only
+there. Crane checks a mapping's shape and capabilities; the C++ it contains
+is trusted to keep the contract it states.
 
 ---
 
@@ -141,7 +155,7 @@ usable by any Rocq programmer:
 
 - Bloomberg-specific integrations (e.g. BDE) are optional modules,
 - the core extraction targets "plain" modern C++,
-- the macro and effect mechanisms are open-ended.
+- the mapping and effect mechanisms are open-ended.
 
 You can adopt Crane in a non-Bloomberg codebase and still get idiomatic C++
 tailored to your own libraries and conventions.

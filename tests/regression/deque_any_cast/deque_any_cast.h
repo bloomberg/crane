@@ -69,12 +69,13 @@ struct DequeAnyCast {
         if (l.empty()) {
           _result = _tcI0::m_id();
         } else {
-          const auto &x = l.front();
-          std::deque<typename _tcI0::m_carrier> rest(l.begin()+1, l.end());
+          const typename _tcI0::m_carrier &x = l.front();
+          std::deque<typename _tcI0::m_carrier> rest =
+              std::deque<typename _tcI0::m_carrier>(l.begin() + 1, l.end());
           const auto &m_op0 = _tcI0::m_op;
           crane::obj _x = _tcI0::m_id;
           _stack.emplace_back(_after_mfold_in_cons{x});
-          _stack.emplace_back(_call{rest});
+          _stack.emplace_back(_call{std::move(rest)});
         }
       } else {
         auto _f = std::move(std::get<_after_mfold_in_cons>(_popped));

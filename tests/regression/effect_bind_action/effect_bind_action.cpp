@@ -25,10 +25,10 @@ int64_t EffectBindAction::conditional_effect(bool flag) {
 }
 
 /// 3. Option match inside bind: conditional effect based on env
-std::string EffectBindAction::maybe_override(std::string name,
-                                             std::string default0) {
+std::string EffectBindAction::maybe_override(const std::string &name,
+                                             const std::string &default0) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(std::move(name).c_str());
+    auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   return [&]() -> std::string {
@@ -74,7 +74,7 @@ std::string EffectBindAction::echo_if(bool flag) {
 }
 
 /// 6. Effect action that's a function application (not inlined)
-std::string EffectBindAction::helper(std::string s) {
+std::string EffectBindAction::helper(const std::string &s) {
   std::cout << s << '\n';
   return s;
 }

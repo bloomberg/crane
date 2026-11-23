@@ -43,5 +43,5 @@ Definition t : bool := Nat.eqb (get_reg_pair (execute_fin sample 2) 2) 55.
 End FinOperatesOnPairs.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "fin_operates_on_pairs" FinOperatesOnPairs.

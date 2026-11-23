@@ -74,6 +74,80 @@ let template_parameters : type p. p t -> p Template.parameters -> p Template.par
       (k, x) )
     ps
 
+(** [unbox ty u] is [u] with its types rewritten by [ty]. *)
+let unbox ty (u : 'p Unbox.t) : 'p Unbox.t =
+  match u with To t -> To (ty t) | Or_keep t -> Or_keep (ty t) | List (a, b) -> List (ty a, ty b)
+
+(** [erase_shape ty s] is [s] with its type rewritten by [ty]. *)
+let erase_shape ty (s : 'p Erase_shape.t) : 'p Erase_shape.t =
+  match s with Boxed_whole -> Boxed_whole | At_signature t -> At_signature (ty t)
+
+(** [arrows ty a] is [a] with its groups' types and its result rewritten by
+    [ty], in that order. *)
+let arrows ty (a : 'p Arrows.t) : 'p Arrows.t =
+  let groups = list (list ty) a.groups in
+  {groups; result = ty a.result}
+
+(** [value_type ty v] is [v] with its types rewritten by [ty]. *)
+let value_type ty (v : 'p Value_type.t) : 'p Value_type.t =
+  match v with
+  | Typed t -> Typed (ty t)
+  | Closure a -> Closure (arrows ty a)
+  | Function_name (r, a) -> Function_name (r, arrows ty a)
+  | Never | Deduced _ -> v
+
+(** [slot_type ty s] is [s] with its types rewritten by [ty]. *)
+let slot_type : type p. (p Type.t -> p Type.t) -> p Slot_type.t -> p Slot_type.t =
+ fun ty s ->
+  match s with
+  | Exactly t -> Exactly (ty t)
+  | Template_parameter t -> Template_parameter (opt ty t)
+  | Forwarded | View _ | Free | Join -> s
+
+(** [coercion ty c] is [c] with every type in it rewritten by [ty]: the
+    value's, the slot's, then the plan's. *)
+let coercion ty (c : 'p Coercion.t) : 'p Coercion.t =
+  let rec plan (p : 'p Coercion.plan) : 'p Coercion.plan =
+    match p with
+    | Regroup_curried (a, b) ->
+      let a = ty a in
+      Regroup_curried (a, ty b)
+    | Nest t -> Nest (opt ty t)
+    | Eta_short e -> Eta_short {e with domain = list ty e.domain}
+    | Eta_global e ->
+      let declared = opt ty e.declared in
+      Eta_global {e with declared; into = opt ty e.into}
+    | Name_closure -> Name_closure
+    | Name_at t -> Name_at (opt ty t)
+    | Erase_as s -> Erase_as (erase_shape ty s)
+    | Convert_to t -> Convert_to (ty t)
+    | Represent (a, b) ->
+      let a = ty a in
+      Represent (a, ty b)
+    | Box_value (t, b) -> Box_value (ty t, b)
+    | Recover_box r ->
+      let into = ty r.into in
+      Recover_box
+        { into;
+          lambda =
+            opt
+              (fun (cod, p) ->
+                let cod = ty cod in
+                (cod, opt plan p) )
+              r.lambda }
+    | Recover_call r ->
+      let domain = list ty r.domain in
+      let args = list (opt plan) r.args in
+      Recover_call {domain; args; result = opt plan r.result}
+    | Box_list_deep -> Box_list_deep
+    | Recast_carrier t -> Recast_carrier (ty t)
+    | Cast_box {into; tolerant} -> Cast_box {into = ty into; tolerant}
+    | Moving (x, p) -> Moving (x, plan p)
+  in
+  let from = value_type ty c.from in
+  let into = slot_type ty c.into in
+  {from; into; plan = plan c.plan}
+
 (** [lambda m l] is [l] with its body, return type and parameter types
     rewritten, in that order. *)
 let lambda m (l : 'p Lambda.t) : 'p Lambda.t =
@@ -94,7 +168,7 @@ let expr : type p. p t -> p Expr.t -> p Expr.t =
     let c = opt (fun (c : p Foreign.custom) -> {c with custom_yields = opt ty c.custom_yields}) c in
     Entity (r, list ty ts, c)
   | Call (s, f, args) ->
-    let yields : p Call.result = match s.yields with Yields t -> Yields (ty t) | Untyped -> Untyped in
+    let yields = value_type ty s.yields in
     let params : p Call.params = match s.params with Types ts -> Types (list ty ts) | Unknown -> Unknown in
     let args = arguments m args in
     let f = ex f in
@@ -114,6 +188,9 @@ let expr : type p. p t -> p Expr.t -> p Expr.t =
   | Suspend (t, e) ->
     let e = ex e in
     Suspend (ty t, e)
+  | Coerce (c, e) ->
+    let e = ex e in
+    Coerce (coercion ty c, e)
   | Allocate (k, t) -> Allocate (k, ty t)
   | Aggregate a ->
     let values = list ex a.values in
@@ -167,6 +244,7 @@ let expr : type p. p t -> p Expr.t -> p Expr.t =
     Variant_get (ty t, e)
   | Holds_alternative t -> Holds_alternative (ty t)
   | Declval t -> Declval (ty t)
+  | Baked_value (t, s) -> Baked_value (ty t, s)
   | Type_name t -> Type_name (ty t)
   | Binary (o, a, b) ->
     let b = ex b in
@@ -182,17 +260,13 @@ let expr : type p. p t -> p Expr.t -> p Expr.t =
   | Tolerant_any_cast (t, e) ->
     let e = ex e in
     Tolerant_any_cast (ty t, e)
-  | Unbox (u, e) ->
-    let u : p Unbox.t =
-      match u with To t -> To (ty t) | Or_keep t -> Or_keep (ty t) | List (a, b) -> List (ty a, ty b) in
-    Unbox (u, ex e)
+  | Unbox (u, e) -> Unbox (unbox ty u, ex e)
   | Convert (t, e) ->
     let e = ex e in
     Convert (ty t, e)
   | Erase_callable (s, e) ->
     let e = ex e in
-    let s : p Erase_shape.t = match s with Boxed_whole -> Boxed_whole | At_signature t -> At_signature (ty t) in
-    Erase_callable (s, e)
+    Erase_callable (erase_shape ty s, e)
   | Erased_call (f, a) ->
     let a = ex a in
     Erased_call (ex f, a)
@@ -218,8 +292,11 @@ let stmt : type p. p t -> p Stmt.t -> p Stmt.t =
   | Declare (x, t, b) -> Declare (x, ty t, b)
   | Bind_variable (x, b, e) ->
     let b : p Binding.t =
-      match b with Declare (t, c) -> Declare (ty t, c) | Declare_static t -> Declare_static (ty t)
-        | Existing -> Existing
+      match b with
+      | Declare (t, c) -> Declare (ty t, c)
+      | Declare_deduced (v, c) -> Declare_deduced (value_type ty v, c)
+      | Declare_static t -> Declare_static (ty t)
+      | Existing -> Existing
     in
     Bind_variable (x, b, ex e)
   | Expression e -> Expression (ex e)

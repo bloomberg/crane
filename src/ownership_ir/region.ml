@@ -152,6 +152,13 @@ let closure_reads d t =
   go d [] t
 
 let worth_moving_ref worth r args =
+  if Base.Mapping_plan.is_type_head r then
+    (* A typed-mapped type is worth a move unless its copy model makes a copy
+       cheap ({!Base.Mapping_plan.copies_cheaply}). *)
+    not
+      (Base.Mapping_plan.copies_cheaply (Base.Mapping_plan.find r) ~argument:(fun i ->
+           match List.nth_opt args i with Some t -> not (worth t) | None -> false))
+  else
   (not (Base.Table.is_enum_inductive r))
   && (not (Base.Table.is_coinductive r))
   && ( (not (Base.Table.is_custom r))
@@ -186,6 +193,11 @@ let rec worth_moving_cpp : type p. p Cpp_ir.Type.t -> bool = function
    coinductive's node, a shared variant's alternative. *)
 let shares_ref r = Base.Table.is_coinductive r || Base.Table.is_shared_variant r
 
+(* A typed-mapped type whose copy retains one identity ([RetainIdentity]). *)
+let retains_identity r =
+  Base.Mapping_plan.is_type_head r
+  && (Base.Mapping_plan.find r).copy = Base.Mapping_descriptor.Retain_identity
+
 (* What a copy of a value of the Core type [ty] is: a retain of a block a
    closure or a handle points at, its bits where moving it gains nothing
    ({!worth_moving}) or there is none (an erased value), else a semantic
@@ -207,7 +219,7 @@ let rec copy_of_type ty =
     match Base.Table.lookup_typedef_unchecked kn with
     | Some body -> copy_of_type (Base.Core_util.type_subst_list args body)
     | None -> Some Duplicate )
-  | Core.Type.Global_app {head = r; _} when shares_ref r -> Some Retain
+  | Core.Type.Global_app {head = r; _} when shares_ref r || retains_identity r -> Some Retain
   (* A mapped type's copy copies its arguments: it is its bits only where
      theirs are. *)
   | Core.Type.Global_app {head = r; type_arguments = args; _} ->
@@ -230,7 +242,7 @@ let rec copy_of_cpp : type p. p Cpp_ir.Type.t -> copy =
  fun ty ->
   match ty with
   | Shared_pointer _ | Function _ -> Retain
-  | Entity_application (r, _, _) when shares_ref r -> Retain
+  | Entity_application (r, _, _) when shares_ref r || retains_identity r -> Retain
   | Entity_application ((Names.GlobRef.ConstRef kn as r), args, _)
     when (not (Base.Table.is_custom r))
          && (not (Base.Table.is_promoted_type_var r || Base.Table.is_erased_type_const r))
@@ -305,15 +317,24 @@ let rec strip =
   function Core.Expr.Coerce {value = t; _} | Core.Expr.Boxed_value {value = t; _}
     | Core.Expr.Lambda_group_barrier {value = t; _} -> strip t | t -> t
 
-(* What a match's pattern variables are parts of: the variable it matches,
-   when it matches one. *)
-let bind_parts parents d ~n scrut =
+(* Whether the custom match [branches] binds the pattern variable [j] of its
+   branch [k] as a variable of its own, a copy rather than a part of the
+   scrutinee: its template declares it by value. *)
+let copied_binder branches k j =
+  Base.Table.is_custom_match branches
+  && Cpp_ir.Foreign_template.declared_by_value (Base.Table.find_custom_match branches) k j
+
+(* What the pattern variables of a match's branch [k] are parts of: the
+   variable it matches, when it matches one, unless the branch binds the
+   variable as a copy of its own ({!copied_binder}). *)
+let bind_parts ?(k = 0) ?(branches = [||]) parents d ~n scrut =
   let rec go parents l =
     if l >= d + n then parents
     else
       let parents =
         match strip scrut with
-        | Core.Expr.Bound_variable {index = i; _} -> Parents.add l (d - i) parents
+        | Core.Expr.Bound_variable {index = i; _} when not (copied_binder branches k (l - d)) ->
+          Parents.add l (d - i) parents
         | _ -> Parents.remove l parents
       in
       go parents (l + 1)
@@ -353,10 +374,12 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
     let parents' = bind parents d ~n in
     whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
   | Core.Expr.Match {scrutinee = scrut; branches; _} ->
+    let k = ref (-1) in
     Array.fold_left
       (fun acc {Core.Match.Branch.binders = ids; body = body; _} ->
+        incr k;
         let n = List.length ids in
-        let parents' = bind_parts parents d ~n scrut in
+        let parents' = bind_parts ~k:!k ~branches parents d ~n scrut in
         Levels.union acc (leave parents' d (free parents' (d + n) body)) )
       (free parents d scrut) branches
   | Core.Expr.Global _
@@ -455,11 +478,24 @@ let scrutinee_consumed ty scrut branches =
       branches
 
 (* How many times an argument of [r] is evaluated: an inline custom splices
-   it as often as its template names it. *)
+   it as often as its template names it, and an operation mapping evaluates
+   each argument once, into a slot its template reads
+   ({!Cpp_passes.Shared_args}). *)
 let evaluations r =
+  if Base.Table.is_mapped_operation r then fun _ -> 1
+  else
   match Base.Table.inline_custom_text r with
   | Some s when Base.Table.is_inline_custom r -> Cpp_ir.Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
+
+(* Whether argument [k] of [r] is only borrowed for the call: an operation
+   mapping's argument it does not own ({!Base.Mapping_operation.owns}) --
+   read, written in place or ignored -- is never moved into it. *)
+let borrowed_by r =
+  if Base.Table.is_mapped_operation r then
+    let owned = Base.Mapping_operation.owned_call_arguments (Base.Mapping_operation.find r) in
+    fun k -> not (Option.default true (List.nth_opt owned k))
+  else fun _ -> false
 
 let sequential_bind effects use = Core_plan.Effects.lookup effects use = Some {operation = Bind; mode = Sequential}
 
@@ -636,10 +672,16 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
          binder may be an argument, [sz0 (let r := g m in sz1 r)], and what
          reads [sz0] after the let is the same handler. *)
       let read_after = Levels.union (free parents d t) (Levels.union (Levels.diff s.outside s.kept) entered) in
+      (* A part the frame keeps beside its whole is saved before the whole
+         ({!Control_to_cpp.Frame}): the whole may still be moved in after it,
+         but not a part while its whole is kept. *)
       let last l =
         (not (Levels.mem l copied))
         && (not (Levels.exists (overlap parents l) read_after))
-        && not (Levels.exists (overlap parents l) (Levels.remove l s.kept))
+        && not
+             (Levels.exists
+                (fun m -> overlap parents l m && not (List.mem l (ancestors parents m)))
+                (Levels.remove l s.kept))
       in
       saves := {save_at = s.let_at; saved = List.map (fun (b, l) -> (b, l, last l)) s.kept_at} :: !saves;
       Levels.union saved (walk ~consumed ~pinned parents d after_save t)
@@ -674,7 +716,7 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
         walk ?tail:(saved_at d action use.occurrence ~outside:(Levels.union live pinned)) ~pinned parents d
           (leave parents' d live_body) action )
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args} when Base.Table.is_inline_custom r ->
-      unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
+      unsequenced ~evaluated:(evaluations r) ~inspected:(borrowed_by r) ~pinned parents d live args
     (* A local fixpoint applied where it is written binds its parameters to
        its arguments in order: each is followed by the later ones alone, and
        by what the fixpoint reads, which it reads as it runs, after them all.
@@ -731,12 +773,16 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
        it hands over -- so what follows the scrutinee is what the branches
        read besides them. *)
     | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; _} ->
+      let k = ref (-1) in
       let after_scrut =
         Array.fold_left
           (fun acc {Core.Match.Branch.binders = ids; body = body; _} ->
+            incr k;
             let n = List.length ids in
             let tail = if bound_in_place ty branches then tail else None in
-            let live_body = walk ~consumed ?tail ~pinned (bind_parts parents d ~n scrut) (d + n) live body in
+            let live_body =
+              walk ~consumed ?tail ~pinned (bind_parts ~k:!k ~branches parents d ~n scrut) (d + n) live body
+            in
             Levels.union acc (leave (bind parents d ~n) d live_body) )
           Levels.empty branches
       in
@@ -853,13 +899,25 @@ module Binding = struct
 
   (* A let binds by reference the field it projects out of a record that is
      not moved there. *)
+  (* Or the component a mapped operation returns as a canonical borrow of
+     its argument ([fst p] is [p.first]), worth a copy, out of a variable
+     the region does not own: a component stored in place moves with its
+     owner, so the owner must be one nothing here moves from. *)
   let projects_in_place ~owned ~fate ty a =
-    Core_plan.Escape.is_shared_ptr_type ty
-    &&
     match a with
     | Core.Expr.Match {scrutinee = Core.Expr.Bound_variable {index = k; occurrence = o};
                        branches = [|{Core.Match.Branch.body = Core.Expr.Bound_variable _; _}|]; _} ->
-      not (owned k o && fate o = Last_use)
+      Core_plan.Escape.is_shared_ptr_type ty && not (owned k o && fate o = Last_use)
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _}; arguments = args}
+      when Base.Table.is_mapped_operation g -> (
+      worth_moving ty
+      &&
+      match Base.Mapping_operation.canonical_borrow_origin (Base.Mapping_operation.find g) with
+      | Some i -> (
+        match List.nth_opt args i with
+        | Some (Core.Expr.Bound_variable {index = k; occurrence = o}) -> not (owned k o)
+        | _ -> false )
+      | None -> false )
     | _ -> false
 
   (* A variant match takes apart a scrutinee the region owns, binding its
@@ -1075,7 +1133,10 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
       | Custom ->
         if Binding.pair_by_value ~owned:(owned_var owned d) scrut branches then
           Levels.union owned (fields (fun _ (_, ty) -> worth_moving ty))
-        else owned
+        else
+          (* A binder the template declares as a variable of its own holds a
+             copy, whoever owns the scrutinee. *)
+          Levels.union owned (fields (fun j (_, ty) -> copied_binder branches k j && worth_moving ty))
       | Record _ -> (
         match List.find_map (function Fields f when f.case == case -> Some f.by_value | _ -> None) arms with
         | Some by_value ->
@@ -1499,7 +1560,7 @@ let eta_captures p ts =
   List.map (fun i -> (i, mode_of moved i)) (read_indices ts)
 
 module Local_passing = struct
-  type t = Core_plan.Callable_abi.passing option list
+  type t = Cpp_ir.Param_mode.ownership option list
 
   let recorded : ((Core.Occurrence.t * int) * t) list ref = Base.State.cell Base.State.Extraction []
 

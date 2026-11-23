@@ -993,9 +993,8 @@ let kept_instance_of_projection ~lex x args =
            (record_fields_of_type (instance_class_ty ~lex a)) )
     args
 
-(** The value parameters of class field [use] called through [inst] in
-
-   [lex], as the method declares them.
+(** The type of class field [use] called through [inst] in [lex], as the
+   method declares it, instantiated at the call.
 
    Two substitutions, because the projection's type quantifies over the
    class's carrier as well as the method's own variables and the use's
@@ -1005,17 +1004,24 @@ let kept_instance_of_projection ~lex x args =
    absorbs its argument and says [std::any].  The carrier, the dictionary
    and the erased type arguments all stand in front of the value
    parameters. *)
-let projection_value_domains ~lex (use : Core.Global_use.t) inst =
+let projection_type ~lex (use : Core.Global_use.t) inst =
   match Base.Table.find_type use.callee with
-  | exception Not_found -> []
+  | exception Not_found -> None
   | ty ->
     let ty =
       match resolve_meta (instance_class_ty ~lex inst) with
       | Core.Type.Global_app {type_arguments = [carrier]; _} -> subst_dict_carrier carrier ty
       | _ -> ty
     in
-    core_domains
-      (Base.Core_util.instantiate_written ~reader:"projection_value_domains" use ty)
+    Some (Base.Core_util.instantiate_written ~reader:"projection_value_domains" use ty)
+
+(** The value parameters of class field [use] called through [inst] in
+    [lex], as the method declares them ({!projection_type}). *)
+let projection_value_domains ~lex (use : Core.Global_use.t) inst =
+  match projection_type ~lex use inst with
+  | None -> []
+  | Some ty ->
+    core_domains ty
     |> List.filter (fun t ->
            match resolve_meta t with
            | Core.Type.Erased _ -> false
@@ -1054,5 +1060,6 @@ let static_projection ~lex (use : Core.Global_use.t) args : Elaborated_call.stat
         | a :: rest -> if a == inst then i else position (i + 1) rest
         | [] -> assert false
       in
-      {Elaborated_call.instance = position 0 args; domains; missing} )
+      let codomain = Option.map core_codomain (projection_type ~lex use inst) in
+      {Elaborated_call.instance = position 0 args; domains; missing; codomain} )
     inst

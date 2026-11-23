@@ -73,10 +73,20 @@ and custom (c : l Foreign.custom) : r Foreign.custom = {inline = c.inline; custo
 
 (** [signature s] is a call's signature at the resolved phase. *)
 and signature (s : l Call.signature) : r Call.signature =
-  { yields = (match s.yields with Yields t -> Yields (type_ t) | Untyped -> Untyped);
+  { yields = value_type s.yields;
     params = (match s.params with Types ts -> Types (list type_ ts) | Unknown -> Unknown);
     constructs = s.constructs;
     occurrence = s.occurrence }
+
+(** [value_type v] is what a call yields at the resolved phase. *)
+and value_type : l Value_type.t -> r Value_type.t = function
+  | Typed t -> Typed (type_ t)
+  | Closure a -> Closure (arrows a)
+  | Function_name (g, a) -> Function_name (g, arrows a)
+  | Never -> Never
+  | Deduced d -> Deduced d
+
+and arrows (a : l Arrows.t) : r Arrows.t = {groups = list (list type_) a.groups; result = type_ a.result}
 
 (** [capture c] is a written capture; raises {!Owed} at one not yet
     decided ({!Capture.Runs_in_place}, {!Capture.Stored}). *)
@@ -94,6 +104,7 @@ and lambda (l : l Lambda.t) : r Lambda.t =
     capture = capture l.capture;
     moved = l.moved;
     binders = l.binders;
+    modes = l.modes;
     fixpoint = l.fixpoint }
 
 (** [aggregate a] is the aggregate initialisation [a] at the resolved
@@ -114,6 +125,7 @@ and expr : l Expr.t -> r Expr.t = function
   | Forward (t, e) -> Forward (type_ t, expr e)
   | Lambda l -> Lambda (lambda l)
   | Suspend _ -> owed "a suspended constructor"
+  | Coerce _ -> owed "an unexpanded coercion"
   | Allocate (k, t) -> Allocate (k, type_ t)
   | Aggregate a -> Aggregate (aggregate a)
   | Local_aggregate a -> Local_aggregate (aggregate a)
@@ -158,6 +170,7 @@ and expr : l Expr.t -> r Expr.t = function
   | Variant_get (t, e) -> Variant_get (type_ t, opt expr e)
   | Holds_alternative t -> Holds_alternative (type_ t)
   | Declval t -> Declval (type_ t)
+  | Baked_value (t, s) -> Baked_value (type_ t, s)
   | Type_name t -> Type_name (type_ t)
   | Numeral (r, n) -> Numeral (r, n)
   | Foreign_text s -> Foreign_text s
@@ -185,6 +198,7 @@ and expr : l Expr.t -> r Expr.t = function
 (** [binding b] is the binding [b] at the resolved phase. *)
 and binding : l Binding.t -> r Binding.t = function
   | Declare (t, b) -> Declare (type_ t, b)
+  | Declare_deduced (_, b) -> Declare (Auto, b)
   | Existing -> Existing
   | Declare_static t -> Declare_static (type_ t)
 
@@ -306,6 +320,7 @@ let method_ (m : l Method.t) : r Method.t =
     is_noexcept = m.is_noexcept;
     is_conversion = m.is_conversion;
     binders = m.binders;
+    modes = m.modes;
     receiver_binder = m.receiver_binder;
     loop = m.loop }
 
@@ -363,6 +378,7 @@ let function_ (f : l Function.t) : r Function.t =
       | Definition (ps, body) -> Definition (typed ps, stmts body)
       | Declaration ps -> Declaration (list (fun (x, t) -> (x, type_ t)) ps) );
     binders = f.binders;
+    modes = f.modes;
     loop = f.loop }
 
 (** [decl d] is [d] at the resolved phase; raises {!Owed} also at a callable

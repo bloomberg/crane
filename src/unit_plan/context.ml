@@ -7,12 +7,12 @@ type std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
   move : string; (* "std::move" or "bsl::move" *)
-  forward : string; (* "std::forward" or "bsl::forward" *)
+  forward : string; (* "std::forward", in either flavour: BDE has no [bsl::forward] *)
   logic_error : string; (* "std::logic_error" or "bsl::logic_error" *)
   ns : string; (* "std" or "bsl": general prefix *)
   string : string; (* "std::string" or "bsl::string" *)
   same_as : string; (* "std::same_as" or "same_as" *)
-  declval : string; (* "std::declval" or "bsl::declval" *)
+  declval : string; (* "std::declval", in either flavour *)
   convertible_to : string; (* "std::convertible_to" or "convertible_to" *)
   holds_alternative : string; (* "std::holds_alternative" or "bsl::holds_alternative" *)
   get_if : string; (* "std::get_if" or "bsl::get_if" *)
@@ -20,6 +20,9 @@ type std_names = {
   variant : string; (* "std::variant", "bsl::variant" or "crane::variant" *)
   variant_header : Base.Table.header; (* the header [variant] is declared in *)
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
+  unreachable : string; (* "std::unreachable" (C++23), or "crane::unreachable" where the build is older *)
+  unreachable_header : Base.Table.header; (* the header [unreachable] is declared in *)
+  placeholder : bool; (* an unread binding written [_] (C++26), or by its own name where the build is older *)
 }
 
 let default_std_names =
@@ -40,6 +43,9 @@ let default_std_names =
     variant = "std::variant";
     variant_header = Base.Table.Standard "variant";
     enable_from_this = "std::enable_shared_from_this";
+    unreachable = "std::unreachable";
+    unreachable_header = Base.Table.Standard "utility";
+    placeholder = true;
   }
 
 type t = {

@@ -24,13 +24,13 @@ LoopifyItreeReified::count_taus(uint64_t fuel,
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
-      const std::shared_ptr<ITree<uint64_t>> &t = _f.t;
+      std::shared_ptr<ITree<uint64_t>> t = std::move(_f.t);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = UINT64_C(0);
       } else {
         uint64_t fuel_ = fuel - 1;
-        auto _cs = t->observe();
+        auto _cs = std::move(t)->observe();
         if (std::holds_alternative<typename ITree<uint64_t>::Ret>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<uint64_t>::Ret>(&_cs);
           auto _x = _itf.value;
@@ -39,7 +39,7 @@ LoopifyItreeReified::count_taus(uint64_t fuel,
           const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
           auto t_ = _itf.next;
           _stack.emplace_back(_after_count_taus_in_TauF{});
-          _stack.emplace_back(_call{t_, fuel_});
+          _stack.emplace_back(_call{std::move(t_), fuel_});
         } else {
           const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
           auto _x = crane_event_as<crane::obj>(_itf.effect);

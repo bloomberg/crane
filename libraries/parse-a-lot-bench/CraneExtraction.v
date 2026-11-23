@@ -3,6 +3,10 @@ From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Import Mapping.ZInt.
+From Crane Require Import Mapping.Descriptor.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
 (* Baseline list mapping (O(N) tail copy -> O(N^2) structural recursion): *)
 (* From Crane Require Import Mapping.DequeList. *)
 (* cons-list mapping (crane::list): O(1) cons/tail, no element boxing.
@@ -43,20 +47,41 @@ Crane Extract Inlined Constant String.eqb => "(%a0 == %a1)".
 Crane Extract Inlined Constant Ascii.N_of_ascii => "(static_cast<unsigned int>(static_cast<unsigned char>(%a0)))".
 Crane Extract Inlined Constant Ascii.compare =>
   "((%a0) < (%a1) ? Datatypes::Comparison::LT : (%a0) == (%a1) ? Datatypes::Comparison::EQ : Datatypes::Comparison::GT)".
-Crane Extract Inlined Constant BinNat.N.compare =>
-  "((%a0) < (%a1) ? Datatypes::Comparison::LT : (%a0) == (%a1) ? Datatypes::Comparison::EQ : Datatypes::Comparison::GT)".
 
 (* ----------------------------------------------------------------- *)
 (* Custom mapping: NativeMap -> immer::map (replaces HashTrie)         *)
-(* Keyed directly on the integer position (%t0 = key type -> int64_t   *)
-(* via Mapping.ZInt; %t1 = value type). immer::map's default           *)
-(* std::hash<int64_t>/std::equal_to suffice, so no custom hash needed. *)
+(* The lexer memo is keyed by a (pointer, position) pair; [crane::hash] *)
+(* hashes a pair from its components' [std::hash]es.                  *)
 (* ----------------------------------------------------------------- *)
-Crane Extract Inlined Constant NativeMap.t     => "immer::map<%t0, %t1>" From "immer/map.hpp".
-Crane Extract Inlined Constant NativeMap.empty => "immer::map<%t0, %t1>{}" From "immer/map.hpp".
-Crane Extract Inlined Constant NativeMap.set   => "(%a0).set(%a1, %a2)".
-Crane Extract Inlined Constant NativeMap.get   =>
-  "[&](){ auto _p = (%a0).find(%a1); return _p ? std::optional<%t1>(*_p) : std::optional<%t1>(); }()".
+Crane Extract Inlined Constant NativeMap.t     => "immer::map<%t0, %t1, crane::hash<%t0>>" From "immer/map.hpp" "crane_hash.h".
+Crane Extract Inlined Constant NativeMap.empty => "immer::map<%t0, %t1, crane::hash<%t0>>{}" From "immer/map.hpp" "crane_hash.h".
+
+(** [get] only reads its map. *)
+#[export] Instance native_map_get_mapping (K V : Type) :
+  OperationMapping (Ref (@NativeMap.get K V)) :=
+  {| operation_headers := ["immer/map.hpp"; "optional"; "type_traits"]%pstring;
+     operation_cpp :=
+       Expr "[&](){ auto _p = (%arg(m)).find(%arg(k)); using _v = std::decay_t<decltype(*_p)>; return _p ? std::optional<_v>(*_p) : std::optional<_v>(); }()"%pstring;
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "m"%pstring; argument_use := Read |};
+          {| argument_name := "k"%pstring; argument_use := Read |}]
+         ReturnValue [] |}.
+
+(** [set] takes its map: at the map's last use Crane passes it as an rvalue,
+    and immer's rvalue [set] then updates the map in place when nothing else
+    holds it.  Where the map stays live it is passed as an lvalue, and the
+    [const&] [set] copies the path as before. *)
+#[export] Instance native_map_set_mapping (K V : Type) :
+  OperationMapping (Ref (@NativeMap.set K V)) :=
+  {| operation_headers := ["immer/map.hpp"%pstring];
+     operation_cpp := Expr "(%arg(m)).set(%arg(k), %arg(v))"%pstring;
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "m"%pstring; argument_use := Take |};
+          {| argument_name := "k"%pstring; argument_use := Take |};
+          {| argument_name := "v"%pstring; argument_use := Take |}]
+         ReturnValue [] |}.
 
 (* ----------------------------------------------------------------- *)
 (* Custom mapping: IntDFA -> O(1) flex_vector operator[] / char cast   *)
@@ -134,6 +159,17 @@ From Crane.Libraries.ParseALot.Lexer.DFA Require Import DFA.
 From Crane.Libraries.ParseALot.Lexer Require Import Regex.
 
 Crane Guard Compare Literal.LXR.Mem.STT.TabT.R.Defs.Regexes.re_compare => Eq.
+
+(* Each lexer's rules with their DFAs built, computed once here and extracted
+   as data: [crane_extracted] holds the tables as constant-initialised static
+   blocks rather than code building them at startup.  The bake compiles the
+   lexer against the immer headers the build uses: set CRANE_BAKE_FLAGS (e.g.
+   "-I$HOME/cpp/immer -DIMMER_NO_THREAD_SAFETY=1") where they are not on the
+   default include path. *)
+Crane Bake
+  Crane.Libraries.ParseALot.Examples.JSON.Parser.JSON.json_srules
+  Crane.Libraries.ParseALot.Examples.CSV.Parser.CSV.csv_srules
+  Crane.Libraries.ParseALot.Examples.XML.Parser.XML.xml_srules.
 
 (* Baseline for the codegen-perf pass: arena OFF. The retired per-type
    `Crane Arena`/`Crane Arena Shared regex` directives were removed (scoped-arena

@@ -36,5 +36,5 @@ Definition flatten_tree {A : Type} (t : tree A) : list (list A) :=
 End NestedTree.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
+Require Import Crane.Mapping.Std.
 Crane Extraction "nested_tree" NestedTree.

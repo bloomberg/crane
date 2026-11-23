@@ -3,8 +3,8 @@
 From Stdlib Require Import Nat Lists.List.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
-Require Crane.Mapping.NatGMP.
+Require Import Crane.Mapping.Std.
+Require Import Crane.Mapping.NatGMP.
 
 Module NatGMPTest.
 
@@ -36,10 +36,5 @@ Definition another_big : nat := 1000.
 Definition add_big (n : nat) : nat := n + 200.
 
 End NatGMPTest.
-
-Crane Extract Inductive bool =>
-  "bool"
-  [ "true" "false" ]
-  "if (%scrut) { %br0 } else { %br1 }".
 
 Crane Extraction "nat_gmp" NatGMPTest.

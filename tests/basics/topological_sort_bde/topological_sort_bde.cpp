@@ -7,10 +7,12 @@
 #include <bsl_optional.h>
 #include <bsl_stdexcept.h>
 #include <bsl_string.h>
+#include <bsl_string_view.h>
 #include <bsl_type_traits.h>
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
+#include <crane_string.h>
 
 namespace BloombergLP {}
 

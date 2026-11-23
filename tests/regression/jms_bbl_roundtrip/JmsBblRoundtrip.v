@@ -29,5 +29,5 @@ Definition t : bool := Nat.eqb (pc (execute_bbl (execute_jms sample 200))) 102.
 End JmsBblRoundtrip.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "jms_bbl_roundtrip" JmsBblRoundtrip.

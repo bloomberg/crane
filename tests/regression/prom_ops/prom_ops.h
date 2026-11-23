@@ -423,17 +423,17 @@ struct PromOps {
   static inline const bool check_pc_bound = []() {
     state10 after = execute_wpm10(
         set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).pc10 < UINT64_C(4096);
+    return after.pc10 < UINT64_C(4096);
   }();
   static inline const bool check_acc_bound = []() {
     state10 after = execute_wpm10(
         set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).acc10 < UINT64_C(16);
+    return after.acc10 < UINT64_C(16);
   }();
   static inline const bool check_bank_bound = []() {
     state10 after = execute_wpm10(
         set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).cur_bank10 < UINT64_C(8);
+    return after.cur_bank10 < UINT64_C(8);
   }();
   static inline const bool check_regs_length = []() {
     state10 after = execute_wpm10(
@@ -448,7 +448,7 @@ struct PromOps {
   static inline const bool check_sel_rom_bound = []() {
     state10 after = execute_wpm10(
         set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
-    return std::move(after).sel_rom10 < UINT64_C(16);
+    return after.sel_rom10 < UINT64_C(16);
   }();
   static inline const bool check_stack_length = []() {
     state10 after = execute_wpm10(
@@ -458,12 +458,12 @@ struct PromOps {
   static inline const bool check_prom_addr_bound = []() {
     state10 after = execute_wpm10(
         set_prom_params10(sample10, UINT64_C(2048), UINT64_C(99), true));
-    return std::move(after).prom_addr10 < UINT64_C(4096);
+    return after.prom_addr10 < UINT64_C(4096);
   }();
   static inline const bool check_prom_data_bound = []() {
     state10 after = execute_wpm10(
         set_prom_params10(sample10, UINT64_C(3), UINT64_C(155), true));
-    return std::move(after).prom_data10 < UINT64_C(256);
+    return after.prom_data10 < UINT64_C(256);
   }();
   static inline const bool check_rom_length = []() {
     state10 after = execute_wpm10(

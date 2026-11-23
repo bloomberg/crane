@@ -307,7 +307,7 @@ struct EncodeOps {
     }
   };
 
-  static bool pair_in_range(const std::pair<uint64_t, uint64_t> &p);
+  static bool pair_in_range(std::pair<uint64_t, uint64_t> p);
   static inline const bool test_encode_bytes_in_range =
       ((((((((((pair_in_range(instruction1::clb().encode1()) &&
                 pair_in_range(instruction1::cmc().encode1())) &&

@@ -17,6 +17,6 @@ Module Use (X : DerivedType).
 End Use.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Separate Extraction Use.

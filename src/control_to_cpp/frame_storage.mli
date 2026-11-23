@@ -51,13 +51,14 @@ type parameter =
 val value_inductive : abbreviations:bool -> Core.Type.t -> bool
 
 (** Whether a frame can hold by pointer a parameter of Core type [ty] that
-    its callable passes as [passing] says: lent by const reference, or under
+    its callable passes with the ownership [ownership]
+    ({!Cpp_ir.Param_mode.ownership}): borrowed, so lent by const reference, or under
     Reuse with NonAtomicRc owned by value -- either lives for the call, and
     nothing moves out of it -- at a value inductive, named as itself or
     through an abbreviation ({!Core_to_cpp.Ownership.wrap_param_by_ownership}
     declares either by reference).  A parameter of no runtime value
     ([None]) is held by none.  NonAtomicRc is the unit [u]'s. *)
-val passed_holdable : Unit_plan.Context.t -> Core_plan.Callable_abi.passing option -> Core.Type.t -> bool
+val passed_holdable : Unit_plan.Context.t -> Cpp_ir.Param_mode.ownership option -> Core.Type.t -> bool
 
 (** Whether a frame can hold the parameter at position [i] of the loop [l]
     by pointer, as the plan of the local fixpoint's function [l] is made
@@ -76,15 +77,17 @@ val local_holdable : Unit_plan.Context.t -> Control_ir.Term.loop -> int -> bool 
     {!Lower}'s machines of functions). *)
 val check_local : int -> planned:bool -> declared:(unit -> bool) -> unit
 
-(** [plan ~pointer_fields ~in_place ~holdable l]: how the frames of the
-    machine of [l] hold its parameters; [pointer_fields c] are the declared
-    arguments of the constructor [c] stored behind the pointer, and an
+(** [plan ~cell_fields ~in_place ~holdable l]: how the frames of the
+    machine of [l] hold its parameters; [cell_fields c] are the declared
+    arguments of the constructor [c] stored in a cell behind the pointer (a
+    field holding its value in the slot, a shared variant's, lies in the
+    value as any other does), and an
     in-place coercion ([in_place from into]) changes nothing about where a
     value lies.  A parameter [holdable] rejects is represented so that no
     frame can hold it by pointer: it is held by value, and what derives from
     it lies in the frame. *)
 val plan :
-  pointer_fields:(Names.GlobRef.t -> int list option) ->
+  cell_fields:(Names.GlobRef.t -> int list option) ->
   in_place:(Core.Type.t -> Core.Type.t -> bool) ->
   holdable:(parameter -> bool) ->
   Control_ir.Term.loop ->

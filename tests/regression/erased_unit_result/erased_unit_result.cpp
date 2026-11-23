@@ -2,11 +2,7 @@
 
 void ErasedUnitResult::touch(uint64_t) { return; }
 
-bool ErasedUnitResult::is_tt() {
-  {
-    return true;
-  }
-}
+bool ErasedUnitResult::is_tt() { return true; }
 
 bool ErasedUnitResult::through_sig(
     const SigT<crane::obj, std::pair<crane::obj, crane::obj>> &p) {

@@ -58,5 +58,5 @@ Definition test_outer : nat := outer_use 4 5.
 End ExtractDirectives.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "extract_directives" ExtractDirectives.

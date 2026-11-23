@@ -1,14 +1,13 @@
 #include "effect_workflow.h"
 
 /// 1. Use 5 different effect types in one function
-std::string EffectWorkflow::full_workflow(std::string prefix) {
+std::string EffectWorkflow::full_workflow(const std::string &prefix) {
   int64_t _x = static_cast<int64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::steady_clock::now().time_since_epoch())
           .count());
   std::string tmp = [&]() -> std::string {
-    std::string _n =
-        std::filesystem::path(std::move(prefix)).filename().string();
+    std::string _n = std::filesystem::path(prefix).filename().string();
     if (_n.empty() || _n == "." || _n == "..") _n = "tmp";
     std::filesystem::path _base = std::filesystem::temp_directory_path();
     std::random_device _rng;
@@ -44,7 +43,7 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
 }
 
 /// 2. Match on bool from create_directory inside a chain
-std::string EffectWorkflow::conditional_create(std::string path) {
+std::string EffectWorkflow::conditional_create(const std::string &path) {
   bool ok = [&]() -> bool {
     std::error_code _ec;
     std::filesystem::create_directories(std::filesystem::path(path), _ec);
@@ -67,7 +66,7 @@ void EffectWorkflow::read_and_set() {
 }
 
 /// 4. Recursive function using effects
-uint64_t EffectWorkflow::repeat_log(uint64_t n, std::string msg) {
+uint64_t EffectWorkflow::repeat_log(uint64_t n, const std::string &msg) {
   if (n <= 0) {
     return UINT64_C(0);
   } else {
@@ -77,13 +76,14 @@ uint64_t EffectWorkflow::repeat_log(uint64_t n, std::string msg) {
             std::chrono::steady_clock::now().time_since_epoch())
             .count());
     std::cout << msg << '\n';
-    uint64_t r = repeat_log(n_, std::move(msg));
+    uint64_t r = repeat_log(n_, msg);
     return (r + 1);
   }
 }
 
 /// 5. Effect returning option, matched, then another effect
-std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
+std::string EffectWorkflow::env_or_create(const std::string &name,
+                                          const std::string &path) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
@@ -97,7 +97,7 @@ std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
       std::filesystem::create_directories(std::filesystem::path(path), _ec);
       return !_ec;
     }();
-    setenv(std::move(name).c_str(), path.c_str(), 1);
+    setenv(name.c_str(), path.c_str(), 1);
     return path;
   }
 }
@@ -106,7 +106,7 @@ std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
 int64_t EffectWorkflow::read_length() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(std::move(line).length());
+  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
   return len;
 }
 

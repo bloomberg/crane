@@ -4,6 +4,7 @@
 #include "obj.h"
 #include <atomic>
 #include <chrono>
+#include <crane_string.h>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -11,6 +12,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -103,13 +105,13 @@ struct EffectComplexReturn {
   /// 2. Effect returning an option
   static std::optional<std::string> maybe_read(bool do_read);
   /// 3. Void effect followed by value effect
-  static std::string print_then_read(std::string prompt);
+  static std::string print_then_read(const std::string &prompt);
   /// 4. Multiple effects with different return types
-  static std::pair<int64_t, std::string> mixed_effects(std::string name);
+  static std::pair<int64_t, std::string> mixed_effects(const std::string &name);
   /// 5. Clock effect in arithmetic
   static int64_t elapsed_ms();
   /// 6. Effect result used to build a list
   static List<std::string> read_n(uint64_t n);
   /// 7. Env effect result used in conditional
-  static std::string env_or_prompt(std::string name);
+  static std::string env_or_prompt(const std::string &name);
 };

@@ -89,8 +89,8 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
   (* Without bodies the methods are their heads alone: what planning reads
      ({!plan_instance_methods}), decided by the very code that generates
      them. *)
-  let gen_body env e =
-    if bodies then gen_stmts cx env (fun x -> Return (Some x)) e
+  let gen_body ~ret env e =
+    if bodies then gen_stmts cx (Slot.at ~ret ()) env (Destination.return_ ~ret) e
     else []
   in
   let inner_ty, inner_body, tc_temps, lam_params = instance_layers cx ty body in
@@ -388,6 +388,9 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
           (* The parameter's C++ type at the arity its declaration was written
              at ([Declared_at]): the arrows substitution moved into the
              callable's parameter list go back where the signature had them. *)
+          (* A method of an instance's struct takes each value parameter
+             by value, its own. *)
+          let instance_param_mode = Cpp_ir.Param_mode.owned in
           let param_cpp_ty n core_ty =
             let ty = Types.cpp_ir_of_core_type cx base_env type_var_names core_ty in
             match
@@ -481,7 +484,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
-            with_cpp_return_type cx (Some method_ret_ty) @@ fun () ->
+            let ret = Some method_ret_ty in
             if bodies then begin_body cx ~owner:name ();
             if List.for_all (fun b -> b.kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
@@ -494,8 +497,8 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                    static value with a nullary accessor method. *)
                 let stmts =
                   with_method_env_types cx ~outer:outer_binders base_env [] (fun () ->
-                      with_region cx inner_body (fun () ->
-                          gen_body base_env inner_body ) )
+                      with_region cx ~ret inner_body (fun () ->
+                          gen_body ~ret base_env inner_body ) )
                 in
                 ([], method_ret_ty, stmts, [])
               | Some (eta_params, call_expr) ->
@@ -579,21 +582,20 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                     ~owned:(fun i ->
                       let name, _, cpp_ty = params_db.(i) in
                       List.exists (fun (n, _, _) -> Id.equal n name) cast_info
-                      || not (Ownership.declared_by_reference cpp_ty) )
+                      || Cpp_ir.Param_mode.holds_own_value instance_param_mode )
                     ~declared:(fun i -> let _, _, cpp_ty = params_db.(i) in Some cpp_ty)
                     ~ty:(fun i -> snd (List.nth core_vars i))
                 in
                 let stmts =
                   with_method_env_types cx ~outer:outer_binders env renamed_eta (fun () ->
-                    with_region cx ~owned call_expr (fun () ->
-                        gen_body env call_expr ) )
+                    with_region cx ~ret ~owned call_expr (fun () ->
+                        gen_body ~ret env call_expr ) )
                 in
                 let stmts =
                   List.fold_left (fun acc (name, _body_ty, body_cpp) ->
                     let param_name =
                       Id.of_string ("_p_" ^ Id.to_string name) in
-                    (Cpp_ir.Stmt.Bind_variable
-                       (name, Declare (body_cpp, None), Cpp_passes.Erasure.unbox body_cpp (Local param_name))
+                    (Cpp_ir.Typed.bind (name) (body_cpp) (Coerce.unbox body_cpp (Local param_name))
                       : Cpp_ir.Lowered.Stmt.t)
                     :: acc
                   ) stmts (List.rev cast_info)
@@ -672,12 +674,12 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                       Ownership.owned_parameters (Array.length binders_db)
                         ~owned:(fun i ->
                           binders_db.(i).kind = `Value
-                          && not (Ownership.declared_by_reference binders_db.(i).cpp_ty) )
+                          && Cpp_ir.Param_mode.holds_own_value instance_param_mode )
                         ~declared:(fun i -> Some binders_db.(i).cpp_ty)
                         ~ty:(fun i -> binders_db.(i).core_ty)
                     in
-                    with_region cx ~owned inner_body (fun () ->
-                        gen_body env inner_body ) )
+                    with_region cx ~ret ~owned inner_body (fun () ->
+                        gen_body ~ret env inner_body ) )
               in
               (cpp_params, method_ret_ty, stmts, tc_tparams)
           in
@@ -713,6 +715,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
               is_noexcept = false;
               is_conversion = false;
               binders = [];
+              modes = List.map (fun (x, _) -> (x, instance_param_mode)) cpp_params;
               receiver_binder = None;
               loop = None }
           in

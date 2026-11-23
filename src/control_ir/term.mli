@@ -151,10 +151,14 @@ val invariant_parameters : loop -> bool list
     of a value derived from the parameter -- by such patterns' binders,
     lets, and coercions [in_place] says keep the value's representation --
     each perhaps through a coercion so.  A copy of a derived value shares
-    the pointers it holds.  [false] for each where no call continues
-    [l]. *)
+    the pointers it holds.  What the body of a loop an entry enters reads
+    of the scope is a copy a frame kept, stored so only where it is the
+    handle of a cell ([cell_fields] gives the fields holding their value in
+    one), not where the field holds the value itself.  [false] for each
+    where no call continues [l]. *)
 val parts_passed :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
+  cell_fields:(Names.GlobRef.t -> int list option) ->
   in_place:(Core.Type.t -> Core.Type.t -> bool) ->
   loop ->
   bool list

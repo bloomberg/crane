@@ -11,13 +11,6 @@ open Util
 open Lowering_state
 open Base.Type_util
 
-(** Whether a parameter declared
-    at [ty] is a reference the body does not own. *)
-let rec declared_by_reference : Cpp_ir.Lowered.Type.t -> bool = function
-  | Reference _ | Const _ -> true
-  | In_namespace (_, t) -> declared_by_reference t
-  | _ -> false
-
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
     [owned] says are passed by value, of a type worth moving.  That is one
     {!Ownership_ir.Region.worth_moving} accepts as reading [ty]; but an erased Core
@@ -50,6 +43,36 @@ let infer_owned_flags cx ?owner body params =
     settled
   | _ -> read_off_body ()
 
+(** What the function whose [body] stands under [params], innermost first,
+    does with each of them ({!Core_plan.Access}): what {!Core_plan.Access}
+    settled for the global [owner] where it covers [params], and otherwise
+    -- a lambda, a local function -- what its own body reads. *)
+let infer_access cx ?owner body params =
+  match Option.bind owner (own_access cx) with
+  | Some settled when List.length settled = List.length params -> settled
+  | _ -> Core_plan.Access.read_off ~settled:(settled_access cx) (List.length params) body
+
+(** The typed mapping of the Core type [ty], if it is a typed-mapped type,
+    named as itself or through type abbreviations. *)
+let rec core_mapped_plan ty =
+  match resolve_meta ty with
+  | Core.Type.Global_app {head = r; _} when Base.Mapping_plan.is_type_head r -> Some (Base.Mapping_plan.find r)
+  | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); _} when not (Base.Table.is_custom r) ->
+    Option.bind (Base.Table.lookup_typedef_unchecked kn) core_mapped_plan
+  | _ -> None
+
+(** The typed mapping of the parameter type [core] or [cpp_ty], if it is a
+    typed-mapped type ({!core_mapped_plan}). *)
+let mapped_plan ?core (cpp_ty : Cpp_ir.Lowered.Type.t) =
+  match core with
+  | Some ty -> core_mapped_plan ty
+  | None -> (
+    match cpp_ty with
+    | Entity_application (r, _, _) | In_namespace (_, Entity_application (r, _, _))
+      when Base.Mapping_plan.is_type_head r ->
+      Some (Base.Mapping_plan.find r)
+    | _ -> None )
+
 (** Whether the C++ type [cpp_ty] names a value inductive
     (an inductive neither enum, coinductive nor custom scalar), as itself or through a type
     abbreviation: [Definition t elt := list (key * elt)] declares [t<T2>] an
@@ -73,6 +96,9 @@ let rec names_value_inductive (cpp_ty : Cpp_ir.Lowered.Type.t) =
    abbreviation stands for the argument written for it. *)
 and abbreviates_value_inductive args body =
   match resolve_meta body with
+  (* A typed-mapped type is lent as its read style says
+     ({!abbreviated_mapping}), not as the inductive it maps. *)
+  | Core.Type.Global_app {head = r; _} when Base.Mapping_plan.is_type_head r -> false
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
     (not (Base.Table.is_enum_inductive r)) && (not (Base.Table.is_coinductive r)) && not (Base.Table.is_custom_scalar_ref r)
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r);
@@ -83,6 +109,30 @@ and abbreviates_value_inductive args body =
   | Core.Type.Variable {variable = j; _} when j >= 1 -> (
     match List.nth_opt args (j - 1) with Some t -> names_value_inductive t | None -> false )
   | _ -> false
+
+(* The typed-mapped type the body [body] of a type abbreviation applied to
+   the C++ types [args] names, through abbreviations: its mapping, and
+   whether each of its arguments copies for free, as {!cpp_lent_by_reference}
+   reads one -- a variable of the abbreviation as the argument written for
+   it, any other off its Core type, as {!core_lent_by_reference} reads the
+   abbreviation unfolded. *)
+let rec abbreviated_mapping args body =
+  match resolve_meta body with
+  | Core.Type.Global_app {head = r; type_arguments = inner; _} when Base.Mapping_plan.is_type_head r ->
+    let argument i =
+      match Option.map resolve_meta (List.nth_opt inner i) with
+      | Some (Core.Type.Variable {variable = j; _}) when j >= 1 -> (
+        match List.nth_opt args (j - 1) with Some t -> is_trivially_copyable_type t | None -> false )
+      | Some t -> core_is_trivially_copyable t
+      | None -> false
+    in
+    Some (Base.Mapping_plan.find r, argument)
+  | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); type_arguments = inner; _} when not (Base.Table.is_custom r)
+    -> (
+    match Base.Table.lookup_typedef_unchecked kn with
+    | Some body -> abbreviated_mapping args (Base.Core_util.type_subst_list inner body)
+    | None -> None )
+  | _ -> None
 
 (* Whether the body [body] of a type abbreviation is a closure: an arrow,
    under the type abstractions erasure removes -- [IFun A B := forall T, A T
@@ -123,6 +173,22 @@ let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
     | _ -> false
   in
   match cpp_ty with
+  (* A typed-mapped type is lent as its canonical read style says
+     ({!Base.Mapping_plan.read_by_value}).  A component is read by value
+     only when copying it is known to be free: one whose cost is unknown --
+     a functor's abstract [A.t], which may be a list -- or one that costs a
+     clone or a retain makes a [ReadByComponents] value lent. *)
+  | Entity_application (r, ts, _) | In_namespace (_, Entity_application (r, ts, _))
+    when Base.Mapping_plan.is_type_head r ->
+    not
+      (Base.Mapping_plan.read_by_value (Base.Mapping_plan.find r) ~argument:(fun i ->
+           match List.nth_opt ts i with Some t -> is_trivially_copyable_type t | None -> false))
+  (* So is one named through an abbreviation, [t1 := nat * bool]. *)
+  | Entity_application ((GlobRef.ConstRef kn as r), args, _)
+    when (not (Base.Table.is_custom r))
+         && Option.has_some (Option.bind (Base.Table.lookup_typedef_unchecked kn) (abbreviated_mapping args)) ->
+    let plan, argument = Option.get (Option.bind (Base.Table.lookup_typedef_unchecked kn) (abbreviated_mapping args)) in
+    not (Base.Mapping_plan.read_by_value plan ~argument)
   | Shared_pointer _ -> true
   | _ when shared_block cpp_ty -> true
   | _ when names_value_inductive cpp_ty -> true
@@ -140,6 +206,22 @@ let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
 let rec core_lent_by_reference cx ty =
   match resolve_meta ty with
   | ty when is_monadic_core_type ty && cx.ctx.input.itree_mode = Reified -> Some true
+  (* A typed-mapped type: its canonical read style, where the Core type of
+     each argument it depends on says whether that argument is read by
+     value -- only when copying it is known to be free, as
+     {!cpp_lent_by_reference} reads it.  An argument the Core type does not
+     determine leaves the C++ type to decide. *)
+  | Core.Type.Global_app {head = r; type_arguments = args; _} when Base.Mapping_plan.is_type_head r -> (
+    let undetermined = ref false in
+    let argument i =
+      match List.nth_opt args i with
+      | Some t when Option.has_some (core_lent_by_reference cx t) -> core_is_trivially_copyable t
+      | _ ->
+        undetermined := true;
+        false
+    in
+    let by_value = Base.Mapping_plan.read_by_value (Base.Mapping_plan.find r) ~argument in
+    if !undetermined then None else Some (not by_value) )
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
     Some ((not (Base.Table.is_enum_inductive r)) && not (Base.Table.is_custom_scalar_ref r))
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); type_arguments = args; _}
@@ -169,13 +251,66 @@ let rec core_lent_by_reference cx ty =
   | Core.Type.Arrow _ | Core.Type.Variable _ -> Some true
   | _ -> None
 
-(** Wraps a C++ parameter type with const/ref based on ownership semantics.
-    An owned parameter is passed by value (the caller moves it in); a
-    borrowed one by const reference where it is lent by reference
-    ({!core_lent_by_reference} of its Core type [core] where that says,
-    {!cpp_lent_by_reference} otherwise), and by value otherwise.  Under
-    [CRANE_CHECK_IR] the two readings are checked against each other. *)
-let wrap_param_by_ownership cx ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+(** How a parameter of C++ type [cpp_ty] is passed ({!Cpp_ir.Param_mode}),
+    and the type it is declared at.  An owned parameter is passed by value
+    (the caller moves it in); a borrowed one by const reference where it is
+    lent by reference ({!core_lent_by_reference} of its Core type [core]
+    where that says, {!cpp_lent_by_reference} otherwise), and by value
+    otherwise.  Under [CRANE_CHECK_IR] the two readings are checked against
+    each other.
+
+    A borrowed parameter of a typed-mapped type whose [access]
+    ({!Core_plan.Access}) asks for more than a read takes the form its
+    access model gives that access (design 6.6, 12.5): [T&] to replace it or
+    to write a mutable value in place, the model's write-through form to
+    write through a handle.  Where [reference_allowed] is false -- a
+    function named as a value, a method -- a mutable reference is a copy by
+    value instead.  Where [view_allowed], a [Preferred] read or write takes
+    the mapping's read or writable view (design 12.5), declared at the view
+    type. *)
+let rec wrap_param_by_ownership cx ?(is_owned = false) ?access ?(reference_allowed = false) ?(view_allowed = false)
+    ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t * Cpp_ir.Param_mode.t =
+  (* A borrowed parameter of a typed-mapped type takes the form its access
+     requires (design 12.5), where that is not the canonical read form. *)
+  let plan = mapped_plan ?core cpp_ty in
+  let physical =
+    match (is_owned, access, plan) with
+    | false, Some r, Some p -> Core_plan.Access.physical ~reference_allowed ~view_allowed p r
+    | _ -> Base.Mapping_plan.As_read
+  in
+  (* A view is declared at the view type, at the mapped type's arguments. *)
+  let mapped_arguments =
+    match cpp_ty with
+    | Entity_application (r, tys, _) | In_namespace (_, Entity_application (r, tys, _))
+      when Base.Mapping_plan.is_type_head r ->
+      Some tys
+    | _ -> None
+  in
+  let physical =
+    match (physical, mapped_arguments) with
+    | Base.Mapping_plan.Physical_view _, None -> Base.Mapping_plan.As_read
+    | physical, _ -> physical
+  in
+  let invalidates = match access with Some (r : Core_plan.Access.requirement) -> r.invalidates | None -> false in
+  let ty, mode =
+  match physical with
+  | Base.Mapping_plan.Physical_view k ->
+    let view : Cpp_ir.Param_mode.view =
+      match k with Base.Mapping_plan.Read_view -> Read_view | Base.Mapping_plan.Write_view -> Write_view
+    in
+    let plan = Option.get plan in
+    ( Base.Mapping_plan.view_type plan k (Option.get mapped_arguments),
+      Cpp_ir.Param_mode.make Borrowed (By_view (view, plan.head)) )
+  | Base.Mapping_plan.Physical_value -> (cpp_ty, Cpp_ir.Param_mode.copied)
+  | Base.Mapping_plan.Physical_const_reference ->
+    (Cpp_ir.Param_mode.declare By_const_reference cpp_ty, Cpp_ir.Param_mode.lent)
+  | Base.Mapping_plan.Physical_mutable_reference ->
+    (Cpp_ir.Param_mode.declare By_reference cpp_ty, Cpp_ir.Param_mode.make Borrowed By_reference)
+  | Base.Mapping_plan.As_read -> wrap_canonical cx ~is_owned ?core cpp_ty
+  in
+  (ty, if invalidates then {mode with Cpp_ir.Param_mode.invalidates_views = true} else mode)
+
+and wrap_canonical cx ~is_owned ?core (cpp_ty : Cpp_ir.Lowered.Type.t) =
   let by_cpp = cpp_lent_by_reference cpp_ty in
   let lent =
     match Option.bind core (core_lent_by_reference cx) with
@@ -189,12 +324,5 @@ let wrap_param_by_ownership cx ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowere
       by_core
     | None -> by_cpp
   in
-  if lent && not is_owned then Reference (Lvalue, Const cpp_ty) else cpp_ty
-
-(** How a parameter declared at [t] -- after {!wrap_param_by_ownership},
-    or as the [F &&] a deduced callable is -- with ownership [owned], is
-    passed. *)
-let param_passing ~owned (t : Cpp_ir.Lowered.Type.t) =
-  match t with
-  | Reference (Forwarding, _) -> Core_plan.Callable_abi.Forwarded
-  | _ -> if owned then Core_plan.Callable_abi.Owned else Core_plan.Callable_abi.Borrowed
+  let mode = if is_owned then Cpp_ir.Param_mode.owned else if lent then Cpp_ir.Param_mode.lent else Cpp_ir.Param_mode.copied in
+  (Cpp_ir.Param_mode.declare mode.form cpp_ty, mode)

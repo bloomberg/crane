@@ -38,14 +38,29 @@ let make_error_file prefix infile =
 (** Report whether Crane is currently targeting the BDE standard library. *)
 let is_bde () = String.equal (Base.Table.std_lib ()) "BDE"
 
-(** Return the configured BDE root without a trailing slash. *)
+(** Return the configured BDE root without a trailing slash, a leading [~]
+    expanded to [HOME] as a shell would: the compiler is run without one, and
+    [Set Crane BDE Directory "~/bde_install/"] is how BDE roots are given. *)
 let normalize_bde_dir () =
   let directory = Base.Table.bde_dir () in
+  let directory =
+    match Sys.getenv_opt "HOME" with
+    | Some home when String.equal directory "~" -> home
+    | Some home when String.starts_with ~prefix:"~/" directory ->
+      home ^ String.sub directory 1 (String.length directory - 1)
+    | _ -> directory
+  in
   let length = String.length directory in
   if length > 0 && Char.equal directory.[length - 1] '/' then
     String.sub directory 0 (length - 1)
   else
     directory
+
+(** The library ABI a BDE program is compiled for: the one the BDE libraries
+    are built with (C++17), whatever [-std] says; otherwise the program
+    references a C++20 ABI tag the libraries do not define and fails to link
+    (scripts/compile-bde.sh passes the same). *)
+let bde_abi = "-DBSLS_LIBRARYFEATURES_FORCE_ABI_CPP17"
 
 (** Convert values into alternating [prefix; value] argument pairs. *)
 let prepend_to_all prefix values =
@@ -100,6 +115,33 @@ let sysroot_args =
       cached := Some args;
       args
 
+(** Locate Crane's C++ runtime header directory ([theories/cpp]).
+
+    Generated C++ sources [#include "crane_fn.h"] and other Crane runtime
+    headers, so the C++ compiler must be pointed at the directory that holds
+    them. This takes the project root, drops a
+    trailing [_build/default] build-context segment so a dune build maps back to
+    the source tree, and appends [theories/cpp]. Recovers the
+    root from the physical location of the loaded [Crane] theory. *)
+let crane_runtime_include () =
+  let crane_dp = Names.DirPath.make [Names.Id.of_string "Crane"] in
+  match Loadpath.find_with_logical_path crane_dp with
+  | [] -> None
+  | lp :: _ ->
+    (* [Loadpath.physical] is the theory root, e.g. [<root>/theories] or, under
+       a dune build, [<root>/_build/default/theories]. *)
+    let project_root = Filename.dirname (Loadpath.physical lp) in
+    let build_suffix =
+      Filename.dir_sep ^ "_build" ^ Filename.dir_sep ^ "default"
+    in
+    let project_root =
+      if Filename.check_suffix project_root build_suffix then
+        Filename.chop_suffix project_root build_suffix
+      else
+        project_root
+    in
+    Some (Filename.concat (Filename.concat project_root "theories") "cpp")
+
 (** Compile or link one C++ source file with [clang++].
 
     Include directories and user flags are kept as distinct argv entries. BDE
@@ -131,6 +173,7 @@ let compile_cpp
       @ (if shouldlink then [] else ["-c"])
       @ [
           "-std=c++20";
+          bde_abi;
           "-Wno-deprecated-literal-operator";
           "-Wno-unused-command-line-argument";
           "-I";
@@ -225,6 +268,7 @@ let compile_and_test ?outfile ?errfile infile =
       [
         "-O2";
         "-std=c++20";
+        bde_abi;
         "-Wno-deprecated-literal-operator";
         "-Wno-unused-command-line-argument";
         "-I";

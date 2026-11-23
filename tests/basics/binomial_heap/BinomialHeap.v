@@ -141,7 +141,7 @@ Definition example2 : key :=
 End BinomialHeap.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
-Require Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.Std.
+Require Import Crane.Mapping.NatIntStd.
 
 Crane Extraction "binomial_heap" BinomialHeap.

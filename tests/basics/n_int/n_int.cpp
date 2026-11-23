@@ -3,7 +3,7 @@
 unsigned int Pos::add_carry(unsigned int x, unsigned int y) {
   if (x == 1u) {
     if (y == 1u) {
-      return (2u * 1u + 1u);
+      return 3u;
     } else if (y % 2u != 0u) {
       unsigned int q = (y - 1u) / 2u;
       return (2u * (q + 1u) + 1u);

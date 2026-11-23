@@ -17,28 +17,15 @@
 // [destroy] of one of its blocks.
 #pragma once
 #include <cstddef>
+#include <tuple>
 #include <type_traits>
 #include <utility>
+#include "aggregate.h"
 
 namespace crane::word_detail {
 
-// The fields of an aggregate, as a type list: its count and first type.
-// (Named functions rather than lambdas in an unevaluated operand, which
-// clang 22 fails on with a structured binding pack.)
-template <class... F> struct fields {
-  static constexpr std::size_t count = sizeof...(F);
-};
-template <class X> auto fields_of(X &x) {
-  auto &[... fs] = x;
-  return fields<std::remove_cvref_t<decltype(fs)>...>{};
-}
-template <class X> using fields_t = decltype(fields_of(std::declval<X &>()));
-template <class X> constexpr std::size_t field_count() { return fields_t<X>::count; }
-template <class L> struct first;
-template <class F0, class... F> struct first<fields<F0, F...>> {
-  using type = F0;
-};
-template <class X> using first_field_t = typename first<fields_t<X>>::type;
+template <class X> constexpr std::size_t field_count() { return aggregate::field_count<X>(); }
+template <class X> using first_field_t = std::tuple_element_t<0, aggregate::fields_t<X>>;
 
 template <class U> constexpr bool is_word_owner();
 

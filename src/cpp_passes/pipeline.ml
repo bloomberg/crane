@@ -88,15 +88,19 @@ let projections = Base.Pipeline_trace.pass "projections" Erasure.lower_projectio
 let conditionals = Base.Pipeline_trace.pass "conditionals" Erasure.lower_conditionals
 let access_moves = Base.Pipeline_trace.pass "access_moves" Erasure.lower_access_moves
 let constexpr = Base.Pipeline_trace.pass "constexpr" Erasure.decide_constexpr
+let immortal_globals = Base.Pipeline_trace.pass "immortal_globals" Erasure.immortal_globals
 let foreign = Base.Pipeline_trace.pass "foreign" Erasure.instantiate_foreign
 let qualifiers = Base.Pipeline_trace.pass "qualifiers" Erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
 let pointer_slots u = Base.Pipeline_trace.pass "pointer_slots" (Erasure.lower_pointer_slots u)
 let unused_bindings = Base.Pipeline_trace.pass "unused_bindings" Erasure.mark_unused_bindings
 let scrutinees = Base.Pipeline_trace.pass "scrutinees" Erasure.name_scrutinees
+let capture_scrutinees = Base.Pipeline_trace.pass "capture_scrutinees" Erasure.capture_scrutinees
 let narrow_captures = Base.Pipeline_trace.pass "narrow_captures" Erasure.narrow_captures
 let captures = Base.Pipeline_trace.pass "captures" Erasure.decide_captures
 let initialisers = Base.Pipeline_trace.pass "initialisers" Erasure.invoke_capturing_initialisers
+
+let coercions = on_decl "coercions" Coercions.decl
 
 type control_check = unit:Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> unit
 
@@ -111,6 +115,10 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
     on_decl "control" (fun d ->
         if Base.Probe.checking () then check_control ~unit:u d;
         d );
+    (* Every value lowering put in a slot is adapted as its coercion plans
+       ({!Coercions.expand}), innermost first: from here on an adapter is
+       the code it is. *)
+    coercions;
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
        fixpoint applied in place binds its parameters to in order
@@ -128,6 +136,17 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
        named once -- after the temporaries went back, so that none of them is
        put back into the text that repeats it. *)
     on_decl "shared_args" Shared_args.transform_decl;
+    (* An argument its callee writes or replaces in place binds a mutable
+       lvalue: one that is not a variable the caller may write is
+       materialised for the call. *)
+    on_decl "in_place_args" (In_place_args.transform_decl u);
+    (* An argument taken as a typed mapping's view is converted by the
+       mapping's declared conversions; a borrowed view escaping its owner is
+       materialised. *)
+    on_decl "view_args" (View_args.transform_decl u);
+    (* A string literal where C++ deduces the type is the string object, not
+       the character array. *)
+    on_decl "deduced_literals" Deduced_literals.transform_decl;
     (* Small local simplifications, each removing something. *)
     on_decl "simplify" Simplify.transform_decl;
     (* An initialiser nested deeper than a compiler will parse becomes a run of
@@ -170,7 +189,9 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     (* A member read moves the member, not the object it is read from. *)
     access_moves;
     (* With every type final, which definitions may be [constexpr]. *)
-    constexpr ]
+    constexpr;
+    (* And which globals hold blocks to make immortal. *)
+    immortal_globals ]
 
 (** With the declaration resolved, each mapping's text is instantiated on
     the way to the printer: what is left to it is to write the pieces.  The
@@ -185,7 +206,7 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     initialiser holding a lambda that captures is invoked in place.  [u] is
     the unit the declaration is of. *)
 let instantiation_passes u =
-  [foreign; qualifiers; pointer_slots u; unused_bindings; scrutinees; narrow_captures; captures; initialisers]
+  [foreign; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
 
 let pass_names =
   Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_plan.Context.detached)
@@ -215,6 +236,7 @@ let checked_before_instantiation : obligation -> bool = function Unlowered_condi
 (** What [o] is and the pass that owes it, as a failed check reports it. *)
 let describe : obligation -> string = function
   | Unresolved_type -> "an undetermined type (Obligation Unresolved_type), owed by the pass that wrote it"
+  | Unlowered_coercion -> "an unexpanded coercion, owed by " ^ coercions.name
   | Opaque_type -> "an unsettled representation (Obligation Opaque_type), owed by " ^ seam
   | Unspellable_binder -> "a custom match binder's unspellable type, owed by " ^ seam
   | Unsettled_callable -> "an unsettled callable constraint, owed by " ^ constraints.name
@@ -259,6 +281,7 @@ let owes u (decl : Erasure.settled) (o : obligation) =
   | Opaque_type -> mentions (function Obligation Opaque_type -> true | _ -> false) decl
   | Unspellable_binder -> Erasure.writes_unspellable_binder decl
   | Unsettled_callable -> compare (constraints.run d) d <> 0
+  | Unlowered_coercion -> compare (coercions.run d) d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
   | Implicit_boxed_read -> rewrites boxed_reads
@@ -336,7 +359,24 @@ let spell_type t =
 (* Under [CRANE_CHECK_IR] the obligations are checked in two halves around
    the instantiation passes ({!checked_before_instantiation}), and the
    instantiated declaration is checked for what it borrows and moves
-   ({!Borrow_projection.check_decl}, {!Ownership_ir.Move_check.check_decl}). *)
+   ({!Borrow_projection.check_decl}, {!Ownership_ir.Move_check.check_decl}).
+   The parameter modes the declaration records are checked against its
+   declared types as lowering leaves it and as the printer is handed it
+   ({!Ownership_ir.Move_check.check_modes}). *)
+(* Under [CRANE_CHECK_IR]: lowering declares every [auto] variable with
+   what it synthesised for the initialiser ({!Cpp_ir.Typed.bind}), so a
+   lowered declaration holds no [Declare (Auto, _)]. *)
+let check_deduced_bindings (d : Cpp_ir.Lowered.Decl.t) =
+  let rec fs (s : Cpp_ir.Lowered.Stmt.t) =
+    ( match s with
+    | Bind_variable (x, Declare (Auto, _), _) ->
+      Base.Probe.violation "deduced binding"
+        Pp.(str "the lowered variable " ++ Names.Id.print x ++ str " is declared auto without its type")
+    | _ -> () );
+    Cpp_ir.Map.stmt (rw ()) s
+  and rw () = Cpp_ir.Map.make ~expr:(fun e -> Cpp_ir.Map.expr (rw ()) e) ~stmt:fs ~type_:Fun.id () in
+  ignore (Cpp_ir.Map.decl (rw ()) d)
+
 let finish ~check_control u decl =
   let trace = traced decl in
   let steps = ref [] in
@@ -356,17 +396,23 @@ let finish ~check_control u decl =
         d' )
       d passes
   in
+  let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
+  if checking then begin
+    Ownership_ir.Move_check.check_modes decl;
+    check_deduced_bindings decl
+  end;
   let decl = run Fun.id (lowered_passes ~check_control u) decl in
+  if checking then check_deduced_bindings decl;
   let settled = Erasure.materialise decl in
   let inj (d : Erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
   note seam decl (inj settled);
-  let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
   let decl = run inj (settled_passes u) settled in
   let early, late = List.partition checked_before_instantiation obligations in
   if checking then check_settled u early decl;
   let decl = run inj (instantiation_passes u) decl in
   if checking then begin
     Borrow_projection.check_decl (inj decl);
+    Ownership_ir.Move_check.check_modes (inj decl);
     Ownership_ir.Move_check.check_decl u (inj decl);
     check_settled u late decl
   end;

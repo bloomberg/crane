@@ -42,7 +42,7 @@ let coerced_slot cx env ~(pos : Cpp_ir.Lowered.Type.t option) slot ~from ~into =
     into)) slot
   else slot
 
-let region cx ~outer ~reads body =
+let region cx ~ret ~outer ~reads body =
   let found = ref [] in
   let env = Base.Common.empty_env () in
   let is_boxed _ occ =
@@ -63,10 +63,10 @@ let region cx ~outer ~reads body =
       found := (occ, pos) :: !found;
       expr ~pos:(match t with Core.Expr.Lambda _ -> pos | _ -> None) ~ret ~slot lex t
     | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} when Base.Table.is_custom r ->
-      with_cpp_return_type cx ret (fun () -> custom ~pos ~slot lex ty r ts)
+      custom ~pos ~ret ~slot lex ty r ts
     | Core.Expr.Construct {arguments = []; _} -> ()
     | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} ->
-      with_cpp_return_type cx ret (fun () -> construction ~pos ~ret ~slot lex ty r ts)
+      construction ~pos ~ret ~slot lex ty r ts
     (* Only the returned value is generated, at no position. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use;
                        arguments = (_ :: _ as args)} when Monadic.is_effect cx Core_plan.Effects.Return use ->
@@ -83,7 +83,7 @@ let region cx ~outer ~reads body =
     | Core.Expr.Let _ -> stmts ~ret:pos lex e
     | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> stmts ~ret lex e
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} -> (
-      expr ~pos:None ~ret lex scrut;
+      scrutinee ~ret lex typ scrut branches occ;
       match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ branches occ with
       | Core_plan.Match_kind.Record _ -> Array.iter (branch ~ret:pos lex) branches
       | Core_plan.Match_kind.Custom ->
@@ -103,6 +103,17 @@ let region cx ~outer ~reads body =
     (* A lambda's body is a region of its own, planned where it begins. *)
     | Core.Expr.Lambda _ -> ()
     | e -> Base.Core_util.ast_iter (expr ~pos:None ~ret lex) e
+  (* A match's scrutinee, generated at no position, under the return type
+     in force -- but a custom match's under the match's own type
+     ({!Match.gen_custom_cpp_case}): a match the scrutinee is returns its
+     value to the template, not out of the enclosing function. *)
+  and scrutinee ~ret lex typ scrut branches occ =
+    let ret =
+      match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ branches occ with
+      | Core_plan.Match_kind.Custom -> Some (Types.cpp_of_core cx (named_env lex) typ)
+      | Core_plan.Match_kind.Record _ | Core_plan.Match_kind.Variant -> ret
+    in
+    expr ~pos:None ~ret lex scrut
   (* A value a constructor stores ({!Construction.gen_stored_value}). *)
   and stored ~pos ~ret ~slot lex e =
     match e with
@@ -113,16 +124,16 @@ let region cx ~outer ~reads body =
      ({!Constructors}). *)
   and construction ~pos ~ret ~slot lex ty r ts =
     let env = named_env lex in
-    let slot = Constructors.into_erased_return cx slot in
+    let slot = Constructors.into_erased_return cx ~ret slot in
     let ty = Constructors.refined_by_slot slot ty in
     with_in_constructor_expr cx true @@ fun () ->
     match Base.Table.record_fields_of_type ty with
     | [] ->
-      let c = Constructors.regular cx env ~expected_ty:pos ty r ts in
+      let c = Constructors.regular cx env ~ret ~expected_ty:pos ty r ts in
       List.iteri
         (fun i e ->
           let p, s =
-            with_cpp_return_type cx None (fun () -> Constructors.regular_field cx env ~is_boxed c ~slot i e)
+            Constructors.regular_field cx env ~is_boxed c ~slot i e
           in
           stored ~pos:p ~ret:None ~slot:s lex e )
         c.args
@@ -135,18 +146,17 @@ let region cx ~outer ~reads body =
         ts
   (* A custom constructor, each argument where its mapping stores it
      ({!Constructors.custom_field}). *)
-  and custom ~pos ~slot lex ty r ts =
+  and custom ~pos ~ret ~slot lex ty r ts =
     let env = named_env lex in
     let var i occ = (is_boxed i occ, Core.Lexenv.type_opt lex i) in
-    let slot = Constructors.into_erased_return cx slot in
-    let ty = Constructors.custom_refined_annotation cx env ~expected_ty:pos ~slot ty r ts in
+    let slot = Constructors.into_erased_return cx ~ret slot in
+    let ty = Constructors.custom_refined_annotation cx env ~ret ~expected_ty:pos ~slot ty r ts in
     with_in_constructor_expr cx true @@ fun () ->
-    let c = Constructors.custom cx env ~expected_ty:pos ~slot ty r in
+    let c = Constructors.custom cx env ~ret ~expected_ty:pos ~slot ty r in
     List.iteri
       (fun i e ->
-        let a = Constructors.custom_field cx ~var env c ~slot r i e in
-        with_cpp_return_type cx a.ret
-          (fun () -> stored ~pos:a.expected ~ret:a.ret ~slot:a.slot lex a.term) )
+        let a = Constructors.custom_field cx ~var env c ~ret ~slot r i e in
+        stored ~pos:a.expected ~ret:a.ret ~slot:a.slot lex a.term )
       ts
   and branch ~ret ?slot lex {Core.Match.Branch.binders = ids; body = body; _} =
     stmts ~ret ?slot (push (List.rev ids) lex) body
@@ -162,7 +172,7 @@ let region cx ~outer ~reads body =
         if core_type_is_unit t then stmts ~ret ~slot lex a else stmts ~ret:(let_result cx env ~ret t) ~slot lex a );
       stmts ~ret ~slot (push [(x, t)] lex) b
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} ->
-      expr ~pos:None ~ret lex scrut;
+      scrutinee ~ret lex typ scrut branches occ;
       let slot =
         match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ branches occ with Core_plan.Match_kind.Record _ ->
           slot | _ -> Slot.empty_slot in
@@ -195,8 +205,7 @@ let region cx ~outer ~reads body =
     | None -> List.iter (expr ~pos:None ~ret lex) args
     | Some inst ->
       let plan =
-        with_cpp_return_type cx ret (fun () ->
-            Calls.plan_call cx ~lex ?expected_ty:pos (named_env lex) inst )
+        Calls.plan_call cx ~ret ~lex ?expected_ty:pos (named_env lex) inst
       in
       let regular_index a =
         let rec go i = function [] -> None | r :: rest -> if r == a then Some i else go (i + 1) rest in
@@ -211,9 +220,8 @@ let region cx ~outer ~reads body =
             (* Whether a local read is a callable decides only the position
                of that read, which holds no coercion. *)
             let ap =
-              with_cpp_return_type cx ret (fun () ->
-                  Calls.argument_position cx ~local_callable:(fun _ _ -> false) (named_env lex)
-                    use.callee plan i a )
+              Calls.argument_position cx ~ret ~local_callable:(fun _ _ -> false) (named_env lex)
+                use.callee plan i a
             in
             let slot =
               { slot with
@@ -228,6 +236,6 @@ let region cx ~outer ~reads body =
   in
   (* A walk that fails leaves the coercions it did not reach unplanned,
      which lowering reports. *)
-  (try stmts ~ret:(current_cpp_return_type cx ()) outer body
+  (try stmts ~ret outer body
    with e when CErrors.noncritical e -> Base.Probe.hit "magic-pos-walk" (fun () -> Printexc.to_string e));
   !found

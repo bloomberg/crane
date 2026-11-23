@@ -807,7 +807,7 @@ struct BranchCallablesCurriedJoin {
       return cf(cg(std::move(c)), UINT64_C(2));
     }
   }();
-  static uint64_t v3(const std::optional<uint64_t> &x);
+  static uint64_t v3(std::optional<uint64_t> x);
   static uint64_t f1(const ptree<std::pair<uint64_t, uint64_t>> &_x,
                      uint64_t x0_, const tree &x1_);
   static inline const uint64_t v4 = f1(

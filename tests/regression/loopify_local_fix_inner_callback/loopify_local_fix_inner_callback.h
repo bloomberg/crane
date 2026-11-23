@@ -16,7 +16,7 @@
 /// adopt an inner fixpoint as a second entry, so f is left recursing
 /// natively.
 struct LoopifyLocalFixInnerCallback {
-  static uint64_t ack(const std::pair<uint64_t, uint64_t> &p);
+  static uint64_t ack(std::pair<uint64_t, uint64_t> p);
   static inline const uint64_t small =
       ack(std::make_pair(UINT64_C(2), UINT64_C(3)));
 };

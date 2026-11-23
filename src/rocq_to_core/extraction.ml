@@ -1747,6 +1747,84 @@ and erased_fix_types env sg ~entries i (fi, ti, ci) =
     try Some (Array.map (fun t -> erase (extract_type env sg [] 1 t [])) ti)
     with e when CErrors.noncritical e -> None
 
+(** [seed_binder_type env sg ~is_fix t a]: the binder [a] stands for, a
+    fresh meta, unified with its declared type [t] before its value is
+    extracted, where that says what inference may not find.  [let body : top
+    nat := ...] fixes the event family [top] spells, which a body built from
+    erased carriers ([ret], [fmap]) leaves a free meta -- and a free meta
+    generalises into a parameter no call supplies when the binding is lifted.
+    So does a local fixpoint's, [let fix go (l : list (nat * A)) ...]: the let
+    generalises its type, so the applications of [go] in the body never tell
+    its parameters what they are, and a parameter left open becomes a variable
+    of the fixpoint's own.  Only a fully informative annotation is given, and
+    one naming a type variable only for a local fixpoint, and only where that
+    variable is the definition's own ({!names_signature_variables}):
+    elsewhere the way this context is numbered need not be the way the term's
+    own variables are, and a value's annotation may be a coercion's target
+    ([Program]'s subset types) rather than the type the value is built at.
+    [~late] is the same question asked once the value is extracted
+    ({!fill_binder_type}). *)
+and seed_binder_type ?(late = false) env sg ~is_fix t1 a =
+  let rec informative_type = function
+    | Core.Type.Unknown | Core.Type.Axiom | Core.Type.Erased _ -> false
+    | Core.Type.Meta {contents = Some t} -> informative_type t
+    | Core.Type.Global_app {type_arguments = l; _} -> List.for_all informative_type l
+    | Core.Type.Arrow {parameter = a; result = b} -> informative_type a && informative_type b
+    | Core.Type.Variable_app {arguments = l; _} -> List.for_all informative_type l
+    | _ -> true
+  in
+  if lang () == Cpp then
+    match
+      try Some (extract_type env sg (db_from_rel_context env) 0 t1 [])
+      with e when CErrors.noncritical e -> None
+    with
+    | Some ty when Int.equal (type_maxvar ty) 0 && informative_type ty ->
+      try_mgu a ty
+    | Some ty when (is_fix || late) && informative_type ty && names_signature_variables env sg t1 ty ->
+      try_mgu a (rigidify ty)
+    | Some ty when is_fix && names_signature_variables ~leading:true env sg t1 ty -> (
+      (* A fixpoint binding types of its own, [let fix go {C}
+         (l : list C) (x : B)]: what the annotation says of [x] it
+         says whatever [C] is, so each [C] is left to inference. *)
+      let rec open_ = function
+        | Core.Type.Unknown -> new_meta ()
+        | Core.Type.Meta {contents = Some t} -> open_ t
+        | Core.Type.Arrow {parameter = x; result = y} -> Core.Type.Arrow {parameter = open_ x; result = open_ y}
+        | Core.Type.Global_app g -> Core.Type.Global_app {g with type_arguments = List.map open_ g.type_arguments}
+        | Core.Type.Variable_app v -> Core.Type.Variable_app {v with arguments = List.map open_ v.arguments}
+        | t -> t
+      in
+      let rec leading = function
+        | Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument as p; result = r} ->
+          Option.map (fun r -> Core.Type.Arrow {parameter = p; result = r}) (leading r)
+        | t ->
+          let t = open_ t in
+          if informative_type t then Some t else None
+      in
+      match leading ty with Some ty -> try_mgu a (rigidify ty) | None -> ())
+    | _ -> ()
+
+(** [fill_binder_type env sg t a]: what inference left open in the binder
+    type [a], once the binder's value (a let's) or scope (a lambda's) is
+    extracted, filled from its declared type [t] ({!seed_binder_type}), here
+    naming a type variable of the definition's own too.  Asked late, the
+    annotation only fills holes and overrules nothing inference found.  A
+    value whose type names one of the definition's variables at a position
+    the value does not mention leaves it open: [let pp := (0, @inr A pt p)]
+    generalises [pp]'s type, so [snd pp] read [A]'s position open; a lambda's
+    unused binder [fun y : sum tree A => 0] left [tree] open in the argument
+    it is applied to. *)
+and fill_binder_type env sg t1 a =
+  let rec has_free_meta = function
+    | Core.Type.Meta {contents = None} -> true
+    | Core.Type.Meta {contents = Some t} -> has_free_meta t
+    | Core.Type.Arrow {parameter = x; result = y} -> has_free_meta x || has_free_meta y
+    | Core.Type.Global_app {type_arguments = l; _} | Core.Type.Variable_app {arguments = l; _} ->
+      List.exists has_free_meta l
+    | _ -> false
+  in
+  if has_free_meta a then seed_binder_type ~late:true env sg ~is_fix:false t1 a
+
 (** Extracts a Rocq PCUIC term into a Core expression. Precondition: term is
     informative and not a type scheme.
     @param env Rocq environment, extended as lambdas and let-ins are entered
@@ -1779,6 +1857,7 @@ and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
       (* If [extracted_ty] cannot be unified with an arrow type, then magic! *)
       let magic = needs_magic (extracted_ty, Core.Type.Arrow {parameter = a; result = b}) in
       let d' = extract_term env' sg (Type_env.push_type type_env a) b d [] in
+      if id <> Core.Binder_name.Anonymous then fill_binder_type env sg t a;
       put_magic_if ~from:(Core.Type.Arrow {parameter = a;
                                            result = b}) ~into:extracted_ty magic (Core.Expr.Lambda {parameter = id;
                                                                                            parameter_type = a;
@@ -1793,65 +1872,8 @@ and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
     let args' = List.map (EConstr.Vars.lift 1) args in
     ( try
         check_default env sg t1;
-        (* Nothing erased either: an annotation that lost a component would
-           overrule what inference knows about it. *)
-        let rec informative_type = function
-          | Core.Type.Unknown | Core.Type.Axiom | Core.Type.Erased _ -> false
-          | Core.Type.Meta {contents = Some t} -> informative_type t
-          | Core.Type.Global_app {type_arguments = l; _} -> List.for_all informative_type l
-          | Core.Type.Arrow {parameter = a; result = b} -> informative_type a && informative_type b
-          | Core.Type.Variable_app {arguments = l; _} -> List.for_all informative_type l
-          | _ -> true
-        in
         let a = new_meta () in
-        (* The binder's declared type says what inference may not find: [let
-           body : top nat := ...] fixes the event family [top] spells, which a
-           body built from erased carriers ([ret], [fmap]) leaves a free
-           meta -- and a free meta generalises into a parameter no call
-           supplies when the binding is lifted.  So does a local fixpoint's,
-           [let fix go (l : list (nat * A)) ...]: the let generalises its
-           type, so the applications of [go] in the body never tell its
-           parameters what they are, and a parameter left open becomes a
-           variable of the fixpoint's own.  Only a fully informative
-           annotation is given, and one naming a type variable only for a
-           local fixpoint, and only where that variable is the definition's
-           own ({!names_signature_variables}): elsewhere the way this context
-           is numbered need not be the way the term's own variables are, and
-           a value's annotation may be a coercion's target ([Program]'s
-           subset types) rather than the type the value is built at. *)
-        let is_fix c = match EConstr.kind sg c with Fix _ -> true | _ -> false in
-        let () =
-          if lang () == Cpp then
-            match
-              try Some (extract_type env sg (db_from_rel_context env) 0 t1 [])
-              with e when CErrors.noncritical e -> None
-            with
-            | Some ty when Int.equal (type_maxvar ty) 0 && informative_type ty ->
-              try_mgu a ty
-            | Some ty when is_fix c1 && informative_type ty && names_signature_variables env sg t1 ty ->
-              try_mgu a (rigidify ty)
-            | Some ty when is_fix c1 && names_signature_variables ~leading:true env sg t1 ty -> (
-              (* A fixpoint binding types of its own, [let fix go {C}
-                 (l : list C) (x : B)]: what the annotation says of [x] it
-                 says whatever [C] is, so each [C] is left to inference. *)
-              let rec open_ = function
-                | Core.Type.Unknown -> new_meta ()
-                | Core.Type.Meta {contents = Some t} -> open_ t
-                | Core.Type.Arrow {parameter = x; result = y} -> Core.Type.Arrow {parameter = open_ x; result = open_ y}
-                | Core.Type.Global_app g -> Core.Type.Global_app {g with type_arguments = List.map open_ g.type_arguments}
-                | Core.Type.Variable_app v -> Core.Type.Variable_app {v with arguments = List.map open_ v.arguments}
-                | t -> t
-              in
-              let rec leading = function
-                | Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument as p; result = r} ->
-                  Option.map (fun r -> Core.Type.Arrow {parameter = p; result = r}) (leading r)
-                | t ->
-                  let t = open_ t in
-                  if informative_type t then Some t else None
-              in
-              match leading ty with Some ty -> try_mgu a (rigidify ty) | None -> ())
-            | _ -> ()
-        in
+        seed_binder_type env sg ~is_fix:(match EConstr.kind sg c1 with Fix _ -> true | _ -> false) t1 a;
         let c1' =
           match EConstr.kind sg c1 with
           | Fix _ ->
@@ -1868,7 +1890,10 @@ and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
             let saved = !let_fix_entries in
             let_fix_entries := Some (c1, !entries);
             Fun.protect ~finally:(fun () -> let_fix_entries := saved) (fun () -> extract_term env sg type_env a c1 [])
-          | _ -> extract_term env sg type_env a c1 []
+          | _ ->
+            let c1' = extract_term env sg type_env a c1 [] in
+            fill_binder_type env sg t1 a;
+            c1'
         in
         (* The type of [c1'] is generalized and stored in [type_env]. *)
         let type_env' =

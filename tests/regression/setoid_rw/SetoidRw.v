@@ -49,5 +49,5 @@ Definition test_add_mod3 : nat := add_mod3 5 7.
 End SetoidRw.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "setoid_rw" SetoidRw.

@@ -137,5 +137,5 @@ Definition t : nat :=
 End DeepPatterns.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "deep_patterns" DeepPatterns.

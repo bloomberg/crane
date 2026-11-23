@@ -24,11 +24,11 @@ struct TcCarrierOptionCast {
   struct OptBox {
     using carrier = std::optional<uint64_t>;
 
-    static std::optional<uint64_t> wrap(uint64_t n) {
+    constexpr static std::optional<uint64_t> wrap(uint64_t n) {
       return std::make_optional<uint64_t>(n);
     }
 
-    static uint64_t peek(std::optional<uint64_t> o) {
+    constexpr static uint64_t peek(std::optional<uint64_t> o) {
       if (o.has_value()) {
         const uint64_t &n = *o;
         return n;

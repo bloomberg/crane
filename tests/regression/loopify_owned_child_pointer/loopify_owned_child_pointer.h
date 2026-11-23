@@ -4,6 +4,7 @@
 #include "crane_variant.h"
 #include "fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include "shared_variant.h"
 #include "small_vector.h"
 #include <atomic>
@@ -320,8 +321,8 @@ struct LoopifyOwnedChildPointer {
       };
 
       struct _after_subs_in_Node_2 {
-        crane::shared_box<tree> a0;
         List<crane::fn<uint64_t(uint64_t)>> _tmp2;
+        crane::shared_box<tree> a0;
       };
 
       using _frame =
@@ -353,7 +354,7 @@ struct LoopifyOwnedChildPointer {
           const tree &a0_value = *a0;
           const tree &a2_value = a2;
           _stack.emplace_back(
-              _after_subs_in_Node_2{std::move(a0), std::move(_result)});
+              _after_subs_in_Node_2{std::move(_result), std::move(a0)});
           _stack.emplace_back(_call{&a2_value});
         } else {
           auto _f = std::move(crane::get<_after_subs_in_Node_2>(_popped));
@@ -493,10 +494,10 @@ struct LoopifyOwnedChildPointer {
     }
   };
 
-  static inline const tree t0 = tree::node(
+  static inline const tree t0 = crane::immortal(tree::node(
       tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
       tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                 UINT64_C(4), tree::leaf()));
+                 UINT64_C(4), tree::leaf())));
   static inline const uint64_t left_sums =
       t0.subs().template fold_left<uint64_t>(
           [](uint64_t a,

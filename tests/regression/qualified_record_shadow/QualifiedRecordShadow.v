@@ -19,5 +19,5 @@ Definition t : Shadow.shadow := bump (Shadow.Mk 1).
 End QualifiedRecordShadow.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "qualified_record_shadow" QualifiedRecordShadow.

@@ -35,14 +35,105 @@ let rec names_storage : expr -> bool = function
   | Dereference e | Move e | Member (e, _) | Project (e, _, _) | Access (_, e, _) -> names_storage e
   | _ -> false
 
+(* What a call to an operation mapping ({!Base.Mapping_operation}) needs to
+   know of it: its text, the positions of the arguments it writes or
+   replaces in place, and whether it is a [PureOperation]. *)
+type operation = {text : string; in_place : int list; pure : bool}
+
+let operation_text : expr -> operation option = function
+  | Entity (r, _, Some {inline = Some {text; _}; _}) when Base.Table.is_mapped_operation r ->
+    let op = Base.Mapping_operation.find r in
+    Some
+      { text;
+        in_place = Base.Mapping_operation.in_place_positions op;
+        pure = op.Base.Mapping_operation.purity = Base.Mapping_operation.Pure }
+  | _ -> None
+
+(* Whether evaluating [e] may do something an evaluation order could
+   reveal: it calls an operation mapping that is not pure.  The rest of what
+   Crane generates is the value of a Rocq term, which has no effect to
+   order: the monads sequence theirs by statements.  A legacy mapping has no
+   contract to read; it is taken as pure, as legacy lowering always took it
+   (it never ordered the arguments of one legacy mapping against another),
+   so the arguments of a pure operation over legacy calls stay in place.  A
+   lambda's body is not evaluated. *)
+let rec may_have_effect (e : expr) : bool =
+  match e with
+  | Entity (r, _, _) when Base.Table.is_mapped_operation r ->
+    (Base.Mapping_operation.find r).Base.Mapping_operation.purity <> Base.Mapping_operation.Pure
+  | Lambda _ -> false
+  | e ->
+    let found = ref false in
+    Cpp_ir.Subterms.expr ~expr:(fun e -> if (not !found) && may_have_effect e then found := true) ~stmts:(fun _ -> ()) e;
+    !found
+
+(* How many times the text splices argument [i]. *)
+let splices text i =
+  List.length
+    (List.filter (function Cpp_ir.Foreign_template.Arg j -> j = i | _ -> false) (Cpp_ir.Foreign_template.term_template text))
+
+(* An operation mapping's arguments, evaluated once each, in source order,
+   before its text (design 11.9): unless at most one of them computes
+   anything and the text splices that one once, or the operation is pure
+   and no computing argument has an effect (then only the arguments the
+   text repeats or drops are), each argument that is not
+   free to repeat is bound ahead of the call, in order -- or, where the text
+   does not splice it (an [Ignore] argument), evaluated as a statement and
+   discarded.  An argument bound by value and spliced once is moved from its
+   temporary, so that a [Take] still receives an rvalue -- unless the text
+   writes or replaces it in place ([in_place]), which takes the temporary as
+   the lvalue it is. *)
+let prepare_operation_args fresh bind discard {text; in_place; pure} (args : expr list) : expr list =
+  let computing = List.filter (fun (_, a) -> not (free_to_repeat a)) (List.mapi (fun i a -> (i, a)) args) in
+  match computing with
+  | [] -> args
+  | [(i, _)] when splices text i = 1 -> args
+  | _ when pure && List.for_all (fun (_, a) -> not (may_have_effect a)) computing ->
+    (* A pure operation none of whose computing arguments has an effect:
+       their order is not observable, so only an argument the text splices
+       more than once is bound ahead (once), and one it does not splice is
+       evaluated and discarded; the rest are evaluated where the text places
+       them (design 11.9). *)
+    List.mapi
+      (fun i (a : expr) ->
+        if free_to_repeat a then a
+        else
+          match splices text i with
+          | 1 -> a
+          | 0 ->
+            discard a;
+            a
+          | _ ->
+            let x = fresh () in
+            bind ~by_value:(match a with Move _ -> true | a -> not (names_storage a)) x a;
+            (Local x : expr))
+      args
+  | _ ->
+    List.mapi
+      (fun i (a : expr) ->
+        if free_to_repeat a then a
+        else
+          match splices text i with
+          | 0 ->
+            discard a;
+            a
+          | n ->
+            let x = fresh () in
+            let by_value = match a with Move _ -> true | a -> not (names_storage a) in
+            bind ~by_value x a;
+            if by_value && n = 1 && not (List.mem i in_place) then (Move (Local x) : expr) else (Local x : expr))
+      args
+
 (* [e] with each argument it must evaluate once named, at every position [e]
    evaluates unconditionally; [bind x a] binds [x] to [a] ahead of [e], in
    evaluation order. *)
-let rec name_args fresh bind (e : expr) : expr =
+let rec name_args fresh bind discard (e : expr) : expr =
   if not (evaluates_operands e) then e
   else
-    let e = Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:(name_args fresh bind) ~stmt:Fun.id ~type_:Fun.id ()) e in
+    let e = Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:(name_args fresh bind discard) ~stmt:Fun.id ~type_:Fun.id ()) e in
     match e with
+    | Call (sg, f, args) when Option.has_some (operation_text f) ->
+      Call (sg, f, prepare_operation_args fresh bind discard (Option.get (operation_text f)) args)
     | Call (sg, f, args) -> (
       match repeating_text f with
       | Some text ->
@@ -51,7 +142,7 @@ let rec name_args fresh bind (e : expr) : expr =
             (fun i a ->
               if Cpp_ir.Foreign_template.arg_mentions text i > 1 && not (free_to_repeat a) then (
                 let x = fresh () in
-                bind x a;
+                bind ~by_value:(not (names_storage a)) x a;
                 (Local x : expr) )
               else a )
             args
@@ -64,11 +155,12 @@ let rec name_args fresh bind (e : expr) : expr =
    where [s] evaluates its expression once, as its first act. *)
 let in_stmt fresh (s : stmt) : stmt list =
   let bound = ref [] in
-  let bind x a =
-    let ty : Cpp_ir.Lowered.Type.t = if names_storage a then Reference (Forwarding, Auto) else Auto in
-    bound := (Bind_variable (x, Declare (ty, None), a) : stmt) :: !bound
+  let bind ~by_value x a =
+    let ty : Cpp_ir.Lowered.Type.t = if by_value then Auto else Reference (Forwarding, Auto) in
+    bound := (Cpp_ir.Typed.bind (x) (ty) (a) : stmt) :: !bound
   in
-  let e' e = name_args fresh bind e in
+  let discard a = bound := (Expression a : stmt) :: !bound in
+  let e' e = name_args fresh bind discard e in
   let s : stmt =
     match s with
     | Return (Some e) -> Return (Some (e' e))

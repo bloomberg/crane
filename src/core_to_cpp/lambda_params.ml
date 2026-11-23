@@ -61,7 +61,7 @@ let return_captures_by_value (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lower
     | Member (e, id) -> Member (expr e, id)
     | Project (e, id, ty) -> Project (expr e, id, ty)
     | Access_call (Arrow, e, id, es) -> Access_call (Arrow, expr e, id, List.map expr es)
-    | Any_cast (ty, e) -> Any_cast (ty, expr e)
+    | (Any_cast _ | Coerce _) as e -> Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr ~stmt ~type_:Fun.id ()) e
     | e -> e
   and stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
     match s with
@@ -281,7 +281,7 @@ let lambda_binder_emitted cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~
   || Base.Core_util.ast_occurs (i + 1) body
 
 (** The C++ type a lambda declares its parameter [(id, ty, owned)] at
-    ({!Lambda.gen_lambda}), and the substitution its body is
+    ({!Lambda.gen_lambda}), how it is passed, and the substitution its body is
     rewritten with, if any.  [slot_dom] is the domain the slot the lambda
     fills declares at this parameter's position, where it declares a
     signature; [unused], that the body never reads the parameter; [body], the
@@ -319,15 +319,21 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
       Some (id, (Dereference (Local id) : Cpp_ir.Lowered.Expr.t))
     | _ -> None
   in
-  let param_cpp_ty : Cpp_ir.Lowered.Type.t =
+  let lent t : Cpp_ir.Lowered.Type.t * Cpp_ir.Param_mode.t =
+    (Cpp_ir.Param_mode.declare By_const_reference t, Cpp_ir.Param_mode.lent)
+  in
+  let param_cpp_ty, mode =
     match body_subst with
-    | Some _ -> Reference (Lvalue, Const stored_cpp_ty)
+    | Some _ -> lent stored_cpp_ty
     (* A binder the body never reads is a parameter only for its callers, and
        the slot's own spelling is the one they call it at:
        [Id_<std::any, ...>] takes its object as a box, whatever the binder's
        annotation recorded -- [MemE], the family the object stands for. *)
     | None when unused && Option.has_some slot_param_cpp_ty ->
-      Option.get slot_param_cpp_ty
+      (* Taken as the slot declares it: the mode is the one its type
+         spells. *)
+      let slot = Option.get slot_param_cpp_ty in
+      (slot, Cpp_ir.Param_mode.spelled ~owned slot)
     (* The binder's annotation is a definition unfolded -- [FusedS] as
        [state * nat] -- and a class field in it names no instance in this
        scope, so it would fall back to the file-scope [std::any].  The slot
@@ -341,7 +347,7 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
       when rank2_carrier <> None
            && has_tany_in_type bare_cpp_ty
            && not (Rank2.is_bare_box bare_cpp_ty) ->
-      Reference (Lvalue, Const (at_carrier bare_cpp_ty))
+      lent (at_carrier bare_cpp_ty)
     | None
       when Cpp_ir.Types.prints_as_any bare_cpp_ty
            && ( match slot_param_cpp_ty with
@@ -404,8 +410,8 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
          rather than erased -- nothing in the term says which -- so it
          deduces.  Committing to [std::monostate] rejects every call through
          an erased tree.  The slot is still emitted; see the parameter filter
-         in {!Expr.gen_expr}. *)
-      Reference (Lvalue, Const Auto)
+         in {!Expr.gen_expr_typed}. *)
+      lent Auto
     | None when Base.Type_util.has_tany_written bare_cpp_ty ->
       (* The type is spelled with erased positions (std::any).  Use
          [const auto&] so the C++ compiler deduces the concrete type at the
@@ -419,7 +425,7 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
          that probes the callable with a [std::any] -- [crane_erase_fn] does --
          instantiates the body at [std::any] and fails inside it, where no
          [requires] can catch it. *)
-      Reference (Lvalue, Const Auto)
+      lent Auto
     | None ->
       (* A function the slot takes at fewer domains than the binder's arrows
          flatten to -- [esc : A -> cont R B], with [cont R B] an alias for a
@@ -433,7 +439,7 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
         (if declared_arity > 0 then Cpp_ir.Types.spell_arrows (Declared_at declared_arity) bare_cpp_ty
          else bare_cpp_ty)
   in
-  (param_cpp_ty, body_subst)
+  (param_cpp_ty, mode, body_subst)
 
 (** The C++ type a lambda parameter of Core type [core_ty] declared [declared]
     ({!lambda_param_cpp_type}) is read at in its body.  A binder erasure would

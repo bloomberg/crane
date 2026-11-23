@@ -23,5 +23,5 @@ Definition t : nat := A.Token'.f 0 + B.Token_.g 0.
 End ModpathEscapeCollision.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "modpath_escape_collision" ModpathEscapeCollision.

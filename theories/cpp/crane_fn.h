@@ -36,6 +36,15 @@ template <typename T> T *crane_raw(const std::shared_ptr<T> &p) noexcept {
 
 template <typename T> T *crane_raw(T *p) noexcept { return p; }
 
+// Any other smart pointer with [get()] -- the BDE flavor's
+// [bsl::shared_ptr], which this flavor-independent header cannot name.  The
+// overloads above, and those the runtime headers add for their own
+// pointers, are more specialised and win where they apply.
+template <typename P>
+auto crane_raw(const P &p) noexcept -> decltype(p.get()) {
+  return p.get();
+}
+
 namespace crane {
 
 // Child slots over [std::shared_ptr], the default pointer: how a factory

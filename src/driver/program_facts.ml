@@ -14,6 +14,7 @@ type t = {
 type program = {
   throwing_values : Names.GlobRef.t list;
   parameter_ownership : (Names.GlobRef.t * bool list) list;
+  parameter_access : Core_plan.Access.t;
   recursive_groups : Core_plan.Recursive_groups.t;
   partner_closure_params : (Names.GlobRef.t * int list) list;
   reusing_matches : Core.Ref.User.Set.t;
@@ -30,6 +31,7 @@ let analyze_program cx normalized =
     normalized in
   { throwing_values = Core_plan.Structure.throwing_values struc;
     parameter_ownership = Core_plan.Ownership.summarize ~receiver struc;
+    parameter_access = Core_plan.Access.summarize ~receiver struc;
     recursive_groups;
     partner_closure_params = Core_to_cpp.Callable_params.partner_closure_params recursive_groups struc;
     reusing_matches = Core_plan.Ownership.reusing_matches struc;
@@ -45,7 +47,12 @@ let lowering (program : program) : Core_to_cpp.Lowering_state.program_facts =
       List.fold_left (fun m (r, f) -> Core.Ref.User.Map.add r f m) Core.Ref.User.Map.empty program.parameter_ownership;
     partner_closure_params =
       List.fold_left (fun m (g, is) -> Core.Ref.User.Map.add g is m) Core.Ref.User.Map.empty program.partner_closure_params;
-    reusing_matches = program.reusing_matches }
+    reusing_matches = program.reusing_matches;
+    parameter_access =
+      List.fold_left
+        (fun m (r, a) -> Core.Ref.User.Map.add r a m)
+        Core.Ref.User.Map.empty program.parameter_access.summaries;
+    pinned = program.parameter_access.pinned }
 
 (* The custom-extracted references [struc] names, a used constructor
    adding its inductive. *)

@@ -114,11 +114,34 @@ let rec peano info expr =
 (* Whether [r] is the global Rocq registers as [name]. *)
 let registered name r = Rocqlib.has_ref name && Rocqlib.check_ref name r
 
+(* The value of a constructor term of a typed numeral descriptor's type,
+   by its constructors' actions (design 17): a field another numeral type
+   (an [Identity] or a [Negate]) is read by that type's own descriptor, or
+   as a binary [positive] where its type has none. *)
+let rec typed_value expr =
+  match strip_magic expr with
+  | Core.Expr.Construct {constructor = GlobRef.ConstructRef ((kn, i), j); arguments = args; _} as e -> (
+    match Base.Table.get_numeral_info (GlobRef.IndRef (kn, i)) with
+    | Some {typed = Some cases; _} -> (
+      let field f = Option.bind (List.nth_opt args f) typed_value in
+      match List.assoc_opt j cases with
+      | Some Base.Mapping_descriptor.Numeral_zero -> Some Z.zero
+      | Some Numeral_one -> Some Z.one
+      | Some (Numeral_successor f) -> Option.map Z.succ (field f)
+      | Some (Numeral_double f) -> Option.map (fun n -> Z.shift_left n 1) (field f)
+      | Some (Numeral_double_plus_one f) -> Option.map (fun n -> Z.succ (Z.shift_left n 1)) (field f)
+      | Some (Numeral_identity f) -> field f
+      | Some (Numeral_negate f) -> Option.map Z.neg (field f)
+      | None -> None )
+    | _ -> positive e )
+  | _ -> None
+
 let constructor_literal = function
   | Core.Expr.Construct {constructor = (GlobRef.ConstructRef ((kn, i), _) as r); arguments = args; _} as e -> (
     let ind = GlobRef.IndRef (kn, i) in
     match Base.Table.get_numeral_info ind with
     | None -> None
+    | Some ({typed = Some _; _} as info) -> Option.map (fun n -> (info, n)) (typed_value e)
     | Some info when registered "num.pos.type" ind -> Option.map (fun n -> (info, n)) (positive e)
     | Some info -> (
       match (peano info e, args) with
@@ -186,13 +209,13 @@ let self_subtractions =
     [ (nat "sub", ("num.nat.type", "num.nat.O")); (n "sub", ("num.N.type", "num.N.N0"));
       (pos "sub", ("num.pos.type", "num.pos.xH")); (z "sub", ("num.Z.type", "num.Z.Z0")) ]
 
-(* A subtraction of one read of storage from itself
-   ({!Base.Core_util.same_storage}), as the value it computes, a literal
+(* A subtraction of one value from itself
+   ({!Base.Core_util.same_value}), as the value it computes, a literal
    where its number type is a numeral mapping's: a mapping's guard would
    compare the read with itself. *)
 let self_subtraction = function
   | Core.Expr.Apply {callee = Core.Expr.Global {callee = GlobRef.ConstRef c; _}; arguments = [a; b]} as e
-    when Base.Core_util.same_storage a b -> (
+    when Base.Core_util.same_value a b -> (
     match Cmap.find_opt c self_subtractions with
     | Some (ind, ctor) when Rocqlib.has_ref ind && Rocqlib.has_ref ctor ->
       let value =

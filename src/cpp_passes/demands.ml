@@ -117,7 +117,7 @@ module Ir = struct
     and visitor = {Children.expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = (fun t -> ty t)}
     and expr (e : expr) =
       ( match e with
-      | Move _ | In_place | In_place_index _ | Declval _ -> std "utility"
+      | Move _ | Forward _ | In_place | In_place_index _ | Declval _ -> std "utility"
       | Lambda {capture = Written (By_copy {moved = _ :: _; _}); _} -> std "utility"
       | Allocate (Heap, _) -> std "memory"
       | Allocate (Arena_scoped, _) ->
@@ -134,6 +134,7 @@ module Ir = struct
         | Cpp_ir.Crane_rt.Unbox_field -> rt Cpp_ir.Crane_rt.field_header
         | Cpp_ir.Crane_rt.Apply2 -> rt Cpp_ir.Crane_rt.fn_header
         | Cpp_ir.Crane_rt.Constant _ | Cpp_ir.Crane_rt.Immortal -> rt Cpp_ir.Crane_rt.shared_block_header
+        | Cpp_ir.Crane_rt.Writable -> rt Cpp_ir.Crane_rt.writable_header
         | Cpp_ir.Crane_rt.Make_rc_reusing_unchecked | Cpp_ir.Crane_rt.Reuse_step | Cpp_ir.Crane_rt.Share_child -> () )
       | Unbox (To _, _) | Any_cast _ -> obj ()
       | Unbox (Or_keep _, _) -> std "type_traits"
@@ -168,6 +169,7 @@ module Ir = struct
       | Throw _ -> std "stdexcept"
       | Switch {enum = r; _} ->
         std "utility";
+        need (Unit_plan.Cpp_state.std_names_of unit).unreachable_header;
         global r
       | Assert (Checked _) -> std "cassert"
       | If_constexpr {test = Convertible (t, _); _} ->
@@ -175,9 +177,11 @@ module Ir = struct
         if at_type_variable t then obj ()
       | Foreign_text text when String.equal text acquire_fence -> std "atomic"
       | Foreign_text text when Base.Common.contains_substring text "std::vector" -> std "vector"
-      | Match (scrut, _, _) ->
+      | Match (scrut, branches, default) ->
         variant ();
-        if scrut.owned then std "utility"
+        if scrut.owned then std "utility";
+        (* A match of no branch and no default is written unreachable. *)
+        if branches = [] && default = None then need (Unit_plan.Cpp_state.std_names_of unit).unreachable_header
       | _ -> () );
       match s with
       | Return (Some (Abort _)) -> std "stdexcept"
@@ -326,6 +330,8 @@ let of_modtype_concept unit (c : Cpp_ast.Modtype_concept.t) =
       cty result
     | Function_member {parameters; result; _} ->
       concepts ();
+      (* Each parameter is written as a [declval]. *)
+      if parameters <> [] then need [Base.Table.Standard "utility"];
       List.iter cty parameters;
       cty result
   in

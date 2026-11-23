@@ -211,8 +211,18 @@ Definition notWS (t : token) : bool :=
 Definition lex_sem   := Crane.Libraries.ParseALot.Examples.XML.Lexer.Semantic.SemLexer.Impl.lex_sem.
 (** Alias for the XML literal lexer rules. *)
 Definition lex_rus   := Crane.Libraries.ParseALot.Examples.XML.Lexer.Literal.rus.
-(** Semantic lexer partially applied to the XML rules. *)
-Definition lex_xml'  := lex_sem lex_rus.
+(** The XML lexer's rules with their DFAs built ([init_srule]): a constant, so that a program
+    builds them once rather than on every input. *)
+Definition xml_srules := map Crane.Libraries.ParseALot.Examples.XML.Lexer.Literal.LXR.Correctness.Impl.Lex.init_srule lex_rus.
+(** Semantic lexer over [xml_srules]; [lex_xml'_lex_sem] says it is [lex_sem lex_rus]. *)
+Definition lex_xml' (s : String) :=
+  Crane.Libraries.ParseALot.Examples.XML.Lexer.Semantic.SemLexer.Impl.lex_sem_of
+    (Crane.Libraries.ParseALot.Examples.XML.Lexer.Literal.LXR.Correctness.Impl.Lex.lex_M_pre xml_srules s).
+(** [lex_xml'] is the semantic lexer partially applied to the XML rules; by [lex_sem_of_lex]. *)
+Lemma lex_xml'_lex_sem : forall s, lex_xml' s = lex_sem lex_rus s.
+Proof.
+  intros. unfold lex_xml'. rewrite <- Crane.Libraries.ParseALot.Examples.XML.Lexer.Semantic.SemLexer.Impl.lex_sem_of_lex. reflexivity.
+Qed.
 (** Lexes an XML input string, returning typed tokens with whitespace filtered out. *)
 Definition lex_xml (s : String) : option (list token) * String :=
   let res' := lex_xml' s in

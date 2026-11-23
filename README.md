@@ -115,9 +115,11 @@ A few tests (those ending in `_bde`) use [Bloomberg's BDE library](https://githu
 
 ## Usage
 
-Once you write your Rocq program, you can extract to C++:
+Once you write your Rocq program, say `Example.v`, you can extract to C++:
 
 ```coq
+From Crane Require Import Extraction Mapping.Std.
+
 Module Foo.
 
 Fixpoint fac n :=
@@ -128,17 +130,17 @@ Fixpoint fac n :=
 
 End Foo.
 
-Require Crane.Extraction.
-Require Crane.Mapping.Std.
 Crane Extraction "Foo" Foo.
 ```
+
+Mappings activate on `Import`; a bare `Require` of a mapping file loads it without using it.
 
 (You can also extract a single function if you do not want to extract an entire module, which will just extract the function with all of its dependencies as opposed to this which extracts all the definitions in the module [and their dependencies].)
 
 Now run:
 
 ```bash
-rocq compile Foo.v && clang++ -c -std=c++2c -I<crane>/theories/cpp Foo.cpp -o Foo.o
+rocq compile Example.v && clang++ -c -std=c++2c -I<crane>/theories/cpp Foo.cpp -o Foo.o
 ```
 
 This command creates `Foo.h` and `Foo.cpp` files from the Rocq file, and then compiles the C++ to the object file `Foo.o` with Clang, ready to be linked to your own C++ file containing a `main` function for execution. The `-I` points at Crane's header-only runtime (`theories/cpp` in the checkout), which generated code includes; see [Getting Started](docs/Getting-Started.md).

@@ -71,6 +71,59 @@ and Reference_kind : sig
 end =
   Reference_kind
 
+and Param_mode : sig
+  (** Whether the callee owns what a parameter holds: [Owned], the caller
+      moving or copying its argument in; [Borrowed], the caller keeping it;
+      [Forwarded], a callable the head deduces, taken as the caller has
+      it. *)
+  type ownership =
+    | Owned
+    | Borrowed
+    | Forwarded
+
+  (** The physical form a parameter is declared in, over the type of the
+      value it stands for: [T], [const T] (a lifted helper's), [const T &],
+      the [T &&] a deduced callable is, or a mutable [T &].  No parameter is
+      planned [By_reference] yet: only a declaration read back has it
+      ({!Cpp_ir.Param_mode.spelled}).  [By_view] is a typed mapping's read
+      or writable view of the value, by value (design 7, 12.5): declared at
+      the view type, not the value's, and given its argument through the
+      mapping's declared conversion ({!Cpp_passes.View_args}). *)
+  type form =
+    | By_value
+    | By_const_value
+    | By_const_reference
+    | By_forwarding_reference
+    | By_reference
+    | By_view of view * GlobRef.t  (** the view, of the mapped type headed so *)
+
+  (** A typed mapping's read view or writable view. *)
+  and view =
+    | Read_view
+    | Write_view
+
+  (** What the parameter is to its body: a value, or the receiver a loop
+      over a method is entered with, [_self], a pointer to the object the
+      method runs on rather than a value borrowed through one. *)
+  type role =
+    | Value
+    | Receiver
+
+  (** How a parameter is passed: a decision recorded where it is made, read
+      wherever it matters, its declared type ({!Type.t}) only the spelling of
+      it. *)
+  type t = {
+    ownership : ownership;
+    form : form;
+    role : role;
+    invalidates_views : bool;
+        (** whether the callee may invalidate a view of its argument
+            (design 7.8): replace it, or resize what it holds, so that a
+            caller may not pass a view of the same value beside it *)
+  }
+end =
+  Param_mode
+
 and Type : sig
   (** A C++ type. *)
   type _ t =
@@ -189,6 +242,186 @@ and Erase_shape : sig
 end =
   Erase_shape
 
+and Arrows : sig
+  (** How a callable takes its arguments: [groups] in call order, each group
+      one C++ call, never empty ([[[]]] for a nullary callable).  The flat
+      [crane::fn<R(A, B)>] is [[[A; B]]]; its curried spelling is
+      [[[A]; [B]]]. *)
+  type 'p t = {
+    groups : 'p Type.t list list;
+    result : 'p Type.t;
+  }
+end =
+  Arrows
+
+and Deduction : sig
+  (** Why only C++ knows the type of an expression: a closed list of honest
+      admissions. *)
+  type t =
+    | Foreign_text  (** C++ text from a user template *)
+    | Runtime_helper of Crane_rt.helper  (** a runtime helper, named *)
+    | Generic_lambda  (** a polymorphic function object *)
+    | Requirement  (** a requires expression's subject or constraint *)
+    | Untranslated
+        (** a term Core infers no type for, or one lowering cannot convert *)
+    | Unannotated
+        (** a node lowering built without stating its type (a variable read,
+            a member, a call without its yield), which its reader decides
+            from Core (an adapter keeping its own test) or takes as C++
+            deduces it (a join) *)
+end =
+  Deduction
+
+and Value_type : sig
+  (** The type of a lowered expression: what lowering synthesised for it,
+      which [Type.t] alone cannot say for a closure, a function's name, or
+      an abort. *)
+  type 'p t =
+    | Typed of 'p Type.t  (** exactly this nameable type *)
+    | Closure of 'p Arrows.t  (** a lambda's own, unnameable, type *)
+    | Function_name of GlobRef.t * 'p Arrows.t
+        (** a global function named as a value, grouped as it is declared *)
+    | Never  (** an abort: fits every slot *)
+    | Deduced of Deduction.t
+end =
+  Value_type
+
+and Slot_type : sig
+  (** What a position asks of the value put in it. *)
+  type _ t =
+    | Exactly : 'p Type.t -> 'p t
+        (** a declared type: a parameter's value type, a variable, a field,
+            a loop variable, a frame field, a return type; [Any] where the
+            slot is erased *)
+    | Template_parameter : 'p Type.t option -> 'p t
+        (** a type C++ deduces (an inline mapping's [auto], a callee's own
+            type variable), with its instantiation, curried, where it is
+            spellable *)
+    | Forwarded : 'p t  (** a forwarding reference [F&&] *)
+    | View : Param_mode.view * GlobRef.t -> 'p t
+        (** a typed mapping's view of the type headed so *)
+    | Free : 'p t  (** an [auto] variable, or a discarded value *)
+    | Join : lowered t
+        (** the return type of the lambda being lowered, which C++ deduces or
+            lowering decides from the values it returns (the join) *)
+end =
+  Slot_type
+
+and Arrow_site : sig
+  (** The site a function type stands at, which decides how its chain of
+      arrows is spelled: flat where a declaration writes it
+      ([crane::fn<R(A, B)>]), curried where a type variable stands for it
+      ([crane::fn<crane::fn<R(B)>(A)>]), or flat for the first [n]
+      parameters a declaration wrote and curried for the rest.
+      [Declared_at 0] is [Through_tvar]. *)
+  type t = Declared | Through_tvar | Declared_at of int
+end =
+  Arrow_site
+
+and Coercion : sig
+  (** What a value's type and its slot's call for, as {!Core_to_cpp.Coerce}
+      decides it from the two types alone. *)
+  type 'p decision =
+    | Regroup of 'p Arrows.t * 'p Arrows.t
+        (** a callable taken at one grouping, called at another *)
+    | Name of 'p Type.t option
+        (** a closure or a function name given a nameable type
+            ([crane::fn]), at a template parameter *)
+    | Eta of {
+        declared : 'p Arrows.t;
+        into : 'p Arrows.t;
+      }  (** a global function eta-expanded to another grouping *)
+    | Box of 'p Erase_shape.t option
+    | Deep_box  (** a list boxed element by element *)
+    | Unbox of 'p Unbox.t
+    | Erase of 'p Erase_shape.t
+    | Recover of 'p Arrows.t * 'p Arrows.t
+        (** a callable with an erased codomain read at a concrete one *)
+    | Convert of 'p Type.t
+    | Container_cast of 'p Type.t * bool
+    | Then of 'p decision * 'p decision  (** the first, then the second *)
+
+  (** How a value is adapted to its slot, with everything its expansion
+      ({!Cpp_passes.Coercions.expand}) reads: the expansion is a function of
+      the plan and the value alone.  Each adapter keeps the parameter prefix
+      it is written with. *)
+  type 'p plan =
+    | Regroup_curried of 'p Type.t * 'p Type.t
+        (** a callable of the first type applied group by group inside an
+            adapter of the second, which takes more at once ([_rg]) *)
+    | Nest of 'p Type.t option
+        (** a closure built for a slot, its parameters nested as the given
+            function type groups them *)
+    | Eta_short of {
+        domain : 'p Type.t list;
+        arity : int;
+      }
+        (** a lambda taking [arity] of its slot's parameters, [domain],
+            applied to the rest of them by an adapter ([_ee]) *)
+    | Eta_global of {
+        declared : 'p Type.t option;
+        into : 'p Type.t option;
+        site : Arrow_site.t;
+        exact : bool;
+      }
+        (** a function name, declared at [declared] and called at the
+            grouping [site] spells, eta-expanded to the slot's grouping
+            ([_ec]); [exact] keeps an erased callable parameter at its
+            signature *)
+    | Name_closure  (** a lambda given its [crane::fn] type *)
+    | Name_at of 'p Type.t option
+        (** a callable named at the given type where spellable, else at the
+            [crane::fn] it deduces *)
+    | Erase_as of 'p Erase_shape.t
+    | Convert_to of 'p Type.t  (** a converting construction ({!Expr.Convert}) *)
+    | Represent of 'p Type.t * 'p Type.t
+        (** a value of the first type at the second, which differs from it in
+            its pointer dimension or its elements *)
+    | Box_value of 'p Type.t * bool
+        (** a value put in the box the type names ([Any]), a callable
+            erased whole first, at the box's instantiation, where [true];
+            one boxed already is left alone *)
+    | Recover_box of {
+        into : 'p Type.t;
+        lambda : ('p Type.t * 'p plan option) option;
+      }
+        (** a boxed value read at [into], unless cast already; a lambda's
+            returns read at its codomain by the plan given instead *)
+    | Recover_call of {
+        domain : 'p Type.t list;
+        args : 'p plan option list;
+        result : 'p plan option;
+      }
+        (** a callable with an erased codomain called through an adapter
+            taking [domain] ([_ue]), each argument and the result adapted
+            as given *)
+    | Box_list_deep
+        (** a list at a concrete element boxed at every level
+            ([crane_deep_box]) *)
+    | Recast_carrier of 'p Type.t
+        (** a carrier at the erased element converted elementwise to the
+            given one ({!Expr.Container_cast}) *)
+    | Cast_box of {
+        into : 'p Type.t;
+        tolerant : bool;
+      }
+        (** a boxed value read at [into] as the site knows it is boxed
+            ({!Cpp_passes.Erasure.unbox}, [tolerant]:
+            {!Cpp_passes.Erasure.unbox_tolerant}): no list shape; [into]
+            is not written as a box *)
+    | Moving of Id.t * 'p plan
+        (** the adapter the plan builds, holding the variable it reads by
+            move *)
+
+  (** A coercion: the value's type, the slot's, and the plan between them. *)
+  type 'p t = {
+    from : 'p Value_type.t;
+    into : 'p Slot_type.t;
+    plan : 'p plan;
+  }
+end =
+  Coercion
+
 and Access : sig
   (** How a member name attaches to the object in front of it. *)
   type t =
@@ -200,20 +433,15 @@ end =
 and Call : sig
   (** What lowering knew about a call. *)
   type 'p signature = {
-    yields : 'p result;
+    yields : 'p Value_type.t;
+        (** what the call yields: a type C++ deduces, with the reason,
+            where lowering states none *)
     params : 'p params;
     constructs : GlobRef.t option;
         (** the constructor a factory call builds *)
     occurrence : Core.Occurrence.t option;
         (** the Core call the call is made of *)
   }
-
-  (** What a call yields. *)
-  and 'p result =
-    | Yields of 'p Type.t
-    | Untyped
-        (** the callee has no Crane-level type; a consumer defers to C++
-            deduction *)
 
   (** The callee's parameter types, aligned with the arguments. *)
   and 'p params =
@@ -298,6 +526,10 @@ and Lambda : sig
     binders : (Id.t * Core.Binder.t) list;
         (** the Core binder each parameter stands for, by the parameter's
             name, where the lambda is the body of a Core function *)
+    modes : (Id.t * Param_mode.t) list;
+        (** how each parameter is passed, by the parameter's name, where
+            the lambda records it: a local fixpoint's, its self-parameters
+            aside *)
     fixpoint : Local_fixpoint.t option;
         (** the local fixpoint whose body this lambda is *)
   }
@@ -365,7 +597,10 @@ end =
 and Literal : sig
   (** A literal value. *)
   type t =
-    | String of Pstring.t
+    | String of Pstring.t  (** a Rocq string: the canonical string object *)
+    | Characters of Pstring.t
+        (** the C++ string literal itself, a character array, as a view is
+            constructed from it *)
     | Uint63 of Uint63.t
     | Float of Float64.t
     | Bool of bool
@@ -426,6 +661,9 @@ and Expr : sig
         (** a coinductive value with its constructor suspended in a thunk,
             written by resolution as its type's [lazy_] factory applied to
             the thunk *)
+    | Coerce : lowered Coercion.t * lowered t -> lowered t
+        (** a value adapted to the slot it is put in, as {!Coercion.plan}
+            says; expanded by finishing *)
     | Allocate : Allocation.t * 'p Type.t -> 'p t
         (** the allocating factory for [T], unapplied; a [Call] supplies
             the constructor arguments *)
@@ -472,6 +710,9 @@ and Expr : sig
     | Holds_alternative : 'p Type.t -> 'p t
         (** bare [std::holds_alternative<T>], applied by a [Call] *)
     | Declval : 'p Type.t -> 'p t  (** [std::declval<T>()] *)
+    | Baked_value : 'p Type.t * string -> 'p t
+        (** [crane::bake::read<T>(image)]: a constant of type [T] read back
+            from the image [Crane Bake] wrote for it, named by the string *)
     | Type_name : 'p Type.t -> 'p t
         (** a type written where an expression token stands, such as a
             dependent nested struct's [typename T::Nested] *)
@@ -532,11 +773,16 @@ end =
 
 and Binding : sig
   (** Whether an assignment to a variable also declares it. *)
-  type 'p t =
-    | Declare of 'p Type.t * Core.Binder.t option
+  type _ t =
+    | Declare : 'p Type.t * Core.Binder.t option -> 'p t
         (** [T x = e;], with the Core binder [x] stands for, if any *)
-    | Existing  (** [x = e;] *)
-    | Declare_static of 'p Type.t  (** [static T x = e;] *)
+    | Declare_deduced : lowered Value_type.t * Core.Binder.t option -> lowered t
+        (** [auto x = e;]: C++ deduces the variable's type, and lowering
+            records what it synthesised for [e] so that a pass reading the
+            variable's type reads it rather than reconstructing it from [e].
+            Resolution writes it [Declare (Auto, b)]. *)
+    | Existing : 'p t  (** [x = e;] *)
+    | Declare_static : 'p Type.t -> 'p t  (** [static T x = e;] *)
 end =
   Binding
 
@@ -560,7 +806,8 @@ and Match : sig
     type_ : 'p Type.t;
     used : bool;
         (** whether the branch body reads the binding; one it does not is
-            written as the placeholder [_] *)
+            written as the placeholder [_] where the target standard has
+            one *)
     binder : Core.Binder.t option;
   }
 
@@ -883,6 +1130,8 @@ and Method : sig
     binders : (Id.t * Core.Binder.t) list;
         (** the Core binder each parameter stands for, by the parameter's
             name, where translation bound it for one *)
+    modes : (Id.t * Param_mode.t) list;
+        (** how each parameter is passed, by the parameter's name *)
     receiver_binder : Core.Binder.t option;
         (** the Core binder the receiver stands for, where there is one *)
     loop : Control_ir.Loop.t option;
@@ -1027,6 +1276,9 @@ and Function : sig
     binders : (Id.t * Core.Binder.t) list;
         (** the Core binder each parameter stands for, by the parameter's
             name, where translation bound it for one *)
+    modes : (Id.t * Param_mode.t) list;
+        (** how each parameter of a definition is passed, by the
+            parameter's name *)
     loop : Control_ir.Loop.t option;
         (** the ControlIR loop the body already is, where it was lowered
             from there; no later pass lowers its control *)

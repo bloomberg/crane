@@ -1,7 +1,7 @@
 #include "deep_patterns.h"
 
 uint64_t DeepPatterns::deep_option(
-    const std::optional<std::optional<std::optional<uint64_t>>> &x) {
+    std::optional<std::optional<std::optional<uint64_t>>> x) {
   if (x.has_value()) {
     const std::optional<std::optional<uint64_t>> &o = *x;
     if (o.has_value()) {
@@ -20,9 +20,8 @@ uint64_t DeepPatterns::deep_option(
   }
 }
 
-uint64_t
-DeepPatterns::deep_pair(const std::pair<std::pair<uint64_t, uint64_t>,
-                                        std::pair<uint64_t, uint64_t>> &p) {
+uint64_t DeepPatterns::deep_pair(
+    std::pair<std::pair<uint64_t, uint64_t>, std::pair<uint64_t, uint64_t>> p) {
   const auto &[p0, p1] = p;
   const auto &[a, b] = p0;
   const auto &[c, d] = p1;
@@ -105,7 +104,7 @@ uint64_t DeepPatterns::complex_match(
   }
 }
 
-uint64_t DeepPatterns::guarded_match(const std::pair<uint64_t, uint64_t> &p) {
+uint64_t DeepPatterns::guarded_match(std::pair<uint64_t, uint64_t> p) {
   const auto &[a, b] = p;
   if (a <= b) {
     return (((b - a) > b ? 0 : (b - a)));

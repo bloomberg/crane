@@ -125,7 +125,9 @@ crane::list<T1> Datatypes::app(const crane::list<T1> &l, crane::list<T1> m) {
   } else {
     const T1 &a = l.front();
     auto l1 = l.tail();
-    return crane::cons(a, Datatypes::template app<T1>(l1, std::move(m)));
+    return crane::cons(a,
+                       Datatypes::template app<T1>(std::move(l1),
+                                                   std::move(m)));
   }
 }
 
@@ -136,8 +138,8 @@ crane::list<T2> List::flat_map(F0 &&f, const crane::list<T1> &l) {
   } else {
     const T1 &x = l.front();
     auto l0 = l.tail();
-    return Datatypes::template app<T2>(f(x),
-                                       List::template flat_map<T1, T2>(f, l0));
+    return Datatypes::template app<T2>(
+        f(x), List::template flat_map<T1, T2>(f, std::move(l0)));
   }
 }
 
@@ -148,6 +150,7 @@ T1 List::fold_left(F0 &&f, const crane::list<T2> &l, T1 a0) {
   } else {
     const T2 &b = l.front();
     auto l0 = l.tail();
-    return List::template fold_left<T1, T2>(f, l0, f(std::move(a0), b));
+    return List::template fold_left<T1, T2>(f, std::move(l0),
+                                            f(std::move(a0), b));
   }
 }

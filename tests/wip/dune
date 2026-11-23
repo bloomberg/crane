@@ -217,17 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir poly_sum_payload_obj
- (rule
-  (targets poly_sum_payload_obj.t.exe)
-  (deps PolySumPayloadObj.vo poly_sum_payload_obj.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_sum_payload_obj.t.exe poly_sum_payload_obj.t.cpp poly_sum_payload_obj.cpp)))
- (rule
-  (alias runtest)
-  (deps poly_sum_payload_obj.t.exe)
-  (action (run ./poly_sum_payload_obj.t.exe))))
-
 
 (subdir shared_event_subevent
  (rule
@@ -239,3 +228,16 @@
   (alias runtest)
   (deps shared_event_subevent.t.exe)
   (action (run ./shared_event_subevent.t.exe))))
+
+
+
+
+
+
+
+
+
+
+
+
+

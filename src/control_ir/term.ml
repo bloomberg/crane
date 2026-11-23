@@ -140,12 +140,21 @@ let entered_binders (l : loop) =
 (* Where a value a binder inside a loop's parameters names comes from, as
    far as it comes from a parameter: stored in what the caller passed for
    it -- the parameter itself, or a constructor's field held behind the
-   pointer of a value derived from it -- or merely derived from it, by
-   fields, lets and coercions keeping its representation, and so perhaps
-   held in a copy, which shares those pointers. *)
+   pointer of a value derived from it, the value lying in the field itself
+   or, [Cell], in a cell the field points at -- or merely derived from it,
+   by fields, lets and coercions keeping its representation, and so perhaps
+   held in a copy, which shares those pointers.  A copy of a binder stored
+   in a cell, the field's handle, points at that cell still; a copy of any
+   other is a value of its own. *)
 type provenance =
   | Stored of int
+  | Cell of int
   | Derived of int
+
+let origin_of = function Stored i | Cell i | Derived i -> i
+
+(* The provenance of a binder's copy, kept in a frame. *)
+let kept = function Cell i -> Cell i | Stored i | Derived i -> Derived i
 
 (* The provenance of [e] under [env], the provenance of each binder inside
    a loop's parameters, innermost first. *)
@@ -156,11 +165,13 @@ let rec provenance ~in_place env = function
   | _ -> None
 
 (* Each Continue of the loop [l], in order, with the provenance of each
-   binder it stands under inside [l]'s parameters, innermost first. *)
-let turn_provenances ~pointer_fields ~in_place (l : loop) =
+   binder it stands under inside [l]'s parameters, innermost first: of
+   the fields [pointer_fields] gives, those [cell_fields] gives hold their
+   value in a cell. *)
+let turn_provenances ~pointer_fields ~cell_fields ~in_place (l : loop) =
   let n = List.length l.parameters in
   let provenance = provenance ~in_place in
-  let derived env e = match provenance env e with Some (Stored i | Derived i) -> Some (Derived i) | None -> None in
+  let derived env e = Option.map (fun p -> Derived (origin_of p)) (provenance env e) in
   let unrelated k env = List.init k (fun _ -> None) @ env in
   (* The binders of a branch, [Core.Pattern.Bound_variable 1] first, of its pattern matching a
      value derived from the parameter [whole]: one bound at a field its
@@ -169,17 +180,19 @@ let turn_provenances ~pointer_fields ~in_place (l : loop) =
   let branch_provenance whole (b : branch) =
     let count = List.length b.binders in
     let bound = Array.make count None in
-    let at fields j k =
-      if k >= 1 && k <= count then bound.(k - 1) <- Some (if List.mem j fields then Stored whole else Derived whole)
+    let at (fields, cells) j k =
+      if k >= 1 && k <= count then
+        bound.(k - 1) <-
+          Some (if List.mem j cells then Cell whole else if List.mem j fields then Stored whole else Derived whole)
     in
     let rec bind fields j = function
       | Core.Pattern.Bound_variable k -> at fields j k
       | Core.Pattern.Constructor {constructor = r; fields = ps} ->
-        List.iteri (bind (Option.default [] (pointer_fields r))) ps
-      | Core.Pattern.Tuple ps -> List.iteri (bind []) ps
+        List.iteri (bind (Option.default [] (pointer_fields r), Option.default [] (cell_fields r))) ps
+      | Core.Pattern.Tuple ps -> List.iteri (bind ([], [])) ps
       | Core.Pattern.Wildcard -> ()
     in
-    bind [] (-1) b.pattern;
+    bind ([], []) (-1) b.pattern;
     Array.to_list bound
   in
   (* Each Continue of [target] in [t], with the provenance of the binders it
@@ -192,7 +205,7 @@ let turn_provenances ~pointer_fields ~in_place (l : loop) =
         (fun acc (b : branch) ->
           let binders =
             match derived env m.scrutinee with
-            | Some (Stored i | Derived i) -> branch_provenance i b
+            | Some p -> branch_provenance (origin_of p) b
             | None -> List.map (fun _ -> None) b.binders
           in
           turns target (binders @ env) acc b.body )
@@ -208,13 +221,13 @@ let turn_provenances ~pointer_fields ~in_place (l : loop) =
      standing under [env] and its scope under [scope]: each parameter
      derived from the parameter every Continue of the loop passes it a
      value derived from, the calls entering it and its own, the fixpoint's
-     name from none. *)
+     name from none, and what it reads of the scope as the copy a frame
+     kept of it ({!kept}). *)
   and entered_env env scope (e : entry) =
     let k = List.length e.entered.parameters in
-    let within parameters = List.rev parameters @ unrelated (entered_binders e.entered - k) env in
-    let origin arguments j =
-      match List.nth_opt arguments j with Some (Some (Stored i | Derived i)) -> Some i | _ -> None
-    in
+    let kept_env = List.map (Option.map kept) env in
+    let within parameters = List.rev parameters @ unrelated (entered_binders e.entered - k) kept_env in
+    let origin arguments j = match List.nth_opt arguments j with Some (Some p) -> Some (origin_of p) | _ -> None in
     let arguments_of = List.map (fun ((c : continue_), env) -> List.map (provenance env) c.arguments) in
     let entering = arguments_of (turns e.entered.loop scope [] e.scope) in
     let agreed parameters =
@@ -240,9 +253,9 @@ let turn_provenances ~pointer_fields ~in_place (l : loop) =
 (* For each parameter of the loop [l], whether every Continue of [l] passes
    it an argument whose provenance [accepted] accepts of its position;
    [false] for each where none continues [l]. *)
-let passed ~accepted ~pointer_fields ~in_place (l : loop) =
+let passed ~accepted ~pointer_fields ~cell_fields ~in_place (l : loop) =
   let n = List.length l.parameters in
-  match turn_provenances ~pointer_fields ~in_place l with
+  match turn_provenances ~pointer_fields ~cell_fields ~in_place l with
   | [] -> List.init n (fun _ -> false)
   | turns ->
     List.init n (fun i ->
@@ -253,9 +266,10 @@ let passed ~accepted ~pointer_fields ~in_place (l : loop) =
             | Some None | None -> false )
           turns )
 
-let parts_passed = passed ~accepted:(fun i -> function Stored j -> Int.equal i j | Derived _ -> false)
+let parts_passed = passed ~accepted:(fun i -> function Stored j | Cell j -> Int.equal i j | Derived _ -> false)
 
-let derived_passed = passed ~accepted:(fun _ (Stored _ | Derived _) -> true)
+(* Whether a field holds its value in a cell matters to no derivation. *)
+let derived_passed ~pointer_fields = passed ~accepted:(fun _ _ -> true) ~pointer_fields ~cell_fields:pointer_fields
 
 type rebuilt = {
   turn : Core.Occurrence.t;
@@ -263,7 +277,7 @@ type rebuilt = {
 }
 
 let rebuilt ~pointer_fields ~in_place (l : loop) i =
-  let of_parameter = function Some (Stored j | Derived j) -> Int.equal i j | None -> false in
+  let of_parameter = function Some p -> Int.equal i (origin_of p) | None -> false in
   (* Whether [e], under [env], reads the parameter or a binder derived from
      it. *)
   let reads env e =
@@ -305,7 +319,7 @@ let rebuilt ~pointer_fields ~in_place (l : loop) i =
         let others = List.filteri (fun j _ -> j <> i) c.arguments in
         Some {turn = c.occurrence; read_elsewhere = List.exists (reads env) others}
       | Some _ | None -> None )
-    (turn_provenances ~pointer_fields ~in_place l)
+    (turn_provenances ~pointer_fields ~cell_fields:pointer_fields ~in_place l)
 
 let invariant_parameters (l : loop) =
   let n = List.length l.parameters in

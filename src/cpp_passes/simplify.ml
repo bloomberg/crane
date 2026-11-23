@@ -38,7 +38,7 @@ let rec pure_scrutinee : expr -> bool = function
 let rec pure_choice : expr -> bool = function
   | Call (_, Lambda {params = []; body; _}, []) ->
     let rec pure_stmt : stmt -> bool = function
-      | Return (Some e) | Bind_variable (_, Declare _, e) -> V.pure e || pure_choice e
+      | Return (Some e) | Bind_variable (_, (Declare _ | Declare_deduced _), e) -> V.pure e || pure_choice e
       | Match (scrut, branches, default) ->
         pure_scrutinee scrut.expr
         && List.for_all
@@ -96,7 +96,7 @@ let rec unassign x (stmts : stmt list) : stmt list =
    assigned to it ({!unassign}). *)
 and drop_unused : stmt list -> stmt list = function
   | [] -> []
-  | Bind_variable (x, Declare _, e) :: rest
+  | Bind_variable (x, (Declare _ | Declare_deduced _), e) :: rest
     when V.pure e && (not (V.mem x (V.free_in_body rest))) && not (Id.Set.mem x (V.assigned rest)) ->
     drop_unused rest
   | (Declare (x, _, _) as s) :: rest -> (
@@ -131,11 +131,12 @@ let exists_expr p (stmts : stmt list) =
 
 (* Whether [stmts] move from [v] anywhere, or from anything inside it, or
    reach into it mutably -- a reuse arm decomposes its scrutinee through
-   [v_mut()]. *)
+   [v_mut()] -- or a lambda takes it into its capture by move. *)
 let takes_from v stmts =
   exists_expr
     (function
       | Move e -> path_root e = Some v
+      | Lambda l -> List.exists (Id.equal v) l.moved
       | Access (_, e, f) | Access_call (_, e, f, _) -> String.equal (Id.to_string f) "v_mut" && path_root e = Some v
       | _ -> false )
     stmts
@@ -196,14 +197,18 @@ let borrow_matches_on ids (stmts : stmt list) =
    borrows the view instead ({!borrow_matches_on}). *)
 let rec bind_by_reference : stmt list -> stmt list = function
   | [] -> []
-  | Bind_variable (x, Declare (ty, binder), rhs) :: rest
-    when (match ty with Reference _ | Const (Reference _) -> false | _ -> true)
-         && (ty = Auto || worth_moving ty)
+  | Bind_variable (x, b, rhs) :: rest
+    when (match Cpp_ir.Stmt.Binding.written b with
+          | Some (ty, _) ->
+            (match ty with Reference _ | Const (Reference _) -> false | _ -> true)
+            && (ty = Auto || worth_moving ty)
+          | None -> false)
          && ( match member_root rhs with
             | Some v ->
               let assigned = V.assigned rest in
               not (Id.Set.mem x assigned || Id.Set.mem v assigned || takes_from v rest || takes_from x rest)
             | None -> false ) ->
+    let ty, binder = Option.get (Cpp_ir.Stmt.Binding.written b) in
     let ty : ty = match ty with Const _ -> ty | _ -> Const ty in
     Bind_variable (x, Declare (Reference (Lvalue, ty), binder), rhs)
     :: bind_by_reference rest
@@ -253,6 +258,7 @@ let borrow_const_matches =
         match s with
         | Declare (x, ty, _) | Declare_value_initialized (x, ty) | Bind_variable (x, Declare (ty, _), _) ->
           declare consts x ty
+        | Bind_variable (x, Declare_deduced _, _) -> declare consts x Auto
         | _ -> consts
       in
       s :: block consts rest

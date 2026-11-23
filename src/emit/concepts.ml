@@ -238,6 +238,8 @@ let pp_requirement cx ctx names frame : Cpp_ast.Modtype_concept.requirement -> P
     let same_as = (std_names_of ctx.unit).same_as in
     let declval = (std_names_of ctx.unit).declval in
     writes_standard "concepts";
+    (* [std::declval] is declared in <utility>. *)
+    if parameters <> [] then writes_standard "utility";
     let declvals =
       List.map (fun ty -> str declval ++ str "<" ++ pp_concept_type ty ++ str ">()") parameters
     in

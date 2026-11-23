@@ -48,36 +48,39 @@ let rec strip_ref_type = function
 
 (** Strip reference types AND const modifiers from a type. Used for shadow
     variables in tail recursion, which must be mutable to support reassignment
-    in the loop body.  However, [const] on a pointer pointee is preserved:
-    [const tree *] stays [const tree *] because the pointer variable itself is
-    mutable (can be reassigned), while the [const] just prevents modification
-    through the pointer; removing it would break [_loop_self = this] when
-    [this] is [const T *] in a const method. *)
+    in the loop body.  Only the top-level [const] goes: a pointer's pointee
+    keeps its own, [Pointer (Const tree)] ([const tree *]) stays, because
+    the pointer variable itself is mutable (can be reassigned), while the
+    [const] just prevents modification through the pointer; removing it
+    would break [_loop_self = this] when [this] is [const T *] in a const
+    method. *)
 let rec strip_ref_and_const_type = function
   | Reference (_, t) -> strip_ref_and_const_type t
-  | Const (Pointer _) as t -> t
   | Const t -> strip_ref_and_const_type t
   | t -> t
 
-(** Return [true] when a parameter is worth moving into a shadow variable.
-    References cannot be moved from; const values would trigger a
+(** Return [true] when a parameter passed as [mode] says, declared at [ty],
+    is worth moving into a shadow variable.  One the body does not hold by
+    value of its own cannot be moved from ({!Cpp_ir.Param_mode.holds_own_value}):
+    a reference names what another holds; a const value would trigger a
     pessimizing-move warning since the move constructor receives [const T&&]
-    and falls back to copy anyway; and a move of a type that copies for free
-    -- a scalar -- transfers nothing.  An [auto] parameter may be anything,
-    and is moved as a type variable is ({!Ownership_ir.Region.worth_moving_cpp}). *)
-let is_moveable_param_type = function
-  | Reference _ | Const _ -> false
-  | Auto -> true
-  | ty -> worthwhile_move_type ty
+    and falls back to copy anyway; the receiver is a pointer.  A move of a
+    type that copies for free -- a scalar -- transfers nothing.  An [auto]
+    parameter may be anything, and is moved as a type variable is
+    ({!Ownership_ir.Region.worth_moving_cpp}). *)
+let is_moveable_param_type (mode : Cpp_ir.Param_mode.t) ty =
+  Cpp_ir.Param_mode.holds_own_value mode && match ty with Auto -> true | ty -> worthwhile_move_type ty
 
-(** Extract the pointee type from a "borrowed value-type" parameter.
+(** Extract the pointee type from a "borrowed value-type" parameter, passed
+    as [mode] says and declared at [ty].
 
-    A borrowed value-type parameter is one declared as [const T&] where [T] is a
-    value-type inductive.  These can be optimised to [const T*] shadows that
-    avoid copying the entire value at each loop iteration.
+    A borrowed value-type parameter is one passed by const reference
+    ([const T&]) where [T] is a value-type inductive.  These can be
+    optimised to [const T*] shadows that avoid copying the entire value at
+    each loop iteration.
 
     Under [Crane Reuse] with non-atomic reference counts in the unit [u]
-    ({!Unit_plan.Context.non_atomic_rc}) an owned by-value parameter qualifies too.  Reuse
+    ({!Unit_plan.Context.non_atomic_rc}) a parameter by value qualifies too.  Reuse
     needs the scrutinee owned (that is what gives the loop cells it may
     recycle), and escape analysis ({!Core_plan.Escape}) therefore passes it by value;
     without this case the shadow
@@ -89,19 +92,22 @@ let is_moveable_param_type = function
     rebuilt each iteration ([acc := Cons(x, acc)]) is not pointer-safe and keeps
     its value shadow.
 
-    A [const T] parameter qualifies for the same reason, under any policy: it
-    lives for the whole call, and being const nothing moves out of it.  A
-    helper lifted out of a definition for a polymorphic local fixpoint
-    declares its parameters so.
+    A parameter by [const] value qualifies for the same reason, under any
+    policy: it lives for the whole call, and being const nothing moves out
+    of it.  A helper lifted out of a definition for a polymorphic local
+    fixpoint declares its parameters so.  The receiver, a pointer itself, is
+    none.
 
     @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
-let borrowed_value_param_pointee u = function
-  | Reference (Lvalue, Const t) when is_value_type_ret t -> Some t
-  | Const (Reference (Lvalue, t)) when is_value_type_ret t -> Some t
-  | Const t when is_value_type_ret t -> Some t
-  | t when Base.Table.reuse_here () && Unit_plan.Context.non_atomic_rc u && is_value_type_ret t ->
-    Some t
-  | _ -> None
+let borrowed_value_param_pointee u (mode : Cpp_ir.Param_mode.t) ty =
+  match mode.form with
+  | By_const_reference | By_const_value ->
+    let t = Cpp_ir.Param_mode.value_type mode ty in
+    if is_value_type_ret t then Some t else None
+  | By_value
+    when mode.role = Value && Base.Table.reuse_here () && Unit_plan.Context.non_atomic_rc u && is_value_type_ret ty ->
+    Some ty
+  | By_value | By_forwarding_reference | By_reference | By_view _ -> None
 
 (** Extract the underlying type variable id from a forwarding-reference type.
     [Reference (Forwarding, Variable (Index (_, Some id) | Named id))] gives
@@ -140,25 +146,85 @@ let lookup_tparam_fun_type tparams id =
     arrow the parameter's constraint already states.
 
     Otherwise the shadow inherits the parameter's type verbatim. *)
-let tail_shadow_type u ~tparams ~pointer_safe ty =
-  match (pointer_safe, borrowed_value_param_pointee u ty) with
+let tail_shadow_type u ~tparams ~pointer_safe mode ty =
+  match (pointer_safe, borrowed_value_param_pointee u mode ty) with
   | true, Some t -> Pointer (Const t)
   | _ ->
     ( match Option.bind (extract_fwd_ref_tvar ty) (lookup_tparam_fun_type tparams) with
     | Some arrow -> arrow
     | None -> ty )
 
-(** Generate the initialiser expression for a shadow variable.
+(** A shadow variable: its name, the type it is declared at, and how it
+    holds the parameter it shadows ([hold]): as a value of its own; through
+    a pointer to the value the caller lent ({!tail_shadow_type}); the
+    receiver's, [_loop_self], as the pointer the receiver is, which is no
+    value borrowed through it; or, a parameter the caller lends by mutable
+    reference ({!Cpp_ir.Param_mode} [By_reference], a typed mapping's write
+    or replace in place), as that reference: the loop rebinds the caller's
+    object, as the recursive call would have been let to, and copies
+    nothing into a value of its own. *)
+module Shadow = struct
+  type hold =
+    | Value
+    | Through_pointer
+    | Receiver
+    | In_place
+
+  type t = {
+    name : Id.t;
+    ty : ty;
+    hold : hold;
+  }
+
+  let name s = s.name
+
+  (** Whether the shadow is kept by value, not repointed. *)
+  let by_value s = s.hold = Value
+end
+
+(** The shadow of a parameter passed as [mode] says, declared at [ty],
+    named [name], pointer-safe where [pointer_safe] says
+    ({!pointer_safe_flags}). *)
+let make_shadow u ~tparams ~pointer_safe name mode ty =
+  let shadow_ty = tail_shadow_type u ~tparams ~pointer_safe mode ty in
+  let hold : Shadow.hold =
+    if pointer_safe && Option.has_some (borrowed_value_param_pointee u mode ty) then Through_pointer
+    else if Cpp_ir.Param_mode.is_receiver mode then Receiver
+    else if mode.form = By_reference then In_place
+    else Value
+  in
+  {Shadow.name; ty = shadow_ty; hold}
+
+(** Whether the shadow [s] holds a borrowed value through a pointer
+    ({!tail_shadow_type}).  The receiver's shadow is a pointer of the same
+    type, [const T *], but a pointer by itself, not a value borrowed through
+    one, so it is not. *)
+let borrowed_pointer_shadow (s : Shadow.t) = s.hold = Through_pointer
+
+(** The value a parameter passed as [mode] says, which the loop holds at
+    [ty], is copied out of [e], the read view the caller passed, where
+    {!held_across_turns} chose the canonical type for it. *)
+let held_from_view (mode : Cpp_ir.Param_mode.t) (ty : ty) (e : expr) =
+  match (mode.form, ty) with
+  | By_view (Read_view, g), Entity_application (g', tys, _) when GlobRef.CanOrd.equal g g' ->
+    Option.map (fun materialise -> materialise tys e) (Cpp_passes.View_args.materialisable g)
+  | _ -> None
+
+(** Generate the initialiser expression for a shadow variable [shadow] of
+    the parameter [orig_id], passed as [mode] says and declared at [ty].
 
     - Pointer-safe shadows: [& orig_id] (address-of)
     - Moveable parameters: [std::move(orig_id)]
+    - A read view held as a value ({!held_from_view}): the value copied out
     - Otherwise: plain copy *)
-let tail_shadow_init u orig_id shadow_ty ty =
-  match shadow_ty, borrowed_value_param_pointee u ty with
-  | Pointer _, Some _ -> Unary (Address_of, Local orig_id)
-  | _ ->
-    if is_moveable_param_type ty then Move (Local orig_id)
-    else Local orig_id
+let tail_shadow_init orig_id (shadow : Shadow.t) mode ty =
+  match held_from_view mode ty (Local orig_id) with
+  | Some e -> e
+  | None ->
+  if borrowed_pointer_shadow shadow then Unary (Address_of, Local orig_id)
+  else if shadow.hold = In_place then Local orig_id
+  else if is_moveable_param_type mode ty then Move (Local orig_id)
+  else Local orig_id
 
 (** Adjust a recursive-call argument to match the shadow variable's type.
 
@@ -172,14 +238,14 @@ let tail_shadow_init u orig_id shadow_ty ty =
     - Otherwise: pass through unchanged
 
     @param shadow_ids  Shadow variable IDs that are already raw pointers *)
-let tail_shadow_arg ~shadow_ids shadow_ty arg =
-  match shadow_ty, arg with
-  | Pointer _, Dereference (Local id) when List.exists (Id.equal id) shadow_ids ->
-    Local id
-  | Pointer _, Dereference inner ->
-    Call (call_opaque, Runtime Cpp_ir.Crane_rt.Raw, [inner])
-  | Pointer _, Local _ -> Unary (Address_of, arg)
-  | _ -> arg
+let tail_shadow_arg ~shadow_ids shadow arg =
+  if not (borrowed_pointer_shadow shadow) then arg
+  else
+    match arg with
+    | Dereference (Local id) when List.exists (Id.equal id) shadow_ids -> Local id
+    | Dereference inner -> Call (call_opaque, Runtime Cpp_ir.Crane_rt.Raw, [inner])
+    | Local _ -> Unary (Address_of, arg)
+    | _ -> arg
 
 (** The variable whose storage [e] stays inside, through dereferences, moves,
     member accesses and variant projections ([x.v()], [std::get<K>(e)]): one
@@ -200,10 +266,13 @@ let rec storage_root ~root ~bound e =
 (** Pointer-safety flags for [params], parallel to it and to [parts]: a parameter is
     pointer-safe when every recursive call passes it a value stored inside
     what the caller passed for it ([parts], as the loop's ControlIR derives
-    it with {!Control_ir.Term.parts_passed}) and its type is a borrowed value
-    type ({!borrowed_value_param_pointee}). *)
-let pointer_safe_flags u ~parts params =
-  List.map2 (fun part (_, ty) -> part && Option.has_some (borrowed_value_param_pointee u ty)) parts params
+    it with {!Control_ir.Term.parts_passed}) and it is a borrowed value of a
+    value type, as its mode in [modes], parallel to [params], says
+    ({!borrowed_value_param_pointee}). *)
+let pointer_safe_flags u ~parts ~modes params =
+  List.map2
+    (fun part (mode, (_, ty)) -> part && Option.has_some (borrowed_value_param_pointee u mode ty))
+    parts (List.combine modes params)
 
 (** Rewrite references to pointer-safe shadow variables ([const T*]) so that
     reads dereference the pointer and method calls use [->] via
@@ -219,14 +288,14 @@ let pointer_safe_flags u ~parts params =
       matched through [->]; any other scrutinee is rewritten as an
       ordinary expression
 
-    @param shadow_params The shadow parameter list; only entries whose type
-                         is [Pointer _] are considered pointer-safe
+    @param shadow_params The shadow parameter list; only the entries
+                         {!borrowed_pointer_shadow} accepts are rewritten
     @param stmts         Statement list to rewrite
     @return Rewritten statements with pointer dereferences inserted *)
 let rewrite_borrowed_shadow_uses shadow_params stmts =
   let ptr_shadows =
     List.filter_map
-      (fun (id, ty) -> match ty with Pointer _ -> Some id | _ -> None)
+      (fun (s : Shadow.t) -> if borrowed_pointer_shadow s then Some s.name else None)
       shadow_params
   in
   let is_ptr_shadow id = List.exists (Id.equal id) ptr_shadows in
@@ -338,7 +407,7 @@ let return_result expr =
     order the updates are made in says.  One assigned whole to a shadow
     kept by value, or to a temporary, by that update is moved. *)
 let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow_params args =
-  let shadow_ids = List.map (fun (id, _) -> id) shadow_params in
+  let shadow_ids = List.map Shadow.name shadow_params in
   let is_self_assign shadow_id arg =
     match arg with
     | Local id when Id.equal id shadow_id -> true
@@ -347,8 +416,8 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
   in
   let pairs =
     List.map
-      (fun ((shadow_id, ty), arg) ->
-        ((shadow_id, ty), tail_shadow_arg ~shadow_ids ty arg))
+      (fun ((shadow : Shadow.t), arg) ->
+        ((shadow.name, shadow.ty), tail_shadow_arg ~shadow_ids shadow arg))
       ( if List.compare_lengths shadow_params args <> 0 then
           arity_mismatch ~args:(List.length args) ~params:(List.length shadow_params)
         else List.combine shadow_params args )
@@ -387,7 +456,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
       converting_ctor vty [core]
     | _ -> arg
   in
-  let by_value id = List.exists (fun (s, ty) -> Id.equal s id && not (pointer ty)) shadow_params in
+  let by_value id = List.exists (fun (s : Shadow.t) -> Id.equal s.name id && Shadow.by_value s) shadow_params in
   let moved_at_last_read updates =
     fst
       (List.fold_right
@@ -399,6 +468,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
                Bind_variable (x, Existing, Move (Local v))
              | Bind_variable (x, (Declare (ty, _) as d), Local v) when (not (pointer ty)) && last v ->
                Bind_variable (x, d, Move (Local v))
+             | Bind_variable (x, (Declare_deduced _ as d), Local v) when last v -> Bind_variable (x, d, Move (Local v))
              | s -> s
            in
            let reads = match s with Bind_variable (_, _, e) | Expression e -> free_vars_expr e | _ -> [] in
@@ -475,10 +545,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
         (fun ((shadow_id, ty), arg) ->
           if needs_temp shadow_id then
             Some
-              (Bind_variable
-                 ( temp_name shadow_id,
-                   Declare (strip_ref_and_const_type ty, None),
-                   make_rhs ty arg ))
+              (Cpp_ir.Typed.bind (temp_name shadow_id) (strip_ref_and_const_type ty) (make_rhs ty arg))
           else
             None)
         non_trivial
@@ -538,8 +605,8 @@ module Loop_rewrite_config = struct
     (** Mask parallel to function parameters: [true] = varying (needs a shadow
         variable), [false] = invariant (referenced directly). *)
 
-    shadow_params : (Id.t * ty) list;
-    (** Shadow variable bindings [(name, type)] for varying parameters.
+    shadow_params : Shadow.t list;
+    (** Shadow variables for varying parameters.
         Used by {!make_shadow_updates} when rewriting tail calls. *)
 
     jumped : expr -> unit;
@@ -627,7 +694,7 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
        repointed; what it pointed at stays where it was. *)
     let by_value =
       List.filter_map
-        (fun (id, ty) -> if pointer ty then None else Some id)
+        (fun (s : Shadow.t) -> if Shadow.by_value s then Some s.name else None)
         trc.inner.shadow_params
     in
     let root =
@@ -712,13 +779,13 @@ let rewrite_visit_stmts ?(last_reads = fun _ _ -> []) ~jumped check varying shad
 (** Returns true if the statement declares a new variable or type binding. *)
 let declares_variable = function
   | Declare _ | Declare_value_initialized _ | Structured_binding _ | Local_struct _ | Local_type_alias _ -> true
-  | Bind_variable (_, Declare _, _) -> true (* typed assignment = declaration *)
+  | Bind_variable (_, (Declare _ | Declare_deduced _), _) -> true (* typed assignment = declaration *)
   | _ -> false
 
 (** Names declared directly by a statement (not recursing into sub-statements). *)
 let direct_decl_ids = function
   | Declare (id, _, _) | Declare_value_initialized (id, _) -> [ id ]
-  | Bind_variable (id, Declare _, _) -> [ id ]
+  | Bind_variable (id, (Declare _ | Declare_deduced _), _) -> [ id ]
   | Local_type_alias (id, _) -> [ id ]
   | Structured_binding (ids, _) -> ids
   | _ -> []
@@ -818,10 +885,12 @@ module Shadow_setup = struct
             across recursive calls and needs a shadow variable. *)
     varying_params : (Id.t * ty) list;
         (** Only the varying parameters (filtered by {!Shadow_setup.varying}). *)
-    shadow_params : (Id.t * ty) list;
-        (** Shadow variable names ([_loop_X]) and types for each varying
-            parameter, respecting pointer-safety (borrowed params become
-            [const T*] shadows). *)
+    varying_modes : Cpp_ir.Param_mode.t list;
+        (** How each of {!Shadow_setup.varying_params} is passed. *)
+    shadow_params : Shadow.t list;
+        (** The shadow variable ([_loop_X]) of each varying parameter,
+            respecting pointer-safety (borrowed params become [const T*]
+            shadows). *)
     subs : (Id.t * Id.t) list;
         (** Substitution list: [(original_id, shadow_id)] pairs.  Applied to
             the function body via {!Analysis.subst_stmt} so that
@@ -843,7 +912,7 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
   if moves = [] then check
   else
     let by_value shadow =
-      match List.assoc_opt shadow shadow_params with Some ty -> not (pointer ty) | None -> false
+      List.exists (fun (s : Shadow.t) -> Id.equal s.name shadow && Shadow.by_value s) shadow_params
     in
     let move_read x arg =
       let bare = ref 0 and moved = ref 0 and captured = ref 0 in
@@ -926,6 +995,62 @@ let planned_last_reads ~moves e args =
          flags args )
   | Some _ | None -> []
 
+(** The arguments of each recursive call [check] finds in [body]. *)
+let recursive_arguments check body =
+  List.map (fun (cs : call_site) -> cs.args) (collect_stmts check ~in_visitor:false body)
+
+(** [params], each passed by read view ({!Cpp_ir.Param_mode.view}) that
+    the loop cannot keep a view declared at the mapped type's canonical type
+    instead.  A loop variable is reassigned at every turn, and a view of
+    what a turn computes -- [crane::string_sub(_loop_s, 1, n)], an owner
+    made for the call -- dangles once the statement assigning it ends; a
+    call would have kept the temporary alive until it returned.  So a
+    parameter the recursive calls vary ([varying], parallel to [params])
+    stays a view only where every call in [sites] (the argument lists,
+    parallel to [params]) passes it a parameter that outlives the loop --
+    one no call varies, or one that stays a view itself -- and none passes
+    it to a varying parameter that does not, which would copy it at every
+    turn.  The others hold their value, copied once out of the view the
+    caller passed ({!held_from_view}).  A writable view is left: the writes
+    through it are the caller's, which a value of the loop's own would not
+    see; so is a view whose mapping cannot copy it ([BorrowOnly]). *)
+let held_across_turns ~varying ~sites ~modes params =
+  let read_view (m : Cpp_ir.Param_mode.t) =
+    match m.form with
+    | By_view (Read_view, g) when Option.has_some (Cpp_passes.View_args.materialisable g) -> Some g
+    | _ -> None
+  in
+  let n = List.length params in
+  let sites = List.filter (fun args -> List.length args = n) sites in
+  let names = List.map fst params in
+  let rec settle kept =
+    let outlives x = List.exists2 (fun id (v, k) -> Id.equal id x && ((not v) || k)) names (List.combine varying kept) in
+    let passed i (a : expr) = match a with Local x | Move (Local x) -> Id.equal x (List.nth names i) | _ -> false in
+    let kept' =
+      List.mapi
+        (fun i k ->
+          k
+          && List.for_all
+               (fun args ->
+                 (match List.nth args i with Local x | Move (Local x) -> outlives x | _ -> false)
+                 && List.for_all2 (fun a (v, k') -> (not v) || k' || not (passed i a)) args (List.combine varying kept))
+               sites)
+        kept
+    in
+    if kept' = kept then kept else settle kept'
+  in
+  let candidate v m = v && Option.has_some (read_view m) in
+  let kept = settle (List.map2 candidate varying modes) in
+  List.map2
+    (fun (((id, ty), m), v) k ->
+      match read_view m with
+      | Some g when v && not k -> (
+        match Base.Mapping_plan.view_arguments (Base.Mapping_plan.find g) Base.Mapping_plan.Read_view ty with
+        | Some tys -> (id, Entity_application (g, tys, []))
+        | None -> (id, ty) )
+      | _ -> (id, ty))
+    (List.combine (List.combine params modes) varying) kept
+
 (** Compute the shadow-variable setup shared by {!transform_tail} and
     {!Tmc.transform_tmc}.
 
@@ -941,21 +1066,23 @@ let planned_last_reads ~moves e args =
     @param tparams The surrounding template header, for callable parameters'
                    shadow types ({!tail_shadow_type})
     @param params  Function parameters [(id, type)]
+    @param modes   How each of [params] is passed, parallel to it
     @return {!shadow_setup} record consumed by the caller *)
-let build_shadow_setup ~unit ~varying ~parts tparams params =
-  let pointer_safe = pointer_safe_flags unit ~parts params in
+let build_shadow_setup ~unit ~varying ~parts ~modes ~sites tparams params =
+  let pointer_safe = pointer_safe_flags unit ~parts ~modes params in
+  let params = held_across_turns ~varying ~sites ~modes params in
   let varying_params = filter_by_mask varying params in
+  let varying_modes = filter_by_mask varying modes in
   let varying_pointer_safe = filter_by_mask varying pointer_safe in
   let shadow_params =
     List.map2
-      (fun (id, ty) safe ->
-        (shadow_name id, tail_shadow_type unit ~tparams ~pointer_safe:safe ty))
-      varying_params varying_pointer_safe
+      (fun ((id, ty), mode) safe -> make_shadow unit ~tparams ~pointer_safe:safe (shadow_name id) mode ty)
+      (List.combine varying_params varying_modes) varying_pointer_safe
   in
   let subs =
-    List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
+    List.map2 (fun (id, _) (s : Shadow.t) -> (id, s.name)) varying_params shadow_params
   in
-  { Shadow_setup.varying = varying; varying_params = varying_params;
+  { Shadow_setup.varying = varying; varying_params = varying_params; varying_modes;
     shadow_params = shadow_params; subs = subs }
 
 (** Drop the shadow variables a loop body only ever writes.
@@ -1066,30 +1193,28 @@ let drop_unread_shadows shadow_decls body =
     @param tparams The surrounding template header
     @param check Call checker for identifying recursive calls
     @param params Function parameters [(id, type)] list
+    @param modes How each of [params] is passed, parallel to it
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~unit ~varying ~parts tparams
+let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~unit ~varying ~parts ~modes tparams
   check params ret_ty body =
-  let { Shadow_setup.varying = varying; varying_params = varying_params;
+  let { Shadow_setup.varying = varying; varying_params = varying_params; varying_modes;
         shadow_params = shadow_params; subs = subs } =
-    build_shadow_setup ~unit ~varying ~parts tparams params
+    build_shadow_setup ~unit ~varying ~parts ~modes ~sites:(recursive_arguments check body) tparams params
   in
   let is_void = ret_ty = Void in
   (* Shadow variable declarations (only for varying params) *)
   let shadow_decls =
     List.map2
-      (fun (orig_id, ty) (shadow_id, shadow_ty) ->
+      (fun ((orig_id, ty), mode) (shadow : Shadow.t) ->
         let init_expr =
           match List.assoc_opt orig_id param_inits with
           | Some custom -> custom
-          | None -> tail_shadow_init unit orig_id shadow_ty ty
+          | None -> tail_shadow_init orig_id shadow mode ty
         in
-        Bind_variable
-          ( shadow_id,
-            Declare (strip_ref_and_const_type shadow_ty, None),
-            init_expr ) )
-      varying_params
+        Cpp_ir.Typed.bind (shadow.name) ((if shadow.hold = In_place then shadow.ty else strip_ref_and_const_type shadow.ty)) (init_expr) )
+      (List.combine varying_params varying_modes)
       shadow_params
   in
   (* Substitute param references in body *)

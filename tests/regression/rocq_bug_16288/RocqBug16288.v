@@ -2,7 +2,7 @@
    were incorrectly referencing themselves *)
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Module RocqBug16288.
 

@@ -3,7 +3,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include "small_vector.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -94,44 +93,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-
-  uint64_t length() const {
-    const List<A> *_self = this;
-
-    // Explicit stack replaces the non-tail recursion of length: _call frames
-    // are pending calls, _after frames resume a caller.
-    struct _call {
-      const List<A> *_self;
-    };
-
-    struct _after_length_in_Cons {};
-
-    using _frame = std::variant<_call, _after_length_in_Cons>;
-    uint64_t _result{};
-    crane::small_vector<_frame> _stack;
-    _stack.emplace_back(_call{_self});
-    while (!_stack.empty()) {
-      _frame &_popped = _stack.back();
-      if (std::holds_alternative<_call>(_popped)) {
-        auto _f = std::move(std::get<_call>(_popped));
-        _stack.pop_back();
-        const List<A> *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = UINT64_C(0);
-        } else {
-          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_after_length_in_Cons{});
-          _stack.emplace_back(_call{crane_raw(a1)});
-        }
-      } else {
-        auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
-        _stack.pop_back();
-        _result = (std::move(_result) + 1);
-      }
-    }
-    return _result;
-  }
 };
 
 template <typename A, typename P> struct SigT {
@@ -180,7 +141,7 @@ template <typename A, typename P> struct SigT {
 /// domty (projT1 e) depends on the runtime witness e, so its call sites
 /// only see std::any; the erased list is boxed as List<std::any>, while
 /// wrap_list expects the concrete List<uint64_t>.
-bool wrap_list(const List<uint64_t> &xs);
+bool wrap_list(const List<uint64_t> &_x);
 using entry = SigT<uint64_t, crane::fn<domty(std::monostate)>>;
 
 template <typename F1> entry mk(uint64_t p, F1 &&f) {

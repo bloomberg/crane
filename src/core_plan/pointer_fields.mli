@@ -25,6 +25,17 @@ module Key : sig
   val compare : t -> t -> int
 end
 
+(** A pointer field as planned: its index, whether it holds the inductive
+    itself, and whether the value is held in the slot itself -- a shared
+    variant's [crane::shared_box], or a [crane::shared_or_t] only an
+    instantiation decides ({!Pointer_slot}) -- rather than in a cell the
+    slot points at, which a copy of the slot shares. *)
+type planned = {
+  index : int;
+  recursive : bool;
+  in_slot : bool;
+}
+
 (** The pointer fields of each constructor struct that has one, by key. *)
 type t
 
@@ -33,9 +44,14 @@ val none : t
 
 (** [add m planned] is [m] with the pointer fields of each constructor
     struct planned: the inductive, the constructor's struct name and each
-    field's index with whether it holds the inductive itself
-    ({!Core_to_cpp.Inductives.constructor_pointer_fields}). *)
-val add : t -> (Names.GlobRef.t * string * (int * bool) list) list -> t
+    field ({!Core_to_cpp.Inductives.constructor_pointer_fields}). *)
+val add : t -> (Names.GlobRef.t * string * planned list) list -> t
 
 (** The pointer fields of the constructor struct [key], if it has any. *)
 val find : t -> Key.t -> field list option
+
+(** The indices of the pointer fields of the constructor struct [key] whose
+    value lies in a cell the slot points at, not in the slot: a pointer to
+    the value stays good when the slot is copied, as long as one copy
+    lives. *)
+val cells : t -> Key.t -> int list option

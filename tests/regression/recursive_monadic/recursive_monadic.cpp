@@ -31,19 +31,19 @@ List<int64_t> RecursiveMonadic::collect_lengths(const List<std::string> &xs) {
     const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
     std::cout << a0 << '\n';
     List<int64_t> rest_ = collect_lengths(*a1);
-    return List<int64_t>::cons(static_cast<int64_t>(a0.length()),
-                               std::move(rest_));
+    return List<int64_t>::cons(
+        static_cast<int64_t>((std::string_view{a0}).size()), std::move(rest_));
   }
 }
 
 /// 4. Recursive with two recursive calls (tree-like)
-uint64_t RecursiveMonadic::repeat_action(uint64_t n, std::string msg) {
+uint64_t RecursiveMonadic::repeat_action(uint64_t n, const std::string &msg) {
   if (n <= 0) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
     std::cout << msg << '\n';
-    uint64_t r = repeat_action(n_, std::move(msg));
+    uint64_t r = repeat_action(n_, msg);
     return (r + 1);
   }
 }

@@ -29,10 +29,8 @@ struct LocalFixReturnsFunction {
   /// closure for the partial application passed the written arguments last
   /// first, go(acc, l, _pa0), which does not compile for g and swaps
   /// l and acc for h.
-  static std::optional<uint64_t> g(uint64_t _x,
-                                   const std::optional<uint64_t> &x0_);
-  static std::optional<uint64_t> h(uint64_t n,
-                                   const std::optional<uint64_t> &x0_);
+  static std::optional<uint64_t> g(uint64_t _x, std::optional<uint64_t> x0_);
+  static std::optional<uint64_t> h(uint64_t n, std::optional<uint64_t> x0_);
 };
 
 template <typename A> struct List {

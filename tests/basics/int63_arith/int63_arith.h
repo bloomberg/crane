@@ -15,11 +15,11 @@ struct Int63Arith {
   static inline const int64_t i_sub = static_cast<int64_t>(
       (static_cast<uint64_t>(INT64_C(50)) - static_cast<uint64_t>(INT64_C(8))) &
       0x7FFFFFFFFFFFFFFFULL);
-  static inline const bool i_eqb_true = INT64_C(42) == INT64_C(42);
+  static constexpr bool i_eqb_true = true;
   static inline const bool i_eqb_false = INT64_C(42) == INT64_C(43);
   static inline const bool i_ltb_true = INT64_C(3) < INT64_C(5);
   static inline const bool i_ltb_false = INT64_C(5) < INT64_C(3);
-  static inline const bool i_leb_true = INT64_C(3) <= INT64_C(3);
+  static constexpr bool i_leb_true = true;
   static inline const bool i_leb_false = INT64_C(5) <= INT64_C(3);
   static int64_t i_abs(int64_t x);
   static inline const int64_t test_abs_pos = i_abs(INT64_C(42));

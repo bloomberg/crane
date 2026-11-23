@@ -232,8 +232,7 @@ struct MemSafetyProbe24 {
           uint64_t a1 = _f.a1;
           std::pair<tree, uint64_t> pl = std::move(_f.pl);
           std::pair<tree, uint64_t> pr = std::move(_result);
-          _result = std::make_pair(
-              *_self, ((a1 + std::move(pl).second) + std::move(pr).second));
+          _result = std::make_pair(*_self, ((a1 + pl.second) + pr.second));
         }
       }
       return _result;
@@ -591,13 +590,13 @@ struct MemSafetyProbe24 {
                    tree::node(tree::leaf(), UINT64_C(11),
                               tree::leaf()))
             .pair_self();
-    return (std::move(p).first.tree_sum() + std::move(p).second);
+    return (std::move(p).first.tree_sum() + p.second);
   }();
   static inline const uint64_t test_triple_use = []() {
     std::pair<std::pair<tree, tree>, uint64_t> p =
         tree::node(tree::leaf(), UINT64_C(5), tree::leaf()).triple_use();
     return (((p.first).first.tree_sum() + (p.first).second.tree_sum()) +
-            std::move(p).second);
+            p.second);
   }();
   static inline const uint64_t test_tag_tree = []() {
     std::pair<tree, uint64_t> p =
@@ -606,7 +605,7 @@ struct MemSafetyProbe24 {
                    tree::node(tree::leaf(), UINT64_C(8),
                               tree::leaf()))
             .tag_tree();
-    return (std::move(p).first.tree_sum() + std::move(p).second);
+    return (std::move(p).first.tree_sum() + p.second);
   }();
   static mylist<uint64_t> tree_to_list(const tree &t);
   static inline const uint64_t test_nested_ops = []() {
@@ -648,8 +647,7 @@ struct MemSafetyProbe24 {
                    UINT64_C(20),
                    tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
     crane::fn<uint64_t(std::pair<uint64_t, uint64_t>)> add_pair =
-        [](const std::pair<uint64_t,
-                           uint64_t> &p) { return (p.first + p.second); };
+        [](std::pair<uint64_t, uint64_t> p) { return (p.first + p.second); };
     if (std::holds_alternative<
             typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(
             pairs.v_mut())) {

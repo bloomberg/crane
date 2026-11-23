@@ -55,7 +55,7 @@ let with_fields_plan cx case asgns f =
 (** The return type a branch of a match invoked in place, annotated [rty],
     is written under: the one in force, [ret], where it is a function type;
     failing that, at a function of several arguments, the annotation's, the
-    type the match joins its callables at ({!Match_types.iife_closure_return}),
+    type the match joins its callables at ({!Match_types.join_branches}),
     so that a lambda in the branch's tail takes them all. *)
 let branch_return cx env (ret : Cpp_ir.Lowered.Type.t option) (rty : Core.Type.t) =
   match ret with
@@ -70,13 +70,11 @@ let branch_return cx env (ret : Cpp_ir.Lowered.Type.t option) (rty : Core.Type.t
     [slot], which states the Core type a function value is written against
     ({!Lambda.gen_lambda}) where it is one; failing that, at a function type,
     the branch's annotation, which says it as well. *)
-let branch_slot ?slot (rty : Core.Type.t) : Slot.slot option =
+let branch_slot (slot : Slot.slot) (rty : Core.Type.t) : Slot.slot =
   let arrow t = match resolve_meta t with Core.Type.Arrow _ -> true | _ -> false in
-  match slot with
-  | Some ({Slot.expected_core_ty = Some t; _} : Slot.slot) when arrow t -> slot
-  | _ when arrow rty ->
-    let s = match slot with Some s -> s | None -> Slot.empty_slot in
-    Some {s with Slot.expected_core_ty = Some rty}
+  match slot.Slot.expected_core_ty with
+  | Some t when arrow t -> slot
+  | _ when arrow rty -> {slot with Slot.expected_core_ty = Some rty}
   | _ -> slot
 
 (** Generate a single branch of a [Match] statement's if/else-if chain.
@@ -110,9 +108,10 @@ let branch_slot ?slot (rty : Core.Type.t) : Slot.slot option =
     @param match_i  nesting level counter for name suffixing
     @param scrut    the value being matched, shared by every branch
     @param site     the match and this branch, binding [ids] *)
-let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body sname
+let gen_match_branch cx (slot : Slot.slot) env (typ : Core.Type.t) rty cname ids dummies body sname
     match_i (scrut : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Match.scrutinee) ~scrut_db ~site :
     Cpp_ir.Lowered.phase Cpp_ir.Grammar.Match.branch =
+  let ret = slot.Slot.ret in
   let ctor_type = Match_types.ctor_type_of_match cx env typ cname in
   let ctor_name = ctor_struct_id_of_ref cname in
   let ctor_struct_name = Id.to_string ctor_name in
@@ -164,13 +163,13 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
   in
   let body_stmts =
     (
-      let inner_ret =
-        match current_cpp_return_type cx () with
+      let ret =
+        match ret with
         | Some Void -> None
         | rt -> branch_return cx env rt rty
       in
       with_scope cx @@ fun () ->
-      with_cpp_return_type cx inner_ret (fun () ->
+      (
           Match_types.populate_erased_field_env cx
             ?scrut_db:(Option.map (fun db -> db + n_pat_vars) scrut_db)
             ~cname ~typ ~env ~n_pat_vars
@@ -182,7 +181,7 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
                 Representation_plan.check cx.ctx ~site ~field:i
                   ~live:(Binders.binder_is_boxed cx (n_pat_vars - i)) () )
               rev_ids;
-          gen_stmts cx ?slot:(branch_slot ?slot rty) env_for_body (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body ))
+          gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot rty) ()) env_for_body (Destination.return_ ~ret) body ))
   in
   let tvars = get_current_type_vars cx in
 (* A non-self-referential field in a type-indexed inductive (no template
@@ -320,7 +319,7 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
             if non_erased_def_site_field_tys <> []
                && not (field_is_self_or_mutual_ref_at_def i)
                && not (field_has_nested_self_ref_at_def i)
-               && Convert.contains_shared_ptr storage_field_cpp_ty
+               && Cpp_passes.Convert.contains_shared_ptr storage_field_cpp_ty
             then bare_field_cpp_ty
             else storage_field_cpp_ty
         in
@@ -400,7 +399,7 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
      This flag triggers pre-extraction even when [branch_has_lambda] is
      false (because the lambda is added externally by [inline_iife]). *)
   let return_type_is_coinductive =
-    match current_cpp_return_type cx () with
+    match ret with
     | Some (Entity_application (r, _, _)) -> Base.Table.is_coinductive r
     | _ -> false
   in
@@ -438,11 +437,11 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
               let deref : Cpp_ir.Lowered.Expr.t = Dereference (Local binding_name) in
               (match field_ty with
                | Shared_pointer storage_inner when storage_inner <> bare_ty ->
-                 Convert.gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
+                 Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
                | _ -> deref)
             else if field_ty <> bare_ty
-                    && Convert.contains_shared_ptr field_ty then
-              Convert.gen_type_conversion_expr ~src_ty:field_ty ~dst_ty:bare_ty
+                    && Cpp_passes.Convert.contains_shared_ptr field_ty then
+              Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:field_ty ~dst_ty:bare_ty
                 (Cpp_ir.Expr.Local binding_name)
             else if field_is_wholesale_erased i
                     && not (Types.resolves_to_any_type cx bare_ty) then
@@ -453,22 +452,22 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
                  value directly, and casting a [std::any] holding a container to
                  [std::any] would throw at runtime.  Only genuinely concrete
                  target types are unwrapped here. *)
-              (match Convert.strip_ns_global_app bare_ty with
+              (match Cpp_passes.Convert.strip_ns_global_app bare_ty with
                | Entity_application (g, [_], _) when is_list_global g && not (Base.Table.is_custom g) ->
                  let list_any_ty : Cpp_ir.Lowered.Type.t =
                    match bare_ty with
                    | In_namespace (ns_g, _) -> In_namespace (ns_g, Entity_application (g, [Any], []))
                    | _ -> Entity_application (g, [Any], [])
                  in
-                 Cpp_passes.Erasure.converting_ctor bare_ty [Cpp_passes.Erasure.unbox list_any_ty (Cpp_ir.Expr.Local binding_name)]
+                 Cpp_passes.Erasure.converting_ctor bare_ty [Coerce.unbox list_any_ty (Cpp_ir.Expr.Local binding_name)]
                | Entity_application (g, [elem_ty], _) when Base.Type_util.is_custom_list_global g ->
                  let erased_elem = Cpp_passes.Erasure.erase_type_to_any elem_ty in
                  let cast_ty : Cpp_ir.Lowered.Type.t =
                    if erased_elem = Any then bare_ty
                    else Entity_application (g, [erased_elem], [])
                  in
-                 Cpp_passes.Erasure.unbox cast_ty (Cpp_ir.Expr.Local binding_name)
-               | _ -> Cpp_passes.Erasure.unbox bare_ty (Cpp_ir.Expr.Local binding_name))
+                 Coerce.unbox cast_ty (Cpp_ir.Expr.Local binding_name)
+               | _ -> Coerce.unbox bare_ty (Cpp_ir.Expr.Local binding_name))
             else
               Local binding_name
           in
@@ -505,7 +504,7 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
             let rhs =
               match field_ty' with
               | Shared_pointer storage_inner when storage_inner <> bare_ty ->
-                Convert.gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
+                Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
               | _ -> deref
             in
             (* The value is what the branch body reads for the pattern
@@ -550,14 +549,16 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
     {b Type resolution.}  The match type is first refined from the type of
     the variable the scrutinee reads ({!Match_types.match_scrutinee_type}), so that
     field types and constructor type parameters are concrete. *)
-let rec gen_cpp_case cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
+let rec gen_cpp_case cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
+  let ret = slot.Slot.ret in
   (* A match that may reuse its cell generates each branch body in a reuse
      arm, under the arm's plan, and again in the shared arm. *)
   if Base.Table.reuse_here () && Lowering_state.matches_reuse cx then
-    Ownership_ir.Region.Frame_save.generating_alternatives (fun () -> gen_cpp_case_once cx ?slot typ t env pv case_occ)
-  else gen_cpp_case_once cx ?slot typ t env pv case_occ
+    Ownership_ir.Region.Frame_save.generating_alternatives (fun () -> gen_cpp_case_once cx (Slot.at ~ret ~slot ()) typ t env pv case_occ)
+  else gen_cpp_case_once cx (Slot.at ~ret ~slot ()) typ t env pv case_occ
 
-and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
+and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
+  let ret = slot.Slot.ret in
   let typ =
     let var_type i = try Some (get_env_type cx i) with _ -> None in
     let at bt = Match_types.match_scrutinee_type cx env typ t pv ~var_type ~var_cpp_type:(fun _ -> bt) in
@@ -599,9 +600,9 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
         CErrors.anomaly (Pp.str "gen_case_cpp: enum type expected to be a Global_app")
     in
     let scrutinee =
-      Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ (gen_expr cx env t)
+      Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr)
     in
-    let rec gen_enum_branches = function
+    let rec gen_enum_branches ~ret = function
       | [] -> []
       | {Core.Match.Branch.binders = ids; pattern = p; body = body; _} :: cs ->
       match p with
@@ -622,31 +623,31 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
         in
         let body_stmts =
           Binders.with_binders cx env ids' (fun () ->
-              gen_stmts cx ?slot env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body )
+              gen_stmts cx (Slot.at ~ret ~slot ()) env' (Destination.return_ ~ret) body )
         in
-        (ctor_name, body_stmts) :: gen_enum_branches cs
-      | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ | Core.Pattern.Tuple _ -> gen_enum_branches cs
+        (ctor_name, body_stmts) :: gen_enum_branches ~ret cs
+      | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ | Core.Pattern.Tuple _ -> gen_enum_branches ~ret cs
     in
-    let gen_default_stmts () =
+    let gen_default_stmts ~ret =
       let wild_br =
         Array.to_list pv
         |> List.find_opt
           (fun {Core.Match.Branch.pattern = p; _} -> match p with Core.Pattern.Wildcard -> true | _ -> false)
       in
       Option.map
-        (fun (br : Core.Match.Branch.t) -> gen_stmts cx ?slot:(branch_slot ?slot br.result_type) env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) br.body)
+        (fun (br : Core.Match.Branch.t) -> gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot br.result_type) ()) env (Destination.return_ ~ret) br.body)
         wild_br
     in
     let void_ret = Match_types.iife_void_return cx env typ pv in
-    let branches, default =
+    let (branches, default), returned =
       let ret =
         match void_ret with
         | Some Void -> void_ret
-        | _ -> current_cpp_return_type cx ()
+        | _ -> ret
       in
-      with_cpp_return_type cx ret (fun () ->
-          let branches = gen_enum_branches (Array.to_list pv) in
-          (branches, gen_default_stmts ()) )
+      with_returns cx (fun () ->
+          let branches = gen_enum_branches ~ret (Array.to_list pv) in
+          (branches, gen_default_stmts ~ret) )
     in
     let body : Cpp_ir.Lowered.Stmt.t list =
       [Switch {scrutinee = scrutinee; enum = ind_ref; branches = branches; default = default}]
@@ -655,7 +656,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
       match void_ret with
       | Some _ -> Some Cpp_ir.Type.Void
       | None ->
-        Match_types.iife_closure_return cx env typ pv body
+        Match_types.join_branches ~own:(Destination.slot_of ret) ~returned cx env typ pv body
     in
     Cpp_ir.Build.iife iife_ret_opt body
   else
@@ -674,7 +675,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
     in
     (* The scrutinee is referenced across all branches, so the plan has a
        read of it as one in place, never moved ({!Ownership_ir.Region.Inspected}). *)
-    let scrut_expr = gen_expr cx env t in
+    let scrut_expr = (gen_expr_typed cx (Slot.at ~ret ()) env t).expr in
     let scrut_expr =
       Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ scrut_expr
     in
@@ -739,7 +740,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
         let saved_erased = Binders.save_erased_env cx () in
         let ids', env', dummies = process_match_pattern_vars ids env in
         let br =
-          gen_match_branch cx ?slot env' typ rty r ids' dummies body sname
+          gen_match_branch cx (Slot.at ~ret ~slot ()) env' typ rty r ids' dummies body sname
             match_i scrut ~scrut_db ~site:(Branch (case_occ, i))
         in
         restore_env_types cx saved_env_types;
@@ -748,17 +749,24 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
         (br :: rest, wild)
       | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ ->
         let body_stmts =
-          gen_stmts cx ?slot:(branch_slot ?slot rty) env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body
+          gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot rty) ()) env (Destination.return_ ~ret) body
         in
         ([], Some body_stmts)
       | Core.Pattern.Tuple _ -> gen_branches (i + 1) cs
     in
-    let branches, wildcard = gen_branches 0 (Array.to_list pv) in
+    let (branches, wildcard), returned = with_returns cx (fun () -> gen_branches 0 (Array.to_list pv)) in
     let iife_ret_opt =
       match Match_types.iife_void_return cx env typ pv with
       | Some _ -> Some Cpp_ir.Type.Void
       | None ->
-        Match_types.iife_closure_return cx env typ pv [Match (scrut, branches, wildcard)]
+        (* The branches were written under [branch_return] of the return
+           type in force (see {!gen_match_branch}). *)
+        let ret =
+          match (ret, Array.to_list pv) with
+          | Some Void, _ | _, [] -> None
+          | rt, {Core.Match.Branch.result_type = rty; _} :: _ -> branch_return cx env rt rty
+        in
+        Match_types.join_branches ~own:(Destination.slot_of ret) ~returned cx env typ pv [Match (scrut, branches, wildcard)]
     in
     (* Perceus reuse (Crane Reuse): rebuild a same-inductive constructor in
        a cell the match frees instead of allocating, via the [<ctor>__reuse]
@@ -937,7 +945,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
                    (fun (i, (var_name, core_ty)) read ->
                      let binder = local_binder cx ~site:(Branch (case_occ, branch_idx)) env' var_name in
                      let bind e : Cpp_ir.Lowered.Stmt.t list =
-                       [Bind_variable (var_name, Declare (Types.cpp_of_core cx env core_ty, binder), e)]
+                       [Cpp_ir.Typed.bind ?binder:(binder) (var_name) (Types.cpp_of_core cx env core_ty) (e)]
                      in
                      match read with
                      | Some `Unused | None -> []
@@ -969,7 +977,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
                   with_plan cx
                     (Ownership_ir.Region.reuse_arm cx.ctx.lexical.move_plan ~scrutinee:t ~branch:branch_idx
                        ~constructor:tail_ctor)
-                    (fun () -> gen_stmts cx ?slot env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body) )
+                    (fun () -> gen_stmts cx (Slot.at ~ret ~slot ()) env' (Destination.return_ ~ret) body) )
             in
             restore_env_types cx saved_env_types;
             Some (branch_idx, extract @ body_stmts, unique_cond)
@@ -1005,9 +1013,10 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
     [body] as statements ending in [k], an erased variable returned at a
     template-parameter type unboxed first.  [site] is the branch, binding
     [ids]. *)
-let gen_cpp_custom_body cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) rty ids body scrut_ind_opt ~site =
+let gen_cpp_custom_body cx (slot : Slot.slot) env (k : Destination.t) rty ids body scrut_ind_opt ~site =
+  let ret = slot.Slot.ret in
   let tvars = get_current_type_vars cx in
-  let ret = Types.cpp_of_core cx env rty in
+  let branch_ty = Types.cpp_of_core cx env rty in
   let n_pat_vars = List.length ids in
   let ids =
     List.mapi
@@ -1047,7 +1056,7 @@ let gen_cpp_custom_body cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
   in
   (* Wrap erased variables with any_cast when returned as a template parameter. *)
   let k =
-    match ret with
+    match branch_ty with
     | Variable _ ->
       let body_is_erased =
         match body with
@@ -1058,20 +1067,21 @@ let gen_cpp_custom_body cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
           not (Binders.read_is_boxed cx i occ) && Erasure.is_env_var_erased cx env tvars i
         | _ -> false
       in
-      if body_is_erased then (fun e -> k (Cpp_passes.Erasure.unbox ret e))
+      if body_is_erased then Destination.adapted (Coerce.unbox branch_ty) k
       else k
     | _ -> k
   in
-  let body = gen_stmts cx ?slot:(branch_slot ?slot rty) env k body in
-  (ids, ret, body)
+  let body = gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot rty) ()) env k body in
+  (ids, branch_ty, body)
 
 (** Generate a custom case expression using user-provided extraction syntax.
     Entry point for custom pattern match generation.
     Returns statements: when the scrutinee is non-trivial and the
     template uses [%scrut] more than once, a cache declaration
     [auto _cs = expr;] is prepended before the [Custom_match] statement. *)
-let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (typ : Core.Type.t) t pv case_occ :
+let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Core.Type.t) t pv case_occ :
     Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.Slot.ret in
   (* Save the Core type for temps computation after fix_a_fired is known. *)
   let core_typ = typ in
   let cs =
@@ -1117,13 +1127,7 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
      match's own type here keeps {!Coerce.position_cpp_ty}'s fallback from recovering a
      boxed scrutinee at the return type -- [any_cast<step_result>] on what is
      a [bool]. *)
-  let t =
-    let saved_ret = cx.ctx.lexical.current_cpp_return_type in
-    set_lexical cx (fun l -> { l with current_cpp_return_type = Some typ_ir });
-    let t = gen_expr cx ?expected_ty:scrut_expected env t in
-    set_lexical cx (fun l -> { l with current_cpp_return_type = saved_ret });
-    t
-  in
+  let t = (gen_expr_typed cx (Slot.at ~ret:(Some typ_ir) ?expected_ty:scrut_expected ()) env t).expr in
   let pair_g_opt = cs.Match_types.pair in
   (* Insert [any_cast] on the scrutinee when the runtime value is [std::any]
      but the template needs a typed expression.
@@ -1141,7 +1145,7 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
     let needs_pair_any_cast = cs.Match_types.pair_any_cast in
     if needs_pair_any_cast then begin
       let g = Option.get pair_g_opt in
-      (Cpp_passes.Erasure.unbox (Entity_application (g, [Any; Any], [])) t, true, None)
+      (Coerce.unbox (Entity_application (g, [Any; Any], [])) t, true, None)
     end
     else if (scrut_is_wrapped || (scrut_is_magic && Cpp_ir.Types.prints_as_any typ)
              || scrut_is_cpp_erased)
@@ -1168,7 +1172,7 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
           Entity_application (g, List.map erase_tparams args, ns)
         | _ -> concrete_match_type
       in
-      (Cpp_passes.Erasure.unbox cast_ty t, false, Some cast_ty)
+      (Coerce.unbox cast_ty t, false, Some cast_ty)
     else
       (t, false, None)
   in
@@ -1190,13 +1194,16 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
      so all fields are [std::any] regardless of the original field types.
      Force [Auto] so the binding uses [auto] and C++ deduces the type.
      Also force [Auto] when a type contains erased positions ([Any]),
-     since an explicit type annotation would block valid concrete-type calls. *)
+     since an explicit type annotation would block valid concrete-type calls,
+     and when the scrutinee is read at an erased instantiation (cast to
+     [std::deque<crane::obj>]): its elements are not of the Core types. *)
+  let erased_cast = match cast_to with Some ty -> has_tany_in_type ty | None -> false in
   let temps =
     match core_typ with
     | Core.Type.Global_app {type_arguments = tys; _} ->
       let raw = Types.template_params_of_core cx ~site:Cpp_ir.Types.Declared env tys in
       List.map (fun ty : Cpp_ir.Lowered.Type.t ->
-        if fix_a_fired || has_tany_in_type ty then Auto else ty) raw
+        if fix_a_fired || erased_cast || has_tany_in_type ty then Auto else ty) raw
     | _ -> []
   in
   (* When the template uses %scrut more than once and the scrutinee is a
@@ -1210,7 +1217,7 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
       match Cpp_build.lift_iife_assignment cache_id None t with
       | Some stmts -> (Cpp_ir.Expr.Local cache_id, stmts)
       | None ->
-        (Cpp_ir.Expr.Local cache_id, [(Bind_variable (cache_id, Declare (Auto, None), t) : Cpp_ir.Lowered.Stmt.t)])
+        (Cpp_ir.Expr.Local cache_id, [(Cpp_ir.Typed.bind_deduced cache_id (t) : Cpp_ir.Lowered.Stmt.t)])
     end else begin
       (t, [])
     end
@@ -1310,7 +1317,7 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
         | _ -> None
       in
       let (br_ids, br_ret, br_stmts) =
-        gen_cpp_custom_body cx ?slot env' k rty ids' t scrut_ind_opt ~site:(Branch (case_occ, i))
+        gen_cpp_custom_body cx (Slot.at ~ret ~slot ()) env' k rty ids' t scrut_ind_opt ~site:(Branch (case_occ, i))
       in
       restore_env_types cx saved_env_types;
       (* Use-site [any_cast] insertion: when [fix_a_fired], pair fields are all
@@ -1328,11 +1335,11 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
           List.fold_left
             (fun stmts ({name = name; type_ = cpp_ty; _} : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Custom_match.param) ->
                if not (Cpp_ir.Types.prints_as_any cpp_ty) then
-                 let stripped = Convert.strip_ns_global_app cpp_ty in
+                 let stripped = Cpp_passes.Convert.strip_ns_global_app cpp_ty in
                  let cast_expr : Cpp_ir.Lowered.Expr.t =
                    match stripped with
                    | Entity_application (g, _, _) when is_prod_global g ->
-                     Cpp_passes.Erasure.unbox (Entity_application (g, [Any; Any], [])) (Cpp_ir.Expr.Local name)
+                     Coerce.unbox (Entity_application (g, [Any; Any], [])) (Cpp_ir.Expr.Local name)
                    | Entity_application (g, [_], _) when is_list_global g && not (Base.Table.is_custom g) ->
                      (* List<T> is stored as List<any> by grammar productions —
                         use the converting constructor List<T>(any_cast<List<any>>(v))
@@ -1344,7 +1351,7 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
                          In_namespace (ns_g, Entity_application (g, [Any], []))
                        | _ -> Entity_application (g, [Any], [])
                      in
-                     Cpp_passes.Erasure.converting_ctor cpp_ty [Cpp_passes.Erasure.unbox list_any_ty (Cpp_ir.Expr.Local name)]
+                     Cpp_passes.Erasure.converting_ctor cpp_ty [Coerce.unbox list_any_ty (Cpp_ir.Expr.Local name)]
                    | Entity_application (g, [_], _) when Base.Type_util.is_custom_list_global g ->
                      Local name
                    | Member _ | Entity_application (GlobRef.ConstRef _, _, _) ->
@@ -1354,7 +1361,7 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
                         wrapping it. any_cast<std::any>(any(V)) throws; pass
                         the std::any value as-is. *)
                      Local name
-                   | _ -> Cpp_passes.Erasure.unbox cpp_ty (Cpp_ir.Expr.Local name)
+                   | _ -> Coerce.unbox cpp_ty (Cpp_ir.Expr.Local name)
                  in
                  List.map (fun st -> Lifting.local_var_subst_stmt ~keep_cast:true name cast_expr st) stmts
                else stmts)
@@ -1379,7 +1386,7 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
         let should_strip args =
           List.exists (fun (a : Cpp_ir.Lowered.Expr.t) ->
             match a with
-            | Any_cast (ty, _) -> has_tany_in_type ty
+            | Any_cast (ty, _) | Coerce ({plan = Cast_box {into = ty; _}; _}, _) -> has_tany_in_type ty
             | Local name -> Id.Set.mem name tany_pat_var_names
             | _ -> false) args
         in
@@ -1472,7 +1479,7 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
               match s with
               | Return (Some (Local name))
                 when Id.Set.mem name erased_pat_vars ->
-                Return (Some (Cpp_passes.Erasure.unbox br_ret (Cpp_ir.Expr.Local name)))
+                Return (Some (Coerce.unbox br_ret (Cpp_ir.Expr.Local name)))
               | s -> s)
               br_stmts
         | _ -> br_stmts
@@ -1526,8 +1533,9 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
    taken apart into three fields made three calls per level.  The temporary
    is read for nothing else, so each field is moved out of it.  Returns what
    the fields are read out of, and the statements evaluating it. *)
-let record_read_once cx env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Stmt.t list =
-  let scrut = gen_expr cx env t in
+let record_read_once cx (slot : Slot.slot) env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.Slot.ret in
+  let scrut = (gen_expr_typed cx (Slot.at ~ret ()) env t).expr in
   if is_typeclass || Match_types.is_trivial_scrut scrut then (scrut, [])
   else
     let n = cx.ctx.threaded.cs_counter in
@@ -1536,39 +1544,57 @@ let record_read_once cx env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Low
     ( Move (Local cache_id),
       match Cpp_build.lift_iife_assignment cache_id None scrut with
       | Some stmts -> stmts
-      | None -> [Bind_variable (cache_id, Declare (Auto, None), scrut)] )
+      | None -> [Cpp_ir.Typed.bind_deduced cache_id (scrut)] )
 
 (** The custom match of [t] at [typ] with branches [pv] at [case_occ], in
     expression position: an immediately invoked lambda over its template's
     statements. *)
-let gen_custom_match_expr cx ?slot env ~typ ~t ~pv ~case_occ : Cpp_ir.Lowered.Expr.t =
+let gen_custom_match_expr cx (slot : Slot.slot) env ~typ ~t ~pv ~case_occ : Cpp_ir.Lowered.Expr.t =
+  let ret = slot.Slot.ret in
   let iife_ret =
     let branch_rty =
       match Array.to_list pv with
       | {Core.Match.Branch.result_type = rty; _} :: _ -> rty
       | [] -> typ
     in
+    (* The branches build their values at the slot's type where the
+       annotation erased what it states ({!Constructors.refined_by_slot}),
+       and so does the lambda returning them. *)
+    let branch_rty = Constructors.refined_by_slot slot branch_rty in
     let r = Types.cpp_of_core cx env branch_rty in
     if is_cpp_unit_type r
        || Monadic.core_type_is_void_call branch_rty
-    then Cpp_ir.Type.Void else r
+    then Cpp_ir.Type.Void
+    else
+      (* The branches are written under the return type in force: where
+         that is the annotation's function type grouped otherwise, the
+         lambdas they return take their arguments as it groups them. *)
+      match Match_types.declared_at ~own:(Destination.slot_of ret) r with Some t -> t | None -> r
   in
   let stmts =
     let ret =
       match iife_ret with
       | Void -> Some iife_ret
-      | _ -> current_cpp_return_type cx ()
+      | _ -> ret
     in
-    with_cpp_return_type cx ret (fun () ->
-        gen_custom_cpp_case cx ?slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) typ t pv case_occ )
+    gen_custom_cpp_case cx (Slot.at ~ret ~slot ()) env (Destination.return_ ~ret) typ t pv case_occ
   in
   Cpp_ir.Build.iife (Some iife_ret) stmts
+
+(** The class method a record projection [typ]/[pv] reads, where it reads
+    one (a field of a type class, not applied). *)
+let read_class_method cx typ pv case_occ : GlobRef.t option =
+  match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ with
+  | Core_plan.Match_kind.Record {typeclass = true; body = Projection {field; application = Read}} ->
+    List.nth_opt (List.filter_map Fun.id (record_fields_of_type typ)) field
+  | _ -> None
 
 (** A match taking the record [t] at [typ] apart (the term [core_e]), in
     expression position: a field read, a field called, or the record
     destructured into locals for the one branch's body. *)
-let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ ~t ~pv ~case_occ :
+let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ ~t ~pv ~case_occ :
   Cpp_ir.Lowered.Expr.t =
+  let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
   let {Core.Match.Branch.binders = ids; result_type = r; pattern = pat; body = body} = pv.(0) in
   let n = List.length ids in
   let is_typeclass, record_body =
@@ -1601,7 +1627,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
         Types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton record_ref) tvars core_ty
       in
       let api_ty = Types.cpp_of_core cx env core_ty in
-      Convert.wrap_api_expr ~storage_ty ~api_ty access
+      Cpp_passes.Convert.wrap_api_expr ~storage_ty ~api_ty access
     | _ -> access
   in
   (* For type classes, use qualified access (::) instead of arrow (->) since
@@ -1630,7 +1656,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
     in
     ( match fld with
     | Some fld ->
-      let access = make_field_access (gen_expr cx env t) fld in
+      let access = make_field_access ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr) fld in
       let access = wrap_record_field_to_api field access in
       if is_typeclass then
         (* For typeclasses, non-function value fields (like m_id : carrier)
@@ -1669,7 +1695,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
             | Core.Type.Global_app {type_arguments = args; _} -> Base.Core_util.type_subst_list args fld_ty
             | _ -> fld_ty
           in
-          Coerce.curry_value_to_expected cx env ?expected_ty (Some fld_ty) access
+          Coerce.eta_global cx env ?expected_ty (Some fld_ty) access
       else
         access
     | _ ->
@@ -1843,12 +1869,13 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
         under_branch_binders (fun () -> Calls.split_instance_args ~lex:(current_lexenv cx ()) value_args)
       in
       let call =
-        (* Source order, as {!Coerce.mk_arity_call} takes them. *)
+        (* Source order, as {!Cpp_ir.Typed.apply} takes them. *)
         let arg_exprs =
           under_branch_binders @@ fun () ->
           List.mapi
             (fun j a ->
-              let e = gen_stored_value cx ~slot env' a in
+              let value = gen_stored_value_typed cx (Slot.at ~ret ~slot ()) env' a in
+              let e = value.expr in
               match List.nth_opt fld_param_tys j with
               | Some (Core.Type.Variable_app _ as pt) when not is_typeclass ->
                 (* The dictionary's method is stored monomorphically, over
@@ -1858,12 +1885,12 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
                    [Nat].  Box the elements on the way in, as the result is
                    unboxed on the way out. *)
                 Cpp_ir.Expr.Container_cast (Types.cpp_of_core cx env' pt, e, false)
-              | Some pt -> Coerce.erase_fn_arg_for_param cx env' pt a e
+              | Some pt -> Coerce.at_param cx env' ~value pt a e
               | None -> e )
             value_args
         in
         let callee =
-          if not member_template then make_field_access (gen_expr cx env t) fld
+          if not member_template then make_field_access ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr) fld
           else
             (* The instance's method is a member template (its own [forall A]
                survives), and its type parameters are not always deducible --
@@ -1880,7 +1907,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
               | Some ft -> Base.Core_util.type_maxvar ft
               | None -> 0
             in
-            if nmax <= ipv then make_field_access (gen_expr cx env t) fld
+            if nmax <= ipv then make_field_access ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr) fld
             else
               let tvars = get_current_type_vars cx in
               let targs =
@@ -1888,7 +1915,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
                     Types.cpp_ir_of_core_type cx env tvars
                       (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = (ipv + 1 + k)}) )
               in
-              Scope ( gen_expr cx env t,
+              Scope ( (gen_expr_typed cx (Slot.at ~ret ()) env t).expr,
                   Base.Common.id_of_global Term fld,
                   targs )
         in
@@ -1904,10 +1931,16 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
         in
         (* A class method is a static member function of the instance
            struct, so its arity is the field's. *)
-        (Coerce.mk_arity_call
-             ?params:(Option.map (fun _ -> List.map (Types.cpp_of_core cx env') fld_param_tys) fld_ty_opt)
-             ~saturated:(Cpp_ir.Build.call callee)
-             arg_exprs)
+        let method_ty : Cpp_ir.Lowered.Value_type.t =
+          match fld_ty_opt with
+          | Some ft ->
+            Typed
+              (Function
+                 ( List.map (Types.cpp_of_core cx env') fld_param_tys,
+                   Types.cpp_of_core cx env' (snd (get_args_and_ret [] ft)) ))
+          | None -> Deduced Untranslated
+        in
+        (Cpp_ir.Typed.apply ~first:(Cpp_ir.Build.call callee) (Cpp_ir.Typed.v ~ty:method_ty callee) arg_exprs).expr
       in
       let n_value_args = List.length value_args in
       let erased_cod =
@@ -1915,10 +1948,10 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
         | Some ft -> (not member_template) && core_codomain_erases_to_any n_value_args ft
         | None -> false
       in
-      let call = Coerce.recover_boxed_result cx ~boxed:erased_cod ~expected:expected_ty call in
-      Coerce.recover_carrier_result
-        ~fun_ty:(if is_typeclass then None else fld_ty_opt)
-        ~n_args:n_value_args ~want:expected_ty call
+      let call = Coerce.recover_boxed_result cx ~ret ~boxed:erased_cod ~expected:expected_ty call in
+      Coerce.into_slot
+        ~origin:(Carrier_result {fun_ty = (if is_typeclass then None else fld_ty_opt); n_args = n_value_args})
+        (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated call) (Coerce.slot_of_expected expected_ty)
     | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
   | Destructure, _ | Projection _, _ ->
     (* Destructure record fields into local variables, then evaluate the body
@@ -1941,7 +1974,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
     (* renamed_ids is in reversed order (from List.rev_map above). Reverse it
        back so it aligns with ids (constructor / field order). *)
     let renamed_ids_fwd = List.rev renamed_ids in
-    let base, cache = record_read_once cx env ~is_typeclass t in
+    let base, cache = record_read_once cx (Slot.at ~ret ()) env ~is_typeclass t in
     let taken = record_taken cx ~is_typeclass t base in
     let asgns =
       List.map
@@ -1961,7 +1994,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
                 Types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton record_ref) [] ty
               in
               let api_ty = Types.cpp_ir_of_core_type cx env [] ty in
-              Convert.wrap_api_expr ~storage_ty ~api_ty e
+              Cpp_passes.Convert.wrap_api_expr ~storage_ty ~api_ty e
             | _ -> e
           in
           let decl_ty =
@@ -1973,13 +2006,13 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
               Cpp_build.lift_iife_assignment renamed_name (Some decl_ty) e
             with
             | Some stmts -> stmts
-            | None -> [Cpp_ir.Stmt.Bind_variable (renamed_name, Declare (decl_ty, binder), e)]
+            | None -> [Cpp_ir.Typed.bind ?binder:(binder) (renamed_name) (decl_ty) (e)]
           in
           (stmts, taken || (is_typeclass && match decl_ty with Reference _ -> false | _ -> true)) )
         (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
     in
-    Cpp_ir.Build.iife None
-      (cache @ List.concat_map fst asgns
+    Match_types.value_iife ?ret:expected_ty cx env (Some r) (fun _ ->
+      cache @ List.concat_map fst asgns
        @ Binders.with_binders cx env renamed_ids (fun () ->
              if Base.Probe.checking () then
                List.iteri
@@ -1987,17 +2020,17 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
                    Representation_plan.check ~as_bound:true cx.ctx ~site:(Branch (case_occ, 0)) ~field:i
                      ~live:(Binders.binder_is_boxed cx (n - i)) () )
                  ids;
-             with_iife_return_type cx expected_ty (fun () ->
-                 with_fields_plan cx core_e asgns (fun () ->
-                     gen_stmts cx ~slot env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body ) ) ) ) )
+             with_fields_plan cx core_e asgns (fun () ->
+                 gen_stmts cx (Slot.at ~ret:expected_ty ~slot ()) env' (Destination.return_ ~ret:expected_ty) body ) ) ) )
   (* Known limitation: simultaneous pattern matching on record fields is not
      supported — each field is destructured individually. *)
 
 (** A match taking the record [t] at [typ] apart (the term [ast]), in
     statement position ending in [k]: the scrutinee read once, its fields
     declared as locals, then the one branch's statements. *)
-let gen_record_match_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~typ ~t
+let gen_record_match_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : Core.Expr.t) ~typ ~t
   ~pv ~case_occ : Cpp_ir.Lowered.Stmt.t list =
+  let ret = slot.Slot.ret in
   let {Core.Match.Branch.binders = ids; body = body; _} = pv.(0) in
   let n = List.length ids in
   let is_typeclass, is_simple =
@@ -2007,21 +2040,26 @@ let gen_record_match_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Low
     | Custom | Variant -> CErrors.anomaly (Pp.str "gen_stmts: a record projection Core did not classify as one")
   in
   if is_simple then
-    (* Simple body: gen_expr handles these as direct field access (no IIFE),
+    (* Simple body: (gen_expr_typed handles these as direct).expr field access (no IIFE),
        so delegate to the default path. *)
     let value =
-      gen_expr cx ?expected_ty:(Coerce.position_cpp_ty cx None) env ast
+      gen_expr_typed cx (Slot.at ~ret ?expected_ty:(ret) ()) env ast
     in
     (* A function value returned into an erased ([std::any]) return type --
        e.g. the [nat -> nat] branch of a dependent [if ... then nat else
        nat -> nat] -- must be stored in the canonical adapter form the
        application site casts back to. *)
     let value =
-      match Option.map (Types.slot_repr_of_cpp_type cx) (current_cpp_return_type cx ()) with
-      | Some (Boxed kind) -> Coerce.box_for_any_slot cx kind ast value
-      | Some Native | None -> value
+      match ret with
+      | Some rt -> (
+        match Types.slot_repr_of_cpp_type cx rt with
+        | Boxed kind ->
+          Typed_checks.adapted ~before:value (Some rt)
+            (Coerce.into_slot ~origin:(Any_slot {cx; kind; term = ast}) value (Exactly rt))
+        | Native -> value )
+      | None -> value
     in
-    Cpp_build.inline_iife k (value)
+    Destination.finish_inlined cx k value
   else
     (* Complex body: emit field extraction assignments as flat statements
        instead of wrapping in an IIFE. This produces clean code for all
@@ -2044,7 +2082,7 @@ let gen_record_match_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Low
     in
     let renamed_ids_fwd = List.rev renamed_ids in
     let tvars = get_current_type_vars cx in
-    let base, cache = record_read_once cx env ~is_typeclass t in
+    let base, cache = record_read_once cx (Slot.at ~ret ()) env ~is_typeclass t in
     let taken = record_taken cx ~is_typeclass t base in
     let asgns =
       List.map
@@ -2065,7 +2103,7 @@ let gen_record_match_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Low
                 Types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton record_ref) tvars ty
               in
               let api_ty = Types.cpp_of_core cx env ty in
-              Convert.wrap_api_expr ~storage_ty ~api_ty e
+              Cpp_passes.Convert.wrap_api_expr ~storage_ty ~api_ty e
             | _ -> e
           in
           let api_ty_for_decl =
@@ -2083,7 +2121,7 @@ let gen_record_match_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Low
               Cpp_build.lift_iife_assignment renamed_name (Some decl_ty) e
             with
             | Some stmts -> stmts
-            | None -> [Bind_variable (renamed_name, Declare (decl_ty, binder), e)]
+            | None -> [Cpp_ir.Typed.bind ?binder:(binder) (renamed_name) (decl_ty) (e)]
           in
           (* A class instance's field is a static member: the local copies
              it, and is its own. *)
@@ -2098,6 +2136,6 @@ let gen_record_match_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Low
             ~live:(Binders.binder_is_boxed cx (n - i)) () )
         ids;
     let body_stmts =
-      with_fields_plan cx ast asgns (fun () -> gen_stmts cx ~slot env' k body)
+      with_fields_plan cx ast asgns (fun () -> gen_stmts cx (Slot.at ~ret ~slot ()) env' k body)
     in
     cache @ List.concat_map fst asgns @ body_stmts

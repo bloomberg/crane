@@ -13,6 +13,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <variant>
@@ -140,19 +141,19 @@ public:
 
 struct EffectDirPath {
   /// 1. list_directory result matched — exercises IIFE + list match
-  static std::optional<std::string> first_file(std::string path);
+  static std::optional<std::string> first_file(const std::string &path);
   /// 2. current_path (zero args) chained to env
   static void save_cwd();
   /// 3. is_directory bool result used in conditional with effects in arms
-  static std::optional<std::string> check_and_list(std::string path);
+  static std::optional<std::string> check_and_list(const std::string &path);
   /// 4. Path effect result chained to print
-  static void show_absolute(std::string path);
+  static void show_absolute(const std::string &path);
   /// 5. Multiple bool effects composed
-  static std::string classify_path(std::string path);
+  static std::string classify_path(const std::string &path);
   /// 6. create_directory bool result explicitly bound and used
-  static std::string create_and_report(std::string path);
+  static std::string create_and_report(const std::string &path);
   /// 7. Recursive function counting list items from list_directory
   static uint64_t count_entries(const List<std::string> &dirs, uint64_t acc);
   /// 8. remove_directory (returns bool but treated as unit in bind)
-  static void cleanup(std::string path);
+  static void cleanup(const std::string &path);
 };

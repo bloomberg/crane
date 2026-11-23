@@ -34,5 +34,5 @@ Definition test_diff : bool := is_equal red blue.
 End TypeclassEnumEq.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 Crane Extraction "typeclass_enum_eq" TypeclassEnumEq.

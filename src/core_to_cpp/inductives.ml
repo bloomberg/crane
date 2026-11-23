@@ -240,7 +240,7 @@ type method_scope = {
   params : (Id.t * Cpp_ir.Lowered.Type.t) list;
       (** The C++ parameters: the runtime ones other than the receiver, each
           wrapped by ownership, a callable as an [F &&]. *)
-  passing : Core_plan.Callable_abi.passing list;
+  modes : Cpp_ir.Param_mode.t list;
       (** How each of {!method_scope.params} is passed. *)
   fun_params : (Id.t * Core_plan.Callable_abi.kind * Id.t) list;
       (** The callable parameters generalised to a template parameter: the
@@ -340,6 +340,10 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in
   let method_owned_flags = Core_plan.Ownership.read_off ~settled:(settled_ownership cx) ids_with_types inner_body in
+  (* What the body does with each parameter ({!Core_plan.Access}), by de
+     Bruijn index; a method keeps canonical forms, as a function named as a
+     value does. *)
+  let method_access = Ownership.infer_access cx ~owner:func_ref inner_body ids_with_types in
 
   (* Extract 'this' argument at this_pos - use renamed ids for consistency with
      body *)
@@ -449,17 +453,19 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
   let params =
     List.map2
       (fun (id, (cpp_ty : Cpp_ir.Lowered.Type.t), i, owned, generalised) (_, core, _) ->
-        let wrapped : Cpp_ir.Lowered.Type.t =
+        let wrapped, mode =
           match cpp_ty with
-          | Function _ when generalised -> Reference (Forwarding, Variable (Named (fun_tparam_id i)))
-          | _ -> Ownership.wrap_param_by_ownership cx ~is_owned:owned ~core cpp_ty
+          | Function _ when generalised ->
+            ( (Reference (Forwarding, Variable (Named (fun_tparam_id i))) : Cpp_ir.Lowered.Type.t),
+              Cpp_ir.Param_mode.forwarded )
+          | _ ->
+            let access = List.nth_opt method_access (n_method_params - 1 - i) in
+            Ownership.wrap_param_by_ownership cx ~is_owned:owned ?access ~reference_allowed:false ~core cpp_ty
         in
-        (id, wrapped) )
+        ((id, wrapped), mode) )
       params_with_idx param_ids_with_pos
   in
-  let passing =
-    List.map2 (fun (_, ty) (_, _, _, owned, _) -> Ownership.param_passing ~owned ty) params params_with_idx
-  in
+  let params, modes = List.split params in
 
   {
     ty = ty;
@@ -479,7 +485,7 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
     method_owned_flags = method_owned_flags;
     this_arg_id = this_arg_id;
     params = params;
-    passing = passing;
+    modes = modes;
     fun_params = fun_params;
     template_params = template_params;
     minted =
@@ -637,7 +643,7 @@ let method_plan func_ref s h =
   let scheme = Base.Core_util.reference_scheme func_ref in
   Core_plan.Callable_abi.of_head ~minted:s.minted
     ~omitted:(Tvars.type_arg_omission func_ref)
-    ~deduced_callables:s.deduced_callables ~passing:s.passing
+    ~deduced_callables:s.deduced_callables ~modes:s.modes
     ~receiver:
       { dropped =
           List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Core.Scheme.Var.of_tvar sc i)) h.dropped;
@@ -694,20 +700,25 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
     method_owned_flags = method_owned_flags;
     this_arg_id = this_arg_id;
     params = params;
+    modes = modes;
     _
   } = s in
+  let modes = List.map2 (fun (x, _) m -> (x, m)) params modes in
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
   let is_cofix_method =
     Suspension.suspends_whole func_ref ret_ty (snd (collect_lams body))
   in
-  let method_k x : Cpp_ir.Lowered.Stmt.t =
+  let method_k : Destination.t =
     if is_cofix_method then
-      suspend_whole
-        ~cpp_of:(Types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Core.Ref.User.Set.singleton name) vars)
-        ~cod:ret_cpp ret_ty x
-    else
-      Return (Some x)
+      Custom
+        { build =
+            suspend_whole
+              ~cpp_of:(Types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Core.Ref.User.Set.singleton name) vars)
+              ~cod:ret_cpp ret_ty;
+          into = Exactly ret_cpp;
+          returns = true }
+    else Return (Exactly ret_cpp)
   in
   (* Generate the method body, owning its owned parameters.  The de Bruijn
      environment has parameters in reverse order: ids_normal_order has
@@ -733,8 +744,8 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
            first, [i] innermost first. *)
         (not (this_arg_id <> None && i = method_n_params - 1 - this_pos))
         &&
-        match List.assoc_opt (Base.Common.get_db_name (i + 1) env) params with
-        | Some ty -> not (Ownership.declared_by_reference ty)
+        match List.assoc_opt (Base.Common.get_db_name (i + 1) env) modes with
+        | Some mode -> Cpp_ir.Param_mode.holds_own_value mode
         | None -> List.nth method_owned_flags i )
       ~declared:(fun i -> List.assoc_opt (Base.Common.get_db_name (i + 1) env) params)
       ~ty:(fun i -> snd (List.nth ids_with_types i))
@@ -758,7 +769,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
      exposed to the body as [gen_dfun] exposes a function's, so a result
      recovered from a box is recovered at it. *)
   let stmts =
-    with_cpp_return_type cx (Some ret_cpp) @@ fun () ->
+    let ret = Some ret_cpp in
     with_type_vars cx (vars @ extra_tvar_names) (fun () ->
         (* Include all local value-type inductives with recursive fields in the
            method ns.  This ensures that when the method body constructs or
@@ -766,8 +777,8 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
            type arguments get shared_ptr wrapping to match struct field
            types. *)
         with_method_ns_for_locals cx ~base:method_ns (fun () ->
-            with_region cx ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
-                gen_stmts cx env method_k inner_body ) ) )
+            with_region cx ~ret ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
+                gen_stmts cx (Slot.at ~ret ()) env method_k inner_body ) ) )
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
@@ -912,6 +923,9 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
       match e with
       | Any_cast (Variable (Index (_, Some name) | Named name), inner) when Id.Set.mem name phantom_name_set ->
         strip_phantom_any_cast_expr inner
+      | Coerce ({plan = Cast_box {into = Variable (Index (_, Some name) | Named name); _}; _}, inner)
+        when Id.Set.mem name phantom_name_set ->
+        strip_phantom_any_cast_expr inner
       | _ -> e
     in
     Cpp_ir.Map.expr (strip_phantom_map ()) e
@@ -942,6 +956,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
           is_noexcept = false;
           is_conversion = false;
           binders = parameter_binders cx env params;
+          modes;
           receiver_binder = Option.bind this_arg_id (local_binder cx env);
           loop = None },
       Public,
@@ -1145,7 +1160,7 @@ let constructor_field_at_own_vars vars (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir
 
 (** The fields of a constructor of [name], of types [tys], that its struct
     stores behind the smart pointer, each with whether it holds [name]
-    itself: what loop lowering reads off the struct, decided before it is
+    itself and whether its value lies in the slot ({!Core_plan.Pointer_slot}): what loop lowering reads off the struct, decided before it is
     generated ({!Core_plan.Pointer_fields.add}). *)
 let constructor_pointer_fields cx ~name ~is_coinductive vars tys =
   List.concat
@@ -1155,8 +1170,10 @@ let constructor_pointer_fields cx ~name ~is_coinductive vars tys =
            constructor_field_at_own_vars vars
              (constructor_field_storage cx ~name ~is_coinductive vars ty)
          with
-         | Shared_pointer (Entity_application (r, _, _)) when globref_equal r name -> [(i, true)]
-         | Shared_pointer _ -> [(i, false)]
+         | Shared_pointer p ->
+           let recursive = match p with Entity_application (r, _, _) -> globref_equal r name | _ -> false in
+           let in_slot = Core_plan.Pointer_slot.of_pointee p <> Core_plan.Pointer_slot.Pointer in
+           [{Core_plan.Pointer_fields.index = i; recursive; in_slot}]
          | _ -> [] )
        tys )
 
@@ -1210,6 +1227,7 @@ let static_method ~name ~ret ~params ~body : Cpp_ir.Lowered.phase F.Method.t =
     is_noexcept = false;
     is_conversion = false;
     binders = [];
+    modes = [];
     receiver_binder = None;
     loop = None }
 
@@ -1233,6 +1251,7 @@ let accessor ?(is_const = true) ?(is_inline = false) ?(section = F.Section.Acces
         is_noexcept = false;
         is_conversion = false;
         binders = [];
+        modes = [];
         receiver_binder = None;
         loop = None },
     Public,
@@ -1278,7 +1297,7 @@ let lambda params ret body ~(capture : Cpp_ir.Lowered.phase E.Capture.t) : Cpp_i
   let return_type = match ret with Some (T.Const t) -> Some t | r -> r in
   match (params, body) with
   | [], [S.Throw msg] -> E.Abort (msg, match return_type with Some t -> t | None -> T.Any)
-  | _ -> E.Lambda {params; type_params = []; return_type; body; capture; moved = []; binders = []; fixpoint = None}
+  | _ -> E.Lambda {params; type_params = []; return_type; body; capture; moved = []; binders = []; modes = []; fixpoint = None}
 
 (** Generate the C++ declaration of an inductive type: an encapsulated struct
     with its methods.
@@ -2246,8 +2265,7 @@ let gen_ind_header_v2 cx
               @ body_for on_spine e
               @ [S.While (
                    E.Unary (Not, dot0 (E.Local wl_id) "empty"),
-                   [ S.Bind_variable (pv, S.Binding.Declare (T.Auto, None),
-                       E.Move (dot0 (E.Local wl_id) "back"));
+                   [ Cpp_ir.Typed.bind_deduced pv (E.Move (dot0 (E.Local wl_id) "back"));
                      S.Expression (dot0 (E.Local wl_id) "pop_back");
                      S.If {condition = E.Binary (Or, E.Unary (Not, E.Local pv),
                          E.Binary (Not_equal, dot0 (E.Local pv) "use_count",
@@ -2350,7 +2368,7 @@ let gen_ind_header_v2 cx
                      a tail is not uniquely owned -- the remaining cells then
                      die with their real owner. *)
                   sole_owner fe
-                    [ S.Bind_variable (lp, S.Binding.Declare (T.Auto, None), dot0 fe "get");
+                    [ Cpp_ir.Typed.bind_deduced lp (dot0 fe "get");
                       S.While (
                         B.call
                           (E.Holds_alternative (T.Member (ls, cons_id)))
@@ -2500,9 +2518,8 @@ let gen_ind_header_v2 cx
                 ~capture:Runs_in_place
             in
             let body =
-              [ S.Bind_variable (next_id, S.Binding.Declare (T.Auto, None), next_lambda);
-                S.Bind_variable (_cur_id, S.Binding.Declare (ptr_ty, None),
-                  B.call (E.Local next_id) [B.call (E.Local (Id.of_string "v_mut")) []]);
+              [ Cpp_ir.Typed.bind_deduced next_id (next_lambda);
+                Cpp_ir.Typed.bind (_cur_id) (ptr_ty) (B.call (E.Local next_id) [B.call (E.Local (Id.of_string "v_mut")) []]);
                 S.While (E.Local _cur_id,
                   [ S.Bind_variable (_cur_id, S.Binding.Existing,
                       B.call (E.Local next_id)
@@ -2584,23 +2601,21 @@ let gen_ind_header_v2 cx
             in
             let body =
               early_returns @
-              [ S.Bind_variable (_stack_id, S.Binding.Declare (stack_ty, None),
-                  E.Braced []);
+              [ Cpp_ir.Typed.bind (_stack_id) (stack_ty) (E.Braced []);
                 (* Most drains only ever hold a handful of pending nodes at
                    once (worklist depth tracks tree height, not size), so
                    [crane::small_vector] keeps the first 8 elements inline
                    with no heap allocation at all, spilling to a heap
                    std::vector only if a destructor happens to drain a
                    worklist deeper than that. *)
-                S.Bind_variable (_drain_id, S.Binding.Declare (T.Auto, None), drain_lambda);
+                Cpp_ir.Typed.bind_deduced _drain_id (drain_lambda);
                 S.Expression (B.call (E.Local _drain_id)
                   [B.call (E.Local (Id.of_string "v_mut")) []]);
                 S.While (
                   E.Unary (Not,
                     E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "empty", [])),
-                  [ S.Bind_variable (_cur_id, S.Binding.Declare (T.Auto, None),
-                      E.Move (E.Access_call (Dot, E.Local _stack_id,
+                  [ Cpp_ir.Typed.bind_deduced _cur_id (E.Move (E.Access_call (Dot, E.Local _stack_id,
                         Id.of_string "back", [])));
                     S.Expression (E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "pop_back", []));
@@ -2678,26 +2693,25 @@ let gen_ind_header_v2 cx
                     :: partner_drains; else_ = []}]
                 in
                 [S.If_declaration
-                  {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_passes.Erasure.unbox (T.Shared_pointer partner_ty)
+                  {name = _sp_id; type_ = T.Pointer T.Auto; init = Coerce.unbox (T.Shared_pointer partner_ty)
                     (E.Unary (Address_of, E.Local _cur_id)); then_ = partner_body; else_ = inner}]
             in
             let loop_body_stmts =
               [S.If_declaration
-                {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_passes.Erasure.unbox (T.Shared_pointer self_ty)
+                {name = _sp_id; type_ = T.Pointer T.Auto; init = Coerce.unbox (T.Shared_pointer self_ty)
                   (E.Unary (Address_of, E.Local _cur_id)); then_ = self_branch_body;
                     else_ = build_if_chain partner_branches}]
             in
             let body =
-              [ S.Bind_variable (_stack_id, S.Binding.Declare (stack_ty, None), E.Braced []);
-                S.Bind_variable (_drain_self_id, S.Binding.Declare (T.Auto, None), drain_self_lambda);
+              [ Cpp_ir.Typed.bind (_stack_id) (stack_ty) (E.Braced []);
+                Cpp_ir.Typed.bind_deduced _drain_self_id (drain_self_lambda);
                 S.Expression (B.call (E.Local _drain_self_id)
                   [B.call (E.Local (Id.of_string "v_mut")) []]);
                 S.While (
                   E.Unary (Not,
                     E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "empty", [])),
-                  S.Bind_variable (_cur_id, S.Binding.Declare (T.Auto, None),
-                    E.Move (E.Access_call (Dot, E.Local _stack_id,
+                  Cpp_ir.Typed.bind_deduced _cur_id (E.Move (E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "back", [])))
                   :: S.Expression (E.Access_call (Dot, E.Local _stack_id,
                        Id.of_string "pop_back", []))
@@ -2861,14 +2875,14 @@ let gen_ind_header_v2 cx
                         let arg_var : Cpp_ir.Lowered.Expr.t = Local (Id.of_string ("x" ^ string_of_int k)) in
                         if _storage_arg = api_arg then arg_var
                         else
-                          Convert.gen_type_conversion_expr ~src_ty:_storage_arg ~dst_ty:api_arg
+                          Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:_storage_arg ~dst_ty:api_arg
                             arg_var )
                       (List.combine storage_args api_args)
                   in
                   let call = B.call var call_args in
                   let ret =
                     if storage_ret = api_ret then call
-                    else Convert.gen_type_conversion_expr ~src_ty:api_ret ~dst_ty:storage_ret call
+                    else Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:api_ret ~dst_ty:storage_ret call
                   in
                   (* The lambda's result is the storage-side type by
                      construction -- [ret] is the call converted into it.  Say
@@ -2879,13 +2893,13 @@ let gen_ind_header_v2 cx
                 | _ when storage_ty = api_ty -> E.Move local
                 | _ ->
                   sink_converted api_ty var
-                    (Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
+                    (Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
               end
               | Shared_pointer inner ->
                 let arg = if is_coinductive then var else E.Move var in
                 let converted =
                   if inner = api_ty then arg
-                  else Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
+                  else Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
                 (* A single factory call.  For arena-eligible types this is
                    the runtime-arena-aware factory ([Arena_scoped]:
@@ -2901,7 +2915,7 @@ let gen_ind_header_v2 cx
                 else E.Move local
               | _ ->
                 sink_converted api_ty var
-                  (Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
+                  (Cpp_passes.Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
             cpp_tys
         in
         (* A field holding the inductive itself takes a [crane::child_slot]
@@ -2985,10 +2999,7 @@ let gen_ind_header_v2 cx
                 [E.Move (E.Local alt_id)] )
           in
           let body =
-            [ S.Bind_variable
-                ( alt_id,
-                  S.Binding.Declare (T.Auto, None),
-                  E.Local_aggregate {struct_ = Id.of_string cname; type_args = []; values = ctor_args} );
+            [ Cpp_ir.Typed.bind_deduced alt_id (E.Local_aggregate {struct_ = Id.of_string cname; type_args = []; values = ctor_args} );
               S.If {condition = reused; then_ = [S.Return (Some (E.Local tok_id))]; else_ = []};
               S.Return (Some (build i cname [E.Move (E.Local alt_id)])) ]
           in
@@ -3202,7 +3213,7 @@ let gen_ind_header_v2 cx
                       in
                       (* A translation result, converted where the branch
                          takes it. *)
-                      Convert.gen_type_conversion_expr
+                      Cpp_passes.Convert.gen_type_conversion_expr
 
                         (* Every inductive generated into this same scope --
                            the type itself, its mutual siblings, and any other
@@ -3327,7 +3338,7 @@ let gen_ind_header_v2 cx
         if not is_coinductive then []
         else
           [ accessor ~no_pure:false "lazy_cell"
-              (T.Const (T.Reference (Lvalue, T.External (Cpp_ir.Crane_rt.lazy_, [variant_alias_ty]))))
+              (T.Reference (Lvalue, T.Const (T.External (Cpp_ir.Crane_rt.lazy_, [variant_alias_ty]))))
               [S.Return (Some (E.Local vmn_id))] ]
       in
       (* Add public accessor for v_ to enable pattern matching from outside *)
@@ -3336,12 +3347,12 @@ let gen_ind_header_v2 cx
           (* For coinductive: const variant_t& v() const { return
              lazy_v_.force(); } *)
           accessor ~no_pure:false "v"
-            (T.Const (T.Reference (Lvalue, variant_alias_ty)))
+            (T.Reference (Lvalue, T.Const variant_alias_ty))
             [ S.Return
                 (Some (B.call (E.Access (Dot, E.Local vmn_id, Id.of_string "force")) [])) ]
         else (* For inductive: const variant_t& v() const { return v_; } *)
           accessor ~no_pure:false "v"
-            (T.Const (T.Reference (Lvalue, variant_alias_ty)))
+            (T.Reference (Lvalue, T.Const variant_alias_ty))
             [S.Return (Some (E.Local vmn_id))]
       in
 

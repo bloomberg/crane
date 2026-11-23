@@ -4,18 +4,21 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
+#include <array_storage.h>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
+#include <crane_st.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
+#include <string_view>
+#include <template_argument.h>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
@@ -216,6 +219,14 @@ struct STRefNat {
   uint64_t STRefToIxNat() const;
 };
 
+struct STMonad {
+  template <typename _tcI0, typename T1 = void, typename T2, typename T3 = void,
+            typename T4>
+    requires STRefClass<_tcI0, T2>
+  static void swapArray(const T2 &_x, std::span<T4> arr, const T2 &i,
+                        const T2 &j);
+};
+
 struct StArrays {
   struct nat_idx {
     static List<uint64_t> range(uint64_t fp, uint64_t sp) {
@@ -223,7 +234,8 @@ struct StArrays {
       return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
     }
 
-    static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
+    constexpr static std::optional<uint64_t> index(uint64_t fp, uint64_t sp,
+                                                   uint64_t i) {
       if ((fp <= i && i <= sp)) {
         return std::make_optional<uint64_t>((((i - fp) > i ? 0 : (i - fp))));
       } else {
@@ -271,6 +283,17 @@ struct StArrays {
   static List<uint64_t> swap_first_and_last_list(const List<uint64_t> &xs);
   static uint64_t nth(uint64_t n, const List<uint64_t> &l, uint64_t default0);
 };
+
+template <typename _tcI0, typename T1, typename T2, typename T3, typename T4>
+  requires STRefClass<_tcI0, T2>
+void STMonad::swapArray(const T2 &, std::span<T4> arr, const T2 &i,
+                        const T2 &j) {
+  T4 vi = std::span<const T4>{arr}[i];
+  T4 vj = std::span<const T4>{arr}[j];
+  arr[i] = std::move(vj);
+  arr[j] = std::move(vi);
+  return;
+}
 
 inline uint64_t STRefNat::STRefToIxNat() const {
   const auto &[s] = *this;

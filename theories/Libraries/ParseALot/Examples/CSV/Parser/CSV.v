@@ -199,9 +199,20 @@ Definition csvGrammarEntries : list grammar_entry :=
 Definition lex_sem := Crane.Libraries.ParseALot.Examples.CSV.Lexer.Semantic.SemLexer.Impl.lex_sem.
 (** Alias for the CSV literal lexer rules. *)
 Definition lex_rus := Crane.Libraries.ParseALot.Examples.CSV.Lexer.Literal.rus.
-(** Lexes a CSV input string into typed tokens. There is no whitespace token --
-    spaces and tabs are significant field content -- so nothing is filtered. *)
-Definition lex_csv (s : String) : option (list token) * String := lex_sem lex_rus s.
+(** The CSV lexer's rules with their DFAs built ([init_srule]): a constant, so that a program
+    builds them once rather than on every input. *)
+Definition csv_srules := map Crane.Libraries.ParseALot.Examples.CSV.Lexer.Literal.LXR.Correctness.Impl.Lex.init_srule lex_rus.
+(** Lexes a CSV input string into typed tokens, over [csv_srules]; [lex_csv_lex_sem] says it is
+    [lex_sem lex_rus]. There is no whitespace token -- spaces and tabs are significant field
+    content -- so nothing is filtered. *)
+Definition lex_csv (s : String) : option (list token) * String :=
+  Crane.Libraries.ParseALot.Examples.CSV.Lexer.Semantic.SemLexer.Impl.lex_sem_of
+    (Crane.Libraries.ParseALot.Examples.CSV.Lexer.Literal.LXR.Correctness.Impl.Lex.lex_M_pre csv_srules s).
+(** [lex_csv] is the semantic lexer applied to the CSV rules; by [lex_sem_of_lex]. *)
+Lemma lex_csv_lex_sem : forall s, lex_csv s = lex_sem lex_rus s.
+Proof.
+  intros. unfold lex_csv. rewrite <- Crane.Libraries.ParseALot.Examples.CSV.Lexer.Semantic.SemLexer.Impl.lex_sem_of_lex. reflexivity.
+Qed.
 
 (** Parses a token list as a CSV document starting from the [Csv] nonterminal. *)
 Definition parse_csv       := parse (grammar_of_entry_list csvGrammarEntries) (grammar_of_entry_list_wf _) Csv.

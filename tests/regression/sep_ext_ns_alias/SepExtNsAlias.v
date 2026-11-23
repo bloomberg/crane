@@ -12,6 +12,6 @@ End Foo.
 Module FooAlias := Foo.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Separate Extraction FooAlias.

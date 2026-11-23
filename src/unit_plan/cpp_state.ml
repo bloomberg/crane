@@ -733,6 +733,9 @@ let note_program_reads s = program_reads := s
 let plan_function_reads s = function_reads := Some (Core.Ref.Can.Set.union s !program_reads)
 
 let read_by_a_function r =
+  (* The bake driver links a unit that names no baked constant: its
+     initialiser has to run all the same. *)
+  Base.Table.is_bake_root r ||
   match !function_reads with
   | Some s -> Core.Ref.Can.Set.mem r s
   | None -> false
@@ -835,12 +838,12 @@ type std_names = Context.std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
   move : string; (* "std::move" or "bsl::move" *)
-  forward : string; (* "std::forward" or "bsl::forward" *)
+  forward : string; (* "std::forward", in either flavour *)
   logic_error : string; (* "std::logic_error" or "bsl::logic_error" *)
   ns : string; (* "std" or "bsl": general prefix *)
   string : string; (* "std::string" or "bsl::string" *)
   same_as : string; (* "std::same_as" or "same_as" *)
-  declval : string; (* "std::declval" or "bsl::declval" *)
+  declval : string; (* "std::declval", in either flavour *)
   convertible_to : string; (* "std::convertible_to" or "convertible_to" *)
   holds_alternative : string; (* "std::holds_alternative" or "bsl::holds_alternative" *)
   get_if : string; (* "std::get_if" or "bsl::get_if" *)
@@ -848,6 +851,9 @@ type std_names = Context.std_names = {
   variant : string; (* "std::variant", "bsl::variant" or "crane::variant" *)
   variant_header : Base.Table.header; (* the header [variant] is declared in *)
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
+  unreachable : string; (* "std::unreachable" (C++23), or "crane::unreachable" where the build is older *)
+  unreachable_header : Base.Table.header; (* the header [unreachable] is declared in *)
+  placeholder : bool; (* an unread binding written [_] (C++26), or by its own name where the build is older *)
 }
 
 let default_std_names = Context.default_std_names
@@ -857,15 +863,23 @@ let mk_std_names prefix =
   | "bsl::" ->
     let p = prefix in
     { shared_ptr = p ^ "shared_ptr"; make_shared = p ^ "make_shared";
-      move = p ^ "move"; forward = p ^ "forward";
+      (* BDE has no [bsl::forward]. *)
+      move = p ^ "move"; forward = "std::forward";
       logic_error = p ^ "logic_error";
       ns = "bsl"; string = p ^ "string";
-      same_as = "same_as"; declval = p ^ "declval";
+      (* Nor does Crane include [bsl_utility.h] for [bsl::declval]: it is
+         [std::declval], from <utility>, as [std::forward] is. *)
+      same_as = "same_as"; declval = "std::declval";
       convertible_to = "convertible_to";
       holds_alternative = p ^ "holds_alternative";
       get_if = p ^ "get_if"; get = p ^ "get";
       variant = p ^ "variant"; variant_header = Base.Table.Standard "variant";
-      enable_from_this = p ^ "enable_shared_from_this" }
+      enable_from_this = p ^ "enable_shared_from_this";
+      (* BDE builds as C++20, which has no [std::unreachable]... *)
+      unreachable = "crane::unreachable";
+      unreachable_header = Base.Table.Runtime Cpp_ir.Crane_rt.unreachable_header;
+      (* Nor placeholder variables: two [_] in one binding are C++26. *)
+      placeholder = false }
   | _ -> default_std_names
 
 let std_namespace () = if Base.Table.std_lib () = "BDE" then "bsl" else "std"

@@ -90,5 +90,5 @@ Definition test_is_op_num : bool := is_operator (TNum 0).
 End LargeEnum.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "large_enum" LargeEnum.

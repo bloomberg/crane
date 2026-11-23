@@ -3,7 +3,7 @@
 From Stdlib Require Import BinInt BinNat.
 
 Require Crane.Extraction.
-Require Crane.Mapping.ZGMP.
+Require Import Crane.Mapping.ZGMP.
 
 Module ZGMPTest.
 

@@ -165,7 +165,7 @@ let same_type (t : ty) = t
 
 (** A call of [f] on [args], with nothing known of its signature. *)
 let call (f : expr) (args : expr list) : expr =
-  Call ({yields = Untyped; params = Unknown; constructs = None; occurrence = None}, f, args)
+  Call ({yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence = None}, f, args)
 
 let lambda_needs_capture = Cpp_ir.Variables.lambda_needs_capture
 
@@ -582,8 +582,8 @@ let in_block = " in a block template."
 let check_ret : expr -> unit = function
   | Call (res, Entity (r, _, Some {inline = Some tmpl; _}), _) when names_ret tmpl.text -> (
     match (tmpl.form, res.yields) with
-    | Templated, Yields _ -> ()
-    | Templated, Untyped -> refuse_ret r ", but the type its call yields is not known here."
+    | Templated, Typed _ -> ()
+    | Templated, _ -> refuse_ret r ", but the type its call yields is not known here."
     | (Block | Bare_callee), _ -> refuse_ret r in_block )
   | Entity (r, _, Some {inline = Some {form = Block; text; _}; _}) when names_ret text -> refuse_ret r in_block
   | _ -> ()
@@ -673,6 +673,12 @@ let rec instantiated_type ~boxing (t : ty) : ty =
          argument is the whole of what there is to write. *)
       | Apply (Entity_application (r, _, _), [arg]) when Base.Type_util.ref_has_no_cpp_name r ->
         Some (instantiated_type ~boxing arg)
+      (* A typed-mapped type is built from its compiled plan, structured:
+         never text ({!Base.Mapping_plan.cpp_type}). *)
+      | (Entity_application (r, tys, _) | In_namespace (_, Entity_application (r, tys, _)))
+        when Base.Mapping_plan.is_type_head r ->
+        Base.Mapping_plan.note_instantiated r;
+        Some (Base.Mapping_plan.cpp_type (Base.Mapping_plan.find r) (List.map (instantiated_type ~boxing) tys))
       (* Written through the inductive's own head. *)
       | In_namespace ((GlobRef.IndRef _ as r), Entity_application (r', tys, args)) when Base.Common.globref_equal r r' ->
         let args = List.map (instantiated_expr ~boxing) args in
@@ -735,14 +741,17 @@ and instantiated_expr ~boxing (e : expr) : expr =
     let tokens = Cpp_ir.Foreign_template.term_template tmpl.text in
     (* An argument past the last one the text names is not its own: the
        call's result is applied to it. *)
-    let named = List.fold_left (fun n -> function Cpp_ir.Foreign_template.Arg i -> max n (i + 1) | _ -> n) 0 tokens in
-    let yields = match res.yields with Yields t -> Some t | Untyped -> None in
+    let named =
+      if Base.Table.is_mapped_operation n then Option.get (Base.Table.inline_custom_arity n)
+      else List.fold_left (fun n -> function Cpp_ir.Foreign_template.Arg i -> max n (i + 1) | _ -> n) 0 tokens
+    in
+    let yields = match res.yields with Typed t -> Some t | _ -> None in
     Foreign (Call, instantiated_foreign ~boxing n tokens tys (CList.firstn (min named (List.length args)) args) yields)
   | Entity (x, tys, Some {inline = Some {form = Block; text; _}; custom_yields}) ->
     value_block (instantiated_block ~boxing x text tys [] custom_yields)
   (* Every argument of a block's call is its own, spliced or not. *)
   | Call (res, Entity (n, tys, Some {inline = Some {form = Block; text; _}; _}), args) ->
-    let yields = match res.yields with Yields t -> Some t | Untyped -> None in
+    let yields = match res.yields with Typed t -> Some t | _ -> None in
     value_block (instantiated_block ~boxing n text tys args yields)
   (* A text that places nothing is a callee: the call stays a call, of the
      text applied to the type arguments, and its arguments are written as a
@@ -782,7 +791,7 @@ and instantiated_stmt ~boxing (s : stmt) : stmt =
   | Foreign_block b ->
     let value : expr =
       Foreign (Statements, instantiated_block ~boxing b.custom b.template b.type_args b.values (Some b.result_type)) in
-    Bind_variable (b.result, Declare (instantiated_type ~boxing b.result_type, b.binder), value)
+    Cpp_ir.Typed.bind ?binder:(b.binder) (b.result) (instantiated_type ~boxing b.result_type) (value)
   | s -> Map.stmt (instantiating ~boxing) s
 
 and instantiating ~boxing =
@@ -968,10 +977,10 @@ let held_scrutinee ~avoid (scrut : phase Match.scrutinee) (branches : phase Matc
   | [{field_bindings = []; var = None; _}], None, _ -> None
   | _, _, Access_call (Arrow, obj, v, []) when is_v v && not (is_named_object obj) ->
     let x = local () in
-    Some (Bind_variable (x, Declare (forwarding, None), obj), Access_call (Arrow, Local x, v, []))
+    Some (Cpp_ir.Typed.bind (x) (forwarding) (obj), Access_call (Arrow, Local x, v, []))
   | _, _, Call (sg, Access (Dot, obj, v), []) when is_v v && not (is_named_object obj) ->
     let x = local () in
-    Some (Bind_variable (x, Declare (forwarding, None), obj), Call (sg, Access (Dot, Local x, v), []))
+    Some (Cpp_ir.Typed.bind (x) (forwarding) (obj), Call (sg, Access (Dot, Local x, v), []))
   | _, _, (Access_call (Arrow, _, v, []) | Call (_, Access (Dot, _, v), [])) when is_v v -> None
   | _, _, (Local _ | Dereference This) -> None
   | _, _, e ->
@@ -984,7 +993,7 @@ let held_scrutinee ~avoid (scrut : phase Match.scrutinee) (branches : phase Matc
    statements are the enclosing scope's. *)
 let rec declared_in_scope (s : stmt) : Id.t list =
   match s with
-  | Bind_variable (x, Declare _, _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
+  | Bind_variable (x, (Declare _ | Declare_deduced _), _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
   | Structured_binding (xs, _) -> xs
   | Match (_, [br], None) ->
     (match br.var with Some x -> [x] | None -> [])
@@ -1176,10 +1185,104 @@ let narrow_captures (d : settled) : settled =
   and rw () = rewriter ~stmts ~expr:fe ~stmt:fs ~type_:same_type () in
   Map.decl (rw ()) d
 
+(** {2 Captured scrutinees} *)
+
+(* A stored lambda written in a branch of a borrowing match, which reads
+   every field the branch binds, captures the matched value instead and
+   binds the fields again inside: the value is a shared variant, one word
+   whose copy is one count, where a copy of the fields is one count for each
+   field held by pointer and as many as a field's own fields for one held
+   in place -- a pair, a record, a type parameter.  An [ITree.iter] thunk
+   captured the [(state, value)] pair its [inl] holds, every component a
+   count bump, where the [inl] itself is one.  Only where the lambda reads
+   every field, so that it keeps alive nothing the copies would not; where
+   it moves none of them out of what it holds, as a thunk does from its own
+   copy; and where the branch neither assigns nor moves the scrutinee, so
+   that the lambda holds the value the branch took apart. *)
+let capture_scrutinees (d : settled) : settled =
+  let rec inductive_of : ty -> GlobRef.t option = function
+    | Member (t, _) | In_namespace (_, t) | Const t -> inductive_of t
+    | Entity_application (r, _, _) -> Some r
+    | _ -> None
+  in
+  let rec copy_cost (t : ty) =
+    match t with
+    | Const t | Reference (_, t) | In_namespace (_, t) -> copy_cost t
+    | Entity_application (r, _, _) when Base.Table.is_coinductive r -> 1
+    | _ when not (Ownership_ir.Region.worth_moving_cpp t) -> 0
+    | Shared_pointer _ | Function _ | Erased _ | Any | External ("crane::shared_box", _) -> 1
+    | Entity_application (r, _, _) when Base.Table.is_shared_variant r -> 1
+    | _ -> 2
+  in
+  let scrutinee_local (e : expr) =
+    match e with
+    | Call (_, Access (Dot, Local s, v), []) | Access_call (Arrow, Local s, v, []) when Id.to_string v = "v" -> Some s
+    | _ -> None
+  in
+  let moves_any xs (body : stmt list) =
+    let found = ref false in
+    let rec expr (e : expr) =
+      (match e with Move (Local x) when Cpp_ir.Variables.mem x xs -> found := true | _ -> ());
+      Cpp_ir.Subterms.expr ~expr ~stmts:(List.iter stmt) e
+    and stmt s = Cpp_ir.Subterms.stmt ~expr ~stmts:(List.iter stmt) s in
+    List.iter stmt body;
+    !found
+  in
+  let branch (scrut : phase Match.scrutinee) (b : phase Match.branch) : phase Match.branch =
+    let names = List.map (fun (f : phase Match.field_binding) -> f.name) b.field_bindings in
+    match (scrutinee_local scrut.expr, inductive_of b.ctor_type) with
+    | Some s, Some r
+      when (not scrut.owned) && (not scrut.flat) && names <> [] && b.extra_conditions = []
+           && Base.Table.is_shared_variant r
+           && List.fold_left (fun n (f : phase Match.field_binding) -> n + copy_cost f.type_) 0 b.field_bindings >= 2
+           && (not (Id.Set.mem s (Cpp_ir.Variables.assigned b.body)))
+           && not (moves_any [s] b.body) ->
+      let rebind (l : phase Lambda.t) : expr =
+        Lambda {l with body = [Match (scrut, [{b with body = l.body}], None)]}
+      in
+      let changed = ref false in
+      let rec fe (e : expr) : expr =
+        match e with
+        | Lambda ({capture = Stored; fixpoint = None; _} as l) ->
+          let free = Cpp_ir.Variables.free_in_expr e in
+          if
+            List.for_all (fun x -> Cpp_ir.Variables.mem x free) names
+            && (not (List.exists (fun x -> Cpp_ir.Variables.mem x names) l.moved))
+            && not (moves_any names l.body)
+          then (
+            changed := true;
+            rebind l )
+          else Map.expr (rw ()) e
+        | _ -> Map.expr (rw ()) e
+      and fs s = Map.stmt (rw ()) s
+      and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
+      let body = List.map fs b.body in
+      if not !changed then b
+      else
+        let read = Cpp_ir.Variables.free_in_body body in
+        let fields =
+          List.map (fun (f : phase Match.field_binding) -> {f with used = Cpp_ir.Variables.mem f.name read}) b.field_bindings
+        in
+        if List.exists (fun (f : phase Match.field_binding) -> f.used) fields then {b with field_bindings = fields; body}
+        else {b with field_bindings = []; var = None; body}
+    | _ -> b
+  in
+  let rec fs (s : stmt) : stmt =
+    match Map.stmt (rw ()) s with
+    | Match (scrut, branches, default) -> Match (scrut, List.map (branch scrut) branches, default)
+    | s -> s
+  and fe e = Map.expr (rw ()) e
+  and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
+  Map.decl (rw ()) d
+
 (** {2 Captures} *)
 
 (* Inner lambdas first: what an outer body names is read off the inner
-   lambdas' bodies, which deciding leaves as they are.  A suspension's thunk
+   lambdas' bodies, which deciding leaves as they are.  A variable the
+   lambda was planned to take by move is taken only where its body still
+   reads it: a pass after the plan may have dropped the read (Loopify an
+   accumulator nothing reads), and a parameter nothing reads is written
+   without a name, so a capture of it would name nothing.  A suspension's thunk
    runs once, when the suspension is first forced, and is let go of then:
    its capture is written [once].  The suspension is then its type's
    [lazy_] factory applied to the thunk. *)
@@ -1190,7 +1293,13 @@ let rec decide_captures (d : settled) : settled =
       let names_scope, this = lambda_needs_capture l.params l.body in
       let written : Written_capture.t =
         if not names_scope then Nothing
-        else match how with Runs_in_place -> By_reference | _ -> By_copy {this; moved = l.moved; copied = []; once}
+        else
+          match how with
+          | Runs_in_place -> By_reference
+          | _ ->
+            let read = Cpp_ir.Variables.free_in_expr (Lambda l) in
+            let moved = List.filter (fun x -> Cpp_ir.Variables.mem x read) l.moved in
+            By_copy {this; moved; copied = []; once}
       in
       Lambda {l with capture = Written written}
     | Written _ -> Lambda l
@@ -1204,7 +1313,7 @@ let rec decide_captures (d : settled) : settled =
         | _ -> fe thunk
       in
       Call
-        ( {yields = Yields ty; params = Unknown; constructs = None; occurrence = None},
+        ( {yields = Typed ty; params = Unknown; constructs = None; occurrence = None},
           qualified ty (Id.of_string "lazy_"),
           [thunk] )
     | _ -> (
@@ -1247,6 +1356,7 @@ and copy_const_captures (d : settled) : settled =
         match s with
         | Declare (x, ty, _) | Declare_value_initialized (x, ty) | Bind_variable (x, Declare (ty, _), _) ->
           declare consts x ty
+        | Bind_variable (x, Declare_deduced _, _) -> declare consts x Auto
         | _ -> consts
       in
       s :: block consts rest
@@ -1337,6 +1447,7 @@ let invoke_capturing_initialisers (d : settled) : settled =
             capture = Written Nothing;
             moved = [];
             binders = [];
+            modes = [];
             fixpoint = None }
       in
       Variable {a with init = call returning []}
@@ -1543,6 +1654,15 @@ let rec is_literal_type (ty : ty) =
   | Function _ | Decay _ -> false
   (* A mapping asks what the application it instantiates asks. *)
   | Foreign fr -> is_literal_type (Entity_application (fr.custom, fr.types, fr.values))
+  (* A typed-mapped type is what its copy model says, before instantiation
+     as after ({!instantiated_type}): a [BitCopy] type is, a
+     [CopyComponents] one is when its components are, a type that
+     duplicates or retains anything ([mpz_class], [std::string], a handle)
+     is not -- its structured type names a class this pass cannot see
+     into. *)
+  | Entity_application (r, tys, _) when Base.Mapping_plan.is_type_head r ->
+    Base.Mapping_plan.copies_cheaply (Base.Mapping_plan.find r) ~argument:(fun i ->
+        match List.nth_opt tys i with Some t -> is_literal_type t | None -> false)
   | Entity_application (r, _, _) when is_axiom_type_ref r -> false
   | Entity_application (r, [], _) when Base.Table.is_custom_scalar_ref r -> true
   (* A generated inductive other than an enum has user-provided constructors
@@ -1554,6 +1674,8 @@ let rec is_literal_type (ty : ty) =
   (* A defined constant with no arguments is an alias nothing here sees
      through, as is a named type with none. *)
   | Entity_application (GlobRef.ConstRef _, [], _) | Named (_, []) -> false
+  (* An instantiated typed-mapped type that duplicates its value. *)
+  | External (s, _) when Base.Mapping_plan.duplicates_name s -> false
   | Entity_application (_, tys, _) | Named (_, tys) | External (_, tys) -> List.for_all is_literal_type tys
   | Rebind (h, x) -> is_literal_type h && is_literal_type x
   | Carrier_parameter | Erased _ -> true
@@ -1609,6 +1731,22 @@ let decide_constexpr (d : settled) : settled =
     | d -> d
   in
   decl d
+
+(* A global is a constant too, built once before [main] (or, in a template,
+   the first time it is read).  Under [Set Crane SharedVariant], where the
+   blocks it holds are the runtime's own, one whose type is not a literal
+   type is initialised through [crane::immortal], as a function's constants
+   are ({!Constants}): no copy or drop of anything it holds then touches a
+   count. *)
+let immortal_globals (d : settled) : settled =
+  let rec decl : decl -> decl = function
+    | Variable ({constexpr = Ineligible; _} as a) when not (is_literal_type a.type_) ->
+      Variable {a with init = call (Runtime Cpp_ir.Crane_rt.Immortal) [a.init]}
+    | Template (tps, c, d) -> Template (tps, c, decl d)
+    | Namespace (r, ds) -> Namespace (r, List.map decl ds)
+    | d -> d
+  in
+  if Base.Table.shared_variant () then decl d else d
 
 (** {2 Free type variables} *)
 

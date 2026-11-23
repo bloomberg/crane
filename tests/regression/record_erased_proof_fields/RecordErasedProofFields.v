@@ -132,6 +132,6 @@ Definition sample_trace_checksum : nat :=
 End RecordErasedProofFieldsCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extraction "record_erased_proof_fields" RecordErasedProofFieldsCase.

@@ -18,6 +18,28 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir baked_constants_default
+ (rule
+  (targets baked_constants_default.t.exe)
+  (deps BakedConstantsDefault.vo baked_constants_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} baked_constants_default.t.exe baked_constants_default.t.cpp baked_constants_default.cpp)))
+ (rule
+  (alias runtest)
+  (deps baked_constants_default.t.exe)
+  (action (run ./baked_constants_default.t.exe))))
+
+(subdir baked_constants
+ (rule
+  (targets baked_constants.t.exe)
+  (deps BakedConstants.vo baked_constants.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} baked_constants.t.exe baked_constants.t.cpp baked_constants.cpp)))
+ (rule
+  (alias runtest)
+  (deps baked_constants.t.exe)
+  (action (run ./baked_constants.t.exe))))
+
 (subdir assoc_type_erased_in_lambda_body
  (rule
   (targets assoc_type_erased_in_lambda_body.t.exe)
@@ -11964,6 +11986,28 @@
   (deps erased_let_not_result_type.t.exe)
   (action (run ./erased_let_not_result_type.t.exe))))
 
+(subdir immortal_global_constant
+ (rule
+  (targets immortal_global_constant.t.exe)
+  (deps ImmortalGlobalConstant.vo immortal_global_constant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} immortal_global_constant.t.exe immortal_global_constant.t.cpp immortal_global_constant.cpp)))
+ (rule
+  (alias runtest)
+  (deps immortal_global_constant.t.exe)
+  (action (run ./immortal_global_constant.t.exe))))
+
+(subdir immortal_sticky_count
+ (rule
+  (targets immortal_sticky_count.t.exe)
+  (deps ImmortalStickyCount.vo immortal_sticky_count.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} immortal_sticky_count.t.exe immortal_sticky_count.t.cpp immortal_sticky_count.cpp)))
+ (rule
+  (alias runtest)
+  (deps immortal_sticky_count.t.exe)
+  (action (run ./immortal_sticky_count.t.exe))))
+
 (subdir shared_variant_constant
  (rule
   (targets shared_variant_constant.t.exe)
@@ -15207,3 +15251,800 @@
   (alias runtest)
   (deps module_alias_shadows_global.t.exe)
   (action (run ./module_alias_shadows_global.t.exe))))
+
+(subdir typed_mapping_abstract
+ (rule
+  (targets typed_mapping_abstract.t.exe)
+  (deps TypedMappingAbstract.vo typed_mapping_abstract.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_abstract.t.exe typed_mapping_abstract.t.cpp typed_mapping_abstract.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_abstract.t.exe)
+  (action (run ./typed_mapping_abstract.t.exe))))
+
+(subdir typed_mapping_copy
+ (rule
+  (targets typed_mapping_copy.t.exe)
+  (deps TypedMappingCopy.vo typed_mapping_copy.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_copy.t.exe typed_mapping_copy.t.cpp typed_mapping_copy.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_copy.t.exe)
+  (action (run ./typed_mapping_copy.t.exe))))
+
+(subdir typed_mapping_access
+ (rule
+  (targets typed_mapping_access.t.exe)
+  (deps TypedMappingAccess.vo typed_mapping_access.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_access.t.exe typed_mapping_access.t.cpp typed_mapping_access.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_access.t.exe)
+  (action (run ./typed_mapping_access.t.exe))))
+
+(subdir typed_mapping_algebraic
+ (rule
+  (targets typed_mapping_algebraic.t.exe)
+  (deps TypedMappingAlgebraic.vo typed_mapping_algebraic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_algebraic.t.exe typed_mapping_algebraic.t.cpp typed_mapping_algebraic.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_algebraic.t.exe)
+  (action (run ./typed_mapping_algebraic.t.exe))))
+
+(subdir typed_mapping_golden
+ (rule
+  (targets typed_mapping_golden.t.exe)
+  (deps TypedMappingGolden.vo typed_mapping_golden.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_golden.t.exe typed_mapping_golden.t.cpp typed_mapping_golden.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_golden.t.exe)
+  (action (run ./typed_mapping_golden.t.exe))))
+
+(subdir typed_mapping_invalid
+ (rule
+  (targets typed_mapping_invalid.t.exe)
+  (deps TypedMappingInvalid.vo typed_mapping_invalid.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_invalid.t.exe typed_mapping_invalid.t.cpp typed_mapping_invalid.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_invalid.t.exe)
+  (action (run ./typed_mapping_invalid.t.exe))))
+
+(subdir typed_mapping_operations
+ (rule
+  (targets typed_mapping_operations.t.exe)
+  (deps TypedMappingOperations.vo typed_mapping_operations.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_operations.t.exe typed_mapping_operations.t.cpp typed_mapping_operations.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_operations.t.exe)
+  (action (run ./typed_mapping_operations.t.exe))))
+
+(subdir typed_mapping_raw_array
+ (rule
+  (targets typed_mapping_raw_array.t.exe)
+  (deps TypedMappingRawArray.vo typed_mapping_raw_array.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_raw_array.t.exe typed_mapping_raw_array.t.cpp typed_mapping_raw_array.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_raw_array.t.exe)
+  (action (run ./typed_mapping_raw_array.t.exe))))
+
+(subdir typed_mapping_selection
+ (rule
+  (targets typed_mapping_selection.t.exe)
+  (deps TypedMappingSelection.vo typed_mapping_selection.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_selection.t.exe typed_mapping_selection.t.cpp typed_mapping_selection.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_selection.t.exe)
+  (action (run ./typed_mapping_selection.t.exe))))
+
+(subdir string_views
+ (rule
+  (targets string_views.t.exe)
+  (deps StringViews.vo string_views.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_views.t.exe string_views.t.cpp string_views.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_views.t.exe)
+  (action (run ./string_views.t.exe))))
+
+(subdir structural_spans
+ (rule
+  (targets structural_spans.t.exe)
+  (deps StructuralSpans.vo structural_spans.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} structural_spans.t.exe structural_spans.t.cpp structural_spans.cpp)))
+ (rule
+  (alias runtest)
+  (deps structural_spans.t.exe)
+  (action (run ./structural_spans.t.exe))))
+
+(subdir typed_mapping_interface
+ (rule
+  (targets typed_mapping_interface.t.exe)
+  (deps Lib.vo Use.vo Mismatch.vo typed_mapping_interface.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_interface.t.exe typed_mapping_interface.t.cpp typed_mapping_interface_lib.cpp typed_mapping_interface.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_interface.t.exe)
+  (action (run ./typed_mapping_interface.t.exe))))
+
+(subdir typed_mapping_exact_numbers
+ (rule
+  (targets typed_mapping_exact_numbers.t.exe)
+  (deps TypedMappingExactNumbers.vo typed_mapping_exact_numbers.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-boost.sh %{project_root} typed_mapping_exact_numbers.t.exe typed_mapping_exact_numbers.t.cpp typed_mapping_exact_numbers.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_exact_numbers.t.exe)
+  (action (run ./typed_mapping_exact_numbers.t.exe))))
+
+(subdir loopify_final_move
+ (rule
+  (targets loopify_final_move.t.exe)
+  (deps LoopifyFinalMove.vo loopify_final_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_final_move.t.exe loopify_final_move.t.cpp loopify_final_move.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_final_move.t.exe)
+  (action (run ./loopify_final_move.t.exe))))
+
+(subdir pair_abstract_components_by_reference
+ (rule
+  (targets pair_abstract_components_by_reference.t.exe)
+  (deps PairAbstractComponentsByReference.vo pair_abstract_components_by_reference.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_abstract_components_by_reference.t.exe pair_abstract_components_by_reference.t.cpp pair_abstract_components_by_reference.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_abstract_components_by_reference.t.exe)
+  (action (run ./pair_abstract_components_by_reference.t.exe))))
+
+(subdir frame_save_copied_binder
+ (rule
+  (targets frame_save_copied_binder.t.exe)
+  (deps FrameSaveCopiedBinder.vo frame_save_copied_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} frame_save_copied_binder.t.exe frame_save_copied_binder.t.cpp frame_save_copied_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps frame_save_copied_binder.t.exe)
+  (action (run ./frame_save_copied_binder.t.exe))))
+
+(subdir loopify_string_view_dangling
+ (rule
+  (targets loopify_string_view_dangling.t.exe)
+  (deps LoopifyStringViewDangling.vo loopify_string_view_dangling.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_string_view_dangling.t.exe loopify_string_view_dangling.t.cpp loopify_string_view_dangling.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_string_view_dangling.t.exe)
+  (action (run ./loopify_string_view_dangling.t.exe))))
+
+(subdir string_get_high_byte
+ (rule
+  (targets string_get_high_byte.t.exe)
+  (deps StringGetHighByte.vo string_get_high_byte.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_get_high_byte.t.exe string_get_high_byte.t.cpp string_get_high_byte.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_get_high_byte.t.exe)
+  (action (run ./string_get_high_byte.t.exe))))
+
+(subdir string_literal_trigraph
+ (rule
+  (targets string_literal_trigraph.t.exe)
+  (deps StringLiteralTrigraph.vo string_literal_trigraph.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_literal_trigraph.t.exe string_literal_trigraph.t.cpp string_literal_trigraph.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_literal_trigraph.t.exe)
+  (action (run ./string_literal_trigraph.t.exe))))
+
+(subdir prim_string_make_compare
+ (rule
+  (targets prim_string_make_compare.t.exe)
+  (deps PrimStringMakeCompare.vo prim_string_make_compare.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_string_make_compare.t.exe prim_string_make_compare.t.cpp prim_string_make_compare.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_string_make_compare.t.exe)
+  (action (run ./prim_string_make_compare.t.exe))))
+
+(subdir string_literal_as_char_pointer
+ (rule
+  (targets string_literal_as_char_pointer.t.exe)
+  (deps StringLiteralAsCharPointer.vo string_literal_as_char_pointer.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_literal_as_char_pointer.t.exe string_literal_as_char_pointer.t.cpp string_literal_as_char_pointer.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_literal_as_char_pointer.t.exe)
+  (action (run ./string_literal_as_char_pointer.t.exe))))
+(subdir bake_std_optional
+ (rule
+  (targets bake_std_optional.t.exe)
+  (deps BakeStdOptional.vo bake_std_optional.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_std_optional.t.exe bake_std_optional.t.cpp bake_std_optional.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_std_optional.t.exe)
+  (action (run ./bake_std_optional.t.exe))))
+
+(subdir bake_prim_string
+ (rule
+  (targets bake_prim_string.t.exe)
+  (deps BakePrimString.vo bake_prim_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_prim_string.t.exe bake_prim_string.t.cpp bake_prim_string.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_prim_string.t.exe)
+  (action (run ./bake_prim_string.t.exe))))
+
+(subdir bake_boxed_field
+ (rule
+  (targets bake_boxed_field.t.exe)
+  (deps BakeBoxedField.vo bake_boxed_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_boxed_field.t.exe bake_boxed_field.t.cpp bake_boxed_field.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_boxed_field.t.exe)
+  (action (run ./bake_boxed_field.t.exe))))
+
+(subdir bake_long_list
+ (rule
+  (targets bake_long_list.t.exe)
+  (deps BakeLongList.vo bake_long_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_long_list.t.exe bake_long_list.t.cpp bake_long_list.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_long_list.t.exe)
+  (action (run ./bake_long_list.t.exe))))
+
+(subdir bake_mapped_values
+ (rule
+  (targets bake_mapped_values.t.exe)
+  (deps BakeMappedValues.vo bake_mapped_values.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_mapped_values.t.exe bake_mapped_values.t.cpp bake_mapped_values.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_mapped_values.t.exe)
+  (action (run ./bake_mapped_values.t.exe))))
+
+(subdir bake_readable_image
+ (rule
+  (targets bake_readable_image.t.exe)
+  (deps BakeReadableImage.vo bake_readable_image.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_readable_image.t.exe bake_readable_image.t.cpp bake_readable_image.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_readable_image.t.exe)
+  (action (run ./bake_readable_image.t.exe))))
+(subdir fold_init_curried_branches
+ (rule
+  (targets fold_init_curried_branches.t.exe)
+  (deps FoldInitCurriedBranches.vo fold_init_curried_branches.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_init_curried_branches.t.exe fold_init_curried_branches.t.cpp fold_init_curried_branches.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_init_curried_branches.t.exe)
+  (action (run ./fold_init_curried_branches.t.exe))))
+
+(subdir branch_callables_fix_accumulator
+ (rule
+  (targets branch_callables_fix_accumulator.t.exe)
+  (deps BranchCallablesFixAccumulator.vo branch_callables_fix_accumulator.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_callables_fix_accumulator.t.exe branch_callables_fix_accumulator.t.cpp branch_callables_fix_accumulator.cpp)))
+ (rule
+  (alias runtest)
+  (deps branch_callables_fix_accumulator.t.exe)
+  (action (run ./branch_callables_fix_accumulator.t.exe))))
+
+(subdir method_hoisted_eta_self_val
+ (rule
+  (targets method_hoisted_eta_self_val.t.exe)
+  (deps MethodHoistedEtaSelfVal.vo method_hoisted_eta_self_val.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_hoisted_eta_self_val.t.exe method_hoisted_eta_self_val.t.cpp method_hoisted_eta_self_val.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_hoisted_eta_self_val.t.exe)
+  (action (run ./method_hoisted_eta_self_val.t.exe))))
+
+(subdir ascii_char_without_bool_mapping
+ (rule
+  (targets ascii_char_without_bool_mapping.t.exe)
+  (deps AsciiCharWithoutBoolMapping.vo ascii_char_without_bool_mapping.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ascii_char_without_bool_mapping.t.exe ascii_char_without_bool_mapping.t.cpp ascii_char_without_bool_mapping.cpp)))
+ (rule
+  (alias runtest)
+  (deps ascii_char_without_bool_mapping.t.exe)
+  (action (run ./ascii_char_without_bool_mapping.t.exe))))
+
+(subdir sep_ext_accessor_functor_chain
+ (rule
+  (targets sep_ext_accessor_functor_chain.t.exe)
+  (deps Pred.vo Sound.vo SepExtAccessorFunctorChain.vo sep_ext_accessor_functor_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_accessor_functor_chain.t.exe sep_ext_accessor_functor_chain.t.cpp Datatypes.cpp Pred.cpp Sound.cpp SepExtAccessorFunctorChain.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_accessor_functor_chain.t.exe)
+  (action (run ./sep_ext_accessor_functor_chain.t.exe))))
+
+(subdir sep_ext_callee_alias_type_head
+ (rule
+  (targets sep_ext_callee_alias_type_head.t.exe)
+  (deps Lib.vo Inst.vo SepExtCalleeAliasTypeHead.vo sep_ext_callee_alias_type_head.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_callee_alias_type_head.t.exe sep_ext_callee_alias_type_head.t.cpp Datatypes.cpp ListDef.cpp Lib.cpp Inst.cpp SepExtCalleeAliasTypeHead.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_callee_alias_type_head.t.exe)
+  (action (run ./sep_ext_callee_alias_type_head.t.exe))))
+
+(subdir prim_int63_float_ops
+ (rule
+  (targets prim_int63_float_ops.t.exe)
+  (deps PrimInt63FloatOps.vo prim_int63_float_ops.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_int63_float_ops.t.exe prim_int63_float_ops.t.cpp prim_int63_float_ops.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_int63_float_ops.t.exe)
+  (action (run ./prim_int63_float_ops.t.exe))))
+
+(subdir string_cat_max_length
+ (rule
+  (targets string_cat_max_length.t.exe)
+  (deps StringCatMaxLength.vo string_cat_max_length.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_cat_max_length.t.exe string_cat_max_length.t.cpp string_cat_max_length.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_cat_max_length.t.exe)
+  (action (run ./string_cat_max_length.t.exe))))
+
+(subdir prim_array_default
+ (rule
+  (targets prim_array_default.t.exe)
+  (deps PrimArrayDefault.vo prim_array_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_array_default.t.exe prim_array_default.t.cpp prim_array_default.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_array_default.t.exe)
+  (action (run ./prim_array_default.t.exe))))
+
+(subdir bake_string_literal
+ (rule
+  (targets bake_string_literal.t.exe)
+  (deps BakeStringLiteral.vo bake_string_literal.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_string_literal.t.exe bake_string_literal.t.cpp bake_string_literal.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_string_literal.t.exe)
+  (action (run ./bake_string_literal.t.exe))))
+
+(subdir frame_stack_bde
+ (rule
+  (targets frame_stack_bde.t.exe)
+  (deps FrameStackBde.vo frame_stack_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} frame_stack_bde.t.exe frame_stack_bde.t.cpp frame_stack_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps frame_stack_bde.t.exe)
+  (action (run ./frame_stack_bde.t.exe))))
+
+(subdir nested_match_unreachable_bde
+ (rule
+  (targets nested_match_unreachable_bde.t.exe)
+  (deps NestedMatchUnreachableBde.vo nested_match_unreachable_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} nested_match_unreachable_bde.t.exe nested_match_unreachable_bde.t.cpp nested_match_unreachable_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_match_unreachable_bde.t.exe)
+  (action (run ./nested_match_unreachable_bde.t.exe))))
+(subdir deque_fold_function_acc
+ (rule
+  (targets deque_fold_function_acc.t.exe)
+  (deps DequeFoldFunctionAcc.vo deque_fold_function_acc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_function_acc.t.exe deque_fold_function_acc.t.cpp deque_fold_function_acc.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_fold_function_acc.t.exe)
+  (action (run ./deque_fold_function_acc.t.exe))))
+
+(subdir fix_acc_empty_erased
+ (rule
+  (targets fix_acc_empty_erased.t.exe)
+  (deps FixAccEmptyErased.vo fix_acc_empty_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_acc_empty_erased.t.exe fix_acc_empty_erased.t.cpp fix_acc_empty_erased.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_acc_empty_erased.t.exe)
+  (action (run ./fix_acc_empty_erased.t.exe))))
+
+(subdir coinductive_bde
+ (rule
+  (targets coinductive_bde.t.exe)
+  (deps CoinductiveBde.vo coinductive_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} coinductive_bde.t.exe coinductive_bde.t.cpp coinductive_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps coinductive_bde.t.exe)
+  (action (run ./coinductive_bde.t.exe))))
+
+(subdir placeholder_binding_bde
+ (rule
+  (targets placeholder_binding_bde.t.exe)
+  (deps PlaceholderBindingBde.vo placeholder_binding_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} placeholder_binding_bde.t.exe placeholder_binding_bde.t.cpp placeholder_binding_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps placeholder_binding_bde.t.exe)
+  (action (run ./placeholder_binding_bde.t.exe))))
+
+(subdir tmc_optional_bde
+ (rule
+  (targets tmc_optional_bde.t.exe)
+  (deps TmcOptionalBde.vo tmc_optional_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} tmc_optional_bde.t.exe tmc_optional_bde.t.cpp tmc_optional_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps tmc_optional_bde.t.exe)
+  (action (run ./tmc_optional_bde.t.exe))))
+
+(subdir array_default_decl_bde
+ (rule
+  (targets array_default_decl_bde.t.exe)
+  (deps ArrayDefaultDeclBde.vo array_default_decl_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} array_default_decl_bde.t.exe array_default_decl_bde.t.cpp array_default_decl_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps array_default_decl_bde.t.exe)
+  (action (run ./array_default_decl_bde.t.exe))))
+
+(subdir pair_mix_bde
+ (rule
+  (targets pair_mix_bde.t.exe)
+  (deps PairMixBde.vo pair_mix_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} pair_mix_bde.t.exe pair_mix_bde.t.cpp pair_mix_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_mix_bde.t.exe)
+  (action (run ./pair_mix_bde.t.exe))))
+
+(subdir bake_bde
+ (rule
+  (targets bake_bde.t.exe)
+  (deps BakeBde.vo bake_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} bake_bde.t.exe bake_bde.t.cpp bake_bde.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_bde.t.exe)
+  (action (run ./bake_bde.t.exe))))
+(subdir self_comparison_global_werror
+ (rule
+  (targets self_comparison_global_werror.t.exe)
+  (deps SelfComparisonGlobalWerror.vo self_comparison_global_werror.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} self_comparison_global_werror.t.exe self_comparison_global_werror.t.cpp self_comparison_global_werror.cpp)))
+ (rule
+  (alias runtest)
+  (deps self_comparison_global_werror.t.exe)
+  (action (run ./self_comparison_global_werror.t.exe))))
+
+(subdir fix_acc_match_none_erased
+ (rule
+  (targets fix_acc_match_none_erased.t.exe)
+  (deps FixAccMatchNoneErased.vo fix_acc_match_none_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_acc_match_none_erased.t.exe fix_acc_match_none_erased.t.cpp fix_acc_match_none_erased.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_acc_match_none_erased.t.exe)
+  (action (run ./fix_acc_match_none_erased.t.exe))))
+
+(subdir unread_param_captured
+ (rule
+  (targets unread_param_captured.t.exe)
+  (deps UnreadParamCaptured.vo unread_param_captured.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unread_param_captured.t.exe unread_param_captured.t.cpp unread_param_captured.cpp)))
+ (rule
+  (alias runtest)
+  (deps unread_param_captured.t.exe)
+  (action (run ./unread_param_captured.t.exe))))
+
+(subdir frame_box_pointer_scope
+ (rule
+  (targets frame_box_pointer_scope.t.exe)
+  (deps FrameBoxPointerScope.vo frame_box_pointer_scope.t.cpp (source_tree .))
+  (action
+   (setenv CRANE_CPP_SANITIZE address,undefined
+    (run %{project_root}/scripts/compile-std.sh %{project_root} frame_box_pointer_scope.t.exe frame_box_pointer_scope.t.cpp frame_box_pointer_scope.cpp))))
+ (rule
+  (alias runtest)
+  (deps frame_box_pointer_scope.t.exe)
+  (action (run ./frame_box_pointer_scope.t.exe))))
+
+(subdir frame_plan_rebind
+ (rule
+  (targets frame_plan_rebind.t.exe)
+  (deps FramePlanRebind.vo frame_plan_rebind.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} frame_plan_rebind.t.exe frame_plan_rebind.t.cpp frame_plan_rebind.cpp)))
+ (rule
+  (alias runtest)
+  (deps frame_plan_rebind.t.exe)
+  (action (run ./frame_plan_rebind.t.exe))))
+
+(subdir case_of_case_coercion
+ (rule
+  (targets case_of_case_coercion.t.exe)
+  (deps CaseOfCaseCoercion.vo case_of_case_coercion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} case_of_case_coercion.t.exe case_of_case_coercion.t.cpp case_of_case_coercion.cpp)))
+ (rule
+  (alias runtest)
+  (deps case_of_case_coercion.t.exe)
+  (action (run ./case_of_case_coercion.t.exe))))
+(subdir scrutinee_list_return_type
+ (rule
+  (targets scrutinee_list_return_type.t.exe)
+  (deps ScrutineeListReturnType.vo scrutinee_list_return_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} scrutinee_list_return_type.t.exe scrutinee_list_return_type.t.cpp scrutinee_list_return_type.cpp)))
+ (rule
+  (alias runtest)
+  (deps scrutinee_list_return_type.t.exe)
+  (action (run ./scrutinee_list_return_type.t.exe))))
+
+(subdir deque_fold_fix_init
+ (rule
+  (targets deque_fold_fix_init.t.exe)
+  (deps DequeFoldFixInit.vo deque_fold_fix_init.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_fix_init.t.exe deque_fold_fix_init.t.cpp deque_fold_fix_init.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_fold_fix_init.t.exe)
+  (action (run ./deque_fold_fix_init.t.exe))))
+
+(subdir nested_fix_alias_result
+ (rule
+  (targets nested_fix_alias_result.t.exe)
+  (deps NestedFixAliasResult.vo nested_fix_alias_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_fix_alias_result.t.exe nested_fix_alias_result.t.cpp nested_fix_alias_result.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_fix_alias_result.t.exe)
+  (action (run ./nested_fix_alias_result.t.exe))))
+
+(subdir fold_curried_fix_step
+ (rule
+  (targets fold_curried_fix_step.t.exe)
+  (deps FoldCurriedFixStep.vo fold_curried_fix_step.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_curried_fix_step.t.exe fold_curried_fix_step.t.cpp fold_curried_fix_step.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_curried_fix_step.t.exe)
+  (action (run ./fold_curried_fix_step.t.exe))))
+
+(subdir capture_move_then_alias
+ (rule
+  (targets capture_move_then_alias.t.exe)
+  (deps CaptureMoveThenAlias.vo capture_move_then_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} capture_move_then_alias.t.exe capture_move_then_alias.t.cpp capture_move_then_alias.cpp)))
+ (rule
+  (alias runtest)
+  (deps capture_move_then_alias.t.exe)
+  (action (run ./capture_move_then_alias.t.exe))))
+
+(subdir alias_param_convention_check
+ (rule
+  (targets alias_param_convention_check.t.exe)
+  (deps AliasParamConventionCheck.vo alias_param_convention_check.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_param_convention_check.t.exe alias_param_convention_check.t.cpp alias_param_convention_check.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_param_convention_check.t.exe)
+  (action (run ./alias_param_convention_check.t.exe))))
+
+(subdir bde_concept_declval_include
+ (rule
+  (targets bde_concept_declval_include.t.exe)
+  (deps BdeConceptDeclvalInclude.vo bde_concept_declval_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} bde_concept_declval_include.t.exe bde_concept_declval_include.t.cpp bde_concept_declval_include.cpp)))
+ (rule
+  (alias runtest)
+  (deps bde_concept_declval_include.t.exe)
+  (action (run ./bde_concept_declval_include.t.exe))))
+
+(subdir bde_loop_acc_fn_std_string
+ (rule
+  (targets bde_loop_acc_fn_std_string.t.exe)
+  (deps BdeLoopAccFnStdString.vo bde_loop_acc_fn_std_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} bde_loop_acc_fn_std_string.t.exe bde_loop_acc_fn_std_string.t.cpp bde_loop_acc_fn_std_string.cpp)))
+ (rule
+  (alias runtest)
+  (deps bde_loop_acc_fn_std_string.t.exe)
+  (action (run ./bde_loop_acc_fn_std_string.t.exe))))
+
+(subdir loopify_constant_local_fix
+ (rule
+  (targets loopify_constant_local_fix.t.exe)
+  (deps LoopifyConstantLocalFix.vo loopify_constant_local_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_constant_local_fix.t.exe loopify_constant_local_fix.t.cpp loopify_constant_local_fix.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_constant_local_fix.t.exe)
+  (action (run ./loopify_constant_local_fix.t.exe))))
+(subdir loop_acc_curried_partial_app
+ (rule
+  (targets loop_acc_curried_partial_app.t.exe)
+  (deps LoopAccCurriedPartialApp.vo loop_acc_curried_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loop_acc_curried_partial_app.t.exe loop_acc_curried_partial_app.t.cpp loop_acc_curried_partial_app.cpp)))
+ (rule
+  (alias runtest)
+  (deps loop_acc_curried_partial_app.t.exe)
+  (action (run ./loop_acc_curried_partial_app.t.exe))))
+
+(subdir deque_fold_curried_acc
+ (rule
+  (targets deque_fold_curried_acc.t.exe)
+  (deps DequeFoldCurriedAcc.vo deque_fold_curried_acc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_fold_curried_acc.t.exe deque_fold_curried_acc.t.cpp deque_fold_curried_acc.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_fold_curried_acc.t.exe)
+  (action (run ./deque_fold_curried_acc.t.exe))))
+
+(subdir boxed_fields_match_arg_obj
+ (rule
+  (targets boxed_fields_match_arg_obj.t.exe)
+  (deps BoxedFieldsMatchArgObj.vo boxed_fields_match_arg_obj.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_fields_match_arg_obj.t.exe boxed_fields_match_arg_obj.t.cpp boxed_fields_match_arg_obj.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_fields_match_arg_obj.t.exe)
+  (action (run ./boxed_fields_match_arg_obj.t.exe))))
+
+(subdir snd_pair_poly_sum_scrutinee
+ (rule
+  (targets snd_pair_poly_sum_scrutinee.t.exe)
+  (deps SndPairPolySumScrutinee.vo snd_pair_poly_sum_scrutinee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} snd_pair_poly_sum_scrutinee.t.exe snd_pair_poly_sum_scrutinee.t.cpp snd_pair_poly_sum_scrutinee.cpp)))
+ (rule
+  (alias runtest)
+  (deps snd_pair_poly_sum_scrutinee.t.exe)
+  (action (run ./snd_pair_poly_sum_scrutinee.t.exe))))
+
+(subdir poly_sum_payload_obj
+ (rule
+  (targets poly_sum_payload_obj.t.exe)
+  (deps PolySumPayloadObj.vo poly_sum_payload_obj.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_sum_payload_obj.t.exe poly_sum_payload_obj.t.cpp poly_sum_payload_obj.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_sum_payload_obj.t.exe)
+  (action (run ./poly_sum_payload_obj.t.exe))))
+(subdir bake_text_trigraph
+ (rule
+  (targets bake_text_trigraph.t.exe)
+  (deps BakeTextTrigraph.vo bake_text_trigraph.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_text_trigraph.t.exe bake_text_trigraph.t.cpp bake_text_trigraph.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_text_trigraph.t.exe)
+  (action (run ./bake_text_trigraph.t.exe))))
+
+(subdir bake_text_overlength
+ (rule
+  (targets bake_text_overlength.t.exe)
+  (deps BakeTextOverlength.vo bake_text_overlength.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_text_overlength.t.exe bake_text_overlength.t.cpp bake_text_overlength.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_text_overlength.t.exe)
+  (action (run ./bake_text_overlength.t.exe))))
+
+(subdir bake_alternating_types_quadratic
+ (rule
+  (targets bake_alternating_types_quadratic.t.exe)
+  (deps BakeAlternatingTypesQuadratic.vo bake_alternating_types_quadratic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_alternating_types_quadratic.t.exe bake_alternating_types_quadratic.t.cpp bake_alternating_types_quadratic.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_alternating_types_quadratic.t.exe)
+  (action (run ./bake_alternating_types_quadratic.t.exe))))
+
+(subdir bake_array_of_nodes
+ (rule
+  (targets bake_array_of_nodes.t.exe)
+  (deps BakeArrayOfNodes.vo bake_array_of_nodes.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_array_of_nodes.t.exe bake_array_of_nodes.t.cpp bake_array_of_nodes.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_array_of_nodes.t.exe)
+  (action (run ./bake_array_of_nodes.t.exe))))
+
+(subdir bake_functor_application_constant
+ (rule
+  (targets bake_functor_application_constant.t.exe)
+  (deps BakeFunctorApplicationConstant.vo bake_functor_application_constant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_functor_application_constant.t.exe bake_functor_application_constant.t.cpp bake_functor_application_constant.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_functor_application_constant.t.exe)
+  (action (run ./bake_functor_application_constant.t.exe))))
+
+(subdir callable_crossing_matrix
+ (rule
+  (targets callable_crossing_matrix.t.exe)
+  (deps CallableCrossingMatrix.vo callable_crossing_matrix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} callable_crossing_matrix.t.exe callable_crossing_matrix.t.cpp callable_crossing_matrix.cpp)))
+ (rule
+  (alias runtest)
+  (deps callable_crossing_matrix.t.exe)
+  (action (run ./callable_crossing_matrix.t.exe))))

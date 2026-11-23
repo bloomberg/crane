@@ -29,16 +29,17 @@ struct LoopifyItreeReified {
     if (std::holds_alternative<typename ITree<T1>::Ret>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&ot);
       auto r = _itf.value;
-      return ITree<T1>::ret(r);
+      return ITree<T1>::ret(std::move(r));
     } else if (std::holds_alternative<typename ITree<T1>::Tau>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&ot);
       auto t_ = _itf.next;
-      return itree_tau(rec(t_));
+      return itree_tau(rec(std::move(t_)));
     } else {
       const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&ot);
       auto e = crane_event_as<crane::obj>(_itf.effect);
       auto k = _itf.cont;
-      return itree_vis(e, [=, rec = rec](const auto &x) { return rec(k(x)); });
+      return itree_vis(std::move(e), [=, rec = rec, k = std::move(k)](
+                                         const auto &x) { return rec(k(x)); });
     }
   }
 

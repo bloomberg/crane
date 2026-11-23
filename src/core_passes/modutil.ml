@@ -258,6 +258,13 @@ let decl_ast_search f = function
     Core.Nonempty.iter (fun (fd : _ Core.Recursion.Definition.at) -> ast_search f fd.body) fds
   | _ -> ()
 
+(** Apply [f] to the body of a declaration. *)
+let decl_ast_iter f = function
+  | Core.Decl.Value {body = a; _} -> f a
+  | Core.Decl.Recursive_group fds ->
+    Core.Nonempty.iter (fun (fd : _ Core.Recursion.Definition.at) -> f fd.body) fds
+  | _ -> ()
+
 (** Search for an AST node anywhere in a structure. *)
 let struct_ast_search f s =
   try
@@ -592,11 +599,29 @@ exception RemainingImplicit of Core.Erasure_reason.t
 
 (** Warn if any implicit arguments remain in the structure. *)
 let check_for_remaining_implicits struc =
-  let check = function
+  (* A call to a typed operation mapping passes nothing for the operation's
+     own [Extraction Implicit] positions: its template is bound to the
+     retained binders ({!Base.Mapping_operation}). *)
+  let rec check e =
+    match e with
     | Core.Expr.Erased_value (Core.Erasure_reason.Configured_implicit _ as k) -> raise (RemainingImplicit k)
-    | _ -> false
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _} as callee; arguments}
+      when Base.Table.is_mapped_operation r ->
+      check callee;
+      List.iter
+        (function
+          | Core.Expr.Erased_value (Core.Erasure_reason.Configured_implicit {entity; _})
+            when Names.GlobRef.CanOrd.equal entity r -> ()
+          | a -> check a)
+        arguments
+    | _ -> ast_iter check e
   in
-  try ignore (struct_ast_search check struc)
+  (* Nor is a mapped operation's own body generated. *)
+  let decl = function
+    | Core.Decl.Value {entity; _} when Base.Table.is_mapped_operation entity -> ()
+    | d -> decl_ast_iter check d
+  in
+  try struct_iter decl (fun _ -> ()) (fun _ -> ()) struc
   with RemainingImplicit k -> err_or_warn_remaining_implicit k
 
 (** Full optimization pipeline: normalize, inline, eliminate dead code. *)

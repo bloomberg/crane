@@ -1,14 +1,14 @@
 #include "io.h"
 
-void iotest::test1(std::string) { return; }
+void iotest::test1(const std::string &) { return; }
 
-void iotest::test2(std::string s) {
-  std::cout << std::move(s);
+void iotest::test2(const std::string &s) {
+  std::cout << s;
   return;
 }
 
-void iotest::test3(std::string s) {
-  std::cout << std::move(s) << '\n';
+void iotest::test3(const std::string &s) {
+  std::cout << s << '\n';
   return;
 }
 
@@ -16,9 +16,10 @@ std::string iotest::test4() {
   std::cout << std::string("what is your name?") << '\n';
   std::string s2;
   std::getline(std::cin, s2);
-  std::cout << std::string("hello ") + s2 << '\n';
-  return std::string("I read the name ") + std::move(s2) +
-         std::string(" from the command line!");
+  std::cout << crane::string_capped(std::string("hello ") + s2) << '\n';
+  return crane::string_capped(
+      std::string("I read the name ") +
+      crane::string_capped(s2 + std::string(" from the command line!")));
 }
 
 void iotest::test5() {

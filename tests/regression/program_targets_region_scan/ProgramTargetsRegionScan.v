@@ -44,5 +44,5 @@ Definition t : nat :=
 End ProgramTargetsRegionScan.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "program_targets_region_scan" ProgramTargetsRegionScan.

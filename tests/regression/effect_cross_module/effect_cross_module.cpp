@@ -1,8 +1,8 @@
 #include "effect_cross_module.h"
 
 /// Inner module defines a helper that returns a value
-void EffectCrossModule::Inner::greet(std::string name) {
-  std::cout << std::string("Hello, ") + std::move(name) << '\n';
+void EffectCrossModule::Inner::greet(const std::string &name) {
+  std::cout << crane::string_capped(std::string("Hello, ") + name) << '\n';
   return;
 }
 
@@ -24,8 +24,8 @@ void EffectCrossModule::test_greet() {
 std::string EffectCrossModule::test_ask_name() { return Inner::ask_name(); }
 
 int64_t EffectCrossModule::test_with_greeting() {
-  return Inner::template with_greeting<int64_t>([](std::string name) {
-    return static_cast<int64_t>(std::move(name).length());
+  return Inner::template with_greeting<int64_t>([](const std::string &name) {
+    return static_cast<int64_t>((std::string_view{name}).size());
   });
 }
 

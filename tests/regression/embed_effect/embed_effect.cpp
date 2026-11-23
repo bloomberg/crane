@@ -1,8 +1,8 @@
 #include "embed_effect.h"
 
-template <typename T1> void bug_create(std::string title) {
+template <typename T1> void bug_create(const std::string &title) {
   {
-    bug_create_impl(std::move(title));
+    bug_create_impl(title);
     return;
   }
 }

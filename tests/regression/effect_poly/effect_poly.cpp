@@ -112,6 +112,6 @@ int64_t EffectPoly::chain_types() {
   std::cout << std::string("enter a number:") << '\n';
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(std::move(line).length());
+  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
   return len;
 }

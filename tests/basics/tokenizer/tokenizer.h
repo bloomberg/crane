@@ -4,6 +4,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <crane_string.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -171,22 +172,28 @@ struct ToString {
   static std::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const std::pair<T1, T2> &x) {
     const auto &[a, b] = x;
-    return std::string("(") + p1(a) + std::string(", ") + p2(b) +
-           std::string(")");
+    return crane::string_capped(
+        std::string("(") +
+        crane::string_capped(
+            p1(a) + crane::string_capped(
+                        std::string(", ") +
+                        crane::string_capped(p2(b) + std::string(")")))));
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<std::string, F0 &, const T1 &>
-  static std::string intersperse(F0 &&p, std::string sep, const List<T1> &l) {
+  static std::string intersperse(F0 &&p, const std::string &sep,
+                                 const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "";
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return std::move(sep) + p(a0);
+        return crane::string_capped(sep + p(a0));
       } else {
-        return sep + p(a0) + intersperse<T1>(p, sep, *a1);
+        return crane::string_capped(
+            sep + crane::string_capped(p(a0) + intersperse<T1>(p, sep, *a1)));
       }
     }
   }
@@ -200,10 +207,14 @@ struct ToString {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return std::string("[") + p(a0) + std::string("]");
+        return crane::string_capped(
+            std::string("[") + crane::string_capped(p(a0) + std::string("]")));
       } else {
-        return std::string("[") + p(a0) + intersperse<T1>(p, "; ", *a1) +
-               std::string("]");
+        return crane::string_capped(
+            std::string("[") +
+            crane::string_capped(
+                p(a0) + crane::string_capped(intersperse<T1>(p, "; ", *a1) +
+                                             std::string("]"))));
       }
     }
   }

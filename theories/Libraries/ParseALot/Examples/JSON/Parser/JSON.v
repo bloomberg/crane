@@ -302,8 +302,18 @@ Definition notWS (t : token) : bool :=
 Definition lex_sem   := Crane.Libraries.ParseALot.Examples.JSON.Lexer.Semantic.SemLexer.Impl.lex_sem.
 (** Alias for the JSON literal lexer rules. *)
 Definition lex_rus   := Crane.Libraries.ParseALot.Examples.JSON.Lexer.Literal.rus.
-(** Semantic lexer partially applied to the JSON rules. *)
-Definition lex_json' := lex_sem lex_rus.
+(** The JSON lexer's rules with their DFAs built ([init_srule]): a constant, so that a program
+    builds them once rather than on every input. *)
+Definition json_srules := map Crane.Libraries.ParseALot.Examples.JSON.Lexer.Literal.LXR.Correctness.Impl.Lex.init_srule lex_rus.
+(** Semantic lexer over [json_srules]; [lex_json'_lex_sem] says it is [lex_sem lex_rus]. *)
+Definition lex_json' (s : String) :=
+  Crane.Libraries.ParseALot.Examples.JSON.Lexer.Semantic.SemLexer.Impl.lex_sem_of
+    (Crane.Libraries.ParseALot.Examples.JSON.Lexer.Literal.LXR.Correctness.Impl.Lex.lex_M_pre json_srules s).
+(** [lex_json'] is the semantic lexer partially applied to the JSON rules; by [lex_sem_of_lex]. *)
+Lemma lex_json'_lex_sem : forall s, lex_json' s = lex_sem lex_rus s.
+Proof.
+  intros. unfold lex_json'. rewrite <- Crane.Libraries.ParseALot.Examples.JSON.Lexer.Semantic.SemLexer.Impl.lex_sem_of_lex. reflexivity.
+Qed.
 (** Lexes a JSON input string, returning typed tokens with whitespace filtered out. *)
 Definition lex_json (s : String) : option (list token) * String :=
   let res' := lex_json' s in

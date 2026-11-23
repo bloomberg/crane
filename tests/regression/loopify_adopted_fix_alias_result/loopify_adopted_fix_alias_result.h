@@ -281,7 +281,7 @@ struct LoopifyAdoptedFixAliasResult {
         List<std::pair<uint64_t, T1>> m = std::move(_f.m);
         if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
                 m.v_mut())) {
-          _result = map2_r<T1, T2, T3>(f, x0_);
+          _result = map2_r<T1, T2, T3>(f, std::move(x0_));
         } else {
           auto &[a0, a1] =
               std::get<typename List<std::pair<uint64_t, T1>>::Cons>(m.v_mut());
@@ -352,8 +352,8 @@ struct LoopifyAdoptedFixAliasResult {
     return _result;
   }
 
-  static std::optional<uint64_t> add_opt(const std::optional<uint64_t> &a,
-                                         const std::optional<uint64_t> &b);
+  static std::optional<uint64_t> add_opt(std::optional<uint64_t> a,
+                                         std::optional<uint64_t> b);
   static uint64_t sum(const List<std::pair<uint64_t, uint64_t>> &m);
   /// The keys i * step, ..., (i + n - 1) * step, each bound to its
   /// multiple.

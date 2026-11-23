@@ -415,7 +415,7 @@ let customs = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrCustom"
     class. *)
 let singleton_class_method r =
   match r with
-  | GlobRef.ConstRef _ when not (Core.Ref.Can.Map.mem r !customs) -> (
+  | GlobRef.ConstRef _ when not (Core.Ref.Can.Map.mem r !customs || Mapping_plan.is_mapped r) -> (
     let closed_arity decl =
       let t = Context.Rel.Declaration.get_type decl in
       Term.isArity t && Vars.closed0 t
@@ -2659,7 +2659,10 @@ let empty_inline_table = (Core.Ref.Can.Set.empty, Core.Ref.Can.Set.empty)
 
 let inline_table = Summary.ref empty_inline_table ~name:"CraneExtrInline"
 
-let to_inline r = Core.Ref.Can.Set.mem r (fst !inline_table)
+(* A typed-mapped type and its constructors are inline as a legacy
+   [Crane Extract Inductive] makes them ({!Mapping_plan}). *)
+let to_inline r =
+  Core.Ref.Can.Set.mem r (fst !inline_table) || Mapping_plan.is_mapped r || Mapping_operation.is_operation_head r
 
 (* Foreign function call extraction: constants called through a C++ function
    of the given name ([Crane Extract Foreign Constant]). *)
@@ -2806,6 +2809,10 @@ let implicits_of_global r =
   match Core.Ref.User.Map.find_opt r !implicits_table with
   | Some s -> s
   | None -> Int.Set.empty
+
+(* An operation mapping binds its arguments to the binders Crane retains,
+   which these positions take away. *)
+let () = Mapping_discovery.implicit_positions := implicits_of_global
 
 (** Register implicit argument positions for a global reference by index or
     name. *)
@@ -3010,7 +3017,23 @@ let same_mutual_block r1 r2 =
   | GlobRef.IndRef (m1, _), GlobRef.IndRef (m2, _) -> MutInd.CanOrd.equal m1 m2
   | _ -> false
 
-let is_custom r = Core.Ref.Can.Map.mem r !customs
+(* Custom: a legacy mapping, or a typed one ([TypeMapping], plan D3): the
+   head of a mapped type or a constructor of one.  Where the content of the
+   mapping is read, the typed plan answers first ({!custom_text}). *)
+let is_custom r =
+  Core.Ref.Can.Map.mem r !customs || Mapping_plan.is_mapped r || Mapping_operation.is_operation_head r
+
+(* The text a typed-mapped global stands for: a constructor's build
+   template, or the canonical type in the legacy type vocabulary for the
+   readers that reason about a type's text (the type itself is built
+   structurally, {!Cpp_passes.Erasure}). *)
+let typed_custom_text r =
+  if Mapping_operation.is_operation_head r then Some (Mapping_operation.find r).template
+  else if not (Mapping_plan.is_mapped r) then None
+  else
+    match r with
+    | GlobRef.ConstructRef k -> Some (Mapping_plan.constructor_template k)
+    | _ -> Some (Mapping_plan.type_text (Mapping_plan.find r))
 
 (** Whether an inductive packet is generated as a flat struct -- its one
     constructor's fields directly, with no variant: an ordinary inductive
@@ -3095,15 +3118,41 @@ let is_inline_custom r = is_custom r && to_inline r
 (** The replacement text of the inline custom [r], read to reason about it
     rather than to write it ({!written_custom_text}). *)
 let inline_custom_text r =
-  if to_inline r then Option.map snd (Core.Ref.Can.Map.find_opt r !customs) else None
+  if not (to_inline r) then None
+  else
+    match typed_custom_text r with
+    | Some _ as t -> t
+    | None -> Option.map snd (Core.Ref.Can.Map.find_opt r !customs)
+
+(* An operation mapping's call supplies one argument per retained runtime
+   binder, whether its template names it or not (an [Ignore] argument is
+   not named); a legacy text's arguments stop at its last [%aN]. *)
+let inline_custom_arity r =
+  if Mapping_operation.is_operation_head r then Some (Mapping_operation.arity (Mapping_operation.find r))
+  else
+    match inline_custom_text r with
+    | None -> None
+    | Some tmpl ->
+      let re = Str.regexp "%a\\([0-9]+\\)" in
+      let rec scan pos acc =
+        match Str.search_forward re tmpl pos with
+        | i -> scan (i + 1) (max acc (int_of_string (Str.matched_group 1 tmpl) + 1))
+        | exception Not_found -> acc
+      in
+      Some (scan 0 0)
+
+let is_mapped_operation r = Mapping_operation.is_operation_head r
 
 let is_foreign_custom r = is_custom r && to_foreign r
 
 let find_callback r = Core.Ref.User.Map.find r !callback_map
 
-let find_custom r = snd (Core.Ref.Can.Map.find r !customs)
+let find_custom_opt r =
+  match typed_custom_text r with
+  | Some _ as t -> t
+  | None -> Option.map snd (Core.Ref.Can.Map.find_opt r !customs)
 
-let find_custom_opt r = Option.map snd (Core.Ref.Can.Map.find_opt r !customs)
+let find_custom r = match find_custom_opt r with Some s -> s | None -> raise Not_found
 
 let check_written_custom r =
   match !written_refs with
@@ -3230,13 +3279,19 @@ let extraction_trivially_copyable (l : qualid list) =
             ++ str
                  " has no custom extraction, so there is no C++ type to \
                   declare trivially copyable.  Give it a mapping with Crane \
-                  Extract Inductive first." ) )
+                  Extract Inductive first; a type mapped by a TypeMapping \
+                  instance declares its copy cost in type_copy." ) )
     l
 
 (** True when [r] is a custom-extracted inductive whose C++ representation
     is a trivially-copyable scalar (e.g. [nat] extracted to [unsigned int]).
     Such types should be passed by value, not by [const T &]. *)
 let is_custom_scalar_ref (r : GlobRef.t) : bool =
+  if Mapping_plan.is_type_head r then
+    (* Cheap whatever the type arguments; the readers with arguments ask
+       {!Mapping_plan.copies_cheaply} themselves. *)
+    Mapping_plan.copies_cheaply (Mapping_plan.find r) ~argument:(fun _ -> false)
+  else
   match find_custom_opt r with
   | Some s -> is_trivially_copyable_cpp_name s
   | None -> false
@@ -3247,7 +3302,10 @@ let reserved_global_cpp_names =
 let escape_reserved_struct_name s =
   if List.mem s reserved_global_cpp_names then s ^ "_" else s
 
-let find_type_custom r = Core.Ref.Can.Map.find r !customs
+let find_type_custom r =
+  match typed_custom_text r with
+  | Some s -> ([], s)
+  | None -> Core.Ref.Can.Map.find r !customs
 
 (* The rest of a mapping -- its match template, its element wrapping and
    drain, its includes, its numeral and void forms, whether it is trivially
@@ -3314,14 +3372,25 @@ let indref_of_match pv =
   | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} -> GlobRef.IndRef ip
   | _ -> raise Not_found
 
+(* A match on a typed-mapped inductive is custom: its template comes from
+   the constructor views, and asking compiles it, so that a match on an
+   abstract type, or on a constructor without a view, is refused here. *)
 let is_custom_match pv =
   match indref_of_match pv with
+  | GlobRef.IndRef ip as r when Mapping_plan.is_type_head r ->
+    ignore (Mapping_plan.match_template ip);
+    true
   | r -> Core.Ref.Can.Map.mem r !custom_matchs
   | exception Not_found -> false
 
-let find_custom_match pv = Core.Ref.Can.Map.find (indref_of_match pv) !custom_matchs
+let find_custom_match pv =
+  match indref_of_match pv with
+  | GlobRef.IndRef ip as r when Mapping_plan.is_type_head r -> Mapping_plan.match_template ip
+  | r -> Core.Ref.Can.Map.find r !custom_matchs
 
 let find_custom_ctor_templates (ip : Names.inductive) =
+  if Mapping_plan.is_type_head (GlobRef.IndRef ip) then Mapping_plan.constructor_templates ip
+  else
   let mib = Global.lookup_mind (fst ip) in
   let n = Array.length mib.mind_packets.(snd ip).mind_consnames in
   List.init n (fun j ->
@@ -3433,18 +3502,23 @@ let ref_imports_object : GlobRef.t * string -> obj =
 let get_ref_import_list r =
   match Core.Ref.Can.Map.find_opt r !ref_imports with
   | Some imports -> StringSet.elements imports
-  | None -> []
+  | None -> Mapping_plan.headers r @ Mapping_operation.headers r
 
 let imports_of refs =
   Core.Ref.User.Set.fold
     (fun r acc ->
+      let acc = List.fold_right StringSet.add (Mapping_plan.headers r @ Mapping_operation.headers r) acc in
       match Core.Ref.Can.Map.find_opt r !ref_imports with
       | Some imports -> StringSet.union imports acc
       | None -> acc )
     refs StringSet.empty
 
-(* The imports of the customs the unit's files write. *)
-let get_custom_imports () = StringSet.elements (imports_of (written_customs ()))
+(* The imports of the customs the unit's files write, and the headers of
+   the typed-mapped types written (a structured type no longer names its
+   head). *)
+let get_custom_imports () =
+  StringSet.elements
+    (List.fold_right StringSet.add (Mapping_plan.instantiated_headers ()) (imports_of (written_customs ())))
 
 (* The headers whose mappings put the program's values on several threads:
    [std::thread] and [std::async] and Crane's [crane::thread] over the
@@ -4008,6 +4082,8 @@ type numeral_info = {
   ind : GlobRef.t;
     (* The numeral inductive itself, so a rendering site holding only the
        info can still ask what C++ type the literal has to fit in. *)
+  typed : (int * Mapping_descriptor.numeral_action) list option;
+    (* A typed mapping's numeral cases; see [table.mli]. *)
 }
 
 let numeral_table = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrNumeral"
@@ -4021,13 +4097,57 @@ let add_numeral_inductive r info =
     (fun conv -> converter_table := Core.Ref.Can.Map.add conv r !converter_table)
     info.converters
 
-let is_numeral_inductive r = Core.Ref.Can.Map.mem r !numeral_table
+(* The numeral information of a typed mapping's numeral descriptor
+   (design 8.7, 17): the literal format is its emitter's, with the
+   validated decimal digits (and sign) at [%n]. *)
+let typed_numeral_info r =
+  if not (Mapping_plan.is_type_head r) then None
+  else
+    match (Mapping_plan.find r).numerals with
+    | None -> None
+    | Some n ->
+      let index p = match List.find_opt (fun (_, a) -> p a) n.cases with Some (j, _) -> j | None -> -1 in
+      let fmt =
+        match n.emitter with
+        | Mapping_descriptor.Integer_token (prefix, suffix) -> prefix ^ "%n" ^ suffix
+        | Mapping_descriptor.Decimal_constructor callee -> callee ^ "(\"%n\")"
+      in
+      Some
+        { zero_ctor = index (function Mapping_descriptor.Numeral_zero -> true | _ -> false);
+          succ_ctor = index (function Mapping_descriptor.Numeral_successor _ -> true | _ -> false);
+          fmt;
+          converters = n.converters;
+          ind = r;
+          typed = Some n.cases }
 
-let get_numeral_info r = Core.Ref.Can.Map.find_opt r !numeral_table
+(* The converters of every typed numeral descriptor, by the type they
+   build: resolved once per extraction, the first time one is asked for. *)
+let typed_converters : GlobRef.t Core.Ref.Can.Map.t option ref = State.cell State.Extraction None
 
-let is_numeral_converter r = Core.Ref.Can.Map.mem r !converter_table
+let typed_converter_table () =
+  match !typed_converters with
+  | Some m -> m
+  | None ->
+    let m =
+      List.fold_left
+        (fun m (head, _) ->
+          List.fold_left (fun m c -> Core.Ref.Can.Map.add c head m) m (Mapping_plan.numeral_converters head))
+        Core.Ref.Can.Map.empty (Mapping_discovery.type_mapping_heads ())
+    in
+    typed_converters := Some m;
+    m
 
-let numeral_ind_of_converter r = Core.Ref.Can.Map.find_opt r !converter_table
+let get_numeral_info r =
+  match typed_numeral_info r with Some _ as i -> i | None -> Core.Ref.Can.Map.find_opt r !numeral_table
+
+let is_numeral_inductive r = Option.has_some (get_numeral_info r)
+
+let numeral_ind_of_converter r =
+  match Core.Ref.Can.Map.find_opt r (typed_converter_table ()) with
+  | Some _ as g -> g
+  | None -> Core.Ref.Can.Map.find_opt r !converter_table
+
+let is_numeral_converter r = Option.has_some (numeral_ind_of_converter r)
 
 let in_numeral : GlobRef.t * numeral_info -> obj =
   declare_object
@@ -4040,6 +4160,40 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
                         info.converters in
          (r', { info with converters = convs' })))
        ~discharge:(fun x -> Some x)
+
+(** The typed mappings whose head also has a legacy mapping: an error (design
+    22.5), raised once mappings are discovered.  Legacy declarations live in
+    two tables: a type or operation template ([customs], which also holds
+    [Crane Extract Monad], [Skip], the ghost of [Void], and every head a
+    [Crane TriviallyCopyable] names, which needs a legacy mapping), and a
+    numeral format ([Crane Extract Numeral]: a typed type's numerals are its
+    descriptor's, design 17). *)
+let check_typed_mapping_conflicts () =
+  let refuse ~kind ~fix head instances command =
+    CErrors.user_err
+      Pp.(
+        hov 0
+          ( str "Crane: " ++ Printer.pr_global head ++ str " is mapped twice:" ++ spc ()
+          ++ str ("by the " ^ kind ^ " mapping") ++ spc ()
+          ++ prlist_with_sep (fun () -> str "," ++ spc ()) Printer.pr_global instances
+          ++ spc () ++ strbrk ("and by a legacy " ^ command ^ " command.") ++ spc () ++ strbrk fix ))
+  in
+  List.iter
+    (fun (head, instances) ->
+      let refuse = refuse ~kind:"typed" head instances in
+      if Core.Ref.Can.Map.mem head !customs then
+        refuse "Crane Extract"
+          ~fix:"Remove one of them: a type is mapped either by a TypeMapping instance or by Crane Extract Inductive/Constant, never both."
+      else if Core.Ref.Can.Map.mem head !numeral_table then
+        refuse "Crane Extract Numeral"
+          ~fix:"Remove it: a typed type's literals are given by its TypeMapping's type_numerals.")
+    (Mapping_discovery.type_mapping_heads ());
+  List.iter
+    (fun (head, instances) ->
+      if Core.Ref.Can.Map.mem head !customs then
+        refuse ~kind:"operation" head instances "Crane Extract"
+          ~fix:"Remove one of them: an operation is mapped either by an OperationMapping instance or by Crane Extract Inlined Constant/Constant, never both.")
+    (Mapping_discovery.operation_mapping_heads ())
 
 (* A numeral format is documented as a numeric-literal formatting directive, but
    it is rendered by textual [%n] substitution and emitted verbatim as C++
@@ -4155,7 +4309,7 @@ let extract_numeral r fmt =
     in
     let info =
       { zero_ctor = !zero_idx; succ_ctor = !succ_idx;
-        fmt = fmt; converters = converters; ind = g }
+        fmt = fmt; converters = converters; ind = g; typed = None }
     in
     Lib.add_leaf (in_numeral (g, info))
   | _ ->
@@ -4193,3 +4347,54 @@ let erased_fix_groups = State.cell State.Extraction ([] : Core.Occurrence.t list
 let add_erased_fix_group occ = erased_fix_groups := occ :: !erased_fix_groups
 
 let is_erased_fix_group occ = List.exists (Core.Occurrence.equal occ) !erased_fix_groups
+
+(* A skipped class ([Crane Extract Skip ReSum]) passes its instances at no
+   template parameter, so an operation mapping's [%tN] does not count them. *)
+let () =
+  Mapping_discovery.skipped_class :=
+    fun g -> is_inline_custom g && match find_custom_opt g with Some s -> String.equal s "" | None -> false
+
+(** {2 Baked constants ([Crane Bake c])} *)
+
+(* A file the bake driver's compilation read: a runtime header, named
+   relative to the directory holding Crane's runtime ([cpp/shared_array.h]),
+   or any other file by its absolute path; and its digest then. *)
+type bake_input = {file : string; in_runtime : bool; digest : Digest.t}
+
+(* What a baked constant is initialised with: the name its image is declared
+   under, and the image itself, C++ text ({!Driver.Bake}); and what the image
+   was computed from outside the Rocq document, which an extraction checks
+   is unchanged ({!Driver.Bake_inputs}): the files the driver's compilation
+   read, the compiler ([clang++ --version]) and [CRANE_BAKE_FLAGS]. *)
+type baked = {symbol : string; image : string; inputs : bake_input list; compiler : string; env_flags : string}
+
+let bake_table = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrBake"
+
+let add_baked (r, b) =
+  bake_table := Core.Ref.Can.Map.add r b !bake_table;
+  (* A baked constant is never inlined: its uses read the value its
+     declaration is initialised with. *)
+  add_inline_entries false [r]
+
+let bake_object : GlobRef.t * baked -> obj =
+  declare_object
+  @@ superglobal_object
+       "Crane Bake"
+       ~cache:add_baked
+       ~subst:(Some (fun (s, (r, b)) -> (fst (subst_global s r), b)))
+       ~discharge:(fun x -> Some x)
+
+let record_baked r b = Lib.add_leaf (bake_object (r, b))
+
+let baked_image r = Core.Ref.Can.Map.find_opt r !bake_table
+
+(* The constant the extraction driving a bake is for: its initialiser is
+   handed to [crane::bake::root], and every unit initialises it. *)
+let bake_root : GlobRef.t option ref = ref None
+
+let is_bake_root r = match !bake_root with Some c -> Core.Ref.Can.equal c r | None -> false
+
+let {Goptions.get = bake_flags} =
+  declare_string_option_and_ref ~key:["Crane"; "Bake"; "Flags"] ~value:"" ()
+
+let baked_constants () = Core.Ref.Can.Map.bindings !bake_table

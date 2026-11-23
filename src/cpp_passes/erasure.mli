@@ -180,6 +180,12 @@ val mark_unused_bindings : settled -> settled
     names nothing. *)
 val name_scrutinees : settled -> settled
 
+(** [capture_scrutinees decl]: a stored lambda in a branch of a borrowing
+    match on a shared variant, reading every field the branch binds and
+    moving none, captures the scrutinee and binds the fields again inside,
+    where copying the fields costs more counts than copying the scrutinee. *)
+val capture_scrutinees : settled -> settled
+
 (** [narrow_captures decl]: a stored lambda reading a local record only
     through at most half its fields captures those fields, each bound by
     reference in front of the statement holding it, instead of the whole
@@ -258,6 +264,12 @@ val lower_access_moves : settled -> settled
     instantiation, not an axiom's type (whose stubs throw), not
     [std::function] or [decltype].  Last, once every type is final. *)
 val decide_constexpr : settled -> settled
+
+(** [immortal_globals decl]: under [Set Crane SharedVariant], each global
+    [decl] defines whose type is not a literal type initialised through
+    [crane::immortal], so every block it holds is never counted or freed.
+    After {!decide_constexpr}. *)
+val immortal_globals : settled -> settled
 
 (** [materialise decl] settles every type of unknown representation in
     [decl] into [std::any].

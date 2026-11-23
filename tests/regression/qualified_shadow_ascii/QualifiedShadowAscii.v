@@ -15,5 +15,5 @@ Definition t : Shadow.shadow := id_shadow Shadow.Mk.
 End QualifiedShadowAscii.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 Crane Extraction "qualified_shadow_ascii" QualifiedShadowAscii.

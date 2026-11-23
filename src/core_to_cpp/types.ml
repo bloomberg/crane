@@ -98,7 +98,7 @@ let mentions_unresolved_promoted cx (ty : Cpp_ir.Lowered.Type.t) =
       | _ -> false )
     ty
 
-(** How a term argument of a custom type is generated: by {!gen_expr}, which
+(** How a term argument of a custom type is generated: by {!gen_expr_typed}, which
     fills this in once it is defined.  The one place type conversion calls
     back into expression generation -- a mapped type applied to a term, as a
     fixed-size array is to its length -- so it is the edge the two are
@@ -378,8 +378,12 @@ let rec cpp_ir_of_core_type cx
   | Core.Type.Erased Core.Erasure_reason.Type_argument -> Erased Type
   | Core.Type.Erased Core.Erasure_reason.Proof -> Erased Proof
   | Core.Type.Erased (Core.Erasure_reason.Configured_implicit _) -> Erased Implicit
-  | Core.Type.String ->
-    External ("std::string", [])
+  (* A string literal's type is Rocq's primitive string: the type its
+     mapping spells, where one maps it. *)
+  | Core.Type.String -> (
+    match Base.Mapping_plan.mapped_prim_string () with
+    | Some g -> Entity_application (g, [], [])
+    | None -> External ("std::string", []) )
   (* Extraction gave up naming this type.  It prints as [std::any], but we
      know nothing about how the value is actually represented. *)
   | Core.Type.Unknown -> Obligation Opaque_type
@@ -443,20 +447,11 @@ let slot_repr_of_cpp_type cx t =
     passing the wrong scope. *)
 let cpp_of_core cx env t = cpp_ir_of_core_type cx env (get_current_type_vars cx) t
 
-(** The result a let's right-hand side, bound at the Core type [t], falls
-    back to where a position in it states nothing
-    ({!Coerce.position_cpp_ty}): the bound value is not the enclosing
-    function's result, so it is the binder's own type, where this scope can
-    write it.  A binder erasure took the whole type from -- [nt_semty x], a
-    type computed from a value -- holds a box, and its value is one; read at
-    the function's result instead, it is cast to a type it does not have.
-    Where [t] lost a component, or names what the scope cannot write, the
-    enclosing function's result stands. *)
-let let_value_result cx env t =
-  let c = cpp_of_core cx env t in
-  if Cpp_ir.Types.prints_as_any c then Some c
-  else if core_type_contains_erased t then current_cpp_return_type cx ()
-  else match spell_in_scope cx c with Some _ as t -> t | None -> current_cpp_return_type cx ()
+(** What a callee of the Core type [t] returns once given [n] value
+    arguments, converted; [auto] (C++ deduces it) where [t] has fewer
+    arrows. *)
+let codomain_after cx env n t : Cpp_ir.Lowered.Type.t =
+  match Base.Type_util.strip_arrows_n n t with Some c -> cpp_of_core cx env c | None -> Auto
 
 (** [template_arg_of_core_type ~site env tvars ty] converts [ty] for a template
     argument position, its arrows spelled as [site] says

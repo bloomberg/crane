@@ -8,3 +8,8 @@
    [From Crane Require Extraction.]
 *)
 Declare ML Module "rocq-crane.plugin".
+
+(** The digest of the C++ runtime headers: a file that loads Crane depends
+    on their contents, so an image [Crane Bake] computed from old headers is
+    rebuilt (docs/Crane-Bake.md). *)
+Require Crane.RuntimeHeaders.

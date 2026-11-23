@@ -145,7 +145,7 @@ let () =
   let f = GlobRef.VarRef (id "f") in
   let decided =
     Core_plan.Callable_abi.decide
-      ~callables:[Core_plan.Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []]
+      ~callables:[Core_plan.Callable_abi.of_head ~modes:[Cpp_ir.Param_mode.owned; Cpp_ir.Param_mode.lent] ~callee:f ~scheme:None []]
       ~assumed:[] ~instance_methods:[]
   in
   let cref : ty = Reference (Lvalue, Const tree) in
@@ -165,6 +165,7 @@ let () =
     [decl "b" (v "a"); Return (Some (Move (v "b")))]
     0;
   convention "a parameter the plan does not pass" [(id "a", tree)] [] 1;
+  convention "a lent parameter declared by value" [(id "a", tree); (id "b", tree)] [] 1;
   if Ownership_ir.Move_check.convention_violations decided (GlobRef.VarRef (id "unplanned")) [] [] <> None then (
     prerr_endline "move_check: a callable with no plan has a convention";
     exit 1 )
@@ -194,3 +195,31 @@ let () =
   stale "nor bound again after it"
     [ match_ "t" ["a0"] [Bind_variable (id "t", Existing, next); match_ "t" ["a0"] [Return (Some (v "a0"))]] ]
     []
+
+(* A parameter's recorded mode against the type it is declared at: the form
+   the type spells, an ownership the form can have, the receiver a pointer
+   and no other parameter one. *)
+let () =
+  let module M = Cpp_ir.Param_mode in
+  let agree name m (ty : ty) expected =
+    if (M.disagreement m ty = None) <> expected then (
+      Printf.eprintf "move_check: mode %s: expected %s\n" name (if expected then "agreement" else "a disagreement");
+      exit 1 )
+  in
+  let cref : ty = Reference (Lvalue, Const tree) in
+  agree "lent at const &" M.lent cref true;
+  agree "lent by value" M.lent tree false;
+  agree "owned at const &" (M.make Owned By_const_reference) cref false;
+  agree "copied by value" M.copied tree true;
+  agree "const value" M.const_copied (Const tree) true;
+  agree "forwarded at F &&" M.forwarded (Reference (Forwarding, tree)) true;
+  agree "receiver at a pointer" M.receiver (Pointer (Const tree)) true;
+  (* A raw-pointer typed mapping's canonical type is a pointer value. *)
+  agree "value at a pointer" M.copied (Pointer tree) true;
+  agree "receiver by value" M.receiver tree false;
+  if M.value_type M.lent cref <> tree || M.value_type M.const_copied (Const tree) <> tree then (
+    prerr_endline "move_check: a mode's value type keeps its declarator";
+    exit 1 );
+  if M.declare By_const_reference tree <> cref then (
+    prerr_endline "move_check: a lent parameter is not declared at const &";
+    exit 1 )

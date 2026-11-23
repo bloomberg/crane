@@ -18,7 +18,7 @@ std::string BlockTemplateStress::conditional_read(bool do_read) {
   if (do_read) {
     std::string s;
     std::getline(std::cin, s);
-    return std::move(s) + std::string("!");
+    return crane::string_capped(s + std::string("!"));
   } else {
     return "skipped";
   }
@@ -36,18 +36,18 @@ std::string BlockTemplateStress::branch_read(uint64_t choice) {
   if (choice <= 0) {
     std::string a;
     std::getline(std::cin, a);
-    return std::string("zero: ") + std::move(a);
+    return crane::string_capped(std::string("zero: ") + a);
   } else {
     uint64_t n = choice - 1;
     if (n <= 0) {
       std::string b;
       std::getline(std::cin, b);
-      return std::string("one: ") + std::move(b);
+      return crane::string_capped(std::string("one: ") + b);
     } else {
       uint64_t _x = n - 1;
       std::string c;
       std::getline(std::cin, c);
-      return std::string("other: ") + std::move(c);
+      return crane::string_capped(std::string("other: ") + c);
     }
   }
 }
@@ -67,7 +67,7 @@ void BlockTemplateStress::block_result_as_arg() {
   std::cin >> _x;
   std::string s;
   std::getline(std::cin, s);
-  std::cout << std::move(s) + std::string(" read") << '\n';
+  std::cout << crane::string_capped(s + std::string(" read")) << '\n';
   return;
 }
 
@@ -95,9 +95,10 @@ std::string BlockTemplateStress::interleaved_void() {
   std::cout << std::string("Enter name:") << '\n';
   std::string name;
   std::getline(std::cin, name);
-  std::cout << std::string("Hello, ") + name << '\n';
+  std::cout << crane::string_capped(std::string("Hello, ") + name) << '\n';
   std::cout << std::string("Enter age:") << '\n';
   std::string age;
   std::getline(std::cin, age);
-  return std::move(name) + std::string(" is ") + std::move(age);
+  return crane::string_capped(name +
+                              crane::string_capped(std::string(" is ") + age));
 }

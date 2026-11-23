@@ -5,7 +5,7 @@ int64_t MonadicClosure::capture_bind() {
   std::string line;
   std::getline(std::cin, line);
   crane::fn<int64_t(uint64_t)> f = [=, line = std::move(line)](uint64_t) {
-    return static_cast<int64_t>(line.length());
+    return static_cast<int64_t>((std::string_view{line}).size());
   };
   return static_cast<int64_t>((static_cast<uint64_t>(f(UINT64_C(0))) +
                                static_cast<uint64_t>(f(UINT64_C(1)))) &
@@ -15,7 +15,7 @@ int64_t MonadicClosure::capture_bind() {
 int64_t MonadicClosure::test_apply_after() {
   return apply_after_effect<std::string, int64_t>(
       [](std::string _x0) -> int64_t {
-        return static_cast<int64_t>(_x0.length());
+        return static_cast<int64_t>((std::string_view{_x0}).size());
       },
       []() -> std::string {
         std::string _r;
@@ -28,8 +28,8 @@ int64_t MonadicClosure::test_apply_after() {
 crane::fn<std::string(std::string)> MonadicClosure::make_greeter() {
   std::string prefix;
   std::getline(std::cin, prefix);
-  return [=, prefix = std::move(prefix)](std::string name) {
-    return prefix + std::move(name);
+  return [=, prefix = std::move(prefix)](const std::string &name) {
+    return crane::string_capped(prefix + name);
   };
 }
 
@@ -47,16 +47,16 @@ int64_t MonadicClosure::nested_capture() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  int64_t la = static_cast<int64_t>(std::move(a).length());
-  int64_t lb = static_cast<int64_t>(std::move(b).length());
+  int64_t la = static_cast<int64_t>((std::string_view{a}).size());
+  int64_t lb = static_cast<int64_t>((std::string_view{b}).size());
   return static_cast<int64_t>(
       (static_cast<uint64_t>(la) + static_cast<uint64_t>(lb)) &
       0x7FFFFFFFFFFFFFFFULL);
 }
 
 uint64_t MonadicClosure::test_count() {
-  return count_matching([](std::string s) {
-    return static_cast<int64_t>(std::move(s).length()) == INT64_C(0);
+  return count_matching([](const std::string &s) {
+    return static_cast<int64_t>((std::string_view{s}).size()) == INT64_C(0);
   },
                         List<std::string>::cons(
                             "a", List<std::string>::cons(
@@ -68,7 +68,7 @@ uint64_t MonadicClosure::test_count() {
 int64_t MonadicClosure::let_effect_capture() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(line.length());
+  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
   std::cout << std::move(line) << '\n';
   return len;
 }
@@ -79,7 +79,7 @@ std::pair<int64_t, int64_t> MonadicClosure::two_closures() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  int64_t la = static_cast<int64_t>(std::move(a).length());
-  int64_t lb = static_cast<int64_t>(std::move(b).length());
+  int64_t la = static_cast<int64_t>((std::string_view{a}).size());
+  int64_t lb = static_cast<int64_t>((std::string_view{b}).size());
   return std::make_pair(la, lb);
 }

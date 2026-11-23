@@ -513,7 +513,7 @@ struct MemSafetyProbe2 {
   static inline const uint64_t test_dup_tree = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<tree, uint64_t> p = t.dup_tree();
-    return (std::move(p).first.sum_values(UINT64_C(0)) + std::move(p).second);
+    return (std::move(p).first.sum_values(UINT64_C(0)) + p.second);
   }();
   static inline const uint64_t test_cps = []() {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),

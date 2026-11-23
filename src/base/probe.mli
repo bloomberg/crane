@@ -44,6 +44,9 @@ val census_dry : unit -> bool
     not pass for one that found nothing. *)
 val census_unit : unit -> unit
 
+(** The library being extracted, by its path. *)
+val library : unit -> string
+
 (** Whether [CRANE_CHECK_IR] is set, or a census is being taken. *)
 val checking : unit -> bool
 

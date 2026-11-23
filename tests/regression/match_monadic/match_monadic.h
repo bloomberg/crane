@@ -4,12 +4,14 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <crane_string.h>
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -127,7 +129,7 @@ struct MatchMonadic {
   /// 3. Nested match: match on result of another match
   static std::string nested_match(uint64_t n, bool b);
   /// 4. Match on option in monadic context
-  static uint64_t handle_option(const std::optional<uint64_t> &o);
+  static uint64_t handle_option(std::optional<uint64_t> o);
   /// 5. Recursive function matching on tree
   static uint64_t tree_sum(const Tree<uint64_t> &t);
   /// 6. Match result used in bind

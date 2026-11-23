@@ -72,12 +72,13 @@ let constraint_is_vacuous (dom : ty list) (cod : ty) =
     An argument's category is read off its syntax and the declaration of the
     name it reads: a variable is an lvalue, [const] when its declaration says
     so (a [const] reference, a structured binding, a borrowed match's
-    fields); a [std::move] is an xvalue; a call, a construction, a literal
+    fields) or, a parameter recording its mode ([modes], by name), when
+    that does ({!Cpp_ir.Param_mode.const_qualified}); a [std::move] is an xvalue; a call, a construction, a literal
     other than a string is a prvalue.  The callable itself is an lvalue,
     [const] once a by-copy lambda has captured it.  Anything else -- a
     dereference, a mapping's binding, a call under [if constexpr] -- makes
     the reading inexact. *)
-let invocations ~params (body : stmt list) tparam (dom : ty list) =
+let invocations ~params ?(modes = []) (body : stmt list) tparam (dom : ty list) =
   let exception Inexact in
   let callable ty =
     let rec strip : ty -> ty = function Reference (_, t) | Const t -> strip t | t -> t in
@@ -88,6 +89,13 @@ let invocations ~params (body : stmt list) tparam (dom : ty list) =
   let declared : ty -> Value_category.t option = function
     | Const _ | Reference (Lvalue, Const _) -> Some Const_lvalue
     | _ -> Some Mutable_lvalue
+  in
+  (* A parameter names its value [const] as its mode says; a local, as its
+     declaration does. *)
+  let parameter modes (x, ty) : Value_category.t option =
+    match List.assoc_opt x modes with
+    | Some m -> Some (if Cpp_ir.Param_mode.const_qualified m then Const_lvalue else Mutable_lvalue)
+    | None -> declared ty
   in
   let bind env x c = Id.Map.add x c env in
   let constify =
@@ -130,7 +138,9 @@ let invocations ~params (body : stmt list) tparam (dom : ty list) =
         | Runs_in_place | Written (By_reference | Nothing) -> env
       in
       let env =
-        List.fold_left (fun env (ty, x) -> match x with Some x -> bind env x (declared ty) | None -> env) env l.params
+        List.fold_left
+          (fun env (ty, x) -> match x with Some x -> bind env x (parameter l.modes (x, ty)) | None -> env)
+          env l.params
       in
       ignore (stmts env l.body)
     | Call (_, Local f, args) when is_callable f -> List.iter (expr env) args
@@ -151,6 +161,9 @@ let invocations ~params (body : stmt list) tparam (dom : ty list) =
     | Bind_variable (x, Declare (ty, _), e) ->
       expr env e;
       bind env x (declared ty)
+    | Bind_variable (x, Declare_deduced _, e) ->
+      expr env e;
+      bind env x (declared Auto)
     | Bind_variable (_, Existing, e) ->
       expr env e;
       env
@@ -205,21 +218,21 @@ let invocations ~params (body : stmt list) tparam (dom : ty list) =
       if mentions_any (fun () -> mentions_stmt s) then raise_notrace Inexact;
       env
   in
-  let env = List.fold_left (fun env (x, ty) -> bind env x (declared ty)) Id.Map.empty params in
+  let env = List.fold_left (fun env (x, ty) -> bind env x (parameter modes (x, ty))) Id.Map.empty params in
   match ignore (stmts env body) with () -> Some (List.rev !found) | exception Inexact -> None
 
-(** The parameters and statements of a declaration's body; empty for a
-    declaration with none.  A variable's body returns its initialiser. *)
-let rec body : decl -> (Id.t * ty) list * stmt list = function
+(** The parameters, how they are passed, and the statements of a
+    declaration's body; empty for a declaration with none.  A variable's body returns its initialiser. *)
+let rec body : decl -> (Id.t * ty) list * (Id.t * Cpp_ir.Param_mode.t) list * stmt list = function
   | Template (_, _, inner) -> body inner
-  | Function {shape = Definition (params, b); _} -> (params, b)
-  | Variable {init; _} -> ([], [Return (Some init)])
-  | _ -> ([], [])
+  | Function {shape = Definition (params, b); modes; _} -> (params, modes, b)
+  | Variable {init; _} -> ([], [], [Return (Some init)])
+  | _ -> ([], [], [])
 
 (** [ps] with each {!Cpp_ir.Grammar.Parameter_kind.Callable_declared}
     settled against the value parameters [params] and the statements [body]
     that use them, by the three rules of [cpp_constraints.mli]. *)
-let settle_parameters ~params body (ps : parameters) : parameters =
+let settle_parameters ~params ?modes body (ps : parameters) : parameters =
   let stored = erased_into_storage_tparam ~params body in
   List.map
     (fun (((k : Cpp_ir.Lowered.phase Parameter_kind.t), id) as p) ->
@@ -227,7 +240,7 @@ let settle_parameters ~params body (ps : parameters) : parameters =
       | Callable_declared _ when stored id -> (Parameter_kind.Typename, id)
       | Callable_declared (dom, cod) when constraint_is_vacuous dom cod -> (Typename, id)
       | Callable_declared (dom, cod) -> (
-        match invocations ~params body id dom with
+        match invocations ~params ?modes body id dom with
         | Some (_ :: _ as invs) -> (Invocable (invs, cod), id)
         | Some [] | None -> (Typename, id) )
       | _ -> p )
@@ -237,7 +250,7 @@ let settle (d : decl) : decl =
   (* A position with no body to read states no call. *)
   let bodiless = settle_parameters ~params:[] [] in
   let settle_method (m : Cpp_ir.Lowered.phase Method.t) =
-    {m with type_params = settle_parameters ~params:m.params m.body m.type_params}
+    {m with type_params = settle_parameters ~params:m.params ~modes:m.modes m.body m.type_params}
   in
   let rec field ((f, vis, tag) : Cpp_ir.Lowered.phase Field.member) : Cpp_ir.Lowered.phase Field.member =
     let f : Cpp_ir.Lowered.phase Field.t =
@@ -258,8 +271,8 @@ let settle (d : decl) : decl =
   in
   let rec go : decl -> decl = function
     | Template (ps, c, d) ->
-      let params, b = body d in
-      Template (settle_parameters ~params b ps, c, go d)
+      let params, modes, b = body d in
+      Template (settle_parameters ~params ~modes b ps, c, go d)
     | Namespace (w, ds) -> Namespace (w, List.map go ds)
     | Struct s -> Struct (struct_ s)
     | Merged_struct_members s -> Merged_struct_members (struct_ s)

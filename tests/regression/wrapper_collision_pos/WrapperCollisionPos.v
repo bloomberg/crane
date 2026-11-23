@@ -24,5 +24,5 @@ Definition t2 : nat := Right.Pos.inc_right 1.
 End WrapperCollisionPos.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "wrapper_collision_pos" WrapperCollisionPos.

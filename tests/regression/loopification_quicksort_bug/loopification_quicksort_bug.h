@@ -4,11 +4,13 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <crane_string.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <variant>

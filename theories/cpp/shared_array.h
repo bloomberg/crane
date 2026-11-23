@@ -59,19 +59,47 @@ template <class T> class shared_array {
   }
 
 public:
+  using value_type = T;
+
+  // A statically allocated array of [N] elements: a block laid out as [make]
+  // lays one out, constant-initialised with an immortal count, so a value
+  // baked at build time ([crane::bake]) costs nothing at startup, is never
+  // freed and its count is never written.
+  template <std::size_t N> struct fixed : block {
+    static_assert(N > 0 && alignof(T) <= alignof(std::size_t));
+    T elems[N];
+    template <class... U>
+    constexpr explicit fixed(U &&...u)
+        : block{{{block_detail::born_immortal}, &block::drop}, N}, elems{T(static_cast<U &&>(u))...} {
+      static_assert(sizeof...(U) == N);
+    }
+  };
+  // The array held by the static block [f] (no count change: it is immortal).
+  template <std::size_t N> static constexpr shared_array of_static(fixed<N> &f) noexcept {
+    shared_array a;
+    a.p_ = &f;
+    return a;
+  }
+  // The same, from the address of a [fixed] block of this element type.
+  static shared_array adopt_static(const void *f) noexcept {
+    shared_array a;
+    a.p_ = static_cast<block *>(const_cast<shared_block *>(static_cast<const shared_block *>(f)));
+    return a;
+  }
+
   // A copy is a count bump.
   using crane_cheap_copy = void;
 
-  shared_array() = default;
+  constexpr shared_array() = default;
   shared_array(const shared_array &o) noexcept : p_(o.p_) {
     if (p_) p_->retain();
   }
-  shared_array(shared_array &&o) noexcept : p_(std::exchange(o.p_, nullptr)) {}
+  constexpr shared_array(shared_array &&o) noexcept : p_(std::exchange(o.p_, nullptr)) {}
   shared_array &operator=(shared_array o) noexcept {
     std::swap(p_, o.p_);
     return *this;
   }
-  ~shared_array() {
+  constexpr ~shared_array() {
     if (p_) p_->release();
   }
 
@@ -98,6 +126,13 @@ public:
   shared_array drop(std::size_t k) const {
     std::size_t n = size() > k ? size() - k : 0;
     return make(n, [&](T *slot, std::size_t i) { ::new (slot) T((*this)[i + k]); });
+  }
+
+  // [crane::make_immortal]: the block and what its elements hold.
+  void make_immortal() const noexcept {
+    if (!p_ || p_->rc.is_immortal()) return;
+    p_->rc.make_immortal();
+    for (const T &x : *this) crane::make_immortal(x);
   }
 
   // [crane::release_into]: the block released into [h], this array empty.

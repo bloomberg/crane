@@ -59,5 +59,5 @@ Definition r_helper_twice : nat := helper_twice 2 true.
 End MoveReadOutsideRegion.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "move_read_outside_region" MoveReadOutsideRegion.

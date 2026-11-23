@@ -256,7 +256,7 @@ inline T readTVar(const bsl::shared_ptr<TVar<T>>& tv) {
     }
 
     // Check if already in read set
-    if (uint64_t* ver_ptr = tx.find_or_add_read(tv.get())) {
+    if (tx.find_or_add_read(tv.get()) != nullptr) {
         // Already read this TVar, just return current value
         // (optimistic read - will validate at commit)
         return tv->value;

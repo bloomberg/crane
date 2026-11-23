@@ -64,7 +64,7 @@ let children expr : Cpp_ir.Lowered.phase Cpp_ir.Map.t = Cpp_ir.Map.make ~expr ~s
     once. *)
 let invoked_in_place body : expr =
   Call
-    ( {yields = Untyped; params = Unknown; constructs = None; occurrence = None},
+    ( {yields = Deduced Unannotated; params = Unknown; constructs = None; occurrence = None},
       Lambda
         { params = [];
           type_params = [];
@@ -73,6 +73,7 @@ let invoked_in_place body : expr =
           capture = Runs_in_place;
           moved = [];
           binders = [];
+          modes = [];
           fixpoint = None },
       [] )
 
@@ -96,7 +97,7 @@ let rec flatten_expr e =
       else begin
         let id = Id.of_string (Printf.sprintf "_lit%d" !next) in
         incr next;
-        stmts := (Bind_variable (id, Declare (Auto, None), e) : Cpp_ir.Lowered.Stmt.t) :: !stmts;
+        stmts := (Cpp_ir.Typed.bind_deduced id (e) : Cpp_ir.Lowered.Stmt.t) :: !stmts;
         Move (Local id)
       end
     end

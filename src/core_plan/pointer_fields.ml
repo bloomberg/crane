@@ -15,17 +15,23 @@ end
 
 module Map = Map.Make (Key)
 
-type t = field list Map.t
+type planned = {
+  index : int;
+  recursive : bool;
+  in_slot : bool;
+}
+
+type t = planned list Map.t
 
 let none = Map.empty
 
 let add m planned =
   List.fold_left
-    (fun m (owner, ctor_name, fields) ->
-      Map.add
-        (Base.Common.ctor_owner_key owner, ctor_name)
-        (List.map (fun (i, recursive) -> if recursive then Recursive i else Boxed i) fields)
-        m )
+    (fun m (owner, ctor_name, fields) -> Map.add (Base.Common.ctor_owner_key owner, ctor_name) fields m)
     m planned
 
-let find m key = Map.find_opt key m
+let find m key =
+  Option.map (List.map (fun p -> if p.recursive then Recursive p.index else Boxed p.index)) (Map.find_opt key m)
+
+let cells m key =
+  Option.map (List.filter_map (fun p -> if p.in_slot then None else Some p.index)) (Map.find_opt key m)

@@ -659,6 +659,16 @@ let header_imports_bsl =
     "bsl_vector.h";
   ]
 
+(** The standard headers whose names Crane writes in [bsl::] under BDE, and
+    so includes as [bsl_<h>.h]. *)
+let bsl_flavoured =
+  ["concepts"; "functional"; "iostream"; "memory"; "optional"; "stdexcept"; "string"; "type_traits"; "variant"; "vector"]
+
+(** The header a BDE build includes for the demanded standard header [h]:
+    [bsl_<h>.h] for a name written in [bsl::], and [h] itself for one written
+    in [std::] ([std::any], [std::atomic], [std::forward], ...). *)
+let bde_standard_header h = if List.mem h bsl_flavoured then "bsl_" ^ h ^ ".h" else h
+
 let mk_include s = str ("#include <" ^ s ^ ">")
 let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
 
@@ -716,12 +726,7 @@ let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
   let imps = List.map (fun u -> u ^ ".h") unit_includes @ get_custom_imports () in
   let himports =
     if is_bde () then
-      let needed = Base.Table.required_standard_headers () in
-      let extra_std =
-        List.filter (fun h -> List.mem h needed)
-          ["any"; "atomic"; "deque"; "utility"]
-      in
-      header_imports_bsl @ extra_std
+      header_imports_bsl @ List.map bde_standard_header (Base.Table.required_standard_headers ())
     else Base.Table.required_standard_headers ()
   in
   (* A standard header the code demands may be a mapping's import too: each
@@ -808,6 +813,20 @@ let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
   let h =
     if Base.Table.demanded Cpp_ir.Crane_rt.field_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.field_header ++ fnl ()
+    else
+      h
+  in
+  (* [crane::writable], for an argument a callee writes in place (see
+     {!Cpp_passes.In_place_args}). *)
+  let h =
+    if Base.Table.demanded Cpp_ir.Crane_rt.writable_header then
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.writable_header ++ fnl ()
+    else
+      h
+  in
+  let h =
+    if Base.Table.demanded Cpp_ir.Crane_rt.unreachable_header then
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.unreachable_header ++ fnl ()
     else
       h
   in
@@ -1750,6 +1769,27 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
     Base.Pipeline_trace.event "emit" (Core_plan.Effects.report facts.effects);
     Base.Pipeline_trace.event "emit" (Core_plan.Callable_abi.report_foreign u.callables)
   end;
+  (* The images of the baked constants the unit declares ([Crane Bake]):
+     declared in the header, ahead of the namespace, and defined at the end
+     of the implementation file, as the bake driver wrote them. *)
+  let baked_here =
+    let declared = declares struc in
+    List.filter
+      (fun (r, _) -> declared r && not (Base.Table.is_bake_root r))
+      (Base.Table.baked_constants ())
+  in
+  (* An image computed from other runtime headers, another compiler or other
+     [CRANE_BAKE_FLAGS] than these is refused, not emitted. *)
+  Bake_inputs.check baked_here;
+  let baked_here = List.map snd baked_here in
+  let bake_decls =
+    match baked_here with
+    | [] -> mt ()
+    | l ->
+      str "#include \"crane_bake.h\"" ++ fnl ()
+      ++ prlist (fun (b : Base.Table.baked) -> str ("extern const crane::bake::image " ^ b.symbol ^ ";") ++ fnl ()) l
+      ++ fnl ()
+  in
   let opened = List.filter !opened_filter (opened_libraries ()) in
   (* The header includes every file either of the unit's files names, so a
      unit including a function's header also includes the header of each
@@ -1822,6 +1862,14 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
     Option.iter
       (fun f ->
         write_laid_out f impl;
+        (* Appended as the bake driver wrote and laid it out
+           (theories/cpp/crane_bake.h, [writer::declaration]): the layout
+           would give each word of a long stream a line. *)
+        if baked_here <> [] then begin
+          let oc = open_out_gen [Open_wronly; Open_append; Open_binary] 0o644 f in
+          Fun.protect ~finally:(fun () -> close_out oc) @@ fun () ->
+          List.iter (fun (b : Base.Table.baked) -> output_string oc ("\n" ^ b.image)) baked_here
+        end;
         info_file f )
       fn;
   (* Now, let's print the signature *)
@@ -1832,6 +1880,7 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
       ( try
           pp_with ft (spec_header ~unit_includes ~config:plan.config (Some si) ());
           pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
+          pp_with ft bake_decls;
           pp_with ft ns_open;
           pp_with ft body_hstruct;
           pp_with ft ns_close;
@@ -1892,7 +1941,11 @@ let init ?(compute = false) ?(inner = false) modular library =
   set_extrcompute compute;
   Unit_plan.Cpp_state.reset_cpp_state ();
   (* Reset ALL C++ global state from previous extractions *)
-  reset ()
+  reset ();
+  (* Typed mappings: which heads have an active instance.  Mappings are
+     consulted while the environment is collected, so this comes first. *)
+  Base.Mapping_discovery.discover ();
+  Base.Table.check_typed_mapping_conflicts ()
 
 (** Emits warnings about opaque constants and axioms encountered during
     extraction. *)
@@ -2039,6 +2092,9 @@ let full_extr_reading cx opaque_access f (refs, mps) read =
       let unit_includes =
         List.sort_uniq String.compare (List.filter_map Base.Table.extracted_unit_of foreign)
       in
+      (* The headers included were written against their units' typed
+         mappings: this extraction must resolve the same (design 20). *)
+      Base.Mapping_interface.check unit_includes;
       warns ();
       let filenames = mono_filename f in
       (* Parse doc comments from the source .v file, if available *)
@@ -2049,6 +2105,7 @@ let full_extr_reading cx opaque_access f (refs, mps) read =
           Base.Doc_comments.set_table (Base.Doc_comments.parse_file source)
       | _ -> () );
       ignore (freeze cx core (print_structure_to_file cx ~unit_includes filenames false));
+      Option.iter Base.Mapping_interface.record f;
       read refs )
 
 let full_extr cx opaque_access f refs =

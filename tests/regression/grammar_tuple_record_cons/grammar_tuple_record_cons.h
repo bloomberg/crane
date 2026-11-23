@@ -10,7 +10,9 @@
 template <typename A, typename P> struct SigT;
 struct rgb;
 enum class Symbol;
+using tuple = crane::obj;
 using symbol_semty = crane::obj;
+using symbols_semty = tuple;
 using predicate_semty = crane::obj;
 using action_semty = crane::obj;
 

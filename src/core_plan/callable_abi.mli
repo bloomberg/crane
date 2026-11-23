@@ -117,14 +117,6 @@ type omission =
           a higher-kinded one ([mbind]'s [B] only ever appears under the
           carrier [M B]). *)
 
-(** How a value parameter is passed: [Owned], by value, the caller moving
-    or copying its argument in; [Borrowed], by const reference;
-    [Forwarded], a callable the head deduces, by forwarding reference. *)
-type passing =
-  | Owned
-  | Borrowed
-  | Forwarded
-
 (** The C++ types a function's value parameters are declared at, in
     declaration order, and the return type it is declared at: its signature
     after the relaxations of its head ({!relaxations}), ownership wrappers
@@ -141,10 +133,10 @@ type t
     ({!of_instance_method}). *)
 val callee : t -> Names.GlobRef.t
 
-(** How each of the callee's value parameters is passed, in declaration
-    order, where the plan is of a declaration generated here; a foreign plan
-    does not say. *)
-val passing : t -> passing list option
+(** How each of the callee's value parameters is passed
+    ({!Cpp_ir.Param_mode}), in declaration order, where the plan is of a
+    declaration generated here; a foreign plan does not say. *)
+val modes : t -> Cpp_ir.Param_mode.t list option
 
 (** The signature of the callee, where the plan is of a function generated
     here; a method's is in {!receiver}, a foreign plan does not say. *)
@@ -189,7 +181,7 @@ val dictionary_carriers : t -> Core.Scheme.Var.t list
     [phantom_prefix] of those are its leading phantoms.  A variable
     [relaxed] says the declaration relaxed out of its head declares nothing
     any more: the parameter left at it is [Derived].  [receiver] is what
-    the plan of a method adds; [passing] how its value parameters are
+    the plan of a method adds; [modes] how its value parameters are
     passed, in declaration order; [Core.Signature.t] what a function is declared
     at; [omitted] says why the convention omits a variable of [scheme], if
     it does. *)
@@ -199,7 +191,7 @@ val of_head :
   ?relaxed:(int -> bool) ->
   ?deduced_callables:Param_pos.orig Param_pos.pos list ->
   ?receiver:receiver ->
-  ?passing:passing list ->
+  ?modes:Cpp_ir.Param_mode.t list ->
   ?signature:signature ->
   ?relaxations:Head_relaxation.t list ->
   ?minted:(Names.Id.t * minted) list ->

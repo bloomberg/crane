@@ -37,6 +37,10 @@ type effect_ = {operation : operation; mode : mode}
     extracted as a tree ({!Base.Table.is_monad_reified}). *)
 val mode_of_monad : Names.GlobRef.t -> mode
 
+(** The mode a declaration of type [ty] is generated in: its codomain's
+    monad's, and {!Sequential} for a codomain that is no monad. *)
+val declaration_mode : Core.Type.t -> mode
+
 (** The operation the global is registered as, if it is one. *)
 val operation_of : Names.GlobRef.t -> operation option
 

@@ -13,9 +13,9 @@ struct ZGMPTest {
   static bool eqb_test(const mpz_class &x0_, const mpz_class &x1_);
   static bool ltb_test(const mpz_class &x0_, const mpz_class &x1_);
   static bool leb_test(const mpz_class &x0_, const mpz_class &x1_);
-  static inline const mpz_class zero_val = mpz_class(0);
-  static inline const mpz_class pos_val = mpz_class(42);
-  static inline const mpz_class neg_val = mpz_class(-7);
-  static inline const mpz_class big_val = mpz_class(1000);
+  static inline const mpz_class zero_val = (0_mpz);
+  static inline const mpz_class pos_val = (42_mpz);
+  static inline const mpz_class neg_val = (-7_mpz);
+  static inline const mpz_class big_val = (1000_mpz);
   static mpz_class z_sign(const mpz_class &z);
 };

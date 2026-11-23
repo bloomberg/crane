@@ -60,11 +60,11 @@ uint64_t LoopifyFramePtrEscape::walk(uint64_t n,
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
-      const LoopifyFramePtrEscape::lst &acc = _f.acc;
+      LoopifyFramePtrEscape::lst acc = std::move(_f.acc);
       const LoopifyFramePtrEscape::lst &l = _f.l;
       uint64_t n = _f.n;
       if (n <= 0) {
-        _result = hd(acc);
+        _result = hd(std::move(acc));
       } else {
         uint64_t m = n - 1;
         if (std::holds_alternative<typename LoopifyFramePtrEscape::lst::Nil>(

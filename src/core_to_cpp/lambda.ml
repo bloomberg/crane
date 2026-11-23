@@ -37,13 +37,14 @@ let forwarded ~by_value ty (v : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
 
 (** Whether a lambda generated as [passing] says owns each parameter it
    takes, innermost first, as its parameters are listed. *)
-let owned_flags passing = List.rev_map (fun p -> p = Core_plan.Callable_abi.Owned) (List.filter_map Fun.id passing)
+let owned_flags passing = List.rev_map (fun p -> p = Cpp_ir.Param_mode.Owned) (List.filter_map Fun.id passing)
 
 (** The lambda [a] as a C++ closure, written against [expected_ty] where the
     position states a function type: its binders split where the expected
     type returns a function, the parameters it takes and how, its captures,
     and its body as statements returning its result. *)
-let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
+let gen_lambda cx (slot : Slot.slot) env (a : Core.Expr.t) : Cpp_ir.Typed.t =
+  let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
   (* What the lambda takes by move as it is made. *)
   let moved_captures = moved_names env (Ownership_ir.Region.captures cx.ctx.lexical.move_plan a) in
   (* Whether a binder becomes a C++ parameter: see
@@ -323,7 +324,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
         ty
   in
   let f =
-    with_escape_analysis cx (fun () ->
+    with_escape_analysis cx ~ret (fun ret ->
       let tvars = get_current_type_vars cx in
       (* What the slot this lambda flows into declares its parameters to be,
          when it declares a signature at all. *)
@@ -349,15 +350,16 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
               | Some i -> not (Base.Core_util.ast_occurs (i + 1) a)
               | None -> false
             in
-            let param_cpp_ty, body_subst =
+            let param_cpp_ty, mode, body_subst =
               Lambda_params.lambda_param_cpp_type cx env ~ns:cx.ctx.input.method_self_ns ~tvars
                 ~rank2_carrier
                 ~reified:(cx.ctx.input.itree_mode = Reified) ~n_params:n_all_params ~body:a ~unused
                 ~slot_dom:(slot_dom_cpp_ty j) arg
             in
-            (param_cpp_ty, Some id, body_subst) )
+            ((param_cpp_ty, Some id, body_subst), mode) )
           filtered_args_with_owned
       in
+      let cpp_arg_info, cpp_arg_modes = List.split cpp_arg_info in
       (* A binder the body never uses is a parameter with no name: named,
          it would be unused -- a [trigger Inc ;; k] continuation's [unit] --
          and could shadow a name the body introduces.  One kept only for the
@@ -377,17 +379,19 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
       (* The body owns the parameters the lambda declares by value, as a
          function's does. *)
       let lambda_owned =
+        let rec position i j = function
+          | [] -> None
+          | i' :: rest -> if i' = i then Some j else position i (j + 1) rest
+        in
         let declared i =
-          let rec position j = function
-            | [] -> None
-            | i' :: rest -> if i' = i then Some j else position (j + 1) rest
-          in
           Option.map (fun j -> let ty, _, _ = List.nth cpp_arg_info j in ty)
-            (position 0 emitted_binder_indices)
+            (position i 0 emitted_binder_indices)
         in
         Ownership.owned_parameters (List.length args_with_owned)
           ~owned:(fun i ->
-            match declared i with Some ty -> not (Ownership.declared_by_reference ty) | None -> false )
+            match position i 0 emitted_binder_indices with
+            | Some j -> Cpp_ir.Param_mode.holds_own_value (List.nth cpp_arg_modes j)
+            | None -> false )
           ~declared
           ~ty:(fun i -> let _, ty, _ = List.nth args_with_owned i in ty)
       in
@@ -467,7 +471,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
       in
       let with_lam_return_type f =
         match Option.map (Types.unfold_cpp_typedef cx env) expected_ty with
-        | _ when binderless_result <> None -> with_cpp_return_type cx binderless_result f
+        | _ when binderless_result <> None -> f binderless_result (Destination.Return (Destination.result_slot binderless_result))
         | _ when carrier <> None ->
           (* A polymorphic function object returns at the type its own
              parameter fixes, so the enclosing function's return type is
@@ -485,7 +489,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
               cx) core_ty)
             | None, _ -> None
           in
-          with_cpp_return_type cx ret f
+          f ret (Destination.Return (Destination.result_slot ret))
         | Some (Function (_, cod)) when cod <> Void ->
           (* Read in this scope: a variable of the callee's the slot names
              ([tfmap]'s [T2]) is erased where it sits, as the binders'
@@ -503,22 +507,28 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
                 | t -> t )
               cod
           in
-          with_cpp_return_type cx (Some cod) f
-        | _ -> f ()
+          f (Some cod) (Destination.Return (Exactly cod))
+        (* [ret] stays the enclosing function's for the body's legacy
+           readers, but it is not this lambda's: its return type is the
+           join of what it returns. *)
+        | _ -> f ret (Destination.Return Join)
       in
-      let body_stmts =
+      let body_stmts, returned =
+        with_returns cx @@ fun () ->
         (match carrier with
          | None -> (fun f -> f ())
          | Some _ -> with_rank2_carrier cx carrier)
           (fun () ->
-            with_lam_return_type (fun () ->
-              with_region cx ~owned:lambda_owned a (fun () ->
-                gen_stmts cx
-                  ~slot:{slot with Slot.expected_core_ty = body_expected_core_ty}
+            with_lam_return_type (fun ret return_ ->
+              with_region cx ~ret ~owned:lambda_owned a (fun () ->
+                gen_stmts cx (Slot.at ~ret ~slot:{slot with Slot.expected_core_ty = body_expected_core_ty} ())
                   env
-                  (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x))
+                  return_
                   a ) ) )
       in
+      (* The returns as lowered, the values [returned] records: the
+         substitutions and the fixpoint fold below rebuild them. *)
+      let raw_body = body_stmts in
       let body_stmts =
         List.fold_left
           (fun stmts (_, _, subst) ->
@@ -686,7 +696,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
                  [return], which have no common type to deduce. *)
               let core_ty = match body_expected_core_ty with Some _ as t -> t | None -> infer_core_body_type a in
               Option.bind core_ty (fun t ->
-                match Match_types.iife_closure_return_at ~several:true cx env t body_stmts with
+                match Match_types.join ~several:true ~own:Free ~returned cx env t raw_body with
                 | Some ty when Types.names_only_scoped_tvars cx ty -> Some ty
                 | _ -> None ) ) )
       in
@@ -697,8 +707,39 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
       | Lambda l -> Cpp_ir.Expr.Lambda {l with moved = moved_captures}
       | f -> f )
   in
+  (* What the body returns, read with its binders in scope: a variable at
+     its binder's type, anything else at its Core type.  Parameters folded
+     in from a fixpoint the body is take their arrows off it. *)
+  let body_result : Cpp_ir.Lowered.Value_type.t Lazy.t =
+    lazy
+      ( match (a, f) with
+      | Core.Expr.Bound_variable {index; _}, Lambda l when List.length l.params = List.length filtered_args ->
+        Binders.read_value_type cx env index
+      | _, Lambda l ->
+        let folded = List.length l.params - List.length filtered_args in
+        Typed_checks.core_value_type cx env
+          (Option.bind (Typed_checks.core_type_of cx a) (Base.Type_util.strip_arrows_n folded))
+      | _ -> Deduced Unannotated )
+  in
+  let body_result = Lazy.force body_result in
   restore_env_types cx saved_env_types;
-  ( match filtered_args with
+  (* The lambda built is a closure over its parameters, returning what C++
+     deduces from its [return]s, or failing that, the body's own type. *)
+  let typed (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Typed.t =
+    match (Cpp_ir.Typed.carried e, e, f) with
+    | None, Lambda l, Lambda l' when l.params == l'.params -> (
+      match body_result with
+      | Typed result -> Cpp_ir.Typed.v ~ty:(Closure {groups = [List.map fst l.params]; result}) e
+      | Closure a | Function_name (_, a) ->
+        Cpp_ir.Typed.v ~ty:(Closure {groups = [List.map fst l.params]; result = Cpp_ir.Arrows.to_type a}) e
+      | _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated e )
+    | None, Call (_, Lambda l, []), Lambda l' when l.params == l'.params -> (
+      match Cpp_ir.Value_type.as_function_type body_result with
+      | Some t -> Cpp_ir.Typed.typed t e
+      | None -> Cpp_ir.Typed.v ~ty:body_result e )
+    | _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated e
+  in
+  typed @@ ( match filtered_args with
   | [] ->
     (* All lambda params are dummy (type abstractions). Skip the lambda
        wrapper and generate the body expression directly. However, when the
@@ -737,7 +778,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
              so no forwarding lambda can name it.  Emit the plain reference
              and let the printer wrap it in the method-calling lambda it
              already builds for method values. *)
-          gen_expr cx env a
+          (gen_expr_typed cx (Slot.at ~ret ()) env a).expr
         else
         let arg_ids = List.init n field_param_id in
         let arg_vars = List.map (fun id : Cpp_ir.Lowered.Expr.t -> Local id) arg_ids in
@@ -908,10 +949,10 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
             (Cpp_ir.Build.call (mk_cppglob r (Calls.written_at_variables cx r by_var)) fwd_args)
       else
         (* Every binder was a type: the body is the value the slot takes. *)
-        gen_expr cx ?expected_ty ~slot env a
+        (gen_expr_typed cx (Slot.at ~ret ?expected_ty ~slot ()) env a).expr
     | _ ->
       (* Body is not a template function ref — wrap in void thunk (old
-         behavior). gen_expr env a might produce lambdas with [&] capture
+         behavior). (gen_expr_typed env a might produce).expr lambdas with [&] capture
          which fail at static scope, so we use the pre-built capture-free
          lambda f.
 
@@ -951,5 +992,6 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
         !found
       | _ -> false
     in
-    Coerce.eta_expand_to_expected ?expected_ty ~core_arity ~returns_a_lambda
-      ~arity:(List.length filtered_args) f )
+    Coerce.into_slot
+      ~origin:(Ee {core_arity; returns_a_lambda; arity = List.length filtered_args})
+      (Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated f) (Coerce.slot_of_expected expected_ty) )

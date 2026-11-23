@@ -69,7 +69,10 @@ let expr : type p. p visitor -> p Expr.t -> unit =
     each v.type_ ts;
     opt (fun (c : p Foreign.custom) -> opt v.type_ c.custom_yields) custom
   | Call (s, f, args) ->
-    (match s.yields with Yields t -> v.type_ t | Untyped -> ());
+    (match s.yields with
+     | Typed t -> v.type_ t
+     | Closure a | Function_name (_, a) -> each (each v.type_) a.groups; v.type_ a.result
+     | Never | Deduced _ -> ());
     (match s.params with Types ts -> each v.type_ ts | Unknown -> ());
     v.expr f;
     each v.expr args
@@ -83,13 +86,21 @@ let expr : type p. p visitor -> p Expr.t -> unit =
   | Suspend (t, e) ->
     v.type_ t;
     v.expr e
+  | Coerce (c, e) ->
+    ignore
+      (Map.coercion
+         (fun t ->
+           v.type_ t;
+           t )
+         c );
+    v.expr e
   | Dereference e | Move e | Member (e, _) | Access (_, e, _) | Function_value e -> v.expr e
   | Lambda l ->
     typed v l.params;
     opt v.type_ l.return_type;
     each v.stmt l.body
   | Allocate (_, t) | Shared_from_this t | Type_member (t, _) | Convertible_to t | Abort (_, t)
-  | Holds_alternative t | Declval t | Type_name t ->
+  | Holds_alternative t | Declval t | Baked_value (t, _) | Type_name t ->
     v.type_ t
   | Aggregate a ->
     each v.type_ a.type_args;
@@ -163,7 +174,7 @@ let stmt : type p. p visitor -> p Stmt.t -> unit =
   | Return e -> opt v.expr e
   | Declare (_, t, _) | Local_type_alias (_, t) | Declare_value_initialized (_, t) -> v.type_ t
   | Bind_variable (_, b, e) ->
-    (match b with Declare (t, _) | Declare_static t -> v.type_ t | Existing -> ());
+    (match b with Declare (t, _) | Declare_static t -> v.type_ t | Declare_deduced _ | Existing -> ());
     v.expr e
   | Expression e | Structured_binding (_, e) -> v.expr e
   | Custom_match m ->

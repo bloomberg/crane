@@ -31,6 +31,9 @@ type program = {
   parameter_ownership : (Names.GlobRef.t * bool list) list;
       (** Which parameters of each function it owns rather than borrows,
           innermost first ({!Core_plan.Ownership.summarize}). *)
+  parameter_access : Core_plan.Access.t;
+      (** What each function does with its parameters, and which functions
+          are named as values ({!Core_plan.Access.summarize}). *)
   recursive_groups : Core_plan.Recursive_groups.t;
       (** Which functions recurse through which. *)
   partner_closure_params : (Names.GlobRef.t * int list) list;

@@ -127,12 +127,13 @@ struct Denotation {
             auto a = _itf.value;
             return itree_ret(
                 Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inr(
-                    Sum<crane::obj, T1>::inr(a)));
+                    Sum<crane::obj, T1>::inr(std::move(a))));
           } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
             const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
             auto u_ = _itf.next;
             return itree_ret(
-                Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inl(u_));
+                Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inl(
+                    std::move(u_)));
           } else {
             const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&_cs);
             auto e =
@@ -145,11 +146,12 @@ struct Denotation {
                   Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inr(
                       Sum<crane::obj, T1>::inl(x)));
             } else {
-              return itree_vis(e, [=](const auto &y) {
-                return itree_ret(
-                    Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inl(
-                        crane_call_erased(k, y)));
-              });
+              return itree_vis(
+                  std::move(e), [=, k = std::move(k)](const auto &y) {
+                    return itree_ret(
+                        Sum<std::shared_ptr<ITree<T1>>,
+                            Sum<crane::obj, T1>>::inl(crane_call_erased(k, y)));
+                  });
             }
           }
         },

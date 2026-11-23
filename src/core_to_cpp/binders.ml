@@ -296,3 +296,28 @@ let with_binders cx ?cpp env ids f =
 let push_parameters cx ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
   push_env_parameters cx ids;
   assign_binder_types cx ~cpp env ids
+
+(** The type a read of the variable at de Bruijn index [i] has: the type
+    its binder was decided to have, without the reference or [const] a
+    parameter adds, and where that is [auto] or unrecorded, the conversion
+    of its Core type, which is what [auto] deduces it at. *)
+let read_value_type cx env i : Cpp_ir.Lowered.Value_type.t =
+  let derived () = Option.map (Types.cpp_of_core cx env) (get_env_type_opt cx i) in
+  match Option.map strip_param_wrappers (binder_cpp_type cx i) with
+  | Some Auto | None -> ( match derived () with Some t -> Typed t | None -> Deduced Untranslated )
+  | Some t -> Typed t
+
+(** A value type, roughly, for diagnostics. *)
+let show_value_type : Cpp_ir.Lowered.Value_type.t -> string =
+  let arrows (a : Cpp_ir.Lowered.Arrows.t) =
+    String.concat ""
+      (List.map (fun g -> "(" ^ String.concat "," (List.map type_shape g) ^ ")") a.groups)
+    ^ "->" ^ type_shape a.result
+  in
+  function
+  | Typed t -> type_shape t
+  | Closure a -> "closure " ^ arrows a
+  | Function_name (_, a) -> "name " ^ arrows a
+  | Never -> "never"
+  | Deduced d -> "deduced " ^ Cpp_ir.Value_type.deduction_name d
+

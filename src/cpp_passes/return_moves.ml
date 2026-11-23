@@ -39,6 +39,7 @@ let drop_return_moves d =
     | s :: rest -> stmt env s :: stmts (declare env s) rest
   and declare env : stmt -> _ = function
     | Bind_variable (id, Declare (ty, _), _) -> hold env [id] (by_type ty)
+    | Bind_variable (id, Declare_deduced _, _) -> hold env [id] (by_type Auto)
     | Declare (id, _, _) | Declare_value_initialized (id, _) -> hold env [id] Moved_on_return
     | Structured_binding (ids, _) -> hold env ids Copied_on_return
     | _ -> env
@@ -55,11 +56,21 @@ let drop_return_moves d =
       in
       Match ({scrut with expr = expr env scrut.expr}, List.map branch branches, Option.map (stmts env) els)
     | Custom_match m ->
-      let branch (b : _ Cpp_ir.Stmt.Custom_match.branch) : _ Cpp_ir.Stmt.Custom_match.branch =
-        let names = List.map (fun (p : _ Cpp_ir.Stmt.Custom_match.param) -> p.name) b.params in
-        {b with body = stmts (hold env names Copied_on_return) b.body}
+      (* A parameter the template declares as a variable of its own is a
+         local held by value; any other may be a reference. *)
+      let branch i (b : _ Cpp_ir.Stmt.Custom_match.branch) : _ Cpp_ir.Stmt.Custom_match.branch =
+        let env =
+          List.fold_left
+            (fun env (j, (p : _ Cpp_ir.Stmt.Custom_match.param)) ->
+              hold env [p.name]
+                (if Cpp_ir.Foreign_template.declared_by_value m.template i j then Moved_on_return
+                 else Copied_on_return) )
+            env
+            (List.mapi (fun j p -> (j, p)) b.params)
+        in
+        {b with body = stmts env b.body}
       in
-      Custom_match {m with scrutinee = expr env m.scrutinee; branches = List.map branch m.branches}
+      Custom_match {m with scrutinee = expr env m.scrutinee; branches = List.mapi branch m.branches}
     | If_declaration i ->
       let inner = hold env [i.name] (by_type i.type_) in
       If_declaration {i with init = expr env i.init; then_ = stmts inner i.then_; else_ = stmts inner i.else_}

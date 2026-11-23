@@ -37,7 +37,7 @@ uint64_t LocalFixReturnsFunction::t(const List<uint64_t> &l) {
 /// first, go(acc, l, _pa0), which does not compile for g and swaps
 /// l and acc for h.
 std::optional<uint64_t>
-LocalFixReturnsFunction::g(uint64_t, const std::optional<uint64_t> &x0_) {
+LocalFixReturnsFunction::g(uint64_t, std::optional<uint64_t> x0_) {
   return []() {
     auto go =
         [](List<bool> l,
@@ -59,7 +59,7 @@ LocalFixReturnsFunction::g(uint64_t, const std::optional<uint64_t> &x0_) {
           }
         };
     return [=](std::optional<uint64_t> _pa0) {
-      return go(List<bool>::nil(), [](const std::optional<uint64_t> &) {
+      return go(List<bool>::nil(), [](std::optional<uint64_t>) {
         return std::optional<uint64_t>();
       },
                 _pa0);
@@ -68,7 +68,7 @@ LocalFixReturnsFunction::g(uint64_t, const std::optional<uint64_t> &x0_) {
 }
 
 std::optional<uint64_t>
-LocalFixReturnsFunction::h(uint64_t n, const std::optional<uint64_t> &x0_) {
+LocalFixReturnsFunction::h(uint64_t n, std::optional<uint64_t> x0_) {
   return [&]() {
     auto go =
         [](List<bool> l, uint64_t acc,

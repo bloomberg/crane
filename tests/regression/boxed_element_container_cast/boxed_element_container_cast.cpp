@@ -63,7 +63,7 @@ BoxedElementContainerCast::sample_symbols(
     const BoxedElementContainerCast::symbol &y = ys.front();
     auto ys_ = ys.tail();
     return std::make_pair(crane::obj(sample_symbol(y)),
-                          crane::obj(sample_symbols(ys_)));
+                          crane::obj(sample_symbols(std::move(ys_))));
   }
 }
 

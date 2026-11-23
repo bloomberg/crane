@@ -150,8 +150,7 @@ struct TyargPartialTypeApplication {
   }
 
   template <typename T1, typename F1>
-  static std::optional<T1> bind_nat(const std::optional<uint64_t> &x0_,
-                                    F1 &&x1_) {
+  static std::optional<T1> bind_nat(std::optional<uint64_t> x0_, F1 &&x1_) {
     return bindo<uint64_t, T1>(x0_, x1_);
   }
 

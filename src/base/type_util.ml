@@ -949,6 +949,10 @@ let count_real_core_args args =
     components costs. *)
 let rec is_trivially_copyable_type (t : Cpp_ir.Lowered.Type.t) =
   match t with
+  (* A typed-mapped type: its copy model ({!Mapping_plan.copies_cheaply}). *)
+  | Entity_application (g, ts, _) when Mapping_plan.is_type_head g ->
+    Mapping_plan.copies_cheaply (Mapping_plan.find g) ~argument:(fun i ->
+        match List.nth_opt ts i with Some t -> is_trivially_copyable_type t | None -> false)
   | Entity_application (g, ts, _) ->
     is_enum_inductive g || Table.is_custom_scalar_ref g
     || Table.is_trivially_copyable_ref g
@@ -960,6 +964,9 @@ let rec is_trivially_copyable_type (t : Cpp_ir.Lowered.Type.t) =
     read off the Core type. *)
 let rec core_is_trivially_copyable ty =
   match resolve_meta ty with
+  | Core.Type.Global_app {head = g; type_arguments = args; _} when Mapping_plan.is_type_head g ->
+    Mapping_plan.copies_cheaply (Mapping_plan.find g) ~argument:(fun i ->
+        match List.nth_opt args i with Some t -> core_is_trivially_copyable t | None -> false)
   | Core.Type.Global_app {head = g; type_arguments = args; _} ->
     is_enum_inductive g || Table.is_custom_scalar_ref g
     || Table.is_trivially_copyable_ref g && List.for_all core_is_trivially_copyable args
