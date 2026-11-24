@@ -329,8 +329,7 @@ struct BoxedFields {
             const auto &[a00, a10] = std::get<typename shape::Circle>(_sv0.v());
             const auto &_sv1 = *a00;
             const auto &[a01, a11] = _sv1;
-            auto _cell = typename scene::Layer(std::make_shared<std::decay_t<
-                decltype(shape::circle(point::pt((a01 + d), a11), a10))>>(
+            auto _cell = typename scene::Layer(std::make_shared<shape>(
                 shape::circle(point::pt((a01 + d), a11), a10)),
                                                nullptr);
             scene &_node =
@@ -341,10 +340,8 @@ struct BoxedFields {
             continue;
           } else if (std::holds_alternative<typename shape::Poly>(_sv0.v())) {
             const auto &[a00] = std::get<typename shape::Poly>(_sv0.v());
-            auto _cell = typename scene::Layer(std::make_shared<
-                std::decay_t<decltype(shape::poly(shift(d, *a00)))>>(
-                shape::poly(shift(d, *a00))),
-                                               nullptr);
+            auto _cell = typename scene::Layer(
+                std::make_shared<shape>(shape::poly(shift(d, *a00))), nullptr);
             scene &_node =
                 (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
                         : _root.emplace(std::move(_cell)));

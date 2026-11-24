@@ -3,13 +3,18 @@
     Loopify, a non-tail recursion building a nested inductive
     ([mterm], whose constructor takes a [list mterm]) whose list argument
     holds, next to the recursive call, a local fixpoint call ([h]) or a
-    [fold_left] ([h2]).  Without Loopify it extracts and runs.
+    [fold_left] ([h2]).  Extraction failed with the anomaly "a declaration
+    reached the printer holding a capture that runs in place" (for [h2]
+    alone, "... a stored capture"; the generator found both, the second
+    under BDE).  Fixed: the TMC cell allocated the boxed [list mterm] field
+    as [std::make_shared<std::decay_t<decltype(e)>>(e)], writing the
+    argument [e] a second time inside [decltype], where no finishing pass
+    rewrites expressions: a lambda's capture was left undecided, a method
+    call unconverted.  The cell is now allocated at the type the call
+    building [e] records ([Control_to_cpp.Tmc.build_cell_call]), with
+    [decltype] only where none is recorded.
 
-    Expected: extracts; [size (h 3) = 7], [size (h2 3) = 10].
-    Actual: Anomaly "Crane: a declaration reached the printer holding a
-    capture that runs in place, which only a lowered declaration may hold
-    in LoopifyNestedListLocalFix.h"; for [h2] alone, "... holding a stored
-    capture ...".  The generator found both (the second under BDE). *)
+    Expected: extracts; [size (h 3) = 7], [size (h2 3) = 10]. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
