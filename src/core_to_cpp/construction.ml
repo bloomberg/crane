@@ -405,7 +405,7 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
             | Some (Core.Type.Global_app {head = exp_r; type_arguments = exp_tys; _})
               when Names.GlobRef.CanOrd.equal exp_r n
                    && List.length exp_tys = List.length tys ->
-              let exp_temps = Types.build_template_params cx ~site:Cpp_ir.Types.Through_tvar env []
+              let exp_temps = Types.build_template_params cx ~site:Cpp_ir.Types.Declared env []
                 exp_tys in
               let r = filter_erased_type_args exp_temps in
               if r <> [] && not (List.exists (function Cpp_ir.Type.Variable (Index (_, None)) -> true | _ -> false) r)
@@ -1453,7 +1453,7 @@ let gen_construction cx (slot : Slot.slot) env ~ty ~r ~ts (construction : Core.E
            [T3] -- a free name where the erasure at least compiled. *)
         let temps =
           Types.ind_promoted_type_args cx n
-          @ Types.template_params_of_core cx ~site:Cpp_ir.Types.Through_tvar env tys
+          @ Types.template_params_of_core cx ~site:Cpp_ir.Types.Declared env tys
         in
         if Base.Table.is_coinductive n then
           Cpp_ir.Build.call

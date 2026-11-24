@@ -387,8 +387,21 @@ let build_cell_call ~unit ?token ?(rec_arg = Literal Null_pointer) ?(allocate = 
           match List.find_opt (fun f -> ptr_field_index f = i) cell.ptr_fields with
           | Some (Boxed _) ->
             (* A boxed field holds some other inductive: allocate at the
-               argument's own type. *)
-            let boxed = Decay (Type_of e) in
+               argument's own type, as the call building it records it, or
+               else as [decltype] of it.  Spelled as a type, the argument is
+               not written twice: a copy in [decltype] would be left
+               unfinished by the passes that rewrite expressions, a
+               lambda's capture undecided among them. *)
+            let boxed =
+              match Cpp_ir.Typed.carried e with
+              | Some (Typed t)
+                when not
+                       (Cpp_ir.Children.exists_type
+                          (function Auto | Any | Obligation _ | Decltype_auto | Type_of _ -> true | _ -> false)
+                          t ) ->
+                t
+              | _ -> Decay (Type_of e)
+            in
             Call
               ( signature ~yields:(Shared_pointer boxed) ~nargs:1 (),
                 Allocate (Heap, boxed),

@@ -165,6 +165,14 @@ let worth_moving_ref worth r args =
      || List.exists worth args
      || not (Base.Table.is_custom_scalar_ref r || Base.Table.is_trivially_copyable_ref r) )
 
+(* The type a primitive string literal's type stands for, where a mapping
+   maps Rocq's primitive strings: a literal's type is spelled as that
+   mapping's, so it copies as the mapped type does. *)
+let prim_string_type () =
+  Option.map
+    (fun g -> Core.Type.Global_app {head = g; type_arguments = []; index_arguments = []})
+    (Base.Mapping_plan.mapped_prim_string ())
+
 let rec worth_moving = function
   | Core.Type.Global_app {head = r; type_arguments = args; _} -> worth_moving_ref worth_moving r args
   | Core.Type.Arrow _ | Core.Type.Variable _ | Core.Type.Variable_app _ -> true
@@ -172,6 +180,8 @@ let rec worth_moving = function
      box ([std::any]), which a move hands over. *)
   | Core.Type.Open _ -> true
   | Core.Type.Meta {contents = Some t} -> worth_moving t
+  | Core.Type.String -> (
+    match prim_string_type () with Some t -> worth_moving t | None -> false )
   | _ -> false
 
 let rec worth_moving_cpp : type p. p Cpp_ir.Type.t -> bool = function
@@ -209,6 +219,7 @@ let retains_identity r =
 let rec copy_of_type ty =
   match ty with
   | Core.Type.Meta {contents = Some t} -> copy_of_type t
+  | Core.Type.String when Option.has_some (prim_string_type ()) -> copy_of_type (Option.get (prim_string_type ()))
   | Core.Type.Arrow {parameter = d; result = rest} when Base.Core_util.is_erased_type d -> copy_of_type rest
   | Core.Type.Arrow _ -> Some Retain
   (* An instance of a class is an object of its own, a singleton class's

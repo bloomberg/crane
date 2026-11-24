@@ -104,10 +104,12 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(concrete_result = false) ?(e
        [target], and so do the Core binders it records by name.  What it
        takes by move it takes from [repl] where that is a local, and
        copies otherwise: a capture moves a local, not an expression. *)
+    let e0 = e in
     let e : Cpp_ir.Lowered.Expr.t =
       match e with
-      | Lambda l ->
+      | Lambda l0 ->
         let l =
+          let l = l0 in
           match Cpp_ir.Variables.free_in_expr repl with
           | [v] ->
             let rekey = List.map (fun (z, b) -> ((if Id.equal z target then v else z), b)) in
@@ -122,24 +124,39 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(concrete_result = false) ?(e
           if not (Id.equal x target) then [x]
           else match repl with Local v -> [v] | _ -> []
         in
-        Lambda {l with moved = List.concat_map moved l.moved}
+        let l' = {l with moved = List.concat_map moved l.moved} in
+        if l'.moved = l0.moved && l'.binders = l0.binders && l'.fixpoint = l0.fixpoint then e else Lambda l'
       | _ -> e
     in
-    Cpp_ir.Map.expr
-      (Cpp_ir.Map.make ~expr:sub ~stmt:(local_var_subst_stmt ~keep_cast ~concrete_result ~extra_args target repl)
-         ~type_:Fun.id ())
-      e
+    let changed, m = sharing ~expr:sub ~stmt:(local_var_subst_stmt ~keep_cast ~concrete_result ~extra_args target repl) in
+    let e' = Cpp_ir.Map.expr m e in
+    if !changed || e != e0 then e' else e0
 
 (** Statement-level counterpart of [local_var_subst_expr]: substitute
     [Local target] with [repl] inside a single C++ statement. *)
 and local_var_subst_stmt ?(keep_cast = false) ?(concrete_result = false) ?(extra_args = []) (target : Id.t)
     (repl : Cpp_ir.Lowered.Expr.t) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
-  Cpp_ir.Map.stmt
-    (Cpp_ir.Map.make
-       ~expr:(local_var_subst_expr ~keep_cast ~concrete_result ~extra_args target repl)
-       ~stmt:(local_var_subst_stmt ~keep_cast ~concrete_result ~extra_args target repl)
-       ~type_:Fun.id ())
-    s
+  let changed, m =
+    sharing
+      ~expr:(local_var_subst_expr ~keep_cast ~concrete_result ~extra_args target repl)
+      ~stmt:(local_var_subst_stmt ~keep_cast ~concrete_result ~extra_args target repl)
+  in
+  let s' = Cpp_ir.Map.stmt m s in
+  if !changed then s' else s
+
+(** A one-level rewrite by [expr] and [stmt] that records whether either
+    changed a child: a substitution that finds nothing to substitute hands
+    back the very node it was given, so a value recorded by identity where
+    it was built -- a [return] for the join of the lambda returning it
+    ({!Lowering_state.record_return}) -- is still found after it. *)
+and sharing ~expr ~stmt =
+  let changed = ref false in
+  let track f x =
+    let x' = f x in
+    if x' != x then changed := true;
+    x'
+  in
+  (changed, Cpp_ir.Map.make ~expr:(track expr) ~stmt:(track stmt) ~type_:Fun.id ())
 
 (** Check whether a variable [target] is referenced in a list of C++ stmts. *)
 let stmts_reference_var (target : Id.t) (stmts : Cpp_ir.Lowered.Stmt.t list) : bool =

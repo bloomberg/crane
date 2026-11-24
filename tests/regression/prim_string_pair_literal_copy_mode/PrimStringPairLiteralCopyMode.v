@@ -2,16 +2,17 @@
     component is a primitive string literal, under [Mapping.Std]
     (primitive strings as [std::string]): the match is reduced to binding
     the field, [std::string p = "ab"; return p;], and the copy-mode check
-    under [CRANE_CHECK_IR] finds the ownership plan copying [p] where its
-    declaration clones it.  The C++ is right; extraction fails.  A string
-    parameter in the same position, or a [list nat] literal, is fine.  The
-    generator found it also through a [sum] literal ([of_sum]) and a list
-    literal ([of_list]).
+    under [CRANE_CHECK_IR] reported the ownership plan copying [p] where
+    its declaration clones it.  The C++ was right.  The generator found it
+    also through a [sum] literal ([of_sum]) and a list literal
+    ([of_list]).  Fixed: [p]'s Core type is the literal's
+    ([Core.Type.String]), which the ownership plan ([Ownership_ir.Region])
+    took for bits, while C++ spells it as the primitive-string mapping's
+    type, which a copy clones; the plan now reads it as that mapping's
+    type, as a parameter of type [PrimString.string] already was.
 
     Expected: extracts under [CRANE_CHECK_IR]; [len 0 = 2],
-    [of_sum 0 = "cd"], [of_list 0 = "f"].
-    Actual: "Crane IR check (copy mode): the plan copies p where its
-    declaration clones it". *)
+    [of_sum 0 = "cd"], [of_list 0 = "f"]. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std.
 From Corelib Require Import PrimString.
 From Stdlib Require Uint63 BinInt.

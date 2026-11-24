@@ -457,14 +457,11 @@ let codomain_after cx env n t : Cpp_ir.Lowered.Type.t =
     argument position, its arrows spelled as [site] says
     ({!Cpp_ir.Types.arrow_site}).
 
-    [Declared] for an argument that instantiates an {e inductive}'s
-    parameter.  Such a parameter only names the type of a stored value, and the
-    value is spelled at the flat arity {!cpp_ir_of_core_type} gives the
-    declaration; currying it would make the instantiation disagree with the
-    type the declaration writes.  [Through_tvar] for a {e function}'s type
-    parameter: the signature may mention it inside an arrow it writes out
-    itself (as [ap : F (A -> B) -> ...] does), and there the currying is what
-    makes the argument match. *)
+    [Declared] for every type argument, of an inductive's parameter or of a
+    function's: a type variable stands for the type of values, which are
+    spelled at the flat arity {!cpp_ir_of_core_type} gives a declaration, so
+    an instantiation spelled otherwise would disagree with the values passed
+    and returned at it.  [Through_tvar] only for a higher-kinded carrier. *)
 let template_arg_of_core_type cx ~site env tvars ty =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting

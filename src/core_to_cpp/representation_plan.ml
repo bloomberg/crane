@@ -453,7 +453,7 @@ let region cx ~ret body =
                ({!Calls.spell_as_declared}), as lowering expects it. *)
             let declared c =
               match Core_plan.Param_pos.nth inst.params_orig (Core_plan.Param_pos.of_regular ~leading i) with
-              | Some orig -> Calls.spell_as_declared ~declared:(Core_plan.Param_pos.to_list inst.params_orig) orig c
+              | Some orig -> Calls.spell_as_declared orig c
               | None -> c
             in
             let slot_ty =

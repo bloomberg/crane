@@ -25,7 +25,8 @@
     though what the arm moved out of the local before is not read of it.
     An assignment gives a local, or a member, a new value; a [return] or a
     [throw] ends the path; a loop's body is followed by its head; the
-    arms of a conditional are alternatives.  A closure reads what it closes
+    arms of a conditional are alternatives, and so are the branches of a
+    match, which without a default is exhaustive.  A closure reads what it closes
     over where it is made, and its own body is checked as a body.  A body
     holding raw C++ is not checked.
 

@@ -54,14 +54,21 @@ let rec is_reference_type : Cpp_ir.Lowered.Type.t -> bool = function
   | _ -> false
 
 (* [e] with its read of [x] replaced by [v], if that read is evaluated
-   whenever [e] is. *)
-let rec subst_expr x (v : expr) (e : expr) : expr option =
+   whenever [e] is.  [statics] are the static locals in scope. *)
+let rec subst_expr ~statics x (v : expr) (e : expr) : expr option =
+  let subst_expr = subst_expr ~statics in
   match e with
   | Local y when Id.equal x y -> Some v
   (* A move out of the temporary moves out of what it held: once, and only
      if that is an lvalue -- a move of a call's result would cost the copy
-     elision it was written to give. *)
-  | Move (Local y) when Id.equal x y -> Some (match v with Local _ | Access _ | Dereference _ -> Move v | _ -> v)
+     elision it was written to give -- other than a static local, a hoisted
+     constant ({!Constants}), which every later evaluation reads again. *)
+  | Move (Local y) when Id.equal x y ->
+    Some
+      ( match v with
+      | Local z when Id.Set.mem z statics -> v
+      | Local _ | Access _ | Dereference _ -> Move v
+      | _ -> v )
   | _ when not (evaluates_operands e) -> None
   | _ ->
     let found = ref false in
@@ -81,8 +88,8 @@ let rec subst_expr x (v : expr) (e : expr) : expr option =
    unconditionally and holds on to no reference into it: a value
    declaration, not a reference, and a match only if it takes its scrutinee
    by value or binds nothing of it, as a [bool]'s does. *)
-let subst_stmt x v (s : stmt) : stmt option =
-  let in_expr rebuild e = Option.map rebuild (subst_expr x v e) in
+let subst_stmt ~statics x v (s : stmt) : stmt option =
+  let in_expr rebuild e = Option.map rebuild (subst_expr ~statics x v e) in
   match s with
   | Return (Some e) -> in_expr (fun e : stmt -> Return (Some e)) e
   | Expression e -> in_expr (fun e : stmt -> Expression e) e
@@ -131,11 +138,11 @@ let rec read_not_moved xs (s : stmt) : stmt =
    them moved that [v] reads is read there instead.  The ownership plan,
    reading the temporaries in sequence, may have taken a later one's read
    for a variable's last. *)
-let inline_into x v rest =
+let inline_into ~statics x v rest =
   let read_by_v = read_not_moved (names_expr v) in
   let rec go = function
     | s :: rest when is_temporary s && count_stmt x s = 0 -> Option.map (fun rest -> read_by_v s :: rest) (go rest)
-    | s :: rest -> Option.map (fun s -> s :: rest) (subst_stmt x v (read_by_v s))
+    | s :: rest -> Option.map (fun s -> s :: rest) (subst_stmt ~statics x v (read_by_v s))
     | [] -> None
   in
   go rest
@@ -143,24 +150,37 @@ let inline_into x v rest =
 (* The rewrite putting temporaries back in a statement list, an expression
    and a statement, the last first: by the time a temporary is considered,
    every temporary between it and its use has already gone back into that
-   use.  [lambdas] says whether lambda bodies are included. *)
+   use.  [lambdas] says whether lambda bodies are included.  A statement
+   list's static locals are in scope in all of it, and in what it nests. *)
 let restorer ~lambdas =
-  let rec block : stmt list -> stmt list = function
-    | [] -> []
-    | s :: rest -> (
-      let rest = block rest in
-      let s : stmt = stmt s in
-      match s with
-      | Bind_variable (x, (Declare _ | Declare_deduced _), v) when Base.Core_util.is_temporary_id x && count_stmts x rest = 1 ->
-        Option.default (s :: rest) (inline_into x v rest)
-      | _ -> s :: rest )
-  and stmt s = Cpp_ir.Map.stmt (children ()) s
-  and expr (e : expr) =
+  let rec block statics (ss : stmt list) : stmt list =
+    let statics =
+      List.fold_left
+        (fun acc (s : stmt) -> match s with Bind_variable (x, Declare_static _, _) -> Id.Set.add x acc | _ -> acc)
+        statics ss
+    in
+    let rec go : stmt list -> stmt list = function
+      | [] -> []
+      | s :: rest -> (
+        let rest = go rest in
+        let s : stmt = Cpp_ir.Map.stmt (children statics) s in
+        match s with
+        | Bind_variable (x, (Declare _ | Declare_deduced _), v)
+          when Base.Core_util.is_temporary_id x && count_stmts x rest = 1 ->
+          Option.default (s :: rest) (inline_into ~statics x v rest)
+        | _ -> s :: rest )
+    in
+    go ss
+  and expr statics (e : expr) =
     match e with
     | Lambda _ when not lambdas -> e
-    | _ -> Cpp_ir.Map.expr (children ()) e
-  and children () = Cpp_ir.Map.make ~stmts:block ~expr ~stmt ~type_:Fun.id () in
-  children ()
+    | _ -> Cpp_ir.Map.expr (children statics) e
+  and children statics =
+    Cpp_ir.Map.make ~stmts:(block statics) ~expr:(expr statics)
+      ~stmt:(fun s -> Cpp_ir.Map.stmt (children statics) s)
+      ~type_:Fun.id ()
+  in
+  children Id.Set.empty
 
 (** [own_stmts body] is [body] with the temporaries of its own statements put
     back, those of any lambda in it left: the view a transform of [body]

@@ -52,14 +52,14 @@ uint64_t BinInt::to_nat(const Z &z) {
 }
 
 std::string MappedOpViewArgument::deque_fold(const std::deque<uint64_t> &l,
-                                             std::string_view s) {
+                                             const std::string &s) {
   return [](auto _f, const auto &_l, auto _a) {
     for (const auto &_x : _l) _a = _f(_a, _x);
     return _a;
   }([](std::string a, uint64_t) { return a; }, l, s);
 }
 
-std::string MappedOpViewArgument::maybe_get(std::string_view s) {
+std::string MappedOpViewArgument::maybe_get(const std::string &s) {
   return [](const auto &_m, auto _d) { return _m.has_value() ? *_m : _d; }(
       std::optional<std::string>{std::string("abc")}, s);
 }

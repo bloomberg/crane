@@ -891,7 +891,7 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
             | Core.Type.Variable {variable = j; _} -> (
               match Base.Core_util.Var_types.find_tvar tys j with
               | Some ty when not (Base.Core_util.is_erased_type (resolve_meta ty)) ->
-                let c = Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Through_tvar env tvars ty in
+                let c = Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Declared env tvars ty in
                 if Cpp_ir.Types.prints_as_any c then None else Some c
               | _ -> None )
             | _ -> None )
@@ -971,7 +971,7 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
                              | _ -> false
                            in
                            has_class x) ->
-                let c = Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Through_tvar env tvars x in
+                let c = Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Declared env tvars x in
                 (* A carrier is written at the erased element, so an
                    instantiation that erases nothing is some application
                    of it, not the carrier. *)
@@ -1060,7 +1060,7 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
               the constant carrier, not the head of the type it returns. *)
            let t =
              if constant_at_higher_kind i ty then carrier_template cx env tvars ty
-             else Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Through_tvar env tvars ty
+             else Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Declared env tvars ty
            in
            (* A higher-kinded variable of the caller's reaching such a
               position is spelled as the template it is, which names no
@@ -1069,7 +1069,7 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
              match (t, resolve_meta ty) with
              | (Member _ | Variable _), Core.Type.Variable {variable = j; _}
                when IntSet.mem i plain_carriers && caller_higher_kinded j ->
-               Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Through_tvar env tvars
+               Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Declared env tvars
                  (Core.Type.Variable_app {head = j; arguments = [Core.Type.Unknown]})
              | _ when (Cpp_ir.Types.prints_as_any t || Tvars.under_applied_ind t)
                       && IntSet.mem i plain_carriers -> (
@@ -1091,6 +1091,35 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
     |> List.filter (fun (v, t) -> not (mem v phantom_vars && Cpp_ir.Types.prints_as_any t))
   in
   let regular_type_args = regular_of tys in
+  (* A type argument the call's expected result writes with its arrows
+     grouped otherwise -- [pure f] put where [ap] takes [F (A -> B)], at
+     [A -> B := nat -> nat -> nat] -- is that grouping: the value is read
+     there, and a type argument is a choice the call makes.  The variable's
+     spelling is read off the expected type where the callee's codomain
+     names the variable under inductives or a carrier variable. *)
+  let regular_type_args =
+    let has_function = Cpp_ir.Types.exists (function Cpp_ir.Type.Function _ -> true | _ -> false) in
+    match (expected_ty, callee_core_type cx id) with
+    | Some exp, Some core_ty when List.exists (fun (_, t) -> has_function t) regular_type_args ->
+      let rec bind acc (p : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) =
+        match (resolve_meta p, t) with
+        | _, (Const t | Reference (_, t) | In_namespace (_, t)) -> bind acc p t
+        | Core.Type.Variable {variable = j; _}, t -> if List.mem_assoc j acc then acc else (j, t) :: acc
+        | ( (Core.Type.Global_app {type_arguments = ps; _} | Core.Type.Variable_app {arguments = ps; _}),
+            Entity_application (_, ts, _) )
+          when List.compare_lengths ps ts = 0 ->
+          List.fold_left2 bind acc ps ts
+        | _ -> acc
+      in
+      let bound = bind [] (core_codomain core_ty) (Types.unfold_cpp_typedef cx env exp) in
+      List.map
+        (fun (v, t) ->
+          match List.assoc_opt (Core.Scheme.Var.ordinal v) bound with
+          | Some t' when t' <> t && Cpp_ir.Types.same_arrows t t' -> (v, t')
+          | _ -> (v, t) )
+        regular_type_args
+    | _ -> regular_type_args
+  in
   (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
      non-empty but all entries were erased (Core.Type.Erased Core.Erasure_reason.Type_argument) →
      filter_erased_type_args drops them all. (b) tys is empty — the Rocq
@@ -1541,7 +1570,7 @@ let rec core_arg_to_template_type cx ?expected env core_arg : Cpp_ir.Lowered.Typ
   in
   let instance_type_args r ts =
     Base.Type_util.filter_erased_type_args
-      (Types.build_template_params cx ~site:Cpp_ir.Types.Through_tvar env []
+      (Types.build_template_params cx ~site:Cpp_ir.Types.Declared env []
          (List.filter_map (Base.Core_util.Var_types.find_tvar ts) (struct_vars r ts)) )
   in
   let instance_type_args_from_expected r ts =
@@ -1555,7 +1584,7 @@ let rec core_arg_to_template_type cx ?expected env core_arg : Cpp_ir.Lowered.Typ
             let j = Core.Scheme.Var.ordinal v in
             ( j,
               if not (Base.Core_util.is_erased_type (resolve_meta t)) then
-                Some (List.hd (Types.build_template_params cx ~site:Cpp_ir.Types.Through_tvar env [] [t]))
+                Some (List.hd (Types.build_template_params cx ~site:Cpp_ir.Types.Declared env [] [t]))
               else
                 Option.bind (List.nth_opt names (j - 1)) (fun v ->
                     Option.map snd (List.find_opt (fun (v', _) -> Id.equal v v') m) ) ) )
@@ -2008,43 +2037,19 @@ let local_callable cx env j occ =
     ({!plan_call}) is generated: {!argument_position}.  [local_callable j
     occ] says whether the variable [j] read at [occ] holds a function. *)
 
-(** [spell_as_declared ~declared orig t]: [t], the C++ type of a callee's
-    parameter declared at the Core type [orig] once the call's instantiation
-    is substituted, with its arrows grouped as the declaration groups them
-    ({!Cpp_ir.Types.arrow_site}): flat where [orig] writes an arrow chain,
-    curried past the arrows it writes and wherever, in a domain, one of the
-    callee's type variables stands that C++ is told explicitly -- not one it
-    deduces from an inductive's argument, which keeps the flat spelling the
-    inductive's instantiation gives it.  [declared] are the callee's declared
-    parameter types, where those inductives are found.  [fold_left]'s step,
-    declared [B -> A -> B], takes its accumulator curried when [B] is
-    [nat -> nat -> nat], and its element, [A] of [list A], flat. *)
-let spell_as_declared ~(declared : Core.Type.t list) (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) :
-    Cpp_ir.Lowered.Type.t =
-  (* The variables an inductive's argument mentions somewhere in the
-     declaration. *)
-  let deduced =
-    let acc = ref Base.Core_util.IntSet.empty in
-    let rec under_inductive inside = function
-      | Core.Type.Meta {contents = Some o} -> under_inductive inside o
-      | Core.Type.Variable {variable = j; _} -> if inside then acc := Base.Core_util.IntSet.add j !acc
-      | Core.Type.Variable_app {head = j; arguments = l} ->
-        if inside then acc := Base.Core_util.IntSet.add j !acc;
-        List.iter (under_inductive inside) l
-      | Core.Type.Arrow {parameter = a; result = b} ->
-        under_inductive inside a;
-        under_inductive inside b
-      | Core.Type.Global_app {type_arguments = l; _} -> List.iter (under_inductive true) l
-      | _ -> ()
-    in
-    List.iter (under_inductive false) declared;
-    !acc
-  in
-  let rec spell ~in_domain (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+(** [spell_as_declared orig t]: [t], the C++ type of a callee's parameter
+    declared at the Core type [orig] once the call's instantiation is
+    substituted, with its arrows grouped as the declaration groups them
+    ({!Cpp_ir.Types.arrow_site}): the arrows [orig] writes in one group,
+    and a function type a type variable of [orig] is instantiated at as one
+    more, spelled as its values are.  [fold_left]'s step, declared
+    [B -> A -> B], at [B := nat -> nat -> nat] takes
+    [crane::fn<uint64_t(uint64_t, uint64_t)>] and the element, and returns
+    the flat [B], not three arguments in one group. *)
+let spell_as_declared (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  let rec spell (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     match (orig, t) with
-    | Core.Type.Meta {contents = Some o}, _ -> spell ~in_domain o t
-    | Core.Type.Variable {variable = j; _}, _ when in_domain && Base.Core_util.IntSet.mem j deduced -> t
-    | (Core.Type.Variable _ | Core.Type.Variable_app _), _ -> Cpp_ir.Types.spell_arrows Through_tvar t
+    | Core.Type.Meta {contents = Some o}, _ -> spell o t
     | Core.Type.Arrow _, Function (doms, cod) ->
       let odoms = core_value_domains orig in
       let k = List.length odoms in
@@ -2055,17 +2060,24 @@ let spell_as_declared ~(declared : Core.Type.t list) (orig : Core.Type.t) (t : C
           | Core.Type.Meta {contents = Some o} -> codomain o
           | o -> o
         in
-        spell ~in_domain (codomain orig) t
+        spell (codomain orig) t
       else if List.length doms < k then t
       else
         let here = List.filteri (fun i _ -> i < k) doms and rest = List.filteri (fun i _ -> i >= k) doms in
         let ocod = core_drop_arrows k orig in
-        let cod = spell ~in_domain ocod (if rest = [] then cod else Function (rest, cod)) in
-        Function (List.map2 (spell ~in_domain:true) odoms here, cod)
-    (* Past the arrows the declaration writes, every arrow is curried. *)
-    | _ -> if in_domain then t else Cpp_ir.Types.spell_arrows Through_tvar t
+        let cod = spell ocod (if rest = [] then cod else Function (rest, cod)) in
+        Function (List.map2 spell odoms here, cod)
+    (* An inductive's arguments, or a carrier variable's, are spelled as
+       the declaration writes them too: [list (A -> A)] at a function [A]
+       holds callables taking [A] as one group, and so does [F (A -> B)]. *)
+    | ( (Core.Type.Global_app {type_arguments = oargs; _} | Core.Type.Variable_app {arguments = oargs; _}),
+        Entity_application (g, args, vs) )
+      when List.compare_lengths oargs args = 0 ->
+      Entity_application (g, List.map2 spell oargs args, vs)
+    | _, In_namespace (r, t') -> In_namespace (r, spell orig t')
+    | _ -> t
   in
-  spell ~in_domain:false orig t
+  spell orig t
 
 (** The slot an argument of the call to [id] fills at the parameter
     declared at the Core type [orig]: what C++ checks it against.  A
@@ -2159,10 +2171,8 @@ let argument_position cx ~ret ~local_callable env id plan i core_arg =
   (* The concrete types come from the substituted parameter type, but its
      {e arity} must come from the unsubstituted one: substituting a
      function type into a codomain that was a type variable flattens the
-     element's arrows into the callable's own parameter list, and a
-     template argument keeps its currying (see
-     {!Types.template_arg_of_core_type}).  A parameter declared as a bare type
-     variable has arity zero, so its value is curried throughout. *)
+     element's arrows into the callable's own parameter list, where the
+     declaration takes them as one more group. *)
   (* This parameter's substituted C++ type.  [param_index] counts
      positions of the unsubstituted type, so it has to be converted before
      it indexes the substituted list -- see [subst_index_of_orig]. *)
@@ -2177,7 +2187,7 @@ let argument_position cx ~ret ~local_callable env id plan i core_arg =
     | Some orig ->
       Option.bind (param_expected_subst ()) (fun t ->
           let spelled =
-            spell_as_declared ~declared:(Core_plan.Param_pos.to_list fn_param_core_tys_orig) orig t
+            spell_as_declared orig t
           in
           if spelled = t then None else Some spelled )
     | None -> None

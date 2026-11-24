@@ -7,16 +7,16 @@ SubSelfUnusedParam::stream SubSelfUnusedParam::sconst(uint64_t n) {
       });
 }
 
-uint64_t SubSelfUnusedParam::on_box(const SubSelfUnusedParam::box &b) {
+uint64_t SubSelfUnusedParam::on_box(const SubSelfUnusedParam::box &) {
   return UINT64_C(0);
 }
 
-uint64_t SubSelfUnusedParam::on_stream(const SubSelfUnusedParam::stream &s) {
+uint64_t SubSelfUnusedParam::on_stream(const SubSelfUnusedParam::stream &) {
   return UINT64_C(0);
 }
 
 uint64_t SubSelfUnusedParam::in_branch(bool c,
-                                       const SubSelfUnusedParam::box &b) {
+                                       const SubSelfUnusedParam::box &) {
   if (c) {
     return UINT64_C(0);
   } else {

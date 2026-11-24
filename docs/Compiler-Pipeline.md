@@ -291,6 +291,14 @@ rather than taking a continuation. A declaration whose type C++ deduces is
 knows and prints as `auto`; `Coerce` and `Declare_deduced` exist only in the
 lowered phase, by the grammar's GADT index.
 
+A Rocq arrow chain is one C++ group, `crane::fn<R(A, B)>`, wherever a value
+of its type is declared, and a type variable instantiated at it is spelled
+the same way (`id2<crane::fn<uint64_t(bool, uint64_t)>>`), so a value
+crosses no regrouping by passing through a polymorphic function. Where a
+declaration writes arrows around a type variable (`B -> A -> B` at a
+function `B`), its own arrows are one group and the variable's the next
+(`Cpp_ir.Types.arrow_site`, `Declared_at`).
+
 **Typed fit.** Under `CRANE_CHECK_IR`, `Core_to_cpp.Typed_checks.fit`
 checks every value lowering puts in a destination (`Destination.finish`) or
 an argument slot: by `Coerce.decide` it needs no adapter, and its type is
@@ -315,7 +323,7 @@ anything else fails extraction:
   [`unit_tests/typed_fit_allowlist.txt`](../unit_tests/typed_fit_allowlist.txt)
   keyed by (library, declaration, position, verdict, from, into), for the
   classes not yet recognised by structure. The list may only shrink. Open
-  (92): erased 40, callable 18, other 12, carrier 7 (carriers not of the
+  (91): erased 40, callable 17, other 12, carrier 7 (carriers not of the
   `app(M)<A>` shape -- `Functor_M<...>`, an instance struct -- or whose
   callable argument is grouped otherwise), promoted 5,
   tvar 5, stateT 4, and one loopify-census pair.
@@ -559,7 +567,7 @@ where noted.
 | Switch | Effect |
 | --- | --- |
 | `CRANE_CHECK_IR=1` | Turns on every boundary check: Core invariants (`Core_passes.Check`, `Core_passes.Spines.check`), plan determinism, plan-versus-lowering agreement (callables, representation, ownership, control, parameter modes), typed lowering (every Core form lowered with a type, declared binders agree with their values, every adapter agrees with `Coerce.decide`, typed fit), the finishing obligations, move and borrow validation, unit-program completeness, structure unchanged by rendering. Set for all four test folders in their `dune` files. Violations go through `Base.Probe.violation`. |
-| typed fit | Under `CRANE_CHECK_IR`, every value put in a destination or argument slot must need no adapter by `Coerce.decide` and have a type related to the slot's, unless the pair is of a class recognised by structure (`Typed_checks.known_class`: `event`, `carrier`, `itreeF`, `promoted`; see §6.1) or its (library, declaration, position, verdict, from, into) entry is in [`unit_tests/typed_fit_allowlist.txt`](../unit_tests/typed_fit_allowlist.txt) (92 entries, grouped by kind; built into the plugin). Each entry is an open type-reconstruction defect. The list may only shrink: a new pair fails extraction and prints its line; `scripts/check-typed-fit-allowlist.sh <probe-log>` lists entries a full `CRANE_PROBE` census no longer hits and counts the structural classes' firings. |
+| typed fit | Under `CRANE_CHECK_IR`, every value put in a destination or argument slot must need no adapter by `Coerce.decide` and have a type related to the slot's, unless the pair is of a class recognised by structure (`Typed_checks.known_class`: `event`, `carrier`, `itreeF`, `promoted`; see §6.1) or its (library, declaration, position, verdict, from, into) entry is in [`unit_tests/typed_fit_allowlist.txt`](../unit_tests/typed_fit_allowlist.txt) (91 entries, grouped by kind; built into the plugin). Each entry is an open type-reconstruction defect. The list may only shrink: a new pair fails extraction and prints its line; `scripts/check-typed-fit-allowlist.sh <probe-log>` lists entries a full `CRANE_PROBE` census no longer hits and counts the structural classes' firings. |
 | `CRANE_PROBE=<file>` | Appends a line per firing of an instrumented repair path (`repr-plan`, `elab-fact`, ...), one per allowed typed-fit pair (`typed-fit-allowed`), and one per pair of a structural typed-fit class (`typed-fit-class <kind>`). |
 | `CRANE_TRACE_PIPELINE=1` | Reports each stage and pass as it runs, plus program fingerprints. |
 | `CRANE_TRACE_PASSES=1` or `=<name substring>` | Reports which finishing passes changed a declaration, with node counts. |

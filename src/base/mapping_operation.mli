@@ -105,11 +105,6 @@ val owned_call_arguments : t -> bool list
 (** The headers of the operation [g], if it is mapped. *)
 val headers : Names.GlobRef.t -> string list
 
-(** One entry per argument of a call in Core ([call_binders]), in order:
-    the use the contract declares for the argument passed there, [None]
-    for a type-class instance. *)
-val call_argument_uses : t -> input_use option list
-
 (** The positions ([%aN]) of the arguments the template receives as
     mutable lvalues ([in_place]). *)
 val in_place_positions : t -> int list
