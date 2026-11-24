@@ -4,15 +4,15 @@
     [Node] case, and in its [Leaf] case re-matches [t]: the inner [Leaf]
     branch reads [s] inside a [fold_left] step, the dead inner [Node]
     branch passes [inr s] to a local fixpoint.  The ownership check under
-    [CRANE_CHECK_IR] finds [s] read after it is moved.  Without Loopify it
-    extracts; with the step returning its accumulator instead of [s] it
-    still fails.  Not the shape of [loopify_shared_variant_moved_read]
-    (filed in the same round), which needs SharedVariant.
+    [CRANE_CHECK_IR] reported "s is read after it is moved", though the C++
+    moved [s] only on paths that return.  Fixed: the move check
+    ([Ownership_ir.Move_check]) let control fall past a match without a
+    default, as if no branch might be taken, and so followed the inner
+    [Nil]/[Cons] match (both branches returning) round the loop to its
+    head, which reads [s].  A match without a default is exhaustive.
 
     Expected: extracts under [CRANE_CHECK_IR]; [result = 0] ([g] of a leaf
-    is [inr ""]).
-    Actual: "Crane IR check (moved value read): in
-    LoopifyParamMovedRead.g, s is read after it is moved". *)
+    is [inr ""]). *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Import Extraction.
 From Stdlib Require Import List String.

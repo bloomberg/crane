@@ -329,14 +329,3 @@
   (alias runtest)
   (deps mapped_op_view_argument.t.exe)
   (action (run ./mapped_op_view_argument.t.exe))))
-
-(subdir loopify_param_moved_read
- (rule
-  (targets loopify_param_moved_read.t.exe)
-  (deps LoopifyParamMovedRead.vo loopify_param_moved_read.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_param_moved_read.t.exe loopify_param_moved_read.t.cpp loopify_param_moved_read.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_param_moved_read.t.exe)
-  (action (run ./loopify_param_moved_read.t.exe))))

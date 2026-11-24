@@ -266,7 +266,10 @@ and stmt report jumps aliases live (s : stmt) =
       let l = kill_all bound (walk report jumps aliases live b.body) in
       List.fold_right (fun c l -> at report aliases l c) b.extra_conditions l
     in
-    let other = match els with Some ss -> walk' live ss | None -> live in
+    (* A match without a default is exhaustive: its last branch is written
+       as the [else] (alone, unconditionally; with none, the match is
+       unreachable), so control never passes it by. *)
+    let other = match els with Some ss -> walk' live ss | None -> [] in
     at' (List.concat (other :: List.map branch branches)) scrut.expr
   | Custom_match m ->
     let branch (b : phase Custom_match.branch) =
