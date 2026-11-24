@@ -81,6 +81,12 @@ STUB_EOF
     exit 1
 fi
 
+# shellcheck source=test-deps.sh
+. "$PROJECT_ROOT/scripts/test-deps.sh"
+GMP_INCLUDE_FLAGS=()
+GMP_INCLUDE=$(dep_include_dir "$GMP_PREFIX")
+[ -n "$GMP_INCLUDE" ] && GMP_INCLUDE_FLAGS=(-I "$GMP_INCLUDE")
+
 # Detect Homebrew LLVM
 HB_LLVM="${HB_LLVM:-/opt/homebrew/opt/llvm}"
 
@@ -102,7 +108,7 @@ if [ -d "$HB_LLVM" ]; then
         "${SYSROOT_FLAGS[@]}"
         -I .
         -I "$THEORIES_CPP"
-        -I "$GMP_PREFIX/include"
+        "${GMP_INCLUDE_FLAGS[@]}"
         -nostdlib++
         -stdlib=libc++
         -I"$HB_LLVM/include/c++/v1"
@@ -134,7 +140,7 @@ else
         -fbracket-depth=1024
         -I .
         -I "$THEORIES_CPP"
-        -I "$GMP_PREFIX/include"
+        "${GMP_INCLUDE_FLAGS[@]}"
         -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion
         -Wsign-conversion -Wstring-compare -Wformat-overflow
         -Wno-stringop-overflow -Wstringop-overflow -Wstringop-overflow=4

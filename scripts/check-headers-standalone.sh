@@ -56,11 +56,8 @@ for dep in gmp boost bde; do
                  DEP_FLAGS_bde+=" -isystem $PROJECT_ROOT/theories/cpp_bde"
                  DEP_FLAGS_bde+=" -isystem $THEORIES_CPP -isystem $prefix/include"
                  export DEP_FLAGS_bde ;;
-            # /usr/include is already searched, after libc++; naming it
-            # again with -isystem would put it first and break include_next.
-            *) inc=" -isystem $prefix/include"
-               [ "$prefix" = /usr ] && inc=""
-               export "DEP_FLAGS_$dep=${STD_FLAGS[*]}$inc" ;;
+            *) inc=$(dep_include_dir "$prefix")
+               export "DEP_FLAGS_$dep=${STD_FLAGS[*]}${inc:+ -isystem $inc}" ;;
         esac
     else
         missing+="$dep "
