@@ -315,8 +315,9 @@ anything else fails extraction:
   [`unit_tests/typed_fit_allowlist.txt`](../unit_tests/typed_fit_allowlist.txt)
   keyed by (library, declaration, position, verdict, from, into), for the
   classes not yet recognised by structure. The list may only shrink. Open
-  (91): erased 40, callable 18, other 12, carrier 6 (carriers not of the
-  `app(M)<A>` shape: `Functor_M<...>`, an instance struct), promoted 5,
+  (92): erased 40, callable 18, other 12, carrier 7 (carriers not of the
+  `app(M)<A>` shape -- `Functor_M<...>`, an instance struct -- or whose
+  callable argument is grouped otherwise), promoted 5,
   tvar 5, stateT 4, and one loopify-census pair.
 
 Generated programs meet the same defects as the test suite under other
@@ -555,7 +556,7 @@ where noted.
 | Switch | Effect |
 | --- | --- |
 | `CRANE_CHECK_IR=1` | Turns on every boundary check: Core invariants (`Core_passes.Check`, `Core_passes.Spines.check`), plan determinism, plan-versus-lowering agreement (callables, representation, ownership, control, parameter modes), typed lowering (every Core form lowered with a type, declared binders agree with their values, every adapter agrees with `Coerce.decide`, typed fit), the finishing obligations, move and borrow validation, unit-program completeness, structure unchanged by rendering. Set for all four test folders in their `dune` files. Violations go through `Base.Probe.violation`. |
-| typed fit | Under `CRANE_CHECK_IR`, every value put in a destination or argument slot must need no adapter by `Coerce.decide` and have a type related to the slot's, unless the pair is of a class recognised by structure (`Typed_checks.known_class`: `event`, `carrier`, `itreeF`, `promoted`; see §6.1) or its (library, declaration, position, verdict, from, into) entry is in [`unit_tests/typed_fit_allowlist.txt`](../unit_tests/typed_fit_allowlist.txt) (91 entries, grouped by kind; built into the plugin). Each entry is an open type-reconstruction defect. The list may only shrink: a new pair fails extraction and prints its line; `scripts/check-typed-fit-allowlist.sh <probe-log>` lists entries a full `CRANE_PROBE` census no longer hits and counts the structural classes' firings. |
+| typed fit | Under `CRANE_CHECK_IR`, every value put in a destination or argument slot must need no adapter by `Coerce.decide` and have a type related to the slot's, unless the pair is of a class recognised by structure (`Typed_checks.known_class`: `event`, `carrier`, `itreeF`, `promoted`; see §6.1) or its (library, declaration, position, verdict, from, into) entry is in [`unit_tests/typed_fit_allowlist.txt`](../unit_tests/typed_fit_allowlist.txt) (92 entries, grouped by kind; built into the plugin). Each entry is an open type-reconstruction defect. The list may only shrink: a new pair fails extraction and prints its line; `scripts/check-typed-fit-allowlist.sh <probe-log>` lists entries a full `CRANE_PROBE` census no longer hits and counts the structural classes' firings. |
 | `CRANE_PROBE=<file>` | Appends a line per firing of an instrumented repair path (`repr-plan`, `elab-fact`, ...), one per allowed typed-fit pair (`typed-fit-allowed`), and one per pair of a structural typed-fit class (`typed-fit-class <kind>`). |
 | `CRANE_TRACE_PIPELINE=1` | Reports each stage and pass as it runs, plus program fingerprints. |
 | `CRANE_TRACE_PASSES=1` or `=<name substring>` | Reports which finishing passes changed a declaration, with node counts. |

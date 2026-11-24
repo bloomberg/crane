@@ -22,7 +22,7 @@
 set -euo pipefail
 log=${1:?usage: $0 <CRANE_PROBE log of a full extraction>}
 list="$(dirname "$0")/../unit_tests/typed_fit_allowlist.txt"
-stale=$(comm -23 \
+stale=$(LC_ALL=C comm -23 \
   <(sed '/^# loopify census only/,$d' "$list" | grep -v '^#' | grep -v '^$' | LC_ALL=C sort -u) \
   <(sed -n 's/^typed-fit-allowed //p' "$log" | LC_ALL=C sort -u))
 classes=$(sed -n 's/^typed-fit-class \([^	]*\)	.*/\1/p' "$log" | sort | uniq -c | awk '{printf "%s %s, ", $2, $1}')
