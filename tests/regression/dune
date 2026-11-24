@@ -16059,3 +16059,14 @@
   (alias runtest)
   (deps local_fix_fn_result_join.t.exe)
   (action (run ./local_fix_fn_result_join.t.exe))))
+
+(subdir alias_arrow_branch_lambda
+ (rule
+  (targets alias_arrow_branch_lambda.t.exe)
+  (deps AliasArrowBranchLambda.vo alias_arrow_branch_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_arrow_branch_lambda.t.exe alias_arrow_branch_lambda.t.cpp alias_arrow_branch_lambda.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_arrow_branch_lambda.t.exe)
+  (action (run ./alias_arrow_branch_lambda.t.exe))))
