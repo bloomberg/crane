@@ -297,17 +297,6 @@
   (deps prim_string_pair_literal_copy_mode.t.exe)
   (action (run ./prim_string_pair_literal_copy_mode.t.exe))))
 
-(subdir local_fix_fn_result_join
- (rule
-  (targets local_fix_fn_result_join.t.exe)
-  (deps LocalFixFnResultJoin.vo local_fix_fn_result_join.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_fn_result_join.t.exe local_fix_fn_result_join.t.cpp local_fix_fn_result_join.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_fn_result_join.t.exe)
-  (action (run ./local_fix_fn_result_join.t.exe))))
-
 (subdir poly_instance_curried_fn
  (rule
   (targets poly_instance_curried_fn.t.exe)

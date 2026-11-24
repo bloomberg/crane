@@ -103,7 +103,7 @@ struct LocalFixFnResultJoin {
               UINT64_C(2),
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())));
       crane::fn<uint64_t(uint64_t)> acc = [](uint64_t) { return UINT64_C(3); };
-      f = [&]() {
+      f = [&]() -> crane::fn<uint64_t(uint64_t)> {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
           return std::move(acc);
         } else {
