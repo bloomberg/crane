@@ -77,6 +77,21 @@ let branch_slot (slot : Slot.slot) (rty : Core.Type.t) : Slot.slot =
   | _ when arrow rty -> {slot with Slot.expected_core_ty = Some rty}
   | _ -> slot
 
+(** The destination a branch of a match lowered to an immediately invoked
+    lambda returns its value to: the lambda's own result, whatever the
+    return type [ret] of the enclosing function the branch is written
+    under.  The lambda is the value of the match wherever it stands -- an
+    argument, a callee, a scrutinee -- and its type is the one it is
+    declared at ([own]) or, where it is not, the one C++ deduces from what
+    its branches return; [void] where it computes nothing.  Where the match
+    is the enclosing function's result its returns are inlined and checked
+    there ({!Destination.finish_inlined}). *)
+let iife_return ?own (ret : Cpp_ir.Lowered.Type.t option) : Destination.t =
+  match (ret, own) with
+  | Some Void, _ -> Return (Exactly Void)
+  | _, Some t -> Return (Exactly t)
+  | _, None -> Return Join
+
 (** Generate a single branch of a [Match] statement's if/else-if chain.
 
     Produces a [Cpp_ir.Grammar.Match.branch] whose body statements live directly
@@ -181,7 +196,7 @@ let gen_match_branch cx (slot : Slot.slot) env (typ : Core.Type.t) rty cname ids
                 Representation_plan.check cx.ctx ~site ~field:i
                   ~live:(Binders.binder_is_boxed cx (n_pat_vars - i)) () )
               rev_ids;
-          gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot rty) ()) env_for_body (Destination.return_ ~ret) body ))
+          gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot rty) ()) env_for_body (iife_return ret) body ))
   in
   let tvars = get_current_type_vars cx in
 (* A non-self-referential field in a type-indexed inductive (no template
@@ -623,7 +638,7 @@ and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_oc
         in
         let body_stmts =
           Binders.with_binders cx env ids' (fun () ->
-              gen_stmts cx (Slot.at ~ret ~slot ()) env' (Destination.return_ ~ret) body )
+              gen_stmts cx (Slot.at ~ret ~slot ()) env' (iife_return ret) body )
         in
         (ctor_name, body_stmts) :: gen_enum_branches ~ret cs
       | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ | Core.Pattern.Tuple _ -> gen_enum_branches ~ret cs
@@ -635,7 +650,7 @@ and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_oc
           (fun {Core.Match.Branch.pattern = p; _} -> match p with Core.Pattern.Wildcard -> true | _ -> false)
       in
       Option.map
-        (fun (br : Core.Match.Branch.t) -> gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot br.result_type) ()) env (Destination.return_ ~ret) br.body)
+        (fun (br : Core.Match.Branch.t) -> gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot br.result_type) ()) env (iife_return ret) br.body)
         wild_br
     in
     let void_ret = Match_types.iife_void_return cx env typ pv in
@@ -749,7 +764,7 @@ and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_oc
         (br :: rest, wild)
       | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ ->
         let body_stmts =
-          gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot rty) ()) env (Destination.return_ ~ret) body
+          gen_stmts cx (Slot.at ~ret ~slot:(branch_slot slot rty) ()) env (iife_return ret) body
         in
         ([], Some body_stmts)
       | Core.Pattern.Tuple _ -> gen_branches (i + 1) cs
@@ -977,7 +992,7 @@ and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_oc
                   with_plan cx
                     (Ownership_ir.Region.reuse_arm cx.ctx.lexical.move_plan ~scrutinee:t ~branch:branch_idx
                        ~constructor:tail_ctor)
-                    (fun () -> gen_stmts cx (Slot.at ~ret ~slot ()) env' (Destination.return_ ~ret) body) )
+                    (fun () -> gen_stmts cx (Slot.at ~ret ~slot ()) env' (iife_return ret) body) )
             in
             restore_env_types cx saved_env_types;
             Some (branch_idx, extract @ body_stmts, unique_cond)
@@ -1577,7 +1592,7 @@ let gen_custom_match_expr cx (slot : Slot.slot) env ~typ ~t ~pv ~case_occ : Cpp_
       | Void -> Some iife_ret
       | _ -> ret
     in
-    gen_custom_cpp_case cx (Slot.at ~ret ~slot ()) env (Destination.return_ ~ret) typ t pv case_occ
+    gen_custom_cpp_case cx (Slot.at ~ret ~slot ()) env (iife_return ~own:iife_ret ret) typ t pv case_occ
   in
   Cpp_ir.Build.iife (Some iife_ret) stmts
 

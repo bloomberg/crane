@@ -16048,3 +16048,36 @@
   (alias runtest)
   (deps callable_crossing_matrix.t.exe)
   (action (run ./callable_crossing_matrix.t.exe))))
+
+(subdir typed_fit_case_argument
+ (rule
+  (targets typed_fit_case_argument.t.exe)
+  (deps TypedFitCaseArgument.vo typed_fit_case_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_fit_case_argument.t.exe typed_fit_case_argument.t.cpp typed_fit_case_argument.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_fit_case_argument.t.exe)
+  (action (run ./typed_fit_case_argument.t.exe))))
+
+(subdir typed_fit_scrutinee_let
+ (rule
+  (targets typed_fit_scrutinee_let.t.exe)
+  (deps TypedFitScrutineeLet.vo typed_fit_scrutinee_let.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_fit_scrutinee_let.t.exe typed_fit_scrutinee_let.t.cpp typed_fit_scrutinee_let.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_fit_scrutinee_let.t.exe)
+  (action (run ./typed_fit_scrutinee_let.t.exe))))
+
+(subdir typed_fit_eta_mapped_operation
+ (rule
+  (targets typed_fit_eta_mapped_operation.t.exe)
+  (deps TypedFitEtaMappedOperation.vo typed_fit_eta_mapped_operation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_fit_eta_mapped_operation.t.exe typed_fit_eta_mapped_operation.t.cpp typed_fit_eta_mapped_operation.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_fit_eta_mapped_operation.t.exe)
+  (action (run ./typed_fit_eta_mapped_operation.t.exe))))

@@ -1738,11 +1738,16 @@ let eta_fun cx (slot : Slot.slot) env f args :
       let cod = match deduced_fn_ty with Some (Function (_, cod)) -> cod | _ -> written_cod in
       match (crossed, Cpp_passes.Coercions.head result) with
       | Some c, _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated c
+      (* The partial application eta-expanded, its arguments bound once
+         around the closure: no call of the callee, and no [cod]. *)
+      | None, Call (_, Lambda _, []) -> Typed.v ~ty:Typed.unannotated result
       | None, Call _ -> Typed.typed cod result
       | None, _ -> Typed.v ~ty:Typed.unannotated result )
     | _ -> (
       match (deduced_fn_ty, Cpp_passes.Coercions.head result) with
-      | Some (Function (doms, cod)), Call _ when excess_args = [] && List.length doms = List.length args ->
+      | Some (Function (doms, cod)), Call (_, f, _)
+        when excess_args = [] && List.length doms = List.length args
+             && (match f with Lambda _ -> false | _ -> true) ->
         Typed.typed cod result
       | _ -> Typed.v ~ty:Typed.unannotated result ) )
   | _ -> Typed.v ~ty:Typed.unannotated @@

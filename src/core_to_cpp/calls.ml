@@ -1725,6 +1725,10 @@ let deduce_erased_domains : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = fun
 let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (e : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   match (e, callee_ty) with
+  (* An immediately invoked lambda is no call of the callee: it is the
+     partial application eta-expanded, its arguments bound once before the
+     closure it returns ({!Application.eta_fun}). *)
+  | Call (_, Lambda _, []), _ -> e
   | Call ({yields = Deduced _; params = Unknown; _}, f, args), Some core_ty ->
     (* A callee typed by a function alias ([Id_ obj c]) takes the
        arguments the alias's arrows do. *)
