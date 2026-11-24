@@ -246,13 +246,13 @@ struct StFibonacci {
             uint64_t _loop_k = k;
             while (true) {
               if (_loop_k <= 0) {
-                return *x0;
+                return *x0.get();
               } else {
                 uint64_t k_ = _loop_k - 1;
-                uint64_t x_ = *x0;
-                uint64_t y_ = *y0;
-                *x0 = y_;
-                *y0 = (x_ + y_);
+                uint64_t x_ = *x0.get();
+                uint64_t y_ = *y0.get();
+                *x0.get() = y_;
+                *y0.get() = (x_ + y_);
                 _loop_k = k_;
               }
             }

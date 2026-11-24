@@ -288,6 +288,19 @@ Class OperationMapping (source : Declaration) : Type := {
   operation_contract : OperationContract
 }.
 
+(** A mapped identity type whose value may live in a local variable
+    instead of its canonical owner, where it does not escape the function
+    that creates it: every use is a view, none is stored, returned, passed
+    as the canonical value or named under a closure.  The local holds the
+    type's one component by value, initialised from the argument its
+    [ReturnFreshIdentity] operation initialises the component from once;
+    [local_view] spells either view of the local, [%value] being the local
+    lvalue.  [local_tag] is unused; it keeps the class a record. *)
+Class LocalStorage (T : Type) : Type := {
+  local_view : string;
+  local_tag : unit
+}.
+
 (** The plugin finds these inductives by the names below and reads
     constructors by their position, so the constructor order above is part of
     its interface. *)
@@ -320,6 +333,7 @@ Register NumeralCase as crane.mapping.NumeralCase.
 Register NumeralEmitter as crane.mapping.NumeralEmitter.
 Register NumeralSpec as crane.mapping.NumeralSpec.
 Register TypeMapping as crane.mapping.TypeMapping.
+Register LocalStorage as crane.mapping.LocalStorage.
 Register InputUse as crane.mapping.InputUse.
 Register ArgumentSpec as crane.mapping.ArgumentSpec.
 Register ComponentPath as crane.mapping.ComponentPath.

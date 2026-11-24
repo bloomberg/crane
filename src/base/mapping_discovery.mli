@@ -43,6 +43,10 @@ val has_new_style_mapping : Names.GlobRef.t -> bool
 (** Whether a [TypeMapping] instance is recorded for this head. *)
 val has_type_mapping : Names.GlobRef.t -> bool
 
+(** The [local_view] of the [LocalStorage] instance of the mapped head, if
+    it has one. *)
+val local_storage : Names.GlobRef.t -> string option
+
 (** Every head with a recorded [TypeMapping] instance, with its instances. *)
 val type_mapping_heads : unit -> (Names.GlobRef.t * Names.GlobRef.t list) list
 

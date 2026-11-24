@@ -364,12 +364,28 @@ Crane Extraction Implicit getElems [idx].
        [{| component_name := "contents"; component_type := KnownType A |}];
      type_copy := RetainIdentity;
      type_access := MutableHandle HandleByConstReference;
-     type_views := NoViews (@STRef T H S A);
+     type_views :=
+       ReadWriteViews
+         {| view_headers := [];
+            view_cpp := Crane.Cpp.Pointer (Crane.Cpp.Const (Crane.Cpp.StoredComponent "contents"));
+            view_from_canonical := "%value.get()";
+            view_escape := BorrowOnly |}
+         {| view_headers := [];
+            view_cpp := Crane.Cpp.Pointer (Crane.Cpp.StoredComponent "contents");
+            view_from_canonical := "%value.get()";
+            view_escape := BorrowOnly |}
+         "%view";
      type_interface := AbstractInterface;
      type_model := Identity;
      type_lifetime := NativeRAII;
      type_release := OrdinaryRelease;
      type_numerals := None |}%pstring.
+
+(** A reference used only through its views where it is created lives in
+    a local: [A x = v;], its views [&x]. *)
+#[export] Instance st_ref_local (T : Type) (H : STRefClass T) (S A : Type)
+  : LocalStorage (@STRef T H S A) :=
+  {| local_view := "&%value"; local_tag := tt |}%pstring.
 
 #[export] Instance new_st_ref_mapping : OperationMapping (Ref (@newSTRef)) :=
   {| operation_headers := ["memory"];

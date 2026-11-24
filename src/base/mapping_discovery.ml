@@ -31,6 +31,9 @@ let type_heads : GlobRef.t list GlobRef.Map.t ref = State.cell State.Extraction 
 let operation_heads : GlobRef.t list GlobRef.Map.t ref =
   State.cell State.Extraction GlobRef.Map.empty
 
+(* The [local_view] of each head with a [LocalStorage] instance. *)
+let local_heads : string GlobRef.Map.t ref = State.cell State.Extraction GlobRef.Map.empty
+
 module Constr_table = Hashtbl.Make (struct
   type t = Constr.t
 
@@ -119,6 +122,19 @@ let collect env sigma ~operation name =
       GlobRef.Map.empty instances
     |> GlobRef.Map.map sorted
 
+(* The instance applied to a fresh evar for each of its binders, and the
+   instantiated conclusion. *)
+let instantiate env sigma gr =
+  let sigma, c = Evd.fresh_global env sigma gr in
+  let rec go sigma c ty =
+    match EConstr.kind sigma (Reductionops.whd_all env sigma ty) with
+    | Constr.Prod (_, dom, codom) ->
+      let sigma, ev = Evarutil.new_evar env sigma dom in
+      go sigma (EConstr.mkApp (c, [|ev|])) (EConstr.Vars.subst1 ev codom)
+    | _ -> (sigma, c, ty)
+  in
+  go sigma c (Retyping.get_type_of env sigma c)
+
 let discover () =
   Constr_table.reset type_cache;
   Constr_table.reset operation_cache;
@@ -126,6 +142,15 @@ let discover () =
   let sigma = Evd.from_env env in
   type_heads := collect env sigma ~operation:false "TypeMapping";
   operation_heads := collect env sigma ~operation:true "OperationMapping";
+  local_heads :=
+    GlobRef.Map.filter_map
+      (fun _ insts ->
+        match insts with
+        | [gr] ->
+          let sigma, dict, _ = instantiate env sigma gr in
+          Some (Mapping_decode.local_storage env sigma dict)
+        | _ -> None)
+      (collect env sigma ~operation:false "LocalStorage");
   if tracing () then
     List.iter
       (fun (what, heads) ->
@@ -143,6 +168,8 @@ let has_new_style_mapping g =
 
 let has_type_mapping g = GlobRef.Map.mem g !type_heads
 
+let local_storage g = GlobRef.Map.find_opt g !local_heads
+
 let type_mapping_heads () = GlobRef.Map.bindings !type_heads
 
 let has_operation_mapping g = GlobRef.Map.mem g !operation_heads
@@ -150,19 +177,6 @@ let has_operation_mapping g = GlobRef.Map.mem g !operation_heads
 let operation_mapping_heads () = GlobRef.Map.bindings !operation_heads
 
 (** {1 Resolution} *)
-
-(* The instance applied to a fresh evar for each of its binders, and the
-   instantiated conclusion. *)
-let instantiate env sigma gr =
-  let sigma, c = Evd.fresh_global env sigma gr in
-  let rec go sigma c ty =
-    match EConstr.kind sigma (Reductionops.whd_all env sigma ty) with
-    | Constr.Prod (_, dom, codom) ->
-      let sigma, ev = Evarutil.new_evar env sigma dom in
-      go sigma (EConstr.mkApp (c, [|ev|])) (EConstr.Vars.subst1 ev codom)
-    | _ -> (sigma, c, ty)
-  in
-  go sigma c (Retyping.get_type_of env sigma c)
 
 let unify env sigma a b =
   try
