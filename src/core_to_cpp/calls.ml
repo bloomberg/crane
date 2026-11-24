@@ -1734,7 +1734,36 @@ let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (
        arguments the alias's arrows do. *)
     let core_ty = if args = [] then core_ty else expand_core_fun_alias core_ty in
     let cpp_of ml = Types.cpp_ir_of_core_type cx env [] ml in
-    ( match match written with Some t -> t | None -> cpp_of (core_codomain core_ty) with
+    (* An over-application -- the call of the call that took the callee's own
+       arguments, or of that call kept as a constant -- yields what is left
+       once both have taken theirs, read through a function alias the
+       callee's codomain is written as ([st A := nat -> A * nat]): not the
+       codomain itself. *)
+    let rec drop n (t : Core.Type.t) =
+      if n <= 0 then Some t
+      else
+        match resolve_meta t with
+        | Arrow {parameter; result} when Base.Core_util.is_erased_type parameter -> drop n result
+        | Arrow {result; _} -> drop (n - 1) result
+        | Global_app {head = GlobRef.ConstRef _; _} as a -> (
+          match expand_core_fun_alias a with Arrow _ as f -> drop n f | _ -> None )
+        | _ -> None
+    in
+    let inner_args =
+      match f with
+      | Call (_, Runtime (Cpp_ir.Crane_rt.Constant _), [Call (_, _, inner)])
+      | Call ({yields = Deduced _; params = Unknown; _}, _, inner) -> List.length inner
+      | _ -> 0
+    in
+    let over_applied =
+      if inner_args = 0 then None else drop (inner_args + List.length args) core_ty
+    in
+    ( match
+        match (written, over_applied) with
+        | Some t, _ -> t
+        | None, Some t -> cpp_of t
+        | None, None -> cpp_of (core_codomain core_ty)
+      with
     | exception e' when CErrors.noncritical e' -> e
     | ty ->
       let params =

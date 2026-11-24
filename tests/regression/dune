@@ -16092,3 +16092,14 @@
   (alias runtest)
   (deps typed_fit_known_class.t.exe)
   (action (run ./typed_fit_known_class.t.exe))))
+
+(subdir typed_fit_alias_over_applied
+ (rule
+  (targets typed_fit_alias_over_applied.t.exe)
+  (deps TypedFitAliasOverApplied.vo typed_fit_alias_over_applied.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_fit_alias_over_applied.t.exe typed_fit_alias_over_applied.t.cpp typed_fit_alias_over_applied.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_fit_alias_over_applied.t.exe)
+  (action (run ./typed_fit_alias_over_applied.t.exe))))

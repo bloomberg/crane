@@ -330,7 +330,10 @@ case-of-case scrutinee); a partial application eta-expanded around its
 hoisted arguments is typed as the closure, not the callee's codomain
 (`Calls.record_call_sig`, `Application.eta_fun`); a methodified callee's
 receiver binds its struct's variables, so a parameter naming one is
-deduced, not written (`Application.gen_call_args`).
+deduced, not written (`Application.gen_call_args`); an over-application
+yields what is left after both calls' arguments, read through a function
+alias such as `st A := nat -> A * nat`, also where the inner call is kept
+as a constant (`Calls.record_call_sig`).
 
 ### 6.2 The single coercion
 
