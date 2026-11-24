@@ -168,7 +168,7 @@ let eta_global_outer ~(declared : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.
     [declared] is an instantiation of it: an instantiation can push arrows
     into the codomain ([idf {A} : A -> A] at [A := nat -> nat] reads as two
     arguments), and the declaration takes only the arguments it wrote, the
-    rest going to what the call returns one at a time ([Declared_at n]).
+    rest going to what the call returns as one more group ([Declared_at n]).
 
     Returns [cglob] unchanged when the declaration is already a value
     ({!eta_global_outer}). *)
@@ -198,45 +198,17 @@ let eta_global ~declared ~(into : Cpp_ir.Lowered.Type.t option) ~site ~exact (cg
     (* Where the slot is declared at a type variable -- a parameter of
        [fold_left]'s step, [A -> B -> A] -- what the declaration takes or
        returns at a function type passes through that variable, which spells
-       it curried ({!Cpp_ir.Types.spell_arrows}): the adapter takes such a
-       parameter curried and hands the callee a flat closure applying it one
-       argument at a time, and returns curried what follows. *)
+       it as its values are spelled: the adapter takes such a parameter as
+       the declaration does, and returns what follows the slot's arguments
+       as one more group. *)
     let exp_dom, exp_cod =
       let rec strip (t : Cpp_ir.Lowered.Type.t) = match t with Const t | Reference (_, t) -> strip t | t -> t in
       match Option.map strip into with
       | Some (Function (dom, cod)) -> (List.map strip dom, Some (strip cod))
       | _ -> ([], None)
     in
-    let through_variable i = match List.nth_opt exp_dom i with Some (Cpp_ir.Type.Variable _) -> true | _ -> false in
-    let curried (ty : Cpp_ir.Lowered.Type.t) = Cpp_ir.Types.spell_arrows Through_tvar ty in
-    let decl_dom =
-      List.mapi
-        (fun i (ty : Cpp_ir.Lowered.Type.t) ->
-          match ty with Function (_ :: _ :: _, _) when through_variable i -> curried ty | ty -> ty )
-        decl_dom
-    in
     let params = adapter_params ~prefix:"_ec" decl_dom in
-    let passed i ((ty : Cpp_ir.Lowered.Type.t), id) : Cpp_ir.Lowered.Expr.t =
-      match (List.nth_opt exp_dom i, ty) with
-      | Some (Variable _), Function ([_], Function _) -> (
-        (* The flat signature the curried parameter stands for. *)
-        let rec flat (t : Cpp_ir.Lowered.Type.t) =
-          match t with
-          | Function ([a], (Function _ as c)) -> (
-            match flat c with Cpp_ir.Type.Function (d, r) -> Cpp_ir.Type.Function (a :: d, r) | r -> r )
-          | t -> t
-        in
-        match flat ty with
-        | Function (dom, _) ->
-          let ps = adapter_params ~prefix:(Id.to_string (Option.get id) ^ "_") dom in
-          stored_adapter ps
-            (Cpp_ir.Typed.apply
-               (Cpp_ir.Typed.typed ty (Local (Option.get id)))
-               (List.map adapter_arg ps) )
-              .expr
-        | _ -> adapter_arg (ty, id) )
-      | _ -> adapter_arg (ty, id)
-    in
+    let passed _ p : Cpp_ir.Lowered.Expr.t = adapter_arg p in
     (* The callee takes the parameters as the site it is spelled at groups
        them. *)
     let call =
@@ -249,7 +221,7 @@ let eta_global ~declared ~(into : Cpp_ir.Lowered.Type.t option) ~site ~exact (cg
       match (into, exp_cod, decl_cod) with
       | Some _, Some (Variable _), Some cod when List.length decl_dom > List.length exp_dom ->
         let rest = List.filteri (fun i _ -> i >= List.length exp_dom) decl_dom in
-        Some (Cpp_ir.Type.Function (exp_dom, curried (Function (rest, cod))))
+        Some (Cpp_ir.Type.Function (exp_dom, Function (rest, cod)))
       | _ -> into
     in
     (* One lambda per group of arguments the slot takes at a time, as deep as

@@ -16081,3 +16081,25 @@
   (alias runtest)
   (deps mapped_op_view_argument.t.exe)
   (action (run ./mapped_op_view_argument.t.exe))))
+
+(subdir poly_instance_curried_fn
+ (rule
+  (targets poly_instance_curried_fn.t.exe)
+  (deps PolyInstanceCurriedFn.vo poly_instance_curried_fn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_instance_curried_fn.t.exe poly_instance_curried_fn.t.cpp poly_instance_curried_fn.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_instance_curried_fn.t.exe)
+  (action (run ./poly_instance_curried_fn.t.exe))))
+
+(subdir mapped_op_curried_element
+ (rule
+  (targets mapped_op_curried_element.t.exe)
+  (deps MappedOpCurriedElement.vo mapped_op_curried_element.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mapped_op_curried_element.t.exe mapped_op_curried_element.t.cpp mapped_op_curried_element.cpp)))
+ (rule
+  (alias runtest)
+  (deps mapped_op_curried_element.t.exe)
+  (action (run ./mapped_op_curried_element.t.exe))))

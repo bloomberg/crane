@@ -11,21 +11,14 @@
 /// takes such a parameter curried, hands step a flat closure applying it
 /// one argument at a time, and returns the rest curried.
 uint64_t FoldGlobalStepCurriedAcc::t1(const List<uint64_t> &l) {
-  return l.template fold_left<crane::fn<crane::fn<uint64_t(bool)>(int64_t)>>(
-      [](crane::fn<crane::fn<uint64_t(bool)>(int64_t)> _ec0, uint64_t _ec1) {
-        return [=, _ec0 = std::move(_ec0)](int64_t _ec2) {
-          return [=, _ec0 = _ec0](bool _ec3) {
-            return step([=, _ec0 = _ec0](int64_t _ec0_0,
-                                         bool _ec0_1) {
-              return crane::apply2(_ec0, _ec0_0, _ec0_1);
-            },
-                        _ec1, _ec2, _ec3);
-          };
+  return l.template fold_left<crane::fn<uint64_t(int64_t, bool)>>(
+      [](crane::fn<uint64_t(int64_t, bool)> _ec0, uint64_t _ec1) {
+        return [=, _ec0 = std::move(_ec0)](int64_t _ec2,
+                                           bool _ec3) {
+          return step(_ec0, _ec1, _ec2, _ec3);
         };
       },
-      [](int64_t) {
-        return [](bool) { return UINT64_C(7); };
-      })(INT64_C(0))(true);
+      [](int64_t, bool) { return UINT64_C(7); })(INT64_C(0), true);
 }
 
 uint64_t FoldGlobalStepCurriedAcc::t2(const List<uint64_t> &l) {

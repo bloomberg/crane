@@ -55,7 +55,5 @@ uint64_t CallableCrossingMatrix::src_fix3(uint64_t m, uint64_t a, uint64_t b,
 }
 
 uint64_t CallableCrossingMatrix::src_mapping2(uint64_t x0_, uint64_t x1_) {
-  return crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>([](uint64_t _ec0) {
-    return [=](uint64_t _ec1) { return add2(_ec0, _ec1); };
-  })(x0_)(x1_);
+  return crane::fn<uint64_t(uint64_t, uint64_t)>(add2)(x0_, x1_);
 }

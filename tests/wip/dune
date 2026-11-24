@@ -264,17 +264,6 @@
   (deps loopify_nested_list_local_fix.t.exe)
   (action (run ./loopify_nested_list_local_fix.t.exe))))
 
-(subdir mapped_op_curried_element
- (rule
-  (targets mapped_op_curried_element.t.exe)
-  (deps MappedOpCurriedElement.vo mapped_op_curried_element.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mapped_op_curried_element.t.exe mapped_op_curried_element.t.cpp mapped_op_curried_element.cpp)))
- (rule
-  (alias runtest)
-  (deps mapped_op_curried_element.t.exe)
-  (action (run ./mapped_op_curried_element.t.exe))))
-
 (subdir loopify_shared_variant_moved_read
  (rule
   (targets loopify_shared_variant_moved_read.t.exe)
@@ -296,17 +285,6 @@
   (alias runtest)
   (deps prim_string_pair_literal_copy_mode.t.exe)
   (action (run ./prim_string_pair_literal_copy_mode.t.exe))))
-
-(subdir poly_instance_curried_fn
- (rule
-  (targets poly_instance_curried_fn.t.exe)
-  (deps PolyInstanceCurriedFn.vo poly_instance_curried_fn.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_instance_curried_fn.t.exe poly_instance_curried_fn.t.cpp poly_instance_curried_fn.cpp)))
- (rule
-  (alias runtest)
-  (deps poly_instance_curried_fn.t.exe)
-  (action (run ./poly_instance_curried_fn.t.exe))))
 
 (subdir loopify_param_moved_read
  (rule

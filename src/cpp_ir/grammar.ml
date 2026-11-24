@@ -310,10 +310,12 @@ end =
 and Arrow_site : sig
   (** The site a function type stands at, which decides how its chain of
       arrows is spelled: flat where a declaration writes it
-      ([crane::fn<R(A, B)>]), curried where a type variable stands for it
-      ([crane::fn<crane::fn<R(B)>(A)>]), or flat for the first [n]
-      parameters a declaration wrote and curried for the rest.
-      [Declared_at 0] is [Through_tvar]. *)
+      ([crane::fn<R(A, B)>]) and where a type variable stands for it (the
+      variable is instantiated as the values of its type are spelled);
+      curried throughout ([crane::fn<crane::fn<R(B)>(A)>]), as a
+      higher-kinded carrier is applied and as two groupings are compared;
+      or the first [n] parameters a declaration wrote as one group and the
+      rest as the next.  [Declared_at 0] is [Declared]. *)
   type t = Declared | Through_tvar | Declared_at of int
 end =
   Arrow_site

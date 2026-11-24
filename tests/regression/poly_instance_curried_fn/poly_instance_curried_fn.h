@@ -1,6 +1,5 @@
 #pragma once
 
-#include "crane_fn.h"
 #include "fn.h"
 #include <cstdint>
 #include <memory>
@@ -14,9 +13,8 @@ struct PolyInstanceCurriedFn {
 
   static inline const std::optional<crane::fn<uint64_t(bool,
                                                        uint64_t)>> none_const =
-      crane_convert<std::optional<crane::fn<uint64_t(bool, uint64_t)>>>(
-          id2<crane::fn<crane::fn<uint64_t(uint64_t)>(bool)>>(
-              std::optional<crane::fn<uint64_t(bool, uint64_t)>>()));
+      id2<crane::fn<uint64_t(bool, uint64_t)>>(
+          std::optional<crane::fn<uint64_t(bool, uint64_t)>>());
   static std::optional<crane::fn<uint64_t(bool, uint64_t)>> none_fn(bool _x);
   static uint64_t
   use_result(std::optional<crane::fn<uint64_t(bool, uint64_t)>> o);

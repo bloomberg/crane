@@ -80,39 +80,11 @@ let normal al t =
   in
   Cpp_ir.Types.map (unfolded 8) t
 
-(** The site the global [id]'s {e result} is spelled at
-    ({!Cpp_ir.Types.arrow_site}): a codomain that is a type variable takes
-    its C++ shape from the template argument instantiating it, so it is
-    curried; one the declaration writes out is flat there.  An inline custom
-    constant has no template argument: what it yields is whatever its text
-    reads -- [fst]'s [%a0.first] is the pair's component, stored flat --
-    except that an argument at a parameter declared as the very type
-    variable the result is arrives named at that variable's curried
-    spelling (the [crane::fn] {!Application.gen_call_args} wraps it in),
-    and the text yields it or a value assigned to it: a fold's
-    accumulator. *)
-let result_site id : Cpp_ir.Types.arrow_site =
-  match find_type_opt id with
-  | None -> Declared
-  | Some core_ty when not (Base.Table.is_inline_custom id) ->
-    if core_codomain_is_tvar core_ty then Through_tvar else Declared
-  | Some core_ty ->
-    let rec split acc (t : Core.Type.t) =
-      match t with
-      | Core.Type.Arrow {parameter; result} -> split (resolve_meta parameter :: acc) result
-      | Core.Type.Meta {contents = Some t} -> split acc t
-      | t -> (acc, t)
-    in
-    ( match split [] core_ty with
-    | params, Core.Type.Variable {variable = v; _} ->
-      if List.exists (function Core.Type.Variable {variable = w; _} -> w = v | _ -> false) params then Through_tvar
-      else Declared
-    | _ -> Declared )
-
 (** The function type [Function (dom, cod)] of the global [r] as the name
-    [r] has it: its parameters in one group, its result spelled at
-    {!result_site}. *)
-let name_arrows r dom cod = Cpp_ir.Arrows.of_type (Function (dom, Cpp_ir.Types.spell_arrows (result_site r) cod))
+    [r] has it: its parameters in one group, its result as the
+    declaration spells it -- a type variable instantiated at a function
+    type is spelled as the values of that type are, flat. *)
+let name_arrows dom cod = Cpp_ir.Arrows.of_type (Function (dom, cod))
 
 (** [a] with every leaf {!normal}: a closure's parameters as the values
     they take, whatever reference they are declared through. *)
@@ -927,7 +899,7 @@ let named_value cx env core_ty (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Typed.t 
   let from : Cpp_ir.Lowered.Value_type.t =
     match (Cpp_ir.Typed.head cglob, declared) with
     | Entity (r, _, _), Some (Function (dom, cod)) -> (
-      match name_arrows r dom cod with
+      match name_arrows dom cod with
       | Some a -> Function_name (r, a)
       | None -> Typed (Function (dom, cod)) )
     | _, Some t -> Typed t

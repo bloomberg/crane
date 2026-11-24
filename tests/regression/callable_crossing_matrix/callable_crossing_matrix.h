@@ -128,87 +128,45 @@ struct CallableCrossingMatrix {
     return f(UINT64_C(1), UINT64_C(2), UINT64_C(3));
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, const F0 &, const uint64_t &,
-                                   uint64_t &>
-  static uint64_t at_tvar2(F0 &&f) {
-    return idp<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>(
-        [=](uint64_t _ec0) {
-          return [=, f = f](uint64_t _ec1) { return f(_ec0, _ec1); };
-        })(UINT64_C(1))(UINT64_C(2));
+  template <typename F0> static uint64_t at_tvar2(F0 &&f) {
+    return idp<crane::fn<uint64_t(uint64_t, uint64_t)>>(f)(UINT64_C(1),
+                                                           UINT64_C(2));
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, const F0 &, const uint64_t &,
-                                   const uint64_t &, uint64_t &>
-  static uint64_t at_tvar3(F0 &&f) {
-    return idp<
-        crane::fn<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)>>(
-        [=](uint64_t _ec0) {
-          return [=, f = f](uint64_t _ec1) {
-            return [=, f = f](uint64_t _ec2) { return f(_ec0, _ec1, _ec2); };
-          };
-        })(UINT64_C(1))(UINT64_C(2))(UINT64_C(3));
+  template <typename F0> static uint64_t at_tvar3(F0 &&f) {
+    return idp<crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>(f)(
+        UINT64_C(1), UINT64_C(2), UINT64_C(3));
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, const F0 &, const uint64_t &,
-                                   uint64_t &>
-  static uint64_t at_auto2(F0 &&f) {
-    return crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(
-        [=](uint64_t _ec0) {
-          return [=, f = f](uint64_t _ec1) { return f(_ec0, _ec1); };
-        })(UINT64_C(1))(UINT64_C(2));
+  template <typename F0> static uint64_t at_auto2(F0 &&f) {
+    return crane::fn<uint64_t(uint64_t, uint64_t)>(f)(UINT64_C(1), UINT64_C(2));
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, const F0 &, const uint64_t &,
-                                   const uint64_t &, uint64_t &>
-  static uint64_t at_auto3(F0 &&f) {
-    return crane::fn<
-        crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)>(
-        [=](uint64_t _ec0) {
-          return [=, f = f](uint64_t _ec1) {
-            return [=, f = f](uint64_t _ec2) { return f(_ec0, _ec1, _ec2); };
-          };
-        })(UINT64_C(1))(UINT64_C(2))(UINT64_C(3));
+  template <typename F0> static uint64_t at_auto3(F0 &&f) {
+    return crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>(f)(
+        UINT64_C(1), UINT64_C(2), UINT64_C(3));
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, const F0 &, const uint64_t &,
-                                   uint64_t &>
-  static uint64_t at_loop2(F0 &&f) {
+  template <typename F0> static uint64_t at_loop2(F0 &&f) {
+    return List<uint64_t>::cons(
+        UINT64_C(1),
+        List<uint64_t>::cons(UINT64_C(2),
+                             List<uint64_t>::nil()))
+               .template fold_left<crane::fn<uint64_t(uint64_t, uint64_t)>>(
+        [](crane::fn<uint64_t(uint64_t, uint64_t)> g, uint64_t) { return g; },
+        f)(UINT64_C(1), UINT64_C(2));
+  }
+
+  template <typename F0> static uint64_t at_loop3(F0 &&f) {
     return List<uint64_t>::cons(
         UINT64_C(1),
         List<uint64_t>::cons(UINT64_C(2),
                              List<uint64_t>::nil()))
                .template fold_left<
-        crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>(
-        [](crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)> g,
+        crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>(
+        [](crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)> g,
            uint64_t) { return g; },
-        [=](uint64_t _ec0) {
-          return [=, f = f](uint64_t _ec1) { return f(_ec0, _ec1); };
-        })(UINT64_C(1))(UINT64_C(2));
-  }
-
-  template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, const F0 &, const uint64_t &,
-                                   const uint64_t &, uint64_t &>
-  static uint64_t at_loop3(F0 &&f) {
-    return List<uint64_t>::cons(
-        UINT64_C(1),
-        List<uint64_t>::cons(UINT64_C(2),
-                             List<uint64_t>::nil()))
-               .template fold_left<
-        crane::fn<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)>>(
-        [](crane::fn<
-            crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)> g,
-           uint64_t) { return g; },
-        [=](uint64_t _ec0) {
-          return [=, f = f](uint64_t _ec1) {
-            return [=, f = f](uint64_t _ec2) { return f(_ec0, _ec1, _ec2); };
-          };
-        })(UINT64_C(1))(UINT64_C(2))(UINT64_C(3));
+        f)(UINT64_C(1), UINT64_C(2), UINT64_C(3));
   }
 
   template <typename F0>

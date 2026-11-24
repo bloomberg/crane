@@ -291,6 +291,14 @@ rather than taking a continuation. A declaration whose type C++ deduces is
 knows and prints as `auto`; `Coerce` and `Declare_deduced` exist only in the
 lowered phase, by the grammar's GADT index.
 
+A Rocq arrow chain is one C++ group, `crane::fn<R(A, B)>`, wherever a value
+of its type is declared, and a type variable instantiated at it is spelled
+the same way (`id2<crane::fn<uint64_t(bool, uint64_t)>>`), so a value
+crosses no regrouping by passing through a polymorphic function. Where a
+declaration writes arrows around a type variable (`B -> A -> B` at a
+function `B`), its own arrows are one group and the variable's the next
+(`Cpp_ir.Types.arrow_site`, `Declared_at`).
+
 ### 6.2 The single coercion
 
 Every adapter between a value and its slot (boxing, unboxing, erasing a

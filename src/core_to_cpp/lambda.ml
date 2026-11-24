@@ -815,7 +815,7 @@ let gen_lambda cx (slot : Slot.slot) env (a : Core.Expr.t) : Cpp_ir.Typed.t =
           List.init (List.fold_left max 0 all_tvars) (fun k -> local_tvar (k + 1))
         in
         let local_ty ty =
-          Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Through_tvar env local_tvars ty
+          Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Declared env local_tvars ty
         in
         let local_var j : Cpp_ir.Lowered.Type.t = Variable (Index (j, Some (local_tvar j))) in
         (* A forwarding parameter, and the argument that forwards it. *)

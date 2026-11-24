@@ -348,7 +348,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
       Typed.v ~ty:(match yields with Some t -> Typed t | None -> Deduced Foreign_text) @@ mk_cppglob
         ?yields
         x
-        (Types.template_params_of_core cx ~site:Cpp_ir.Types.Through_tvar env
+        (Types.template_params_of_core cx ~site:Cpp_ir.Types.Declared env
            (List.map snd (Base.Core_util.Var_types.bindings tys)) ) )
   | Core.Expr.Global ({callee = x; _} as use) ->
     let tys = Base.Core_util.written_type_args use in
