@@ -266,6 +266,66 @@ let fit_allowlist =
        (String.split_on_char '\n' Typed_fit_allowlist.text);
      t)
 
+(** The open defect class a pair belongs to by its structure alone,
+    whatever declaration it is met in: [x], put in a slot of type [into],
+    which {!verdict} found unrelated.  Each class is a type reconstruction
+    defect whose C++ is right -- the slot is spelled through a name C++
+    resolves to the value's type -- and is recognised by the relation
+    between the two types that makes it so, never by a name:
+
+    - [event]: an event family named unapplied ([getE]) against its
+      application to an index ([app(getE)<nat>]): the slot is the family
+      applied, the value the family;
+    - [carrier]: a higher-kinded carrier applied ([app(M)<A>]) against a type
+      whose trailing type arguments are [A]: the slot is the carrier's
+      application, which unfolds to the value's type;
+    - [itreeF]: the observation of an interaction tree ([itreeF]) against
+      the tree ([itree], or an alias of a tree's type);
+    - [promoted]: two types that agree once every member of an instance or
+      a class ([_tcI0::iptr], [ProvenanceV<>::prov]) and every promoted
+      variable in them is taken as undecided: an associated type C++
+      resolves through the instance, which lowering wrote on one side and
+      resolved on the other.
+
+    Any other pair is no known class: on {!fit_allowlist} or fatal. *)
+let known_class cx (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) : string option =
+  let related a b = not (Coerce.unrelated cx (Typed a) (Exactly b)) in
+  let rec bare (t : Cpp_ir.Lowered.Type.t) =
+    match t with Const t | Reference (_, t) | In_namespace (_, t) -> bare t | t -> t
+  in
+  let is_ind name (t : Cpp_ir.Lowered.Type.t) =
+    match bare t with
+    | Entity_application ((Names.GlobRef.IndRef _ as g), _, _) ->
+      String.equal (Pp.string_of_ppcmds (Names.GlobRef.print g)) ("(ITree.Core.ITreeDefinition." ^ name ^ ", 0)")
+    | _ -> false
+  in
+  let rec last n l = if List.length l <= n then l else last n (List.tl l) in
+  match (x.ty, into) with
+  | Typed from, Exactly slot -> (
+    match (bare from, bare slot) with
+    | (Entity_application (_, [], _) as f), Apply (h, _ :: _) when related f h -> Some "event"
+    | Entity_application (_, targs, _), Apply (_, (_ :: _ as args))
+      when List.length targs >= List.length args && List.for_all2 related (last (List.length args) targs) args ->
+      Some "carrier"
+    | f, s when is_ind "itreeF" f && (is_ind "itree" s || match s with Entity_application (Names.GlobRef.ConstRef _, _, _) -> true | _ -> false) ->
+      Some "itreeF"
+    | _ ->
+      let members = ref false in
+      let undecided =
+        Cpp_ir.Types.map (function
+          | Cpp_ir.Type.Member ((Instance _ | Entity_application _), _) as m
+            when (match m with
+                  | Member (Entity_application (g, _, _), _) -> Base.Table.is_typeclass g || Base.Table.builds_instance g
+                  | _ -> true ) ->
+            members := true;
+            Cpp_ir.Type.Any
+          | Promoted_member _ -> members := true; Cpp_ir.Type.Any
+          | t -> t )
+      in
+      let from' = undecided from and slot' = undecided slot in
+      if !members && related from' slot' then Some "promoted" else None )
+  | _ -> None
+
 (** [s] on one line, its whitespace runs one space: a type's shape as
     {!fit_allowlist} keys it. *)
 let one_line s =
@@ -287,7 +347,9 @@ let fit cx ~site (x : Typed.t) (into : Cpp_ir.Lowered.Slot_type.t) =
         String.concat "\t"
           (List.map one_line [Base.Probe.library (); declaration cx; site; verdict_name verdict; Binders.show_value_type x.ty; slot])
       in
-      if Hashtbl.mem (Lazy.force fit_allowlist) key then Base.Probe.hit "typed-fit-allowed" (fun () -> key)
+      let known = match verdict with `Unrelated -> known_class cx x into | `Plan _ -> None in
+      if Option.has_some known then Base.Probe.hit "typed-fit-class" (fun () -> Option.get known ^ "\t" ^ key)
+      else if Hashtbl.mem (Lazy.force fit_allowlist) key then Base.Probe.hit "typed-fit-allowed" (fun () -> key)
       else
         Base.Probe.violation "typed fit"
           Pp.(str "a value of type " ++ str (Binders.show_value_type x.ty) ++ str " put in a slot of type "

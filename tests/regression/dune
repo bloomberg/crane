@@ -16081,3 +16081,14 @@
   (alias runtest)
   (deps typed_fit_eta_mapped_operation.t.exe)
   (action (run ./typed_fit_eta_mapped_operation.t.exe))))
+
+(subdir typed_fit_known_class
+ (rule
+  (targets typed_fit_known_class.t.exe)
+  (deps TypedFitKnownClass.vo typed_fit_known_class.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_fit_known_class.t.exe typed_fit_known_class.t.cpp typed_fit_known_class.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_fit_known_class.t.exe)
+  (action (run ./typed_fit_known_class.t.exe))))

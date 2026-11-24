@@ -11,6 +11,10 @@
 #   CRANE_PROBE=/tmp/probe.log make extract   # from clean, every folder
 #   scripts/check-typed-fit-allowlist.sh /tmp/probe.log
 #
+# A pair of a known structural class (Typed_checks.known_class) is let
+# through whatever declaration it is in and logged as `typed-fit-class
+# <kind> <pair>`; the counts by kind are reported.
+#
 # Entries after the "# loopify census only" header are hit only with Loopify
 # on everywhere (scripts/loopify-census.sh) and are not checked here.
 #
@@ -21,6 +25,8 @@ list="$(dirname "$0")/../unit_tests/typed_fit_allowlist.txt"
 stale=$(comm -23 \
   <(sed '/^# loopify census only/,$d' "$list" | grep -v '^#' | grep -v '^$' | LC_ALL=C sort -u) \
   <(sed -n 's/^typed-fit-allowed //p' "$log" | LC_ALL=C sort -u))
+classes=$(sed -n 's/^typed-fit-class \([^	]*\)	.*/\1/p' "$log" | sort | uniq -c | awk '{printf "%s %s, ", $2, $1}')
+if [ -n "$classes" ]; then echo "typed-fit known classes (firings): ${classes%, }"; fi
 if [ -n "$stale" ]; then
   echo "typed-fit allowlist: $(printf '%s\n' "$stale" | wc -l | tr -d ' ') stale entries (delete them):"
   printf '%s\n' "$stale"
