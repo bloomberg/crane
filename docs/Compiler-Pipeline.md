@@ -291,6 +291,14 @@ rather than taking a continuation. A declaration whose type C++ deduces is
 knows and prints as `auto`; `Coerce` and `Declare_deduced` exist only in the
 lowered phase, by the grammar's GADT index.
 
+A Rocq arrow chain is one C++ group, `crane::fn<R(A, B)>`, wherever a value
+of its type is declared, and a type variable instantiated at it is spelled
+the same way (`id2<crane::fn<uint64_t(bool, uint64_t)>>`), so a value
+crosses no regrouping by passing through a polymorphic function. Where a
+declaration writes arrows around a type variable (`B -> A -> B` at a
+function `B`), its own arrows are one group and the variable's the next
+(`Cpp_ir.Types.arrow_site`, `Declared_at`).
+
 ### 6.2 The single coercion
 
 Every adapter between a value and its slot (boxing, unboxing, erasing a
@@ -515,7 +523,7 @@ where noted.
 | Switch | Effect |
 | --- | --- |
 | `CRANE_CHECK_IR=1` | Turns on every boundary check: Core invariants (`Core_passes.Check`, `Core_passes.Spines.check`), plan determinism, plan-versus-lowering agreement (callables, representation, ownership, control, parameter modes), typed lowering (every Core form lowered with a type, declared binders agree with their values, every adapter agrees with `Coerce.decide`, typed fit), the finishing obligations, move and borrow validation, unit-program completeness, structure unchanged by rendering. Set for all four test folders in their `dune` files. Violations go through `Base.Probe.violation`. |
-| typed fit | Under `CRANE_CHECK_IR`, every value put in a destination or argument slot must need no adapter by `Coerce.decide` and have a type related to the slot's, unless its (library, declaration, position, verdict, from, into) entry is in [`unit_tests/typed_fit_allowlist.txt`](../unit_tests/typed_fit_allowlist.txt) (211 entries, grouped by kind; built into the plugin). Each entry is an open type-reconstruction defect. The list may only shrink: a new pair fails extraction and prints its line; `scripts/check-typed-fit-allowlist.sh <probe-log>` lists entries a full `CRANE_PROBE` census no longer hits. |
+| typed fit | Under `CRANE_CHECK_IR`, every value put in a destination or argument slot must need no adapter by `Coerce.decide` and have a type related to the slot's, unless its (library, declaration, position, verdict, from, into) entry is in [`unit_tests/typed_fit_allowlist.txt`](../unit_tests/typed_fit_allowlist.txt) (207 entries, grouped by kind; built into the plugin). Each entry is an open type-reconstruction defect. The list may only shrink: a new pair fails extraction and prints its line; `scripts/check-typed-fit-allowlist.sh <probe-log>` lists entries a full `CRANE_PROBE` census no longer hits. |
 | `CRANE_PROBE=<file>` | Appends a line per firing of an instrumented repair path (`repr-plan`, `elab-fact`, ...) and one per allowed typed-fit pair (`typed-fit-allowed`). |
 | `CRANE_TRACE_PIPELINE=1` | Reports each stage and pass as it runs, plus program fingerprints. |
 | `CRANE_TRACE_PASSES=1` or `=<name substring>` | Reports which finishing passes changed a declaration, with node counts. |

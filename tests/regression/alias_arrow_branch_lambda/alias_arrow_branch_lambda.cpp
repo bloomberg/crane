@@ -8,8 +8,7 @@ AliasArrowBranchLambda::g(bool b, const List<uint64_t> &x0_) {
           crane::fn<crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)>(
               List<uint64_t>)> acc,
           uint64_t) { return acc; },
-      [&]() -> crane::fn<
-          std::pair<uint64_t, uint64_t>(List<uint64_t>, uint64_t)> {
+      [&]() -> crane::fn<AliasArrowBranchLambda::st<uint64_t>(List<uint64_t>)> {
         if (b) {
           return [](List<uint64_t>) { return sret<uint64_t>(UINT64_C(6)); };
         } else {

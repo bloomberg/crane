@@ -363,11 +363,6 @@ let owned_call_arguments p =
 
 let headers g = if is_operation_head g then (find g).headers else []
 
-let call_argument_uses p =
-  List.map
-    (fun k -> Option.map (fun a -> a.use) (List.find_opt (fun a -> a.binder = k) p.arguments))
-    p.call_binders
-
 let in_place_positions p = List.filter_map (fun a -> if a.in_place then Some a.position else None) p.arguments
 
 let canonical_borrow_origin p =

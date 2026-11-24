@@ -16103,3 +16103,57 @@
   (alias runtest)
   (deps loopify_nested_list_local_fix.t.exe)
   (action (run ./loopify_nested_list_local_fix.t.exe))))
+(subdir local_fix_fn_result_join
+ (rule
+  (targets local_fix_fn_result_join.t.exe)
+  (deps LocalFixFnResultJoin.vo local_fix_fn_result_join.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_fn_result_join.t.exe local_fix_fn_result_join.t.cpp local_fix_fn_result_join.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_fn_result_join.t.exe)
+  (action (run ./local_fix_fn_result_join.t.exe))))
+
+(subdir alias_arrow_branch_lambda
+ (rule
+  (targets alias_arrow_branch_lambda.t.exe)
+  (deps AliasArrowBranchLambda.vo alias_arrow_branch_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_arrow_branch_lambda.t.exe alias_arrow_branch_lambda.t.cpp alias_arrow_branch_lambda.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_arrow_branch_lambda.t.exe)
+  (action (run ./alias_arrow_branch_lambda.t.exe))))
+
+(subdir mapped_op_view_argument
+ (rule
+  (targets mapped_op_view_argument.t.exe)
+  (deps MappedOpViewArgument.vo mapped_op_view_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mapped_op_view_argument.t.exe mapped_op_view_argument.t.cpp mapped_op_view_argument.cpp)))
+ (rule
+  (alias runtest)
+  (deps mapped_op_view_argument.t.exe)
+  (action (run ./mapped_op_view_argument.t.exe))))
+
+(subdir poly_instance_curried_fn
+ (rule
+  (targets poly_instance_curried_fn.t.exe)
+  (deps PolyInstanceCurriedFn.vo poly_instance_curried_fn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_instance_curried_fn.t.exe poly_instance_curried_fn.t.cpp poly_instance_curried_fn.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_instance_curried_fn.t.exe)
+  (action (run ./poly_instance_curried_fn.t.exe))))
+
+(subdir mapped_op_curried_element
+ (rule
+  (targets mapped_op_curried_element.t.exe)
+  (deps MappedOpCurriedElement.vo mapped_op_curried_element.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mapped_op_curried_element.t.exe mapped_op_curried_element.t.cpp mapped_op_curried_element.cpp)))
+ (rule
+  (alias runtest)
+  (deps mapped_op_curried_element.t.exe)
+  (action (run ./mapped_op_curried_element.t.exe))))

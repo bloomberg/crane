@@ -179,11 +179,11 @@ type arrow_site = Grammar.Arrow_site.t = Declared | Through_tvar | Declared_at o
 
 (** [spell_arrows site t] respells every function type in [t] as [site]
     spells it. *)
-let rec spell_arrows : type p. arrow_site -> p Type.t -> p Type.t =
+let spell_arrows : type p. arrow_site -> p Type.t -> p Type.t =
  fun site t ->
   match site with
-  | Declared -> t
-  | Through_tvar | Declared_at 0 ->
+  | Declared | Declared_at 0 -> t
+  | Through_tvar ->
     map
       (fun (t : p Type.t) ->
         match t with
@@ -195,7 +195,7 @@ let rec spell_arrows : type p. arrow_site -> p Type.t -> p Type.t =
     | Function (dom, cod) when List.length dom > n ->
       let outer = List.filteri (fun i _ -> i < n) dom in
       let inner = List.filteri (fun i _ -> i >= n) dom in
-      Function (outer, spell_arrows Through_tvar (Function (inner, cod)))
+      Function (outer, Function (inner, cod))
     | _ -> t )
 
 (** Whether [p] holds of [t] or of a type inside it.  Unlike {!map}, this

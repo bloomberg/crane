@@ -188,11 +188,15 @@ let returned_types ~returned (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lower
     otherwise -- curried, as a type variable instantiated at [r] takes it --
     and [r] otherwise (the enclosing declaration's own return type, say,
     reaching a position that states none); [None] where [r] is not a
-    function type. *)
-let declared_at ~(own : Cpp_ir.Lowered.Slot_type.t) (r : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t option =
+    function type.  The two are compared with the unit's aliases unfolded:
+    a slot may spell [r]'s result through an alias of an arrow type
+    ([st nat] for [nat -> nat * nat]). *)
+let declared_at cx ~(own : Cpp_ir.Lowered.Slot_type.t) (r : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t option =
+  let al = Coerce.aliases_in cx in
+  let arrows t = Option.map (Coerce.normal_arrows al) (Cpp_ir.Arrows.of_type t) in
   match (own, Cpp_ir.Arrows.of_type r) with
-  | Exactly (Function _ as f), Some a
-    when f <> r && (match Cpp_ir.Arrows.of_type f with Some b -> Cpp_ir.Arrows.same_function a b | None -> false) ->
+  | Exactly (Function _ as f), Some _
+    when f <> r && (match (arrows f, arrows r) with Some b, Some a -> Cpp_ir.Arrows.same_function a b | _ -> false) ->
     Some f
   | _, Some _ -> Some r
   | _, None -> None
@@ -223,7 +227,7 @@ let join ?(several = false) ~own ~returned cx env rty (stmts : Cpp_ir.Lowered.St
     Cpp_ir.Lowered.Type.t option =
   let types = returned_types ~returned stmts in
   if (several && List.length types < 2) || not (Cpp_ir.Value_type.deduces_none types) then None
-  else declared_at ~own (Types.cpp_of_core cx env rty)
+  else declared_at cx ~own (Types.cpp_of_core cx env rty)
 
 (** {!join} for the lambda a match [typ]/[pv] is lowered in, at the type
     its branches compute.  A lambda in a branch tail takes its arguments

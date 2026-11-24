@@ -1,22 +1,27 @@
 (** Found by Ephyra round 24 (whose generator writes its own typed
-    mappings). Under [Mapping.Std] a primitive-string parameter is read as
-    [std::string_view].  Passed as the argument of an operation mapping
-    whose value the operation returns, the view goes into the template
-    unconverted, so the template's result is a [std::string_view] (or does
-    not type at all) where the declaration returns [std::string].
+    mappings). Under [Mapping.Std] a primitive-string parameter that is
+    only read is taken as [std::string_view].  Passed as an operation
+    mapping's argument typed by a type variable, which the template is
+    given canonically and returns, the view went into the template as it
+    was, so the template's result was a [std::string_view] (or did not
+    type at all) where the declaration returns [std::string].
 
     - [deque_fold]: [Mapping.DequeList]'s [fold_left] with the parameter as
-      the initial accumulator: [auto _a] is a [std::string_view], the step
-      [[](std::string a, uint64_t) { return a; }] cannot be called with it
-      and assigned back, and the result does not convert to [std::string].
+      the initial accumulator: [auto _a] was a [std::string_view], which the
+      step [[](std::string a, uint64_t) { return a; }] cannot take.
     - [maybe_get]: a test-local [OperationMapping] of
       [mb_get : maybe A -> A -> A] as [_m.has_value() ? *_m : _d]: the
-      conditional's type is [std::string_view], "no viable conversion from
+      conditional's type was [std::string_view] ("no viable conversion from
       returned value of type 'std::string_view' to function return type
-      'std::string'".
+      'std::string'").
 
-    Expected: compiles; [result = 6].
-    Actual: the errors above. *)
+    Fixed: the access analysis counted a [Read] argument as one a view may
+    be passed to whatever its binder's type; one the template is given no
+    view of (its binder typed by a type variable) needs the canonical
+    representation, so the parameter is now a [const std::string &]
+    ([Core_plan.Access.read_off]).
+
+    Expected: compiles; [result = 6]. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
 From Corelib Require Import PrimString.
 From Crane Require Import Extraction Mapping.Descriptor.

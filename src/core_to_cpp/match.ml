@@ -1569,7 +1569,7 @@ let gen_custom_match_expr cx (slot : Slot.slot) env ~typ ~t ~pv ~case_occ : Cpp_
       (* The branches are written under the return type in force: where
          that is the annotation's function type grouped otherwise, the
          lambdas they return take their arguments as it groups them. *)
-      match Match_types.declared_at ~own:(Destination.slot_of ret) r with Some t -> t | None -> r
+      match Match_types.declared_at cx ~own:(Destination.slot_of ret) r with Some t -> t | None -> r
   in
   let stmts =
     let ret =

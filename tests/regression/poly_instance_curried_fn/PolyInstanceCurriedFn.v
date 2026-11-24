@@ -1,27 +1,25 @@
 (** Found by Ephyra round 24 (through the generator's own typed mappings:
     [mb_of_opt : option A -> maybe A] at [A := option bool -> nat -> nat];
     the mapping is not needed). A polymorphic function over [option A] at
-    [A := bool -> nat -> nat]: Crane instantiates the template at the
+    [A := bool -> nat -> nat]: Crane instantiated the template at the
     curried [crane::fn<crane::fn<uint64_t(uint64_t)>(bool)>] while values
     of type [bool -> nat -> nat] are the flat
-    [crane::fn<uint64_t(bool, uint64_t)>], and converts only some of them.
+    [crane::fn<uint64_t(bool, uint64_t)>], and converted only some of them:
+    [id2 None] passed the [None] built flat ("no matching function for call
+    to 'id2'"), [match id2 o with Some f => ...] bound the field flat from
+    the curried result, and [id2 o] compiled through a [crane_convert] each
+    way that the typed-fit check refused ("(argument, convert)").
 
-    - [none_const]: [id2 None]: the [None] literal is built at the flat type
-      and passed unconverted, "no matching function for call to 'id2'".
-    - [none_fn]: the same inside a function.
-    - [use_result]: [match id2 o with Some f => f true 1 | None => 0 end]:
-      the argument is converted to the curried type, but the field bound
-      from the result is declared flat, "no viable conversion from
-      'fn<crane::fn<uint64_t (uint64_t)> (bool)>' to
-      'const fn<uint64_t (bool, uint64_t)>'".
-    - [pass]: [id2 o] returned: compiles (a [crane_convert] each way) but the
-      typed-fit check under [CRANE_CHECK_IR] refuses the converted argument,
-      "(argument, convert)".
+    Fixed: a type variable instantiated at a function type was spelled
+    curried, as a template argument and wherever a declaration names the
+    variable (Arrow_site Through_tvar), while values of the type are
+    spelled flat in every declared position.  A type argument is now
+    spelled as the values of its type are ([Types.template_arg_of_core_type]
+    at [Declared], [Calls.spell_as_declared]); the arrows a declaration
+    writes are one group and the instantiated variable's own arrows the
+    next ([Declared_at n]).
 
-    Expected: compiles and extracts under [CRANE_CHECK_IR], the template
-    instantiated at the type its values have; [result = 4].
-    Actual: under [CRANE_CHECK_IR] (the suite's setting) extraction stops
-    at the typed-fit refusal; without it, the C++ errors above. *)
+    Expected: compiles and extracts under [CRANE_CHECK_IR]; [result = 4]. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Import Extraction.
 

@@ -3,16 +3,20 @@
     binds the recursive result [rv] and returns a call of a local [go2],
     itself returning, in its [cons] case, a call of a local [go3] (a tail
     loop) whose [nil] case may return [rv]; the result is let-bound and
-    applied twice.  The lambda [go2] lowers to returns [acc] (a
-    [crane::fn]) on one path and the closure [[](uint64_t) { return 0; }]
-    on another, so its deduced return type disagrees.  Related to round
-    1's [local_fix_returns_function] and round 19's
-    [branch_callables_fix_accumulator] (both fixed); this shape still fails.
+    applied twice.  The match lowered to an immediately invoked lambda that
+    returns [acc] (a [crane::fn]) on one path and the closure
+    [[](uint64_t) { return 0; }] on another, and was left without a return
+    type, so C++ deduced two ("return type '(lambda ...)' must match
+    previous return type 'crane::fn<...>'").
 
-    Expected: compiles; [result = 6].
-    Actual: "return type '(lambda ...)' must match previous return type
-    'crane::fn<unsigned long long (unsigned long long)>' when lambda
-    expression has unspecified explicit return type". *)
+    Fixed: the join that annotates such a lambda reads the type each
+    [return] was lowered at, recorded by node identity; substituting a
+    pattern field's local into the branch ([a1] read through
+    [a1_value]) rebuilt every node of the branch, so the closures were no
+    longer found and counted as unannotated.  The substitution now hands
+    back a node it changed nothing in ([Lifting.local_var_subst_expr]).
+
+    Expected: compiles; [result = 6]. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.

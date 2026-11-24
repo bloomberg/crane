@@ -1,26 +1,32 @@
 (** Found by Ephyra round 24 (whose generator writes its own typed
-    mappings). A variant of round 23's [deque_fold_curried_acc] (fixed for
-    a [fold_right] accumulator): an operation mapping whose template mixes
-    a value of the element type [A] with a stored element, at
-    [A := nat -> nat -> nat].  The stored element is the flat
-    [crane::fn<uint64_t(uint64_t, uint64_t)>], but the value Crane passes or
-    builds for [A] is the curried
+    mappings). A variant of round 23's [deque_fold_curried_acc]: an
+    operation mapping whose template mixes a value of the element type [A]
+    with a stored element, at [A := nat -> nat -> nat].  The stored element
+    is the flat [crane::fn<uint64_t(uint64_t, uint64_t)>], but the value
+    Crane passed or built for [A] was the curried
     [crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>] (or a lambda
-    returning a lambda), so the template does not compile.
+    returning a lambda):
 
     - [deque_map]: [Mapping.DequeList]'s [map] with an identity step over a
-      list of two-argument functions: the step is eta-expanded curried and
-      [_r.push_back(_f(_x))] has no conversion to the flat element.
-    - [maybe_get]: a test-local [TypeMapping] of [maybe A] to
-      [std::optional<%stored(element)>] and an [OperationMapping] of
-      [mb_get : maybe A -> A -> A] as
-      [_m.has_value() ? *_m : _d]: "incompatible operand types
-      ('const fn<uint64_t (uint64_t, uint64_t)>' and
-      'fn<crane::fn<uint64_t (uint64_t)> (uint64_t)>')".
+      list of two-argument functions: the step was eta-expanded curried and
+      [_r.push_back(_f(_x))] had no conversion to the flat element.
+    - [maybe_get]: a test-local [OperationMapping] of
+      [mb_get : maybe A -> A -> A] as [_m.has_value() ? *_m : _d]:
+      "incompatible operand types".
+
+    Fixed: a type variable instantiated at a function type was spelled
+    curried, as a template argument and wherever a declaration names the
+    variable (Arrow_site Through_tvar), while values of the type are
+    spelled flat in every declared position.  A type argument is now
+    spelled as the values of its type are ([Types.template_arg_of_core_type]
+    at [Declared], [Calls.spell_as_declared]); the arrows a declaration
+    writes are one group and the instantiated variable's own arrows the
+    next ([Declared_at n]).  The step is now
+    [[](crane::fn<uint64_t(uint64_t, uint64_t)> g) { return g; }] and the
+    default a flat [crane::fn].
 
     Expected: compiles; [deque_map [plus; minus] = 2],
-    [maybe_get (Just plus) = 3], [maybe_get Nothing = 1].
-    Actual: the two compile errors above. *)
+    [maybe_get (Just plus) = 3], [maybe_get Nothing = 1]. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
 From Corelib Require Import PrimString.
 From Crane Require Import Extraction Mapping.Descriptor.

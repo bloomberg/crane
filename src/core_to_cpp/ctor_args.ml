@@ -178,7 +178,7 @@ let ctor_draft_temps cx env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t op
           | None -> raw_tys )
         | _ -> raw_tys
       in
-      let temps = Types.template_params_of_core cx ~site:Through_tvar env tys in
+      let temps = Types.template_params_of_core cx ~site:Declared env tys in
       if List.for_all Cpp_ir.Types.prints_as_any temps && promoted_active then
         match promoted_tys_of_arity cx (List.length tys) with
         | Some promoted_tys -> promoted_tys
