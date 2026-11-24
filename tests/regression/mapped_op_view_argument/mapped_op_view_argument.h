@@ -170,18 +170,18 @@ struct Uint63Axioms {
 
 struct MappedOpViewArgument {
   static std::string deque_fold(const std::deque<uint64_t> &l,
-                                std::string_view s);
-  static std::string maybe_get(std::string_view s);
+                                const std::string &s);
+  static std::string maybe_get(const std::string &s);
   static uint64_t len(std::string_view s);
-  static inline const uint64_t result =
-      (len(deque_fold(
-           [](auto _a0, auto _a1) {
-             _a1.push_front(_a0);
-             return _a1;
-           }(UINT64_C(1), [](auto _a0, auto _a1) {
-             _a1.push_front(_a0);
-             return _a1;
-           }(UINT64_C(2), std::deque<uint64_t>{})),
-           std::string_view("xyz"))) +
-       len(maybe_get(std::string_view("q"))));
+  static inline const uint64_t result = (len(deque_fold(
+                                             [](auto _a0, auto _a1) {
+                                               _a1.push_front(_a0);
+                                               return _a1;
+                                             }(UINT64_C(1),
+                                               [](auto _a0, auto _a1) {
+                                                 _a1.push_front(_a0);
+                                                 return _a1;
+                                               }(UINT64_C(2),
+                                                 std::deque<uint64_t>{})),
+                                             "xyz")) + len(maybe_get("q")));
 };

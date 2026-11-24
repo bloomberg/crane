@@ -89,20 +89,24 @@ let read_off ?(sequential = false) ~settled n body =
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _}; arguments = args}
       when Base.Table.is_mapped_operation g ->
       let op = Base.Mapping_operation.find g in
-      let uses = Base.Mapping_operation.call_argument_uses op in
-      let names =
+      let arguments =
         List.map
-          (fun k ->
-            Option.map
-              (fun (a : Base.Mapping_operation.argument) -> a.name)
-              (List.find_opt (fun (a : Base.Mapping_operation.argument) -> a.binder = k) op.arguments) )
+          (fun k -> List.find_opt (fun (a : Base.Mapping_operation.argument) -> a.binder = k) op.arguments)
           op.call_binders
       in
       List.iteri
         (fun j a ->
-          match (direct a, List.nth_opt uses j) with
-          | Some i, Some (Some use) ->
-            note (param_of env i) (of_use ~facts:op.facts ?name:(Option.bind (List.nth_opt names j) Fun.id) use)
+          match (direct a, List.nth_opt arguments j) with
+          | Some i, Some (Some (arg : Base.Mapping_operation.argument)) ->
+            let r = of_use ~facts:op.facts ~name:arg.name arg.use in
+            (* An argument the template is given no view of -- its binder's
+               type is no mapped type with a view, a type variable say --
+               receives the canonical value: a view passed there would reach
+               the template as it is, and be returned or stored as a view. *)
+            let r =
+              if r.access <> Unused && Option.is_empty arg.view then {r with representation = Canonical} else r
+            in
+            note (param_of env i) r
           | _ -> walk env a )
         args
     (* In a sequential monad a bind's continuation is the rest of the

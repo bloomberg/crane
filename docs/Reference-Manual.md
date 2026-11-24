@@ -428,8 +428,12 @@ mentions it.
 | `Replace` | may replace or reseat the caller's value | `T&` |
 | `OpaqueUse` | unknown | conservative |
 
-An argument written or replaced in place must be a variable the caller may
-write; anything else is copied into a temporary for the call.
+A view is given only to an argument whose binder's type is a mapped type
+declaring one: an argument typed by a type variable (`d : A`) receives the
+canonical value whatever its use, so a caller's parameter passed there is
+not taken as a view. An argument written or replaced in place must be a
+variable the caller may write; anything else is copied into a temporary
+for the call.
 
 | `ResultSpec` | Meaning |
 | --- | --- |
