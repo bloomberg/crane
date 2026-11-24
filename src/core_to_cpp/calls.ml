@@ -1091,6 +1091,35 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
     |> List.filter (fun (v, t) -> not (mem v phantom_vars && Cpp_ir.Types.prints_as_any t))
   in
   let regular_type_args = regular_of tys in
+  (* A type argument the call's expected result writes with its arrows
+     grouped otherwise -- [pure f] put where [ap] takes [F (A -> B)], at
+     [A -> B := nat -> nat -> nat] -- is that grouping: the value is read
+     there, and a type argument is a choice the call makes.  The variable's
+     spelling is read off the expected type where the callee's codomain
+     names the variable under inductives or a carrier variable. *)
+  let regular_type_args =
+    let has_function = Cpp_ir.Types.exists (function Cpp_ir.Type.Function _ -> true | _ -> false) in
+    match (expected_ty, callee_core_type cx id) with
+    | Some exp, Some core_ty when List.exists (fun (_, t) -> has_function t) regular_type_args ->
+      let rec bind acc (p : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) =
+        match (resolve_meta p, t) with
+        | _, (Const t | Reference (_, t) | In_namespace (_, t)) -> bind acc p t
+        | Core.Type.Variable {variable = j; _}, t -> if List.mem_assoc j acc then acc else (j, t) :: acc
+        | ( (Core.Type.Global_app {type_arguments = ps; _} | Core.Type.Variable_app {arguments = ps; _}),
+            Entity_application (_, ts, _) )
+          when List.compare_lengths ps ts = 0 ->
+          List.fold_left2 bind acc ps ts
+        | _ -> acc
+      in
+      let bound = bind [] (core_codomain core_ty) (Types.unfold_cpp_typedef cx env exp) in
+      List.map
+        (fun (v, t) ->
+          match List.assoc_opt (Core.Scheme.Var.ordinal v) bound with
+          | Some t' when t' <> t && Cpp_ir.Types.same_arrows t t' -> (v, t')
+          | _ -> (v, t) )
+        regular_type_args
+    | _ -> regular_type_args
+  in
   (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
      non-empty but all entries were erased (Core.Type.Erased Core.Erasure_reason.Type_argument) →
      filter_erased_type_args drops them all. (b) tys is empty — the Rocq
@@ -2005,6 +2034,14 @@ let spell_as_declared (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.
         let ocod = core_drop_arrows k orig in
         let cod = spell ocod (if rest = [] then cod else Function (rest, cod)) in
         Function (List.map2 spell odoms here, cod)
+    (* An inductive's arguments, or a carrier variable's, are spelled as
+       the declaration writes them too: [list (A -> A)] at a function [A]
+       holds callables taking [A] as one group, and so does [F (A -> B)]. *)
+    | ( (Core.Type.Global_app {type_arguments = oargs; _} | Core.Type.Variable_app {arguments = oargs; _}),
+        Entity_application (g, args, vs) )
+      when List.compare_lengths oargs args = 0 ->
+      Entity_application (g, List.map2 spell oargs args, vs)
+    | _, In_namespace (r, t') -> In_namespace (r, spell orig t')
     | _ -> t
   in
   spell orig t

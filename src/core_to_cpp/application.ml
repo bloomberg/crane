@@ -256,6 +256,23 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
       | Some core_ty when not (core_type_contains_erased core_ty) -> Some core_ty
       | _ -> slot.Slot.expected_core_ty
     in
+    (* The slot the argument fills: the parameter at the call's
+       instantiation, a forwarding reference for a deduced callable, a
+       template parameter for an inline mapping's parameter at a type
+       variable. *)
+    let arg_slot : Cpp_ir.Lowered.Slot_type.t =
+      Calls.argument_slot cx env id ~deduced_callable ~written_by_var ~expected:arg_expected_ty
+        (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
+    in
+    (* The argument is built at the slot's grouping where the two are one
+       type grouped otherwise: the slot is the parameter at the type
+       arguments the call writes, which may take a function type the way
+       the call's expected result does. *)
+    let arg_expected_ty =
+      match (arg_slot, arg_expected_ty) with
+      | Exactly s, Some e when s <> e && Cpp_ir.Types.same_arrows s e -> Some s
+      | _ -> arg_expected_ty
+    in
     let arg_typed =
       Knot.gen_expr_typed cx (Slot.at ~ret ?expected_ty:arg_expected_ty ~slot:
           { slot with
@@ -265,14 +282,6 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
         env core_arg
     in
     let expr = arg_typed.expr in
-    (* The slot the argument fills: the parameter at the call's
-       instantiation, a forwarding reference for a deduced callable, a
-       template parameter for an inline mapping's parameter at a type
-       variable. *)
-    let arg_slot : Cpp_ir.Lowered.Slot_type.t =
-      Calls.argument_slot cx env id ~deduced_callable ~written_by_var ~expected:arg_expected_ty
-        (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
-    in
     let expr : Cpp_ir.Lowered.Expr.t =
       match param_core_ty with
       | Some param_ty when not deduced_callable ->

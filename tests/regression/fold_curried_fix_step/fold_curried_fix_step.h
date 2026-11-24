@@ -140,13 +140,10 @@ public:
 
 struct FoldCurriedFixStep {
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, const F0 &, const uint64_t &,
-                                   uint64_t &>
   static uint64_t g(F0 &&base, const List<uint64_t> &l, uint64_t x0_,
                     uint64_t x1_) {
-    return l.template fold_right<
-        crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>(
-        [](uint64_t, crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)> acc) {
+    return l.template fold_right<crane::fn<uint64_t(uint64_t, uint64_t)>>(
+        [](uint64_t, crane::fn<uint64_t(uint64_t, uint64_t)> acc) {
           auto go =
               [=](List<bool> m, crane::fn<uint64_t(uint64_t, uint64_t)>,
                   uint64_t x0_0, uint64_t x1_0)
@@ -157,7 +154,7 @@ struct FoldCurriedFixStep {
                 while (true) {
                   if (std::holds_alternative<typename List<bool>::Nil>(
                           _loop_m.v_mut())) {
-                    return crane::apply2(acc, x0_0, x1_0);
+                    return acc(x0_0, x1_0);
                   } else {
                     auto &[_, a1] =
                         std::get<typename List<bool>::Cons>(_loop_m.v_mut());
@@ -166,20 +163,12 @@ struct FoldCurriedFixStep {
                   }
                 }
               };
-          return [=](uint64_t _pa0) {
-            return [=, acc = acc](uint64_t _pa1) {
-              return go(List<bool>::nil(),
-                        [=, acc = acc](uint64_t _rg0_0,
-                                       uint64_t _rg0_1) {
-                          return crane::apply2(acc, _rg0_0, _rg0_1);
-                        },
-                        _pa0, _pa1);
-            };
+          return [=](uint64_t _pa0,
+                     uint64_t _pa1) {
+            return go(List<bool>::nil(), acc, _pa0, _pa1);
           };
         },
-        [=](uint64_t _ec0) {
-          return [=, base = base](uint64_t _ec1) { return base(_ec0, _ec1); };
-        })(x0_)(x1_);
+        base)(x0_, x1_);
   }
 
   static inline const uint64_t result =
