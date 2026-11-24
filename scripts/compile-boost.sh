@@ -2,20 +2,21 @@
 # Compile C++ files that include Boost headers (header-only libraries such as
 # boost::multiprecision): compile-std.sh with Boost's include directory on the
 # system include path, so that Boost's own headers are exempt from -Werror.
+# Boost under /usr needs nothing: /usr/include is a system directory already.
 # Usage: compile-boost.sh <project_root> output.exe source1.cpp source2.cpp ...
 # Without Boost, writes a stub that reports the test skipped.
 
 set -e
 
-BOOST_INCLUDE=""
-for prefix in "${BOOST_PREFIX:-}" /opt/homebrew/opt/boost /opt/homebrew /usr/local /usr; do
-    if [ -n "$prefix" ] && [ -f "$prefix/include/boost/multiprecision/cpp_int.hpp" ]; then
-        BOOST_INCLUDE="$prefix/include"
-        break
-    fi
-done
+# The search is test-deps.sh's and the compile is compile-std.sh's, both read
+# from the source tree (as compile-std.sh reads theories/cpp): a dune rule
+# copies only the script it runs into _build.
+SOURCE_ROOT="$(cd "$1" && pwd -P)"
+SOURCE_ROOT="${SOURCE_ROOT%/_build/default}"
+# shellcheck source=test-deps.sh
+. "$SOURCE_ROOT/scripts/test-deps.sh"
 
-if [ -z "$BOOST_INCLUDE" ]; then
+if ! BOOST_PREFIX_FOUND=$(find_boost_prefix); then
     OUTPUT="$2"
     echo "Boost not found, creating skip stub for $OUTPUT" >&2
     cat > "$OUTPUT.cpp" << 'STUB_EOF'
@@ -27,5 +28,8 @@ STUB_EOF
     exit 0
 fi
 
-export CPLUS_INCLUDE_PATH="$BOOST_INCLUDE${CPLUS_INCLUDE_PATH:+:$CPLUS_INCLUDE_PATH}"
-exec "$(dirname "$0")/compile-std.sh" "$@"
+BOOST_INCLUDE=$(dep_include_dir "$BOOST_PREFIX_FOUND")
+if [ -n "$BOOST_INCLUDE" ]; then
+    export CPLUS_INCLUDE_PATH="$BOOST_INCLUDE${CPLUS_INCLUDE_PATH:+:$CPLUS_INCLUDE_PATH}"
+fi
+exec "$SOURCE_ROOT/scripts/compile-std.sh" "$@"

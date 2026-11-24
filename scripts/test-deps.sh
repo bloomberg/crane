@@ -3,9 +3,10 @@
 # runs (compile-bde.sh, compile-gmp.sh, compile-boost.sh), never from its
 # name, so a test named bde_foo and one named foo_bde are treated alike.
 #
-# The detection mirrors the compile scripts' own search lists; keep them in
-# step.  CRANE_WITHOUT="bde gmp boost" (any subset) pretends a library is
-# absent, to rehearse a machine that lacks it.
+# The detection mirrors the BDE and GMP compile scripts' search lists; keep
+# them in step (compile-boost.sh sources this file instead).
+# CRANE_WITHOUT="bde gmp boost" (any subset) pretends a library is absent, to
+# rehearse a machine that lacks it.
 
 # test_dep <suite-dune> <test-name>: prints bde, gmp or boost, or nothing for
 # a test that needs only the standard library (or has no rule).
@@ -61,7 +62,7 @@ find_gmp_prefix() {
     return 1
 }
 
-# find_boost_prefix: as compile-boost.sh.
+# find_boost_prefix: compile-boost.sh's search too.
 find_boost_prefix() {
     _dep_disabled boost && return 1
     local prefix
@@ -72,6 +73,15 @@ find_boost_prefix() {
         fi
     done
     return 1
+}
+
+# dep_include_dir <prefix>: the include directory to add for a library
+# installed at <prefix>, or nothing for /usr.  The compiler already searches
+# /usr/include, after the C++ standard library's own directories; naming it
+# again (-isystem, CPLUS_INCLUDE_PATH) moves it ahead of them, and their
+# [#include_next <math.h>] then finds nothing.
+dep_include_dir() {
+    [ "$1" = /usr ] || echo "$1/include"
 }
 
 # dep_prefix <bde|gmp|boost>: the install prefix, or failure if absent.
