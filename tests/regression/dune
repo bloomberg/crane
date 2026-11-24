@@ -16081,3 +16081,14 @@
   (alias runtest)
   (deps loopify_shared_variant_moved_read.t.exe)
   (action (run ./loopify_shared_variant_moved_read.t.exe))))
+
+(subdir prim_string_pair_literal_copy_mode
+ (rule
+  (targets prim_string_pair_literal_copy_mode.t.exe)
+  (deps PrimStringPairLiteralCopyMode.vo prim_string_pair_literal_copy_mode.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_string_pair_literal_copy_mode.t.exe prim_string_pair_literal_copy_mode.t.cpp prim_string_pair_literal_copy_mode.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_string_pair_literal_copy_mode.t.exe)
+  (action (run ./prim_string_pair_literal_copy_mode.t.exe))))
