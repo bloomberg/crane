@@ -16048,3 +16048,14 @@
   (alias runtest)
   (deps callable_crossing_matrix.t.exe)
   (action (run ./callable_crossing_matrix.t.exe))))
+
+(subdir sub_self_unused_param
+ (rule
+  (targets sub_self_unused_param.t.exe)
+  (deps SubSelfUnusedParam.vo sub_self_unused_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sub_self_unused_param.t.exe sub_self_unused_param.t.cpp sub_self_unused_param.cpp)))
+ (rule
+  (alias runtest)
+  (deps sub_self_unused_param.t.exe)
+  (action (run ./sub_self_unused_param.t.exe))))

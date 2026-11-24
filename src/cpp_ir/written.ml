@@ -114,7 +114,11 @@ and stmt : type p. p Stmt.t -> Id.t list =
   | Switch {scrutinee; branches; default; _} ->
     expr scrutinee @ List.concat_map (fun (_, b) -> body b) branches @ Option.cata body [] default
   | Match (scrutinee, branches, default) ->
-    expr scrutinee.expr
+    (* A match of one constructor, exhaustive, that binds nothing is
+       written as its branch's body alone, without its scrutinee. *)
+    ( match (branches, default) with
+    | [({field_bindings = []; var = None; _} : p Match.branch)], None -> []
+    | _ -> expr scrutinee.expr )
     @ List.concat_map
         (fun (br : p Match.branch) ->
           let bound =
