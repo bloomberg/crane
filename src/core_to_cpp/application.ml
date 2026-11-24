@@ -2398,7 +2398,8 @@ let gen_application cx (slot : Slot.slot) env (f : Core.Expr.t) (args : Core.Exp
   in
   let built : Cpp_ir.Lowered.Expr.t =
     let written = match (call.ty, recovered == result) with Typed t, true -> Some t | _ -> None in
-    match Calls.record_call_sig ?written cx env callee_ty_inst recovered with
+    let declared_arity = Option.map count_core_value_arrows callee_ty in
+    match Calls.record_call_sig ?written ?declared_arity cx env callee_ty_inst recovered with
     (* A cast, or a coercion expanding to one, records the call it reads. *)
     | r when (match Cpp_ir.Typed.head r with Any_cast _ -> true | _ -> false) ->
       Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:made_of_application ~stmt:Fun.id ~type_:Fun.id ()) r

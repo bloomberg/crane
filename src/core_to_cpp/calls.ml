@@ -1751,7 +1751,7 @@ let deduce_erased_domains : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = fun
     argument -- {!Cpp_ir.Build.signature} enforces that -- since a partial
     application, or a callee whose arrows an eta-expansion has rearranged,
     would otherwise hand the printer a misaligned list. *)
-let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (e : Cpp_ir.Lowered.Expr.t) :
+let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) ?declared_arity cx env callee_ty (e : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   match (e, callee_ty) with
   (* An immediately invoked lambda is no call of the callee: it is the
@@ -1764,10 +1764,14 @@ let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (
     let core_ty = if args = [] then core_ty else expand_core_fun_alias core_ty in
     let cpp_of ml = Types.cpp_ir_of_core_type cx env [] ml in
     (* An over-application -- the call of the call that took the callee's own
-       arguments, or of that call kept as a constant -- yields what is left
-       once both have taken theirs, read through a function alias the
-       callee's codomain is written as ([st A := nat -> A * nat]): not the
-       codomain itself. *)
+       arguments, or of that call kept as a constant -- yields what is left of
+       the callee's codomain once the outer call has taken its arguments,
+       read through the function alias the codomain is written as ([st A :=
+       nat -> A * nat]): not the codomain itself.  The inner call takes every
+       arrow the callee declares, [declared_arity] of them (its dictionaries
+       may be template arguments, so its argument count says nothing of
+       them), and not the arrows a type variable its codomain is instantiated
+       at has. *)
     let rec drop n (t : Core.Type.t) =
       if n <= 0 then Some t
       else
@@ -1785,12 +1789,20 @@ let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) cx env callee_ty (
       | _ -> 0
     in
     let over_applied =
-      if inner_args = 0 then None else drop (inner_args + List.length args) core_ty
+      match declared_arity with
+      | Some k when inner_args > 0 -> drop (k + List.length args) core_ty
+      | _ -> None
     in
     ( match
         match (written, over_applied) with
         | Some t, _ -> t
-        | None, Some t -> cpp_of t
+        (* Where the codomain's head is a carrier the call leaves to its
+           dictionary ([M (S * R)]), what is left says nothing: the
+           codomain does. *)
+        | None, Some t -> (
+          match cpp_of t with
+          | (Erased _ | Any | Obligation _ | Auto) -> cpp_of (core_codomain core_ty)
+          | c -> c )
         | None, None -> cpp_of (core_codomain core_ty)
       with
     | exception e' when CErrors.noncritical e' -> e
