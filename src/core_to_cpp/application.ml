@@ -183,6 +183,28 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
     _
   } = plan in
   let leading_params = Core_plan.Elaborated_call.leading_params call in
+  (* A methodified callee is called on its receiver, whose struct binds the
+     variables the receiver's parameter names: the member call writes none
+     of them ({!Cpp_passes.Erasure}'s method calls drop them), so a
+     parameter that names one is C++'s to deduce -- [stored.fold_left<R>(f,
+     a)] takes [stored]'s element type, whatever spelling the free call
+     would have written. *)
+  let written_by_var =
+    (* Before the unit's methods are registered (a library unit lowered
+       ahead), nothing is a method yet. *)
+    let this_pos =
+      if Option.has_some !Unit_plan.Cpp_state.method_registry then Unit_plan.Cpp_names.lookup_method_this_pos id
+      else None
+    in
+    match this_pos with
+    | None -> written_by_var
+    | Some pos -> (
+      match Core_plan.Param_pos.nth fn_param_core_tys_orig (Core_plan.Param_pos.of_regular ~leading:leading_params pos) with
+      | None -> written_by_var
+      | Some receiver ->
+        let bound = collect_tvars_set IntSet.empty receiver in
+        List.filter (fun (v, _) -> not (IntSet.mem (Core.Scheme.Var.ordinal v) bound)) written_by_var )
+  in
   List.mapi (fun i core_arg : Typed.t ->
     match strip_magic core_arg with
     | Core.Expr.Erased_value _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated @@ (
