@@ -16070,3 +16070,14 @@
   (alias runtest)
   (deps loopify_param_moved_read.t.exe)
   (action (run ./loopify_param_moved_read.t.exe))))
+
+(subdir loopify_shared_variant_moved_read
+ (rule
+  (targets loopify_shared_variant_moved_read.t.exe)
+  (deps LoopifySharedVariantMovedRead.vo loopify_shared_variant_moved_read.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_shared_variant_moved_read.t.exe loopify_shared_variant_moved_read.t.cpp loopify_shared_variant_moved_read.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_shared_variant_moved_read.t.exe)
+  (action (run ./loopify_shared_variant_moved_read.t.exe))))

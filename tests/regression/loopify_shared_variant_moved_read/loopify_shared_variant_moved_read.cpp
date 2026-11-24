@@ -36,7 +36,7 @@ LoopifySharedVariantMovedRead::g(const List<uint64_t> &l) {
           _result = k_1.template fold_left<LoopifySharedVariantMovedRead::tree>(
               [](LoopifySharedVariantMovedRead::tree acc,
                  uint64_t) { return acc; },
-              std::move(k));
+              k);
         } else {
           _stack.emplace_back(_after_g_in_Cons{});
           _stack.emplace_back(_call{crane_raw(a1)});

@@ -3,13 +3,16 @@
     and SharedVariant, a recursion over a list whose [cons] case folds a
     one-element list with a step that matches on the tail [r], starting
     from a [match] on [r] whose [cons] branch is the recursive call [g r].
-    The ownership check under [CRANE_CHECK_IR] finds the frame's
-    continuation reading a value it already moved.  Without SharedVariant,
-    or without Loopify, it extracts.
+    The ownership check under [CRANE_CHECK_IR] reported "k is read after it
+    is moved": the frame loop's base case passed [std::move(k)], [k] being
+    the [static const] the constant [Node Leaf 1 Leaf] is hoisted to.
+    Fixed: Normalize's temporary for the fold's initial value was moved at
+    its use, and putting the temporary back ([Cpp_passes.Temporaries])
+    kept the move on any local it held, the hoisted static included.  A
+    static local is read again by every later evaluation, so the move is
+    dropped there.
 
-    Expected: extracts under [CRANE_CHECK_IR]; [size (g [1; 2; 3]) = 1].
-    Actual: "Crane IR check (moved value read): in
-    LoopifySharedVariantMovedRead.g, k is read after it is moved". *)
+    Expected: extracts under [CRANE_CHECK_IR]; [size (g [1; 2; 3]) = 1]. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
