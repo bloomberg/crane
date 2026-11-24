@@ -66,6 +66,17 @@ int main() {
     ASSERT(result == "foo5");
   }
 
+  // Test 6: two counters are two cells
+  {
+    auto c1 = GlobalStateTests::counter();
+    auto c2 = GlobalStateTests::counter();
+    (void)GlobalStateTests::counter_next_mine(c1);
+    (void)GlobalStateTests::counter_next_mine(c1);
+    auto result = GlobalStateTests::counter_next_mine(c2);
+    ASSERT(result == 0);
+    std::cout << "Test 6 (fresh counter starts at 0): " << result << std::endl;
+  }
+
   if (testStatus == 0) {
     std::cout << "\nAll global state tests passed!" << std::endl;
   } else {

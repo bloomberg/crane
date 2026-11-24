@@ -315,6 +315,41 @@ T1 partition(std::shared_ptr<crane::array_storage<uint64_t>> arr, T1 arr_idx,
   return storeIndex;
 }
 
+template <typename _tcI0, typename _tcI1, typename T1, typename T2 = void>
+  requires STRefClass<_tcI0, T1> && Ix<_tcI1, T1>
+void quicksort_ST(uint64_t fuel,
+                  std::shared_ptr<crane::array_storage<uint64_t>> arr,
+                  T1 arr_idx, const T1 &l, const T1 &r) {
+  if (fuel <= 0) {
+    return;
+  } else {
+    uint64_t fuel_ = fuel - 1;
+    if (_tcI1::toNat(l) < _tcI1::toNat(r)) {
+      uint64_t leftn = _tcI1::toNat(l);
+      uint64_t rightn = _tcI1::toNat(r);
+      uint64_t pivotIndexn =
+          (leftn +
+           (UINT64_C(2) ? (((rightn - leftn) > rightn ? 0 : (rightn - leftn))) /
+                          UINT64_C(2)
+                        : 0));
+      T1 newPivot = partition<_tcI0, _tcI1>(arr, arr_idx, l, r,
+                                            _tcI1::fromNat(pivotIndexn));
+      auto _once1 = _tcI1::toNat(newPivot);
+      quicksort_ST<_tcI0, _tcI1, T1, T2>(
+          fuel_, arr, arr_idx, l,
+          _tcI1::fromNat(
+              (((_once1 - UINT64_C(1)) > _once1 ? 0
+                                                : (_once1 - UINT64_C(1))))));
+      quicksort_ST<_tcI0, _tcI1, T1, T2>(
+          fuel_, std::move(arr), std::move(arr_idx),
+          _tcI1::fromNat((_tcI1::toNat(std::move(newPivot)) + UINT64_C(1))), r);
+      return;
+    } else {
+      return;
+    }
+  }
+}
+
 template <typename F1>
   requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
 List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,

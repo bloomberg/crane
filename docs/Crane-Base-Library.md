@@ -285,13 +285,13 @@ stores addressable `bool`s, so the span mapping holds for every element
 type. Arrays are reference counted; cycles through an array are not
 collected.
 
-`Module Recursion` provides `rec` and `call` for writing recursive `ST`
-computations; it is skipped by extraction, and `rec`/`call` are mapped to an
-explicit work-stack idiom.
+Recursive `ST` code is an ordinary `Fixpoint`; one that is not structural
+recursion runs on fuel (`tests/monadic/st_quicksort`).
 
 ### `Monads/GlobalState.v`, `Monads/Error.v`
 
-A global-state event family (`crane_globals.h`) with its reasoning facts in
+A global-state event family, its references mapped as ST references
+(`std::shared_ptr<A>`), with its reasoning facts in
 `GlobalStateFacts.v`, and `Err`, the error type of runtime errors raised
 through ITree's exception events.
 
@@ -352,7 +352,6 @@ Generated code includes these by name, so `theories/cpp` (or
 | `crane_thread.h` | `crane::thread`, a copyable thread handle |
 | `crane_itree.h` | reified interaction trees |
 | `crane_real.h` | the `Real` class |
-| `crane_globals.h` | storage for the global-state event family |
 | `stm_adapter.h`, `crane-stm/` | the STM API and its implementation |
 | `mini_stm.h` | an earlier single-header STM, kept as the reference for `stm_adapter.h`'s API |
 | `skipnode.h` | support for the STM skip-list example |

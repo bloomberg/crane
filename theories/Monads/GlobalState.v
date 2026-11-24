@@ -191,20 +191,60 @@ Definition runGlob {A : Type}
 Crane Extract Skip GlobEvent.
 Crane Extract Skip mkGlobRef.
 Crane Extract Skip GlobRefToIx.
-Crane Extract Inlined Constant GlobRef => "%t1".
-Crane Extract Inlined Constant newGlobRef => "(_crane_globals[%a0] = %a1, %a0)" From "crane_globals.h".
-Crane Extract Inlined Constant readGlobRef => "crane::any_cast<%t2>(_crane_globals.at(%a1))" From "crane_globals.h".
-Crane Extract Inlined Constant writeGlobRef => "_crane_globals[%a1] = %a2" From "crane_globals.h".
+(** A global reference is a [std::shared_ptr<A>], as an ST reference
+    (theories/Monads/STMonad.v): a fresh cell per [newGlobRef]. *)
 
+From Crane Require Import Mapping.Descriptor.
+Import ListNotations.
 
+Crane Extraction Implicit newGlobRef [idx].
+Crane Extraction Implicit readGlobRef [idx].
+Crane Extraction Implicit writeGlobRef [idx].
 
+#[export] Instance glob_ref_mapping (T : Type) (H : GlobRefClass T) (A : Type)
+  : TypeMapping (@GlobRef T H A) :=
+  {| type_headers := ["memory"%pstring];
+     type_cpp := Crane.Cpp.Apply "std::shared_ptr"
+                   [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "contents")];
+     type_components :=
+       [{| component_name := "contents"; component_type := KnownType A |}];
+     type_copy := RetainIdentity;
+     type_access := MutableHandle HandleByConstReference;
+     type_views := NoViews (@GlobRef T H A);
+     type_interface := AbstractInterface;
+     type_model := Identity;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}%pstring.
 
+#[export] Instance new_glob_ref_mapping : OperationMapping (Ref (@newGlobRef)) :=
+  {| operation_headers := ["memory"];
+     operation_cpp := Expr "std::make_shared<%stored(contents)>(%arg(v))";
+     operation_contract :=
+       EffectfulOperation
+         [{| argument_name := "v"; argument_use := Take |}]
+         (ReturnFreshIdentity
+            [{| initial_component := "contents";
+                initial_source_argument := Some "v";
+                initial_multiplicity := InitialiseOnce |}])
+         [] |}%pstring.
 
+#[export] Instance read_glob_ref_mapping : OperationMapping (Ref (@readGlobRef)) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "*%arg(ref)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "ref"; argument_use := Read |}]
+         ReturnValue
+         [ReadsComponent {| path_argument := "ref"; path_components := ["contents"] |}] |}%pstring.
 
-
-
-
-
-
-
-
+#[export] Instance write_glob_ref_mapping : OperationMapping (Ref (@writeGlobRef)) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "*%arg(ref) = %arg(a)";
+     operation_contract :=
+       EffectfulOperation
+         [{| argument_name := "ref"; argument_use := Write |};
+          {| argument_name := "a"; argument_use := Take |}]
+         ReturnValue
+         [WritesComponent {| path_argument := "ref"; path_components := ["contents"] |} (Some "a");
+          InvalidatesElementBorrows {| path_argument := "ref"; path_components := ["contents"] |}] |}%pstring.

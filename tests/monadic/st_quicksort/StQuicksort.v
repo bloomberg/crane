@@ -56,25 +56,23 @@ Section Quicksort.
     swapArray (idx := arr_idx) arr storeIndex right;;
     Ret storeIndex.
 
-  (** The two recursive calls are [call] events tied by [rec] (internally
-      [mrec]). A [CoFixpoint] with [Tau] around the recursive calls would not
-      do: the first call sits on the left of a bind, which the guard
-      condition rejects. *)
-  Definition quicksort_ST_body (args : STArray T S nat * T * T * T)
-    : itree (callE (STArray T S nat * T * T * T) unit +' E0) unit :=
-    let '(arr, arr_idx, l, r) := args in
-    if Nat.ltb (toNat l) (toNat r) then
-      let leftn := toNat l in
-      let rightn := toNat r in
-      let pivotIndexn := leftn + ((rightn - leftn) / 2) in
-      newPivot <- partition arr arr_idx l r (fromNat pivotIndexn);;
-      call (arr, arr_idx, l, fromNat (toNat newPivot - 1));;
-      call (arr, arr_idx, fromNat (toNat newPivot + 1), r)
-    else ITreeDefinition.Ret tt.
-
-  Definition quicksort_ST (arr : STArray T S nat) (arr_idx left right : T)
+  (** The recursion is not structural (the pivot comes out of an effectful
+      [partition]), so it runs on [fuel]: a segment of [n] elements needs
+      [n] steps. *)
+  Fixpoint quicksort_ST (fuel : nat) (arr : STArray T S nat) (arr_idx l r : T)
     : itree E0 unit :=
-    rec quicksort_ST_body (arr, arr_idx, left, right).
+    match fuel with
+    | O => Ret tt
+    | Datatypes.S fuel' =>
+      if Nat.ltb (toNat l) (toNat r) then
+        let leftn := toNat l in
+        let rightn := toNat r in
+        let pivotIndexn := leftn + ((rightn - leftn) / 2) in
+        newPivot <- partition arr arr_idx l r (fromNat pivotIndexn);;
+        quicksort_ST fuel' arr arr_idx l (fromNat (toNat newPivot - 1));;
+        quicksort_ST fuel' arr arr_idx (fromNat (toNat newPivot + 1)) r
+      else Ret tt
+    end.
 
   Definition quicksort_ST_list (xs : list nat) : itree E0 (list nat) :=
     match xs with
@@ -82,7 +80,7 @@ Section Quicksort.
     | _ :: _ =>
       let lastIndex := fromNat (length xs - 1) in
       arr <- newListArray zero zero lastIndex xs;;
-      quicksort_ST arr zero zero lastIndex;;
+      quicksort_ST (length xs) arr zero zero lastIndex;;
       getElems (idx := zero) arr
     end.
 
@@ -110,12 +108,8 @@ Module StQuicksort.
 
   Transparent quicksort_fun.
   Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
-  (** [partition] and [swapArray] stay functions of their own, taking the
-      array as a [const std::shared_ptr<std::vector<uint64_t>>&].  The body
-      of the recursion is unfolded into [quicksort_ST]: its [call] events
-      push onto the stack of the loop [rec] is mapped to. *)
   Definition quicksort_ST_mine :=
-    Eval unfold quicksort_ST_list, quicksort_ST, quicksort_ST_body in
+    Eval unfold quicksort_ST_list in
       (@quicksort_ST_list nat unit Nat.le nat_idx nat_stref).
 
   Definition nth := Eval unfold List.nth in (@List.nth nat).
@@ -147,8 +141,11 @@ Module StQuicksort.
 End StQuicksort.
 
 Set Crane Loopify.
+(** The two recursive calls stay C++ recursion, as deep as the sort:
+    Loopify cannot yet lower two self-calls in sequence at [itree E unit]
+    (tests/wip/itree_two_self_calls). *)
+Crane NoLoopify quicksort_ST.
 Crane Extract Inlined Constant StQuicksort.runST' => "%a0".
-Crane Extract Skip callE.
 
 Crane Extraction "st_quicksort" StQuicksort.
 

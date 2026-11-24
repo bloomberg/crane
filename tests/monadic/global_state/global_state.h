@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <atomic>
 #include <concepts>
-#include <crane_globals.h>
 #include <crane_itree.h>
 #include <crane_string.h>
 #include <cstdint>
@@ -166,18 +165,6 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct GlobalStateExamples {
-  template <typename _tcI0, typename T1>
-    requires Ix<_tcI0, T1>
-  static T1 idx_x();
-  template <typename _tcI0, typename T1>
-    requires Ix<_tcI0, T1>
-  static T1 idx_y();
-  template <typename _tcI0, typename T1>
-    requires Ix<_tcI0, T1>
-  static T1 ctr_idx();
-};
-
 struct GlobRefNat {
   // DATA
   uint64_t a;
@@ -245,12 +232,10 @@ struct GlobalStateTests {
   template <typename _tcI0, typename _tcI1>
     requires GlobRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
-    auto _once1 = _tcI1::zero();
-    uint64_t r1 = (_crane_globals[_once1] = UINT64_C(5), _once1);
-    auto _once2 = _tcI1::suc(_tcI1::zero());
-    uint64_t r2 = (_crane_globals[_once2] = UINT64_C(6), _once2);
-    uint64_t x1 = crane::any_cast<uint64_t>(_crane_globals.at(std::move(r1)));
-    uint64_t x2 = crane::any_cast<uint64_t>(_crane_globals.at(std::move(r2)));
+    std::shared_ptr<uint64_t> r1 = std::make_shared<uint64_t>(UINT64_C(5));
+    std::shared_ptr<uint64_t> r2 = std::make_shared<uint64_t>(UINT64_C(6));
+    uint64_t x1 = *r1;
+    uint64_t x2 = *r2;
     return std::make_pair(x1, x2);
   }
 
@@ -260,54 +245,38 @@ struct GlobalStateTests {
     if (n < UINT64_C(2)) {
       return n;
     } else {
-      auto _once1 = _tcI1::zero();
-      uint64_t x = (_crane_globals[_once1] = UINT64_C(0), _once1);
-      auto _once2 = _tcI1::suc(_tcI1::zero());
-      uint64_t y = (_crane_globals[_once2] = UINT64_C(1), _once2);
-      auto fib_loop = [](uint64_t k, uint64_t x0, uint64_t y0) -> uint64_t {
-        // Loop replaces the tail recursion: each recursive call updates the
-        // loop variables.
-        uint64_t _loop_k = k;
-        while (true) {
-          if (_loop_k <= 0) {
-            return crane::any_cast<uint64_t>(_crane_globals.at(x0));
-          } else {
-            uint64_t k_ = _loop_k - 1;
-            uint64_t x_ = crane::any_cast<uint64_t>(_crane_globals.at(x0));
-            uint64_t y_ = crane::any_cast<uint64_t>(_crane_globals.at(y0));
-            _crane_globals[x0] = y_;
-            _crane_globals[y0] = (x_ + y_);
-            _loop_k = k_;
-          }
-        }
-      };
+      std::shared_ptr<uint64_t> x = std::make_shared<uint64_t>(UINT64_C(0));
+      std::shared_ptr<uint64_t> y = std::make_shared<uint64_t>(UINT64_C(1));
+      auto fib_loop =
+          [](uint64_t k, const std::shared_ptr<uint64_t> &x0,
+             const std::shared_ptr<uint64_t> &y0)
+               -> uint64_t {
+            // Loop replaces the tail recursion: each recursive call updates the
+            // loop variables.
+            uint64_t _loop_k = k;
+            while (true) {
+              if (_loop_k <= 0) {
+                return *x0;
+              } else {
+                uint64_t k_ = _loop_k - 1;
+                uint64_t x_ = *x0;
+                uint64_t y_ = *y0;
+                *x0 = y_;
+                *y0 = (x_ + y_);
+                _loop_k = k_;
+              }
+            }
+          };
       return fib_loop(n, std::move(x), std::move(y));
     }
   }
 
   static uint64_t fib_fun(uint64_t n);
-  static uint64_t counter();
-  static uint64_t counter_next_mine(uint64_t ctr);
-  static std::string gensym(uint64_t counter0, const std::string &prefix);
+  static std::shared_ptr<uint64_t> counter();
+  static uint64_t counter_next_mine(const std::shared_ptr<uint64_t> &ctr);
+  static std::string gensym(const std::shared_ptr<uint64_t> &counter0,
+                            const std::string &prefix);
 };
-
-template <typename _tcI0, typename T1>
-  requires Ix<_tcI0, T1>
-T1 GlobalStateExamples::idx_x() {
-  return _tcI0::zero();
-}
-
-template <typename _tcI0, typename T1>
-  requires Ix<_tcI0, T1>
-T1 GlobalStateExamples::idx_y() {
-  return _tcI0::suc(_tcI0::zero());
-}
-
-template <typename _tcI0, typename T1>
-  requires Ix<_tcI0, T1>
-T1 GlobalStateExamples::ctr_idx() {
-  return _tcI0::suc(_tcI0::suc(_tcI0::zero()));
-}
 
 inline uint64_t GlobRefNat::GlobRefToIxNat() const {
   const auto &[a] = *this;

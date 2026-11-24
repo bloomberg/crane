@@ -319,7 +319,7 @@
 (subdir global_state
  (rule
   (targets global_state.t.exe)
-  (deps GlobalStateExamples.vo global_state.t.cpp (source_tree .))
+  (deps GlobalStateExtractionTests.vo global_state.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} global_state.t.exe global_state.t.cpp global_state.cpp)))
  (rule
