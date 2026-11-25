@@ -1992,15 +1992,19 @@ let plan_call cx ~ret ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (in
   (* The callee's variables as the call's expected result instantiates
      them: its declared codomain, named [T1]..[Tn] and with a plain family's
      application taken off, matched against that type.  Read by the argument
-     loop below for a parameter the substitution left erased. *)
+     loop below for a parameter the substitution left erased.  Nothing for
+     an over-applied call: its position states the type of its result
+     applied to the excess arguments, not of its result. *)
   let result_tvar_map =
     lazy
-      (binding_results_of id (fun () ->
-           callee_result_bindings cx env id
-             ~explicit:(expected_ty <> None)
-             ( match expected_ty with
-             | Some _ -> expected_ty
-             | None -> ret ) ) )
+      ( if excess_args <> [] then ([], [])
+        else
+          binding_results_of id (fun () ->
+              callee_result_bindings cx env id
+                ~explicit:(expected_ty <> None)
+                ( match expected_ty with
+                | Some _ -> expected_ty
+                | None -> ret ) ) )
   in
   {
     instantiated = inst;
@@ -2295,7 +2299,19 @@ let argument_position cx ~ret ~local_callable env id plan i core_arg =
        about the type the constructor's own annotation knows better: it
        carries this producer's instantiation, which the parameter type may
        have erased.  So take the currying and nothing else. *)
-    | Core.Expr.Construct _ -> param_expected_recurried ()
+    | Core.Expr.Construct {result_type; _} -> (
+      match param_expected_recurried () with
+      | Some _ as t -> t
+      (* An annotation that spells the slot's type through a function
+         alias unfolded ([list (nat -> nat -> nat * nat)] for [list (nat ->
+         st nat)]) is the same type grouped otherwise: the slot's grouping
+         is the one the callee reads. *)
+      | None -> (
+        match param_expected_subst () with
+        | Some p ->
+          let own = Types.cpp_of_core cx env result_type in
+          if Types.regrouped_through_aliases cx env p own then Some p else None
+        | None -> None ) )
     (* A match in argument position becomes an immediately-invoked lambda,
        whose branches have to agree on one return type -- and the branches
        are where a value is spelled for the first time, so nothing inside

@@ -554,6 +554,16 @@ let rec unfold_cpp_typedef cx env (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowe
     | None -> cpp_ty )
   | _ -> cpp_ty
 
+(** Whether [a] and [b] are one type with its arrows grouped otherwise
+    ({!Cpp_ir.Types.same_arrows}) once every alias in either is unfolded:
+    [crane::fn<st<nat>(nat)>] and [crane::fn<std::pair<nat, nat>(nat,
+    nat)>] at [st A := nat -> A * nat].  Not two spellings of one type
+    that differ only in the aliases they write. *)
+let regrouped_through_aliases cx env a b =
+  let unfold = Cpp_ir.Types.map (unfold_cpp_typedef cx env) in
+  let a = unfold a and b = unfold b in
+  a <> b && Cpp_ir.Types.same_arrows a b
+
 (** [t] with every type variable named by the default spelling of its
     index ({!Base.Common.tvar_name}) written by the index alone: the two
     print the same, and lowering records a binder's type before its

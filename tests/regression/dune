@@ -16234,3 +16234,14 @@
   (alias runtest)
   (deps twice_fn_transformer_step.t.exe)
   (action (run ./twice_fn_transformer_step.t.exe))))
+
+(subdir fn_list_state_alias_fit
+ (rule
+  (targets fn_list_state_alias_fit.t.exe)
+  (deps FnListStateAliasFit.vo fn_list_state_alias_fit.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fn_list_state_alias_fit.t.exe fn_list_state_alias_fit.t.cpp fn_list_state_alias_fit.cpp)))
+ (rule
+  (alias runtest)
+  (deps fn_list_state_alias_fit.t.exe)
+  (action (run ./fn_list_state_alias_fit.t.exe))))
