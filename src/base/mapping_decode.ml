@@ -349,6 +349,12 @@ let type_mapping env sigma c =
       type_numerals }
   | _ -> fail cx ~what:"a TypeMapping" c
 
+let local_storage env sigma c =
+  let cx = {env; sigma} in
+  match constructor_of cx "LocalStorage" c with
+  | 1, [v; _] -> string cx v
+  | _ -> fail cx ~what:"a LocalStorage" c
+
 let input_use cx c =
   match constructor_of cx "InputUse" c with
   | 1, [] -> Ignore

@@ -230,43 +230,43 @@ struct StRefs {
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
-    std::shared_ptr<uint64_t> r1 = std::make_shared<uint64_t>(UINT64_C(5));
-    std::shared_ptr<uint64_t> r2 = std::make_shared<uint64_t>(UINT64_C(6));
-    uint64_t x1 = *r1;
-    uint64_t x2 = *r2;
+    uint64_t r1 = UINT64_C(5);
+    uint64_t r2 = UINT64_C(6);
+    uint64_t x1 = *&r1;
+    uint64_t x2 = *&r2;
     return std::make_pair(x1, x2);
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static uint64_t tree_simp_nat() {
-    std::shared_ptr<uint64_t> v = std::make_shared<uint64_t>(UINT64_C(5));
-    return *v;
+    uint64_t v = UINT64_C(5);
+    return *&v;
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static uint64_t tree_simp_another_nat() {
-    std::shared_ptr<uint64_t> v = std::make_shared<uint64_t>(UINT64_C(5));
-    *v = UINT64_C(6);
-    return *v;
+    uint64_t v = UINT64_C(5);
+    *&v = UINT64_C(6);
+    return *&v;
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<bool, bool> new_and_read_both_bool() {
-    std::shared_ptr<bool> r1 = std::make_shared<bool>(false);
-    std::shared_ptr<bool> r2 = std::make_shared<bool>(true);
-    bool x1 = *r1;
-    bool x2 = *r2;
+    bool r1 = false;
+    bool r2 = true;
+    bool x1 = *&r1;
+    bool x2 = *&r2;
     return std::make_pair(x1, x2);
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static bool tree_simp_bool() {
-    std::shared_ptr<bool> v = std::make_shared<bool>(true);
-    return *v;
+    bool v = true;
+    return *&v;
   }
 };
 

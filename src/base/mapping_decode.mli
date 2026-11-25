@@ -22,6 +22,9 @@ val registered : string -> Names.GlobRef.t option
     evars. *)
 val type_mapping : Environ.env -> Evd.evar_map -> EConstr.t -> type_mapping
 
+(** The [local_view] of a [LocalStorage T] instance. *)
+val local_storage : Environ.env -> Evd.evar_map -> EConstr.t -> string
+
 (** The dictionary of an [OperationMapping (Ref d)] instance. *)
 val operation_mapping :
   Environ.env -> Evd.evar_map -> EConstr.t -> operation_mapping
