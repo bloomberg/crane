@@ -296,21 +296,21 @@ template <typename _tcI0, typename _tcI1, typename T1, typename T2 = void,
 T1 partition(std::shared_ptr<crane::array_storage<uint64_t>> arr, T1 arr_idx,
              const T1 &left, const T1 &right, const T1 &pivotIndex) {
   uint64_t pivotValue = std::span<const uint64_t>{*arr}[pivotIndex];
-  STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(
-      arr_idx, std::span<uint64_t>{*arr}, pivotIndex, right);
-  T1 storeIndex = STMonad::template for_each_with<T3, T1, T1>(
+  STMonad::template swapArray<_tcI0>(arr_idx, std::span<uint64_t>{*arr},
+                                     pivotIndex, right);
+  T1 storeIndex = STMonad::template for_each_with<void, T1, T1>(
       _tcI1::range(left, _tcI1::sub(right, _tcI1::suc(_tcI1::zero()))), left,
       [=](const T1 &storeIndex, const T1 &i) {
         uint64_t val = std::span<const uint64_t>{*arr}[i];
         if (val <= pivotValue) {
-          STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(
-              arr_idx, std::span<uint64_t>{*arr}, i, storeIndex);
+          STMonad::template swapArray<_tcI0>(arr_idx, std::span<uint64_t>{*arr},
+                                             i, storeIndex);
           return _tcI1::suc(storeIndex);
         } else {
           return storeIndex;
         }
       });
-  STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(
+  STMonad::template swapArray<_tcI0>(
       std::move(arr_idx), std::span<uint64_t>{*arr}, storeIndex, right);
   return storeIndex;
 }
