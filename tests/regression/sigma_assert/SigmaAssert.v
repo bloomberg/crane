@@ -7,10 +7,7 @@ From Stdlib Require Import Arith PeanoNat.
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
 
-(* Make sig transparent: extract to just the witness type *)
-Crane Extract Inductive sig => "%t0" [ "%a0" ]
-  "%t0 %b0a0 = %scrut; %br0".
-Crane Extract Inlined Constant proj1_sig => "%a0".
+(* [sig] is its witness ([Mapping.Shared]'s [sig_mapping]). *)
 
 Module SigmaAssert.
 
