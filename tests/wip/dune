@@ -276,17 +276,6 @@
   (deps local_fix_inlined_dict_destination.t.exe)
   (action (run ./local_fix_inlined_dict_destination.t.exe))))
 
-(subdir pick_curried_fn_overapply
- (rule
-  (targets pick_curried_fn_overapply.t.exe)
-  (deps PickCurriedFnOverapply.vo pick_curried_fn_overapply.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pick_curried_fn_overapply.t.exe pick_curried_fn_overapply.t.cpp pick_curried_fn_overapply.cpp)))
- (rule
-  (alias runtest)
-  (deps pick_curried_fn_overapply.t.exe)
-  (action (run ./pick_curried_fn_overapply.t.exe))))
-
 (subdir twice_composed_fn_destination
  (rule
   (targets twice_composed_fn_destination.t.exe)

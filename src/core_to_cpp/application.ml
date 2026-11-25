@@ -1440,12 +1440,14 @@ let eta_fun cx (slot : Slot.slot) env f args :
           in
           (* A call that already fills its callee -- [fold_right compose id
              fs] at [A := nat -> nat] -- is missing only its result's own
-             parameter.  Rocq evaluates it once, where it is written, and its
+             parameters.  Rocq evaluates it once, where it is written, and its
              result is the closure; eta-expanded, the lambda would make the
-             whole call again every time it is applied. *)
+             whole call again every time it is applied, and would apply the
+             result to the missing parameters grouped as the instantiation
+             flattens them rather than as the type argument the call writes
+             spells its codomain. *)
           let saturated =
             (not (is_inline_custom id))
-            && List.length missing_args = 1
             && match callee_arity with Some arity -> List.length args >= arity | None -> false
           in
           if saturated then
