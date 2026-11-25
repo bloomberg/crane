@@ -2014,27 +2014,27 @@ let eta_fun cx (slot : Slot.slot) env f args :
        the callee's own where the term shows it, else, for a local binder,
        the type its binding site recorded.  Only a type that states every
        part: an erased one says less than the argument's annotation. *)
+    let declared_core_params =
+      match (callee_param_tys, f) with
+      | (_ :: _ as l), _ -> l
+      | [], (Core.Expr.Bound_variable {index = j; _}
+            | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _}
+            | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _}
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _}) ->
+        let rec params = function
+          | Core.Type.Arrow {parameter = t; result = rest} -> (
+            match resolve_meta t with
+            | Core.Type.Erased _ -> params rest
+            | t when Base.Table.is_typeclass_type t -> params rest
+            | t -> t :: params rest )
+          | Core.Type.Meta {contents = Some t} -> params t
+          | _ -> []
+        in
+        (match get_env_type_opt cx j with Some t -> params t | None -> [])
+      | [], _ -> []
+    in
     let declared_core_dom i =
-      let params =
-        match (callee_param_tys, f) with
-        | (_ :: _ as l), _ -> l
-        | [], (Core.Expr.Bound_variable {index = j; _}
-              | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _}
-              | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _}
-              | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _}) ->
-          let rec params = function
-            | Core.Type.Arrow {parameter = t; result = rest} -> (
-              match resolve_meta t with
-              | Core.Type.Erased _ -> params rest
-              | t when Base.Table.is_typeclass_type t -> params rest
-              | t -> t :: params rest )
-            | Core.Type.Meta {contents = Some t} -> params t
-            | _ -> []
-          in
-          (match get_env_type_opt cx j with Some t -> params t | None -> [])
-        | [], _ -> []
-      in
-      match List.nth_opt params i with
+      match List.nth_opt declared_core_params i with
       | Some t when not (core_type_contains_erased t) -> Some t
       | _ -> arg_slot.Slot.expected_core_ty
     in
@@ -2079,7 +2079,25 @@ let eta_fun cx (slot : Slot.slot) env f args :
            The parameter's Core type says, and the slot, which every form
            hands on to the positions whose value is the argument's, refines
            the erased parts by it. *)
-        | _ -> gen_expr_typed cx (Slot.at ~ret ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} ()) env x
+        | _ ->
+          (* An argument is not a tail position: where the callee's
+             declaration states the parameter, that, not the enclosing
+             function's result, is the return type in force while it is
+             generated, and a match there, an immediately invoked lambda,
+             returns to it ({!Calls.argument_position}). *)
+          let dom =
+            match List.nth_opt declared_core_params i with
+            | Some t when not (core_type_contains_erased t) -> (
+              match Types.param_expected_cpp_ty cx env declared_core_params i with
+              | Some d when not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any d) -> Some d
+              | _ -> None )
+            | _ -> None
+          in
+          let ret = if Option.has_some dom then dom else ret in
+          let expected_ty = match x with Core.Expr.Match _ -> dom | _ -> None in
+          gen_expr_typed cx
+            (Slot.at ~ret ?expected_ty ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} ())
+            env x
       in
       let expr = value.expr in
       match List.nth_opt callee_param_tys i with

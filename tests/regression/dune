@@ -16256,3 +16256,14 @@
   (alias runtest)
   (deps twice_composed_fn_destination.t.exe)
   (action (run ./twice_composed_fn_destination.t.exe))))
+
+(subdir local_fix_alias_acc_join
+ (rule
+  (targets local_fix_alias_acc_join.t.exe)
+  (deps LocalFixAliasAccJoin.vo local_fix_alias_acc_join.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_alias_acc_join.t.exe local_fix_alias_acc_join.t.cpp local_fix_alias_acc_join.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_alias_acc_join.t.exe)
+  (action (run ./local_fix_alias_acc_join.t.exe))))

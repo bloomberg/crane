@@ -3,13 +3,15 @@
     function type ending in a function-type alias ([nat -> st nat], with
     [st A := nat -> A * nat]) and whose accumulator has that type, passed on
     through an [if] that joins a lambda with the accumulator. The generated
-    C++ is right, but the typed-fit check finds an [st nat] value stored in a
-    destination typed [nat * nat]: the eta-expanded result's pair. Passing the
-    accumulator on directly, without the [if], passes the check.
-    Expected: extracts under CRANE_CHECK_IR, [result = 7]. Actual: "Crane IR
-    check (typed fit): a value of type st<nat> put in a slot of type
-    prod<nat, nat> (destination, unrelated)". Also seen under BDE with
-    [st string]. *)
+    C++ was right, but the typed-fit check found an [st nat] value stored in
+    a destination typed [nat * nat]: the [if], an argument of the local
+    fixpoint's self-call, was built at the enclosing function's result
+    [st nat], so its lambda branch returned into that type's pair.
+
+    Fixed: an argument of a call of a local function is generated with the
+    parameter's declared type, not the enclosing function's result, as the
+    return type in force, and a match there is built at it
+    ([Application.eta_fun], a non-global callee), as for a global callee. *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Stdlib Require Import List.
