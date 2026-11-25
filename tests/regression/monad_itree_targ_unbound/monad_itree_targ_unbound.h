@@ -216,7 +216,7 @@ Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> handle(Ev) {
             throw std::logic_error("absurd case");
           });
     } else {
-      return itree_ret(std::make_pair(s, s));
+      return itree_ret(std::make_pair(s, crane_convert<T2>(s)));
     }
   };
 }

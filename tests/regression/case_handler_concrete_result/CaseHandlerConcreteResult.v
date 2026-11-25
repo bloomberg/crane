@@ -1,12 +1,12 @@
-(* [interp (case_ hl hr)] over a reified tree whose handlers return a
-   concrete result.
+(** [interp (case_ hl hr)] over a reified tree whose handlers return a
+    concrete result: [handled_left] is 1, [handled_right] is 2.
 
-   Expected: [handled_left] is 1, [handled_right] is 2.
-   Actual:   the handlers are written returning [ITree<crane::obj>] and their
-             bodies build [ITree<uint64_t>]:
-       error: no viable conversion from returned value of type
-              'shared_ptr<ITree<unsigned long long>>' to function return type
-              'shared_ptr<ITree<crane::obj>>' *)
+    Fixed: the handlers are declared returning [ITree<T1>] at their erased
+    index, and their bodies built [itree_ret(UINT64_C(1))], an
+    [ITree<uint64_t>]: the branch value is at the index its match refined
+    ([T1 = nat]), and C++ does not know the two are one type.  The value is
+    now carried across with [crane_convert<T1>] where the position deduces
+    its type ([itree_ret(%a0)] keeps the instantiation it is given). *)
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITreeReified.
 From ITree Require Import ITree.
