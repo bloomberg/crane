@@ -82,6 +82,11 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+/// An event family defined under a class Context (FailE carries the
+/// class's prov), observed by ITree.iter in run_exc.  The name
+/// records the defect it was written for, an event parameter dropped.
+/// Added without a dune stanza in 0fb638f2a; it extracts, compiles and
+/// runs.
 enum class Provenance { BUILD_PROVENANCE };
 
 struct Denotation {

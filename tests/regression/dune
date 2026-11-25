@@ -16256,3 +16256,14 @@
   (alias runtest)
   (deps template_param_redef.t.exe)
   (action (run ./template_param_redef.t.exe))))
+
+(subdir event_param_dropped
+ (rule
+  (targets event_param_dropped.t.exe)
+  (deps EventParamDropped.vo event_param_dropped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} event_param_dropped.t.exe event_param_dropped.t.cpp event_param_dropped.cpp)))
+ (rule
+  (alias runtest)
+  (deps event_param_dropped.t.exe)
+  (action (run ./event_param_dropped.t.exe))))
