@@ -184,17 +184,19 @@ template <typename ptr> struct CountE {
     return {std::move(a0), std::move(a1)};
   }
 
-  /// Takes a bool first, so it stays a function rather than becoming a
-  /// member template of CountE -- that shape has a defect of its own
-  /// (tests/wip/eta_handler_event_as_template).
-  template <Params _tcI0> std::shared_ptr<ITree<ptr>> ctx(bool) const;
+  /// Takes a bool first; it is still made a member template of
+  /// CountE, its receiver the event after the bool.
+  template <Params _tcI0, typename T1>
+  std::shared_ptr<ITree<T1>> ctx(bool) const;
 };
 
 template <Params _tcI0> std::shared_ptr<ITree<Nat>> run_mrec() {
   return Recursion::template mrec<CountE<typename _tcI0::ptr>, crane::obj, Nat>(
       []() {
         return [](CountE<typename _tcI0::ptr> _x0) -> std::shared_ptr<
-            ITree<crane::obj>> { return _x0.template ctx<_tcI0>(false); };
+            ITree<crane::obj>> {
+          return _x0.template ctx<_tcI0, crane::obj>(false);
+        };
       }(),
       CountE<typename _tcI0::ptr>::count(Nat::s(Nat::s(Nat::s(Nat::o()))),
                                          _tcI0::nullp()));
@@ -255,16 +257,15 @@ template <typename T1, typename T2, typename T3, typename F0>
 std::shared_ptr<ITree<T3>> Recursion::mrec(F0 &&ctx0,
                                            crane::rebind_t<T1, T3> d) {
   return Recursion::template interp_mrec<T1, T2, T3>(ctx0, ctx0(std::move(d)));
-} /// Takes a bool first, so it stays a function rather than becoming a
+} /// Takes a bool first; it is still made a member template of
 
-/// member template of CountE -- that shape has a defect of its own
-/// (tests/wip/eta_handler_event_as_template).
+/// CountE, its receiver the event after the bool.
 template <typename ptr>
-template <Params _tcI0> std::shared_ptr<ITree<ptr>>
+template <Params _tcI0, typename T1> std::shared_ptr<ITree<T1>>
 CountE<ptr>::ctx(bool) const {
   const auto &[a0, a1] = *this;
   if (std::holds_alternative<typename Nat::O>(a0.v())) {
-    return itree_ret(Nat::o());
+    return itree_ret(crane_convert<T1>(Nat::o()));
   } else {
     const auto &[a00] = std::get<typename Nat::S>(a0.v());
     return itree_trigger(sum1_inl(CountE<ptr>::count(*a00, a1)));
