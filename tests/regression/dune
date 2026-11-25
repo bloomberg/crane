@@ -16245,3 +16245,14 @@
   (alias runtest)
   (deps fn_list_state_alias_fit.t.exe)
   (action (run ./fn_list_state_alias_fit.t.exe))))
+
+(subdir twice_composed_fn_destination
+ (rule
+  (targets twice_composed_fn_destination.t.exe)
+  (deps TwiceComposedFnDestination.vo twice_composed_fn_destination.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} twice_composed_fn_destination.t.exe twice_composed_fn_destination.t.cpp twice_composed_fn_destination.cpp)))
+ (rule
+  (alias runtest)
+  (deps twice_composed_fn_destination.t.exe)
+  (action (run ./twice_composed_fn_destination.t.exe))))

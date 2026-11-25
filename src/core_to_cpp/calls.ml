@@ -2262,8 +2262,11 @@ let argument_position cx ~ret ~local_callable env id plan i core_arg =
         (Core_plan.Param_pos.positioned fn_param_core_tys_orig)
     | _ -> false
   in
+  (* A let in argument position is the value its body is: [let cf := ...
+     in fun c => cf (c 1)] is a lambda written against the slot. *)
+  let rec let_body = function Core.Expr.Let {body; _} -> let_body body | e -> e in
   let arg_expected_ty =
-    match core_arg with
+    match let_body core_arg with
     (* A lambda under a coercion is written against the slot all the
        same. *)
     | Core.Expr.Lambda _

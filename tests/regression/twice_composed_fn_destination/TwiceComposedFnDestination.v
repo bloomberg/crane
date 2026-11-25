@@ -1,14 +1,15 @@
 (** Found by Ephyra round 25. A polymorphic function instantiated at a
     function type, [twice] at [A := nat -> nat], whose step is a [let] of a
     two-argument local function followed by a lambda that partially applies
-    it, [let cf := fun y j => ... in fun c => cf (c 1)]. The generated C++ is
-    right, but the typed-fit check finds the partial application, a closure
-    [nat -> nat], stored in a destination typed [nat]: the lambda's result is
-    typed as if the step had the flat arity of [A -> A]. Naming the step as a
-    top-level function, or dropping [twice], passes the check.
-    Expected: extracts under CRANE_CHECK_IR, [result = 20]. Actual: "Crane IR
-    check (typed fit): a value of type closure (nat)->nat put in a slot of type
-    nat (destination, unrelated) in ... h". *)
+    it, [let cf := fun y j => ... in fun c => cf (c 1)]. The generated C++ was
+    right, but the typed-fit check found the partial application, a closure
+    [nat -> nat], stored in a destination typed [nat]: an argument written
+    as a [let] got no slot type, so the lambda it ends in was typed at the
+    flat arity of [A -> A].
+
+    Fixed: a [let] in argument position is the value its body is, and is
+    written against the parameter as that body would be
+    ([Calls.argument_position]). *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 
