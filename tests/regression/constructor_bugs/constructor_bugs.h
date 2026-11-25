@@ -12,7 +12,6 @@
 #include <variant>
 
 template <typename A> struct List;
-template <typename A> struct Sig;
 
 template <typename A> struct List {
   // TYPES
@@ -93,28 +92,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
 };
 
 struct ConstructorBugs {
@@ -281,7 +258,7 @@ struct ConstructorBugs {
   quad_tuple(const Inner &i);
   static std::pair<std::optional<Inner>, uint64_t>
   match_both_branches(const std::optional<Inner> &o);
-  static Sig<Inner> sigma_test(const Inner &i);
+  static Inner sigma_test(const Inner &i);
   static uint64_t extract(const Inner &i);
   static std::pair<Inner, uint64_t> nested_extract(const Inner &i);
   static std::pair<Outer, uint64_t> update_test(const Outer &o);

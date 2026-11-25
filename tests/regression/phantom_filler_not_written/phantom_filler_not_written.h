@@ -31,10 +31,6 @@ concept STRefClass = requires {
 
 struct Nat {};
 
-struct Sumbool {
-  static bool sumbool_of_bool(bool b);
-};
-
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -217,7 +213,7 @@ struct PhantomFillerNotWritten {
   template <typename T1 = void, typename T2 = void>
   static uint64_t sum_from(std::span<const uint64_t> arr, uint64_t hi,
                            uint64_t i) {
-    if (Sumbool::sumbool_of_bool(i < hi)) {
+    if (i < hi) {
       uint64_t v = arr[i];
       uint64_t r = sum_from<crane::obj, crane::obj>(arr, hi, (i + 1));
       return (v + r);

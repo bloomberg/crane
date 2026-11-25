@@ -4,9 +4,8 @@
 /// is the concrete Sig<std::function<uint64_t(uint64_t)>>), must be applied
 /// directly rather than through an erased-function cast.
 uint64_t
-SigFunParamResultCast::apply_sig(const Sig<crane::fn<uint64_t(uint64_t)>> &f,
-                                 uint64_t n) {
+SigFunParamResultCast::apply_sig(const crane::fn<uint64_t(uint64_t)> &x0_,
+                                 uint64_t x1_) {
   // Precondition: (g 0) == 0
-  const auto &[x] = f;
-  return x(n);
+  return x0_(x1_);
 }

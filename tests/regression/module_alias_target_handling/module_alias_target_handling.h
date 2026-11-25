@@ -16,7 +16,6 @@
 enum class Reflect;
 enum class Comparison;
 enum class CompareSpecT;
-template <typename A> struct Sig;
 template <typename A> struct Sumor;
 struct Uint;
 struct Signed_int;
@@ -49,28 +48,6 @@ struct Datatypes {
   template <typename T1>
   static CompSpecT<T1> CompSpec2Type(const T1 &_x, const T1 &_x0,
                                      Comparison x0_);
-};
-
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
 };
 
 template <typename A> struct Sumor {
@@ -1344,7 +1321,7 @@ struct N {
   static Signed_int0 to_hex_int(unsigned int n);
   static Signed_int1 to_num_int(unsigned int n);
   static Signed_int1 to_num_hex_int(unsigned int n);
-  static Sumor<Sig<unsigned int>> discr(unsigned int n);
+  static Sumor<unsigned int> discr(unsigned int n);
 
   template <typename T1>
   static T1

@@ -17,7 +17,6 @@ enum class Reflect;
 template <typename A, typename B> struct Sum;
 enum class Comparison;
 enum class CompareSpecT;
-template <typename A> struct Sig;
 struct Uint;
 struct Signed_int;
 struct Uint0;
@@ -114,28 +113,6 @@ struct Datatypes {
   template <typename T1>
   static CompSpecT<T1> CompSpec2Type(const T1 &_x, const T1 &_x0,
                                      Comparison x0_);
-};
-
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
 };
 
 struct Uint {
@@ -1435,16 +1412,14 @@ struct Nat {
   static uint64_t ones(uint64_t n);
   static uint64_t lnot(uint64_t a, uint64_t n);
   static bool Even_Odd_dec(uint64_t n);
-  using EvenT = Sig<uint64_t>;
-  using OddT = Sig<uint64_t>;
-  [[gnu::used]] static inline const EvenT EvenT_0 =
-      Sig<uint64_t>::exist(UINT64_C(0));
-  static EvenT EvenT_2(uint64_t _x, const Sig<uint64_t> &h0);
-  [[gnu::used]] static inline const OddT OddT_1 =
-      Sig<uint64_t>::exist(UINT64_C(0));
-  static OddT OddT_2(uint64_t _x, const Sig<uint64_t> &h0);
-  static OddT EvenT_S_OddT(uint64_t _x, const Sig<uint64_t> &h);
-  static EvenT OddT_S_EvenT(uint64_t _x, const Sig<uint64_t> &h);
+  using EvenT = uint64_t;
+  using OddT = uint64_t;
+  [[gnu::used]] static inline const EvenT EvenT_0 = UINT64_C(0);
+  static EvenT EvenT_2(uint64_t _x, uint64_t h0);
+  [[gnu::used]] static inline const OddT OddT_1 = UINT64_C(0);
+  static OddT OddT_2(uint64_t _x, uint64_t h0);
+  static OddT EvenT_S_OddT(uint64_t _x, uint64_t h);
+  static EvenT OddT_S_EvenT(uint64_t _x, uint64_t h);
   static EvenT even_EvenT(uint64_t n);
   static OddT odd_OddT(uint64_t n);
   static EvenT Even_EvenT(uint64_t x0_);
@@ -1453,14 +1428,14 @@ struct Nat {
 
   template <typename T1, typename T2, typename F0, typename F2>
   static T1 OddT_EvenT_rect(F0 &&hQP, const T2 &hQ0, F2 &&hPQ, uint64_t n0,
-                            const Sig<uint64_t> &h) {
+                            uint64_t h) {
     // Precondition: n == (2 * m + 1)
     if (n0 <= 0) {
-      const auto &[x0] = h;
-      if (x0 <= 0) {
+      const uint64_t &x = h;
+      if (x <= 0) {
         throw std::logic_error("absurd case");
       } else {
-        uint64_t _x = x0 - 1;
+        uint64_t _x = x - 1;
         throw std::logic_error("absurd case");
       }
     } else {
@@ -1479,7 +1454,7 @@ struct Nat {
 
   template <typename T1, typename T2, typename F0, typename F2>
   static T2 EvenT_OddT_rect(F0 &&hQP, T2 hQ0, F2 &&hPQ, uint64_t n0,
-                            const Sig<uint64_t> &hES) {
+                            uint64_t hES) {
     // Precondition: n == (2 * m)
     if (n0 <= 0) {
       return hQ0;

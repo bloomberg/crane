@@ -277,9 +277,9 @@ ConstructorBugs::match_both_branches(
   }
 }
 
-Sig<ConstructorBugs::Inner>
+ConstructorBugs::Inner
 ConstructorBugs::sigma_test(const ConstructorBugs::Inner &i) {
-  return Sig<ConstructorBugs::Inner>::exist(i);
+  return i;
 }
 
 uint64_t ConstructorBugs::extract(const ConstructorBugs::Inner &i) {

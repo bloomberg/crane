@@ -192,9 +192,9 @@ ComprehensivePatterns::closure_pair(ComprehensivePatterns::S s) {
                             [=](std::monostate) { return s.s_b; }));
 }
 
-Sig<ComprehensivePatterns::S>
+ComprehensivePatterns::S
 ComprehensivePatterns::sigma_reuse(const ComprehensivePatterns::S &s) {
-  return Sig<ComprehensivePatterns::S>::exist(s);
+  return s;
 }
 
 std::pair<uint64_t, std::pair<uint64_t, uint64_t>>

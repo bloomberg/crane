@@ -14,7 +14,6 @@
 #include <variant>
 
 template <typename A> struct List;
-template <typename A> struct Sig;
 template <typename A, typename P> struct SigT;
 template <typename A> struct T0;
 struct T;
@@ -333,28 +332,6 @@ struct Datatypes {
   static std::optional<T2> option_map(F0 &&f, const std::optional<T1> &o);
 };
 
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
 template <typename A, typename P> struct SigT {
   // DATA
   A x;
@@ -512,7 +489,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Sig<uint64_t> to_nat(uint64_t _x) const;
+  uint64_t to_nat(uint64_t _x) const;
 };
 
 struct PendantSumtreeRoundtripCase {
@@ -862,7 +839,7 @@ template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
   }
 }
 
-inline Sig<uint64_t> T::to_nat(uint64_t _x) const {
+inline uint64_t T::to_nat(uint64_t _x) const {
   const T *_self = this;
 
   // Explicit stack replaces the non-tail recursion of to_nat: _call frames are
@@ -875,7 +852,7 @@ inline Sig<uint64_t> T::to_nat(uint64_t _x) const {
   struct _after_to_nat_in_FS {};
 
   using _frame = std::variant<_call, _after_to_nat_in_FS>;
-  Sig<uint64_t> _result{};
+  uint64_t _result{};
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{_self, _x});
   while (!_stack.empty()) {
@@ -887,7 +864,7 @@ inline Sig<uint64_t> T::to_nat(uint64_t _x) const {
       uint64_t _x = _f._x;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename T::F1>(_sv.v())) {
-        _result = Sig<uint64_t>::exist(UINT64_C(0));
+        _result = UINT64_C(0);
       } else {
         const auto &[n1, a1] = std::get<typename T::FS>(_sv.v());
         _stack.emplace_back(_after_to_nat_in_FS{});
@@ -896,9 +873,9 @@ inline Sig<uint64_t> T::to_nat(uint64_t _x) const {
     } else {
       auto _f = std::move(std::get<_after_to_nat_in_FS>(_popped));
       _stack.pop_back();
-      Sig<uint64_t> _tmp1 = std::move(_result);
-      auto &[x0] = _tmp1;
-      _result = Sig<uint64_t>::exist((std::move(x0) + 1));
+      uint64_t _tmp1 = std::move(_result);
+      const uint64_t &i = _tmp1;
+      _result = (i + 1);
     }
   }
   return _result;

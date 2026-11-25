@@ -13,11 +13,10 @@
 #include <variant>
 
 template <typename A> struct List;
-template <typename A> struct Sig;
 template <typename A, typename P> struct SigT;
 
 struct Sumbool {
-  static Sig<bool> bool_of_sumbool(bool s);
+  static bool bool_of_sumbool(bool s);
 };
 
 template <typename A> struct List {
@@ -169,28 +168,6 @@ public:
     }
     return _result;
   }
-};
-
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
 };
 
 template <typename A, typename P> struct SigT {
@@ -352,13 +329,10 @@ template <typename T1, typename T2>
 halist<T1, T2> HAList0::halist_remove(const std::type_identity_t<EqDec<T1>> &eq,
                                       const T1 &k,
                                       const List<SigT<T1, T2>> &m) {
-  return m.filter([=, eq = eq, k = k](const SigT<T1, T2> &k_v) {
-    return !([&]() {
-      const auto &_sv = Sumbool::bool_of_sumbool(
-          EquivDec::template equiv_dec<T1>(eq, k_v.projT1(), k));
-      const auto &[x] = _sv;
-      return x;
-    }());
+  return m.filter([=, eq = eq, k = k](const SigT<T1,
+                                                 T2> &k_v) {
+    return !(Sumbool::bool_of_sumbool(
+                 EquivDec::template equiv_dec<T1>(eq, k_v.projT1(), k)));
   });
 }
 

@@ -1,9 +1,9 @@
 #include "loopify_coerced_self_call.h"
 
-Nat::EvenT Nat::EvenT_2(uint64_t, const Sig<uint64_t> &h0) {
+Nat::EvenT Nat::EvenT_2(uint64_t, uint64_t h0) {
   // Precondition: n == (2 * m)
-  const auto &[x0] = h0;
-  return Sig<uint64_t>::exist((x0 + 1));
+  const uint64_t &x = h0;
+  return (x + 1);
 }
 
 Nat::EvenT Nat::even_EvenT(uint64_t n) {
@@ -59,8 +59,4 @@ Nat::EvenT Nat::even_EvenT(uint64_t n) {
 /// The recursion plan read only a callee written as a bare global, saw no
 /// recursion, and the function was left calling itself: half of two
 /// million ran two million C++ frames deep.
-uint64_t LoopifyCoercedSelfCall::half(uint64_t n) {
-  const auto &_sv = Nat::even_EvenT(n);
-  const auto &[x] = _sv;
-  return x;
-}
+uint64_t LoopifyCoercedSelfCall::half(uint64_t n) { return Nat::even_EvenT(n); }

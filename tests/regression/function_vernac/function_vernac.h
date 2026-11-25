@@ -13,7 +13,6 @@
 #include <variant>
 
 template <typename A> struct List;
-template <typename A> struct Sig;
 
 template <typename A> struct List {
   // TYPES
@@ -96,28 +95,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
 struct FunctionVernac {
   template <typename F0> static uint64_t div2_F(F0 &&div3, uint64_t n) {
     if (n <= 0) {
@@ -133,7 +110,7 @@ struct FunctionVernac {
     }
   }
 
-  static Sig<uint64_t> div2_terminate(uint64_t n);
+  static uint64_t div2_terminate(uint64_t n);
   static uint64_t div2(uint64_t n);
 
   struct R_div2 {
@@ -313,7 +290,7 @@ struct FunctionVernac {
     }
   }
 
-  static Sig<uint64_t> list_sum_terminate(const List<uint64_t> &l);
+  static uint64_t list_sum_terminate(const List<uint64_t> &l);
   static uint64_t list_sum(const List<uint64_t> &l);
 
   struct R_list_sum {

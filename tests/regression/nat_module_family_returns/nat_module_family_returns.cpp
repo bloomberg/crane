@@ -649,33 +649,33 @@ bool Nat::Even_Odd_dec(uint64_t n) {
   }
 }
 
-Nat::EvenT Nat::EvenT_2(uint64_t, const Sig<uint64_t> &h0) {
+Nat::EvenT Nat::EvenT_2(uint64_t, uint64_t h0) {
   // Precondition: n == (2 * m)
-  const auto &[x0] = h0;
-  return Sig<uint64_t>::exist((x0 + 1));
+  const uint64_t &x = h0;
+  return (x + 1);
 }
 
-Nat::OddT Nat::OddT_2(uint64_t, const Sig<uint64_t> &h0) {
+Nat::OddT Nat::OddT_2(uint64_t, uint64_t h0) {
   // Precondition: n == (2 * m + 1)
-  const auto &[x0] = h0;
-  return Sig<uint64_t>::exist((x0 + 1));
+  const uint64_t &x = h0;
+  return (x + 1);
 }
 
-Nat::OddT Nat::EvenT_S_OddT(uint64_t, const Sig<uint64_t> &h) {
+Nat::OddT Nat::EvenT_S_OddT(uint64_t, uint64_t h) {
   // Precondition: (S n) == (2 * m)
-  const auto &[x0] = h;
-  if (x0 <= 0) {
+  const uint64_t &x = h;
+  if (x <= 0) {
     throw std::logic_error("absurd case");
   } else {
-    uint64_t n = x0 - 1;
-    return Sig<uint64_t>::exist(n);
+    uint64_t n = x - 1;
+    return n;
   }
 }
 
-Nat::EvenT Nat::OddT_S_EvenT(uint64_t, const Sig<uint64_t> &h) {
+Nat::EvenT Nat::OddT_S_EvenT(uint64_t, uint64_t h) {
   // Precondition: (S n) == (2 * m + 1)
-  const auto &[x0] = h;
-  return Sig<uint64_t>::exist(x0);
+  const uint64_t &x = h;
+  return x;
 }
 
 Nat::EvenT Nat::even_EvenT(uint64_t n) {

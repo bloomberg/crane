@@ -1380,12 +1380,12 @@ Signed_int1 N::to_num_hex_int(unsigned int n) {
   return Signed_int1::inthexadecimal(to_hex_int(n));
 }
 
-Sumor<Sig<unsigned int>> N::discr(unsigned int n) {
+Sumor<unsigned int> N::discr(unsigned int n) {
   if (n == 0u) {
-    return Sumor<Sig<unsigned int>>::inright();
+    return Sumor<unsigned int>::inright();
   } else {
     unsigned int p = n;
-    return Sumor<Sig<unsigned int>>::inleft(Sig<unsigned int>::exist(p));
+    return Sumor<unsigned int>::inleft(p);
   }
 }
 

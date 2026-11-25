@@ -1,13 +1,7 @@
 #include "sig_arg_match.h"
 
-Nat SigArgMatch::addp(const Sig<Nat> &p, const Sig<Nat> &q) {
+Nat SigArgMatch::addp(const Nat &p, const Nat &q) {
   // Precondition: q >= 1
   // Precondition: p >= 1
-  return [&]() {
-    const auto &[x] = p;
-    return x;
-  }().add([&]() {
-    const auto &[x0] = q;
-    return x0;
-  }());
+  return p.add(q);
 }

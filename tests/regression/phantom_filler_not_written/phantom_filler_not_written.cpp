@@ -10,11 +10,3 @@ uint64_t PhantomFillerNotWritten::sum_list(const List<uint64_t> &xs) {
   return sum_from<std::monostate, void>(std::span<const uint64_t>{*arr},
                                         xs.length(), UINT64_C(0));
 }
-
-bool Sumbool::sumbool_of_bool(bool b) {
-  if (b) {
-    return true;
-  } else {
-    return false;
-  }
-}

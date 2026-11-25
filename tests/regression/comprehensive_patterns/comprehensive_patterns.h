@@ -14,7 +14,6 @@
 #include <variant>
 
 template <typename A> struct List;
-template <typename A> struct Sig;
 
 template <typename A> struct List {
   // TYPES
@@ -97,28 +96,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
 struct ComprehensivePatterns {
   struct S {
     uint64_t s_a;
@@ -198,7 +175,7 @@ struct ComprehensivePatterns {
   static std::pair<S, uint64_t> rebind(const S &s1);
   static std::pair<crane::fn<uint64_t(std::monostate)>,
                    crane::fn<uint64_t(std::monostate)>> closure_pair(S s);
-  static Sig<S> sigma_reuse(const S &s);
+  static S sigma_reuse(const S &s);
   static std::pair<uint64_t, std::pair<uint64_t, uint64_t>>
   multi_proj_arg(const S &s);
 

@@ -42,7 +42,7 @@ bool Opaque::are_equal(uint64_t n, uint64_t m) {
   }
 }
 
-Sig<uint64_t> Opaque::bounded_add(uint64_t, uint64_t, uint64_t) {
+uint64_t Opaque::bounded_add(uint64_t, uint64_t, uint64_t) {
   throw std::logic_error(
       "unrealized axiom: CraneTestsRegression.opaque.Opaque.Opaque.bounded_add");
 }

@@ -6,9 +6,7 @@ LoopifyTmcLibraryInductive::digit_of_nat(uint64_t n) {
 }
 
 uint64_t LoopifyTmcLibraryInductive::digit_to_nat(const T &d) {
-  const auto &_sv = d.to_nat(UINT64_C(10));
-  const auto &[x] = _sv;
-  return x;
+  return d.to_nat(UINT64_C(10));
 }
 
 T Fin::of_nat_lt(uint64_t p, uint64_t n) {

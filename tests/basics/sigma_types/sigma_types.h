@@ -10,7 +10,6 @@
 #include <variant>
 
 template <typename A> struct List;
-template <typename A> struct Sig;
 template <typename A, typename P> struct SigT;
 
 template <typename A> struct List {
@@ -94,28 +93,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
 template <typename A, typename P> struct SigT {
   // DATA
   A x;
@@ -155,18 +132,14 @@ template <typename A, typename P> struct SigT {
 
 struct SigmaTypes {
   static SigT<uint64_t, crane::obj> nat_with_double(uint64_t n);
-  static Sig<uint64_t> positive_succ(uint64_t n);
+  static uint64_t positive_succ(uint64_t n);
   static uint64_t get_positive(uint64_t n);
-  static Sig<uint64_t> double_positive(uint64_t n);
+  static uint64_t double_positive(uint64_t n);
   static uint64_t use_nat_double(uint64_t n);
   static List<uint64_t> positives_up_to(uint64_t k);
   static inline const uint64_t test_double_5 = use_nat_double(UINT64_C(5));
   static inline const uint64_t test_positive_3 = get_positive(UINT64_C(3));
-  static inline const uint64_t test_double_pos = []() {
-    const auto &_sv = double_positive(UINT64_C(3));
-    const auto &[x] = _sv;
-    return x;
-  }();
+  static inline const uint64_t test_double_pos = double_positive(UINT64_C(3));
   static inline const List<uint64_t> test_positives =
       positives_up_to(UINT64_C(5));
 };

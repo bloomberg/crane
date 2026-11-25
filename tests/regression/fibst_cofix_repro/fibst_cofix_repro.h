@@ -205,13 +205,13 @@ uint64_t fibst_repro(uint64_t n) {
         // loop variables.
         while (true) {
           if (n <= 0) {
-            return *x;
+            return *x.get();
           } else {
             uint64_t _x = n - 1;
-            uint64_t x_ = *x;
-            uint64_t y_ = *y;
-            *x = y_;
-            *y = (x_ + y_);
+            uint64_t x_ = *x.get();
+            uint64_t y_ = *y.get();
+            *x.get() = y_;
+            *y.get() = (x_ + y_);
           }
         }
       };

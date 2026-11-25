@@ -1,18 +1,14 @@
 #include "sig_prop_comment.h"
 
-uint64_t SigSubset::head(const Sig<SigSubset::lst> &p) {
+uint64_t SigSubset::head(const SigSubset::lst &p) {
   // Precondition: match l with
   // | SigSubset.nil => False
   // | SigSubset.cons _ _ => True
   // end
-  auto &&_sv = [&]() {
-    const auto &[x0] = p;
-    return x0;
-  }();
-  if (std::holds_alternative<typename SigSubset::lst::Nil>(_sv.v())) {
+  if (std::holds_alternative<typename SigSubset::lst::Nil>(p.v())) {
     throw std::logic_error("absurd case");
   } else {
-    const auto &[a0, _] = std::get<typename SigSubset::lst::Cons>(_sv.v());
+    const auto &[a0, _] = std::get<typename SigSubset::lst::Cons>(p.v());
     return a0;
   }
 }

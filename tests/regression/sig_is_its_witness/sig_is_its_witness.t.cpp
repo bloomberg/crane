@@ -22,7 +22,11 @@ int main() {
   check(M::apply_fixes_zero(21) == 42, "apply_fixes_zero 21 = 42");
   check(M::unit_sig_used(7) == 7, "unit_sig_used 7 = 7");
   auto xs = List<uint64_t>::cons(1, List<uint64_t>::cons(2, List<uint64_t>::nil()));
-  check(M::unwrap_list(xs).length() == 2, "unwrap_list keeps the list");
+  {
+    auto ys = M::unwrap_list(xs);
+    const auto *c = std::get_if<typename List<uint64_t>::Cons>(&ys.v());
+    check(c && c->a == 1, "unwrap_list keeps the list");
+  }
   check(M::sum_positives(3) == 6, "sum_positives 3 = 1 + 2 + 3");
   check(M::rt_example_sum == 7, "rt_example_sum = 7");
   check(M::between_val(9) == 9, "between_val 9 = 9");

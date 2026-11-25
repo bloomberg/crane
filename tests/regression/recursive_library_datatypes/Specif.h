@@ -12,149 +12,35 @@
 #include <variant>
 
 namespace Specif {
-template <typename A> struct Sig;
-template <typename A> struct Sig2;
 template <typename A, typename P> struct SigT;
 template <typename A, typename P, typename Q> struct SigT2;
 template <typename A> struct Sumor;
 
 struct SigTNotations {};
 
-template <typename A> struct Sig {
-  // DATA
-  A x;
+template <typename T1, typename T2, typename F0>
+T2 sig_rect(F0 &&f, const T1 &s) {
+  // Precondition: P
+  const T1 &x = s;
+  return f(x);
+}
 
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
+template <typename T1, typename T2, typename F0>
+T2 sig_rec(F0 &&f, const T1 &s) {
+  // Precondition: P
+  return sig_rect<T1, T2>(f, s);
+}
 
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
+template <typename T1, typename T2, typename F0>
+T2 sig2_rect(F0 &&f, const T1 &s) {
+  const T1 &x = s;
+  return f(x);
+}
 
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const A &>
-  T1 sig_rect(F0 &&f) const {
-    const auto &[x0] = *this;
-    return f(x0);
-  }
-
-  template <typename T1, typename F0> T1 sig_rec(F0 &&f) const {
-    return this->template sig_rect<T1>(f);
-  }
-
-  A proj1_sig() const {
-    const auto &[x] = *this;
-    return x;
-  }
-
-  template <typename T1> T1 eq_sig_rect(const Sig<A> &, const T1 &f) const {
-    return f;
-  }
-
-  template <typename T1> T1 eq_sig_rec(const Sig<A> &x1_, const T1 &x2_) const {
-    return this->template eq_sig_rect<T1>(x1_, x2_);
-  }
-
-  template <typename T1>
-  T1 eq_sig_rect_exist_l(const A &u1, const T1 &f) const {
-    return Sig<A>::exist(u1).template eq_sig_rect<T1>(*this, f);
-  }
-
-  template <typename T1>
-  T1 eq_sig_rect_exist_r(const A &v1, const T1 &f) const {
-    return this->template eq_sig_rect<T1>(Sig<A>::exist(v1), f);
-  }
-
-  template <typename T1> T1 eq_sig_rect_uncurried(const Sig<A> &v, T1 f) const {
-    return this->template eq_sig_rect<T1>(
-        v, [=, f = std::move(f)]() { return f; }());
-  }
-
-  template <typename T1>
-  T1 eq_sig_rec_uncurried(const Sig<A> &x1_, T1 x2_) const {
-    return this->template eq_sig_rect_uncurried<T1>(x1_, std::move(x2_));
-  }
-};
-
-template <typename A> struct Sig2 {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig2<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig2<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig2<A> exist2(A x) { return {std::move(x)}; }
-
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, const A &>
-  T1 sig2_rect(F0 &&f) const {
-    const auto &[x0] = *this;
-    return f(x0);
-  }
-
-  template <typename T1, typename F0> T1 sig2_rec(F0 &&f) const {
-    return this->template sig2_rect<T1>(f);
-  }
-
-  Sig<A> sig_of_sig2() const {
-    return Sig<A>::exist([&]() {
-      const auto &[x0] = *this;
-      return x0;
-    }());
-  }
-
-  template <typename T1> T1 eq_sig2_rect(const Sig2<A> &, const T1 &f) const {
-    return f;
-  }
-
-  template <typename T1>
-  T1 eq_sig2_rec(const Sig2<A> &x1_, const T1 &x2_) const {
-    return this->template eq_sig2_rect<T1>(x1_, x2_);
-  }
-
-  template <typename T1>
-  T1 eq_sig2_rect_exist2_l(const A &u1, const T1 &f) const {
-    return Sig2<A>::exist2(u1).template eq_sig2_rect<T1>(*this, f);
-  }
-
-  template <typename T1>
-  T1 eq_sig2_rect_exist2_r(const A &v1, const T1 &f) const {
-    return this->template eq_sig2_rect<T1>(Sig2<A>::exist2(v1), f);
-  }
-
-  template <typename T1>
-  T1 eq_sig2_rect_uncurried(const Sig2<A> &v, T1 f) const {
-    return this->template eq_sig2_rect<T1>(
-        v, [=, f = std::move(f)]() { return f; }());
-  }
-
-  template <typename T1>
-  T1 eq_sig2_rec_uncurried(const Sig2<A> &x1_, T1 x2_) const {
-    return this->template eq_sig2_rect_uncurried<T1>(x1_, std::move(x2_));
-  }
-};
+template <typename T1, typename T2, typename F0>
+T2 sig2_rec(F0 &&f, const T1 &s) {
+  return sig2_rect<T1, T2>(f, s);
+}
 
 template <typename A, typename P> struct SigT {
   // DATA
@@ -208,7 +94,7 @@ template <typename A, typename P> struct SigT {
     return a1;
   }
 
-  Sig<A> sig_of_sigT() const { return Sig<A>::exist(this->projT1()); }
+  A sig_of_sigT() const { return this->projT1(); }
 
   std::pair<A, P> prod_of_sigT() const {
     return std::make_pair(this->projT1(), this->projT2());
@@ -316,9 +202,7 @@ template <typename A, typename P, typename Q> struct SigT2 {
     return a2;
   }
 
-  Sig2<A> sig2_of_sigT2() const {
-    return Sig2<A>::exist2(this->sigT_of_sigT2().projT1());
-  }
+  A sig2_of_sigT2() const { return this->sigT_of_sigT2().projT1(); }
 
   template <typename T1>
   T1 eq_sigT2_rect(const SigT2<A, P, Q> &, const T1 &f) const {
@@ -356,26 +240,20 @@ template <typename A, typename P, typename Q> struct SigT2 {
   }
 };
 
-template <typename T1> SigT<T1, crane::obj> sigT_of_sig(const Sig<T1> &x) {
+template <typename T1> T1 sig_of_sig2(const T1 &x) {
+  const T1 &a = x;
+  return crane_any_cast<T1>(a);
+}
+
+template <typename T1> SigT<T1, crane::obj> sigT_of_sig(const T1 &x) {
   // Precondition: P
-  return SigT<T1, crane::obj>::existt(
-      [&]() {
-        const auto &[x0] = x;
-        return x0;
-      }(),
-      crane::obj());
+  return SigT<T1, crane::obj>::existt(x, crane::obj());
 }
 
 template <typename T1>
-SigT2<T1, crane::obj, crane::obj> sigT2_of_sig2(const Sig2<T1> &x) {
-  return SigT2<T1, crane::obj, crane::obj>::existt2(
-      [&]() {
-        const auto &_sv = x.sig_of_sig2();
-        const auto &[x0] = _sv;
-        return x0;
-      }(),
-      crane::obj(),
-      crane::obj());
+SigT2<T1, crane::obj, crane::obj> sigT2_of_sig2(const T1 &x) {
+  return SigT2<T1, crane::obj, crane::obj>::existt2(sig_of_sig2<T1>(x),
+                                                    crane::obj(), crane::obj());
 }
 
 template <typename T1, typename T2>
@@ -391,8 +269,50 @@ T3 eq_sigT_rect_existT(const T1 &u1, const T2 &u2, const T1 &v1, const T2 &v2,
 }
 
 template <typename T1, typename T2>
+T2 eq_sig_rect(const T1 &u, const T1 &, const T2 &f) {
+  // Precondition: (P a)
+  // Precondition: (P a)
+  T2 f0 = f;
+  const T1 &_x0 = u;
+  return f0;
+}
+
+template <typename T1, typename T2>
+T2 eq_sig_rec(const T1 &x0_, const T1 &x1_, const T2 &x2_) {
+  // Precondition: (P a)
+  // Precondition: (P a)
+  return eq_sig_rect<T1, T2>(x0_, x1_, x2_);
+}
+
+template <typename T1, typename T2>
+T2 eq_sig_rect_exist_l(const T1 &u1, const T1 &v, const T2 &f) {
+  // Precondition: (P a)
+  return eq_sig_rect<T1, T2>(u1, v, f);
+}
+
+template <typename T1, typename T2>
+T2 eq_sig_rect_exist_r(const T1 &u, const T1 &v1, const T2 &f) {
+  // Precondition: (P a)
+  return eq_sig_rect<T1, T2>(u, v1, f);
+}
+
+template <typename T1, typename T2>
 T2 eq_sig_rect_exist(const T1 &u1, const T1 &v1, const T2 &f) {
-  return Sig<T1>::exist(u1).template eq_sig_rect<T2>(Sig<T1>::exist(v1), f);
+  return eq_sig_rect<T1, T2>(u1, v1, f);
+}
+
+template <typename T1, typename T2>
+T2 eq_sig_rect_uncurried(const T1 &u, const T1 &v, T2 f) {
+  // Precondition: (P a)
+  // Precondition: (P a)
+  return eq_sig_rect<T1, T2>(u, v, [=, f = std::move(f)]() { return f; }());
+}
+
+template <typename T1, typename T2>
+T2 eq_sig_rec_uncurried(const T1 &x0_, const T1 &x1_, T2 x2_) {
+  // Precondition: (P a)
+  // Precondition: (P a)
+  return eq_sig_rect_uncurried<T1, T2>(x0_, x1_, std::move(x2_));
 }
 
 template <typename T1, typename T2, typename T3, typename T4>
@@ -403,9 +323,40 @@ T4 eq_sigT2_rect_existT2(const T1 &u1, const T2 &u2, const T3 &u3, const T1 &v1,
 }
 
 template <typename T1, typename T2>
+T2 eq_sig2_rect(const T1 &u, const T1 &, const T2 &f) {
+  T2 f0 = f;
+  const T1 &_x0 = u;
+  return f0;
+}
+
+template <typename T1, typename T2>
+T2 eq_sig2_rec(const T1 &x0_, const T1 &x1_, const T2 &x2_) {
+  return eq_sig2_rect<T1, T2>(x0_, x1_, x2_);
+}
+
+template <typename T1, typename T2>
+T2 eq_sig2_rect_exist2_l(const T1 &u1, const T1 &v, const T2 &f) {
+  return eq_sig2_rect<T1, T2>(u1, v, f);
+}
+
+template <typename T1, typename T2>
+T2 eq_sig2_rect_exist2_r(const T1 &u, const T1 &v1, const T2 &f) {
+  return eq_sig2_rect<T1, T2>(u, v1, f);
+}
+
+template <typename T1, typename T2>
 T2 eq_sig2_rect_exist2(const T1 &u1, const T1 &v1, const T2 &f) {
-  return Sig2<T1>::exist2(u1).template eq_sig2_rect<T2>(Sig2<T1>::exist2(v1),
-                                                        f);
+  return eq_sig2_rect<T1, T2>(u1, v1, f);
+}
+
+template <typename T1, typename T2>
+T2 eq_sig2_rect_uncurried(const T1 &u, const T1 &v, T2 f) {
+  return eq_sig2_rect<T1, T2>(u, v, [=, f = std::move(f)]() { return f; }());
+}
+
+template <typename T1, typename T2>
+T2 eq_sig2_rec_uncurried(const T1 &x0_, const T1 &x1_, T2 x2_) {
+  return eq_sig2_rect_uncurried<T1, T2>(x0_, x1_, std::move(x2_));
 }
 
 template <typename T1> T1 sumbool_rect(const T1 &f, const T1 &f0, bool s) {
@@ -488,12 +439,8 @@ public:
 };
 
 template <typename T1, typename T2>
-Sig<crane::fn<T2(T1)>> Choice(std::type_identity_t<crane::fn<Sig<T2>(T1)>> h) {
-  return Sig<crane::fn<T2(T1)>>::exist([=, h = std::move(h)](const T1 &z) {
-    const auto &_sv = h(z);
-    const auto &[x] = _sv;
-    return x;
-  });
+crane::fn<T2(T1)> Choice(std::type_identity_t<crane::fn<T2(T1)>> h) {
+  return [=, h = std::move(h)](const T1 &z) { return h(z); };
 }
 
 template <typename T1, typename T2, typename T3>
@@ -508,20 +455,19 @@ Choice2(std::type_identity_t<crane::fn<SigT<T2, T3>(T1)>> h) {
 }
 
 template <typename T1>
-Sig<crane::fn<bool(T1)>>
-bool_choice(std::type_identity_t<crane::fn<bool(T1)>> h) {
-  return Sig<crane::fn<bool(T1)>>::exist([=, h = std::move(h)](const T1 &z) {
+crane::fn<bool(T1)> bool_choice(std::type_identity_t<crane::fn<bool(T1)>> h) {
+  return [=, h = std::move(h)](const T1 &z) -> bool {
     if (h(z)) {
       return true;
     } else {
       return false;
     }
-  });
+  };
 }
 
 template <typename T1>
-Sig<crane::fn<T1(uint64_t)>>
-dependent_choice(std::type_identity_t<crane::fn<Sig<T1>(T1)>> h, T1 x0) {
+crane::fn<T1(uint64_t)>
+dependent_choice(std::type_identity_t<crane::fn<T1(T1)>> h, T1 x0) {
   auto f_impl =
       [=, h = std::move(h), x0 = std::move(x0)](auto &_self_f,
                                                 uint64_t n)
@@ -530,16 +476,14 @@ dependent_choice(std::type_identity_t<crane::fn<Sig<T1>(T1)>> h, T1 x0) {
           return x0;
         } else {
           uint64_t n_ = n - 1;
-          const auto &_sv = h(_self_f(_self_f, n_));
-          const auto &[x] = _sv;
-          return x;
+          return h(_self_f(_self_f, n_));
         }
       };
   auto f =
       [=, f_impl = std::move(f_impl)](uint64_t n) -> T1 {
         return f_impl(f_impl, n);
       };
-  return Sig<crane::fn<T1(uint64_t)>>::exist(std::move(f));
+  return f;
 }
 
 template <typename a> using Exc = std::optional<a>;

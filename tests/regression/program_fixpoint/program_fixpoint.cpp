@@ -6,13 +6,9 @@ ProgFix::interleave_func(const SigT<List<uint64_t>, List<uint64_t>> &x) {
   List<uint64_t> l2 = x.projT2();
   crane::fn<List<uint64_t>(List<uint64_t>, List<uint64_t>)> interleave0 =
       [](const List<uint64_t> &l3, const List<uint64_t> &l4) {
-        Sig<SigT<List<uint64_t>, List<uint64_t>>> y =
-            Sig<SigT<List<uint64_t>, List<uint64_t>>>::exist(
-                SigT<List<uint64_t>, List<uint64_t>>::existt(l3, l4));
-        return interleave_func([&]() {
-          auto &[x0] = y;
-          return std::move(x0);
-        }());
+        SigT<List<uint64_t>, List<uint64_t>> y =
+            SigT<List<uint64_t>, List<uint64_t>>::existt(l3, l4);
+        return interleave_func(y);
       };
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v_mut())) {
     return l2;

@@ -12,7 +12,6 @@
 #include <variant>
 
 template <typename A> struct List;
-template <typename A> struct Sig;
 
 struct Compare_dec {
   static bool le_gt_dec(uint64_t x0_, uint64_t x1_);
@@ -138,28 +137,6 @@ public:
   }
 };
 
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
 struct Sort {
   template <typename T1, typename T2, typename F0, typename F2, typename F3>
   static T2 div_conq(F0 &&splitF, T2 x, F2 &&x0, F3 &&x1, const List<T1> &ls) {
@@ -250,18 +227,16 @@ struct Sort {
     }
   }
 
-  static Sig<List<uint64_t>>
-  sort_cons_prog(uint64_t a, const List<uint64_t> &_x,
-                 const List<uint64_t> &l_);
-  static Sig<List<uint64_t>> isort(const List<uint64_t> &l);
+  static List<uint64_t> sort_cons_prog(uint64_t a, const List<uint64_t> &_x,
+                                       const List<uint64_t> &l_);
+  static List<uint64_t> isort(const List<uint64_t> &l);
   static List<uint64_t> merge(List<uint64_t> l1, const List<uint64_t> &l2);
-  static Sig<List<uint64_t>>
-  merge_prog(const List<uint64_t> &_x, List<uint64_t> l1,
-             const List<uint64_t> &l2);
-  static Sig<List<uint64_t>> msort(const List<uint64_t> &x0_);
-  static Sig<List<uint64_t>>
+  static List<uint64_t> merge_prog(const List<uint64_t> &_x, List<uint64_t> l1,
+                                   const List<uint64_t> &l2);
+  static List<uint64_t> msort(const List<uint64_t> &x0_);
+  static List<uint64_t>
   pair_merge_prog(uint64_t _x, uint64_t _x0, const List<uint64_t> &_x1,
                   const List<uint64_t> &l_, List<uint64_t> l_0);
-  static Sig<List<uint64_t>> psort(const List<uint64_t> &x0_);
-  static Sig<List<uint64_t>> qsort(const List<uint64_t> &x0_);
+  static List<uint64_t> psort(const List<uint64_t> &x0_);
+  static List<uint64_t> qsort(const List<uint64_t> &x0_);
 };

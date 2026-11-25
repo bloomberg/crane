@@ -23,7 +23,6 @@
 
 struct nat_ix_stref;
 template <typename A> struct List;
-template <typename A> struct Sig;
 template <typename Err> struct ExceptE;
 struct Err;
 struct STRefNat;
@@ -213,28 +212,6 @@ public:
   }
 };
 
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
 template <typename Err> struct ExceptE {
   // DATA
   Err a0;
@@ -301,8 +278,8 @@ struct nat_ix_stref {
 static_assert(STRefClass<nat_ix_stref, uint64_t>);
 
 template <typename T1 = void, typename T2 = void>
-Sig<uint64_t> lomuto_scan(std::span<uint64_t> arr, uint64_t pv, uint64_t,
-                          uint64_t hi, uint64_t i, uint64_t s) {
+uint64_t lomuto_scan(std::span<uint64_t> arr, uint64_t pv, uint64_t,
+                     uint64_t hi, uint64_t i, uint64_t s) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   uint64_t _loop_s = s;
@@ -320,49 +297,31 @@ Sig<uint64_t> lomuto_scan(std::span<uint64_t> arr, uint64_t pv, uint64_t,
         _loop_i = (_loop_i + 1);
       }
     } else {
-      return Sig<uint64_t>::exist(_loop_s);
+      return _loop_s;
     }
   }
 }
 
 template <typename T1 = void, typename T2 = void>
-Sig<uint64_t> partition(std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
-                        uint64_t pividx) {
+uint64_t partition(std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
+                   uint64_t pividx) {
   uint64_t pv = std::span<const uint64_t>{arr}[pividx];
   STMonad::template swapArray<nat_ix_stref>(UINT64_C(0), arr, pividx, hi);
-  Sig<uint64_t> p = lomuto_scan<crane::obj, void>(arr, pv, lo, hi, lo, lo);
-  STMonad::template swapArray<nat_ix_stref>(
-      UINT64_C(0),
-      arr,
-      [&]() {
-        const auto &[x] = p;
-        return x;
-      }(),
-      hi);
+  uint64_t p = lomuto_scan<crane::obj, void>(arr, pv, lo, hi, lo, lo);
+  STMonad::template swapArray<nat_ix_stref>(UINT64_C(0), arr, p, hi);
   return p;
 }
 
 template <typename T1 = void, typename T2 = void>
 void quicksort_ST(std::span<uint64_t> arr, uint64_t lo, uint64_t hi) {
   if (lo < hi) {
-    Sig<uint64_t> p = partition<crane::obj, T2>(
+    uint64_t p = partition<crane::obj, T2>(
         arr, lo, hi,
         (lo +
          (UINT64_C(2) ? (((hi - lo) > hi ? 0 : (hi - lo))) / UINT64_C(2) : 0)));
-    auto _once1 = [&]() {
-      const auto &[x] = p;
-      return x;
-    }();
     quicksort_ST<crane::obj, T2>(
-        arr, lo,
-        (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
-    quicksort_ST<crane::obj, T2>(
-        arr,
-        ([&]() {
-          auto &[x0] = p;
-          return x0;
-        }() + UINT64_C(1)),
-        hi);
+        arr, lo, (((p - UINT64_C(1)) > p ? 0 : (p - UINT64_C(1)))));
+    quicksort_ST<crane::obj, T2>(arr, (p + UINT64_C(1)), hi);
     return;
   } else {
     return;

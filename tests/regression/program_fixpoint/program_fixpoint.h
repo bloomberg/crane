@@ -11,7 +11,6 @@
 #include <variant>
 
 template <typename A> struct List;
-template <typename A> struct Sig;
 template <typename A, typename P> struct SigT;
 
 template <typename A> struct List {
@@ -93,28 +92,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
 };
 
 template <typename A, typename P> struct SigT {

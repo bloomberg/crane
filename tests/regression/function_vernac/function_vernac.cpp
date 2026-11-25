@@ -1,25 +1,23 @@
 #include "function_vernac.h"
 
-Sig<uint64_t> FunctionVernac::div2_terminate(uint64_t n) {
+uint64_t FunctionVernac::div2_terminate(uint64_t n) {
   if (n <= 0) {
-    return Sig<uint64_t>::exist(UINT64_C(0));
+    return UINT64_C(0);
   } else {
     uint64_t n0 = n - 1;
     if (n0 <= 0) {
-      return Sig<uint64_t>::exist(UINT64_C(0));
+      return UINT64_C(0);
     } else {
       uint64_t n1 = n0 - 1;
-      const auto &_sv = div2_terminate(n1);
-      const auto &[x0] = _sv;
-      return Sig<uint64_t>::exist((x0 + 1));
+      const uint64_t &x = div2_terminate(n1);
+      return (x + 1);
     }
   }
 }
 
 uint64_t FunctionVernac::div2(uint64_t n) {
-  const auto &_sv = div2_terminate(n);
-  const auto &[x] = _sv;
-  return x;
+  const uint64_t &a = div2_terminate(n);
+  return a;
 }
 
 FunctionVernac::R_div2 FunctionVernac::R_div2_correct(uint64_t n,
@@ -40,21 +38,19 @@ FunctionVernac::R_div2 FunctionVernac::R_div2_correct(uint64_t n,
       n)(res_);
 }
 
-Sig<uint64_t> FunctionVernac::list_sum_terminate(const List<uint64_t> &l) {
+uint64_t FunctionVernac::list_sum_terminate(const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-    return Sig<uint64_t>::exist(UINT64_C(0));
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    const auto &_sv0 = list_sum_terminate(*a1);
-    const auto &[x0] = _sv0;
-    return Sig<uint64_t>::exist((a0 + x0));
+    const uint64_t &x = list_sum_terminate(*a1);
+    return (a0 + x);
   }
 }
 
 uint64_t FunctionVernac::list_sum(const List<uint64_t> &l) {
-  const auto &_sv = list_sum_terminate(l);
-  const auto &[x] = _sv;
-  return x;
+  const uint64_t &a = list_sum_terminate(l);
+  return a;
 }
 
 FunctionVernac::R_list_sum

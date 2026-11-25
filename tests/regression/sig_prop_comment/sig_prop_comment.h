@@ -1,37 +1,12 @@
 #pragma once
 
 #include "crane_fn.h"
-#include "obj.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
 #include <variant>
-
-template <typename A> struct Sig;
-
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-};
 
 struct SigSubset {
   struct lst {
@@ -108,7 +83,6 @@ struct SigSubset {
     return lst_rect<T1>(std::move(f), f0, l);
   }
 
-  static uint64_t head(const Sig<lst> &p);
-  static inline const uint64_t go =
-      head(Sig<lst>::exist(lst::cons(UINT64_C(7), lst::nil())));
+  static uint64_t head(const lst &p);
+  static inline const uint64_t go = head(lst::cons(UINT64_C(7), lst::nil()));
 };

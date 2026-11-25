@@ -13,7 +13,6 @@
 
 struct Nat;
 template <typename A> struct List;
-template <typename A> struct Sig;
 
 struct Nat {
   // TYPES
@@ -222,43 +221,15 @@ public:
   }
 };
 
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
 struct SigArgMatch {
-  using pos = Sig<Nat>;
-  static inline const pos one = Sig<Nat>::exist(Nat::s(Nat::o()));
-  static Nat addp(const Sig<Nat> &p, const Sig<Nat> &q);
+  using pos = Nat;
+  static inline const pos one = Nat::s(Nat::o());
+  static Nat addp(const Nat &p, const Nat &q);
   static inline const List<pos> ps =
       List<pos>::cons(one, List<pos>::cons(one, List<pos>::nil()));
-  static inline const Nat run = []() {
-    return ps.template fold_right<Nat>(
-        [](const Sig<Nat> &p, Nat acc) {
-          return [&]() {
-            const auto &[x] = p;
-            return x;
-          }().add(std::move(acc));
-        },
-        Nat::o())
-               .add(addp(one, one));
-  }();
+  static inline const Nat run =
+      ps.template fold_right<Nat>(
+          [](const Nat &p, Nat acc) { return p.add(std::move(acc)); },
+          Nat::o())
+          .add(addp(one, one));
 };

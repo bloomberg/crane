@@ -1,7 +1,5 @@
 #pragma once
 
-#include "crane_fn.h"
-#include "obj.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
@@ -9,9 +7,7 @@
 #include <utility>
 #include <variant>
 
-template <typename A>
-struct Sig; /// A recursive call made through a coercion of its callee is a recursive
-
+/// A recursive call made through a coercion of its callee is a recursive
 /// call.
 ///
 /// Nat.even_EvenT calls itself as (magic even_EvenT) n', the coercion
@@ -24,32 +20,9 @@ struct LoopifyCoercedSelfCall {
   static uint64_t half(uint64_t n);
 };
 
-template <typename A> struct Sig {
-  // DATA
-  A x;
-
-  // ACCESSORS
-  Sig<A> clone() const { return {x}; }
-
-  template <typename CraneU> operator Sig<CraneU>() const {
-    return {[&]() -> CraneU {
-      if constexpr (crane_convertible<CraneU, const A &>) {
-        return crane_convert<CraneU>(x);
-      } else {
-        throw std::logic_error("unreachable: inactive constructor field at "
-                               "this instantiation");
-      }
-    }()};
-  }
-
-  // CREATORS
-  static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
 struct Nat {
-  using EvenT = Sig<uint64_t>;
-  [[gnu::used]] static inline const EvenT EvenT_0 =
-      Sig<uint64_t>::exist(UINT64_C(0));
-  static EvenT EvenT_2(uint64_t _x, const Sig<uint64_t> &h0);
+  using EvenT = uint64_t;
+  [[gnu::used]] static inline const EvenT EvenT_0 = UINT64_C(0);
+  static EvenT EvenT_2(uint64_t _x, uint64_t h0);
   static EvenT even_EvenT(uint64_t n);
 };
