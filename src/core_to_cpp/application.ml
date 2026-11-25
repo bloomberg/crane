@@ -310,12 +310,23 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
       | _ -> arg_expected_ty
     in
     let arg_typed =
-      Knot.gen_expr_typed cx (Slot.at ~ret ?expected_ty:arg_expected_ty ~slot:
+      let at =
+        Slot.at ~ret ?expected_ty:arg_expected_ty ~slot:
           { slot with
             Slot.expected_core_ty = arg_expected_core_ty;
             call_result = expected_result;
-            stated_core_ty = param_core_ty } ())
-        env core_arg
+            stated_core_ty = param_core_ty } ()
+      in
+      (* An inline mapping's text takes the argument at the type it comes
+         with, and where what it builds of it keeps that instantiation
+         ([itree_ret(%a0)]), or goes on into a position that does
+         ([itree_ret(std::make_pair(%a0, %a1))]), nothing converts it
+         after. *)
+      let deduced =
+        Base.Table.is_inline_custom id
+        && (slot.Slot.deduced || match Slot.expected slot with Some t -> Coerce.keeps_instantiation t | None -> false)
+      in
+      Knot.gen_expr_typed cx { at with Slot.deduced } env core_arg
     in
     let expr = arg_typed.expr in
     let expr : Cpp_ir.Lowered.Expr.t =

@@ -64,6 +64,11 @@ type slot = {
       (** The constructor in this slot is part of a constant
           ({!Cpp_ir.Crane_rt.Constant}), so it is built here rather than hoisted
           again: the constant is the outermost closed term. *)
+  deduced : bool;
+      (** The position takes the value at the type it comes with: an inline
+          mapping's parameter ([itree_ret(%a0)]), which nothing converts to
+          the type [into] states.  Restated by every position, like
+          [into]. *)
 }
 
 (** The slot properties of a position that constrains nothing. *)
@@ -76,7 +81,8 @@ let empty_slot =
     eta_keep_moves = false;
     call_result = None;
     stated_core_ty = None;
-    building_constant = false }
+    building_constant = false;
+    deduced = false }
 
 (** Whether the value of [slot] is built inside a [std::any], at the
     canonical erased shape. *)
@@ -90,7 +96,7 @@ let into_box kind slot = if boxed slot then slot else { slot with repr = Boxed k
     [expected_ty] where it states a type, with [slot]'s other properties
     (none by default). *)
 let at ~ret ?expected_ty ?(slot = empty_slot) () : slot =
-  { slot with ret; into = (match expected_ty with Some t -> Exactly t | None -> Free) }
+  { slot with ret; into = (match expected_ty with Some t -> Exactly t | None -> Free); deduced = false }
 
 (** The type the position states, if any. *)
 let expected (s : slot) : Cpp_ir.Lowered.Type.t option = match s.into with Exactly t -> Some t | _ -> None

@@ -117,7 +117,8 @@ template <Params _tcI0, typename T1, typename T2>
 Monads::template stateT<lenv, itree_tc_609e8855cd7ad294, T2>
 handle_local_debug(LocalE) {
   return [=](const Nat &s) {
-    return itree_ret(std::make_pair(s, s.add(_tcI0::width())));
+    return itree_ret(
+        std::make_pair(s, crane_convert<T2>(s.add(_tcI0::width()))));
   };
 }
 

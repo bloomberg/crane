@@ -102,17 +102,23 @@ let renumbering ~num_ind_vars ~this_pos ty =
   let all_args, _ = Base.Type_util.get_args_and_ret [] ty in
   let ind_tvar_map =
     match List.nth_opt all_args this_pos with
-    | Some (Core.Type.Global_app {type_arguments = tvar_args; _}) ->
-      (* Only entries whose destination is one of the inductive's variables:
-         a parameter extraction killed (a phantom) maps past them, and is the
-         function's own instead. *)
+    | Some (Core.Type.Global_app {head; type_arguments = tvar_args; _}) ->
+      (* The struct's promoted parameters lead its variables
+         ({!Base.Table.ind_promoted_params}): the receiver's type arguments
+         are the ones after them.  Only entries whose destination is one of
+         the inductive's variables: a parameter extraction killed (a
+         phantom), or an index the struct declares nothing for, maps past
+         them, and is the function's own instead. *)
+      let promoted =
+        match head with GlobRef.IndRef (kn, _) -> List.length (Base.Table.ind_promoted_params kn) | _ -> 0
+      in
       List.filter
         (fun (_, dst) -> dst <= num_ind_vars)
         (List.concat
            (List.mapi
               (fun pos t ->
                 match Base.Table.type_var_of_arg t with
-                | Some i -> [(i, pos + 1)]
+                | Some i -> [(i, promoted + pos + 1)]
                 | None -> [] )
               tvar_args ) )
     | _ -> List.init num_ind_vars (fun i -> (i + 1, i + 1))
@@ -330,9 +336,12 @@ let find_epon_arg_pos epon_ref ty =
   let rec aux pos = function
     | Core.Type.Arrow {parameter = Core.Type.Global_app {head = arg_ref; type_arguments = tvar_args; _}; result = rest}
       when globref_equal arg_ref epon_ref ->
+      (* The parameters the struct declares a variable for: not one
+         extraction killed (a phantom), which the method declares itself
+         ({!renumbering}). *)
       let nparams = match epon_ref with
         | GlobRef.IndRef (kn, _) ->
-          (match get_ind_nparams_opt kn with Some n -> n | None -> List.length tvar_args)
+          (match get_ind_num_param_vars_opt kn with Some n -> n | None -> List.length tvar_args)
         | _ -> List.length tvar_args
       in
       let param_tvar_args = List.firstn (min nparams (List.length tvar_args)) tvar_args in

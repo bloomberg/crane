@@ -104,17 +104,6 @@
   (deps eta_handler_event_as_template.t.exe)
   (action (run ./eta_handler_event_as_template.t.exe))))
 
-(subdir applied_typename_not_hk
- (rule
-  (targets applied_typename_not_hk.t.exe)
-  (deps AppliedTypenameNotHk.vo applied_typename_not_hk.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} applied_typename_not_hk.t.exe applied_typename_not_hk.t.cpp applied_typename_not_hk.cpp)))
- (rule
-  (alias runtest)
-  (deps applied_typename_not_hk.t.exe)
-  (action (run ./applied_typename_not_hk.t.exe))))
-
 (subdir handler_lambda_targ_undeclared
  (rule
   (targets handler_lambda_targ_undeclared.t.exe)
@@ -183,28 +172,6 @@
 ; --- Stage A: an immediately invoked [=] lambda matching an owned capture.
 
 ; --- A local fix captured by reference escapes through a state-monad bind.
-
-(subdir case_handler_concrete_result
- (rule
-  (targets case_handler_concrete_result.t.exe)
-  (deps CaseHandlerConcreteResult.vo case_handler_concrete_result.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} case_handler_concrete_result.t.exe case_handler_concrete_result.t.cpp case_handler_concrete_result.cpp)))
- (rule
-  (alias runtest)
-  (deps case_handler_concrete_result.t.exe)
-  (action (run ./case_handler_concrete_result.t.exe))))
-
-(subdir interp_state_dict
- (rule
-  (targets interp_state_dict.t.exe)
-  (deps InterpStateDict.vo interp_state_dict.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} interp_state_dict.t.exe interp_state_dict.t.cpp interp_state_dict.cpp)))
- (rule
-  (alias runtest)
-  (deps interp_state_dict.t.exe)
-  (action (run ./interp_state_dict.t.exe))))
 
 (subdir nullary_unit_effect_dropped
  (rule

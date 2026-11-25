@@ -95,7 +95,9 @@ using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 struct M {
   template <typename T1, typename T2>
   static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> base(AE) {
-    return [](const Nat &s) { return itree_ret(std::make_pair(s, s)); };
+    return [](const Nat &s) {
+      return itree_ret(std::make_pair(s, crane_convert<T2>(s)));
+    };
   }
 
   template <typename T1, typename T2>

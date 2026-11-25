@@ -1,44 +1,31 @@
-(** A natural transformation passed as a *higher-order argument* is
-    eta-expanded into a generic lambda whose parameter type spells the event
-    family as a template -- but an erased event family is emitted as a plain
-    non-template type, so the lambda does not parse.
+(** A natural transformation passed as a higher-order argument is
+    eta-expanded at the call site ([run base]).  Vellvm has the same
+    construct via src/rocq/Semantics/InterpretationStack.v:79
+    (fused_intrinsic).
 
-    [AE] is emitted as [enum class AE { A0 };], yet the call site writes
+    The face this was filed for ([const AE<_T2> &] for an enum [AE]) is
+    gone: the eta lambda now takes [const AE &].  Diagnosed 2026-11-24, three
+    layers remain:
 
-      run<T1, T2>([]<typename _T2>(const AE<_T2> &a0) -> decltype(auto) {
-                    return base<_T2, std::invoke_result_t<decltype(a0)&, _T2&>>(a0);
-                  }, e);
-
-    giving
-
-      error: expected ')'
-      error: use of undeclared identifier 'a0'
-
-    Expected: the eta-expanded parameter is [const AE& a0], since the index is
-    erased from the event type, with [_T2] used only where the index survives.
-
-    Negative result worth keeping: if the handler's domain is a genuine type
-    constructor rather than an erased event -- e.g. [Definition memM (T : Type)
-    := nat -> T.], which is emitted as [template <typename t> using memM =
-    ...] -- then [memM<_T2>] is well-formed and the same program compiles. So
-    the defect is specifically the erased-event case, not eta-expansion in
-    general.
-
-    Vellvm has the same construct at [vellvm_bench.h:19306], [:19318] and
-    [:19328] via [src/rocq/Semantics/InterpretationStack.v:79]:
-
-      Definition fused_intrinsic : IntrinsicE ~> stateT FusedS (itree MCFGEbot) :=
-        fun T e => on_mem (handle_intrinsic memM_interp e).
-
-    but there the lambda comes out *without* the [<typename _T2>] header and
-    with an explicit return type naming an unbound [T2]:
-
-      [](memM<T2> _x0) -> Monads::stateT<State, std::shared_ptr, T2> { ... }
-
-    I could not reduce that monomorphic variant -- four attempts, including a
-    recursive [Fixpoint] natural transformation defined in a separate module,
-    all produced the templated-lambda form above instead. This test covers the
-    templated-lambda half only. *)
+    1. [base<T1>(a0)]: [base]'s head is [<T1, T2>], [T2] its index, which
+       only its return type names.  The eta lambda writes the type arguments
+       the use instantiates ([E] only); the index is bound by the lambda the
+       Rocq term is, not by the use, and nothing writes it.  The erased
+       instantiation ([base<T1, crane::obj>]) is what the slot ([run]'s
+       [crane::fn<stateT<st, itree_tc, crane::obj>(AE)>]) reads; a method
+       named the same way is now written so
+       ([Cpp_passes.Erasure.method_type_args]), the free-function value path
+       ([Expr]'s global case, [Calls.written_at_variables]) is not.
+    2. [base]'s body: [fun s => Ret (s, s)] at [stateT st (itree E) nat] is
+       coerced as a whole lambda to [stateT st (itree E) T]; the lambda
+       returns [ITree<pair<Nat, Nat>>] and does not convert to
+       [crane::fn<ITree<pair<Nat, T2>>(Nat)>].  The coercion would have to
+       be pushed into the lambda's body ([Coerce] of an arrow type around a
+       [Lambda] whose domains agree), before position planning, which keys
+       every coercion by its occurrence.
+    3. [run]'s body: [crane::apply2(h, e, s)] for the rank-2 parameter [h]
+       returns [ITree<pair<Nat, crane::obj>>] where [T2] is promised: the
+       consumer-side recovery described in handler_lambda_targ_undeclared. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

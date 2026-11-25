@@ -95,6 +95,74 @@ let normal_arrows al (a : Cpp_ir.Lowered.Arrows.t) : Cpp_ir.Lowered.Arrows.t =
   | Some r -> {groups = groups @ r.groups; result = r.result}
   | None -> {groups; result}
 
+(** Whether C++ converts between no two instantiations of [g]: a mapped type
+    other than the pair.  A generated inductive has a converting
+    constructor, and [std::pair] converts element by element. *)
+let opaque_head g = Base.Table.is_custom g && not (is_prod_global g)
+
+(** Whether a value of type [t] is not converted to another instantiation
+    of its type by C++: a mapped type {!opaque_head} names, a pointer. *)
+let rec keeps_instantiation (t : Cpp_ir.Lowered.Type.t) =
+  match t with
+  | Const t | Reference (_, t) | In_namespace (_, t) -> keeps_instantiation t
+  | Entity_application (g, _, _) | Foreign {custom = g; _} -> opaque_head g
+  | Shared_pointer _ | Pointer _ -> true
+  | _ -> false
+
+(** [crossing_index_plan ~deduced ~from ~into]: a value built at [from] read at
+    [into] across a coercion extraction recorded, where the two are one type
+    but for the element a type index decides: [into] names a type variable
+    where [from] has the type a match refined it to ([Ret 1 : itree E nat]
+    returned by a handler declared [AE ~> itree E] at its index [T1]), or
+    [from] has the box where [into] has a concrete type (a call of a
+    function whose undeducible index was erased, [itree E std::any], read
+    at [itree E nat]).  Either way the index is one type at every
+    instantiation the value is reached at, which C++ does not know;
+    [crane_convert] carries the value across ([crane_cast_to] for a carrier
+    whose element is the index): the identity at the instantiation the
+    index names, a box or a cast where one side erased it.  Only where C++
+    would not convert by itself: the value itself where the position
+    deduces its type ([deduced]), and inside a type where some place the
+    two differ is inside a mapped type ([std::shared_ptr<ITree<T>>]), not
+    only inside generated inductives and pairs. *)
+let crossing_index_plan ~deduced ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) :
+    Cpp_ir.Lowered.Coercion.plan option =
+  let closed t = not (contains_tvar t || Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t) in
+  let needed = ref false in
+  (* One type but where [into] has a variable and [from] a closed type, or
+     [from] a box and [into] a closed type; [under] says whether the place
+     is inside a head C++ converts no instantiation of. *)
+  let rec fits ~under (f : Cpp_ir.Lowered.Type.t) (i : Cpp_ir.Lowered.Type.t) =
+    let differs ok = if ok && under then needed := true; ok in
+    f = i
+    ||
+    match (f, i) with
+    | _, Variable _ -> differs (closed f)
+    | _ when Cpp_ir.Types.prints_as_any f -> differs (closed i)
+    (* An event family applied to the erased index is the family. *)
+    | Apply (h, xs), _ when List.for_all Cpp_ir.Types.prints_as_any xs -> fits ~under h i
+    | _, Apply (h, ys) when List.for_all Cpp_ir.Types.prints_as_any ys -> fits ~under f h
+    | Entity_application (r, xs, _), Entity_application (r', ys, _) ->
+      GlobRef.CanOrd.equal r r' && all ~under:(under || opaque_head r) xs ys
+    | Foreign a, Foreign b -> GlobRef.CanOrd.equal a.custom b.custom && all ~under:(under || opaque_head a.custom) a.types b.types
+    | Named (n, xs), Named (n', ys) -> Id.equal n n' && all ~under xs ys
+    | External (n, xs), External (n', ys) -> String.equal n n' && all ~under:true xs ys
+    | Variant (k, xs), Variant (k', ys) -> k = k' && all ~under:true xs ys
+    | Shared_pointer f, Shared_pointer i | Pointer f, Pointer i -> fits ~under:true f i
+    | In_namespace (g, f), In_namespace (g', i) -> GlobRef.CanOrd.equal g g' && fits ~under f i
+    | _ -> false
+  and all ~under xs ys = List.compare_lengths xs ys = 0 && List.for_all2 (fits ~under) xs ys in
+  let from = strip_cpp_ref_const from and into = strip_cpp_ref_const into in
+  match (from, into) with
+  | Function _, _ | _, Function _ -> None
+  | _ when from = into || Cpp_ir.Types.prints_as_any from || Cpp_ir.Types.prints_as_any into -> None
+  (* The value itself at the variable, where the position deduces its type
+     ([itree_ret(%a0)]): nothing converts it later.  Anywhere else C++
+     converts it to the variable by itself. *)
+  | _, Variable _ when deduced && closed from -> Some (Convert_to into)
+  | _ when fits ~under:false from into && !needed -> Some (Convert_to into)
+  | _ -> None
+
 (** [decide_with aliases from into]: how a value of type [from] is adapted to
     a slot of type [into], or [None] where it fits as it is.  A total function
     of the two types; [aliases] only unfolds them.  The first row that matches
@@ -776,6 +844,9 @@ let builds = function
   | Built (Cast_box _) -> ["unbox"]
   | Built (Erase_as Boxed_whole) -> ["box"]
   | Built (Erase_as (At_signature _)) -> ["erase"]
+  (* A crossing the Core coercion says is one type ({!crossing_index_plan}),
+     which {!decide}, reading the two types alone, cannot tell from two. *)
+  | Built (Convert_to _) -> ["convert"; "none"]
   | Built _ -> []
 
 (** Whether {!decide} answers for a value of type [from] at [into]: a typed

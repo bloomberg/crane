@@ -565,12 +565,16 @@ struct State {
 template <typename CraneTcArg>
 using crane_carrier_tc_6f2a644abca70cfd =
     Itree<crane::obj,
-          CraneTcArg>; /// A counter interpreted through coq-itree's interp_state.  Known issue:
+          CraneTcArg>; /// A counter interpreted through coq-itree's interp_state.
 
-/// the call writes State::interp_state<Monad_itree, Functor_itree, ...>,
-/// and clang rejects Monad_itree as the argument for the Monad-concept
-/// parameter ("invalid explicitly-specified argument for template parameter
-/// '_tcI0'").
+///
+/// Fixed: the call wrote State::interp_state<MonadIter_itree,
+/// Monad_itree, ...>, and clang rejected the bare MonadIter_itree for
+/// the MonadIter-concept parameter: the instance's struct takes the
+/// event family as a template parameter, and the use's argument for it
+/// (void1) is erased, which dropped the whole argument list.  An
+/// instance's struct is never named without its arguments, so an erased
+/// one is written as the box (MonadIter_itree<crane::obj>).
 struct InterpStateDict {
   enum class Cnt { TICK, GET };
 

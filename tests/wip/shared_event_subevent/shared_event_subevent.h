@@ -904,7 +904,8 @@ struct SharedEventSubevent {
 
   static inline const Itree<crane::obj, Nat> run = []() {
     return crane::immortal(Interp::template interp<
-        MonadIter_itree, Monad_itree, Functor_itree, E<crane::obj>, Nat>(
+        MonadIter_itree<crane::obj>, Monad_itree<crane::obj>,
+        Functor_itree<crane::obj>, E<crane::obj>, Nat>(
         CategoryOps::template case_<
             crane::obj, crane::fn<Itree<crane::obj, crane::obj>(crane::obj)>>(
             [](const auto &, const auto &) { return crane::obj(); },
