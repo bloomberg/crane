@@ -342,7 +342,17 @@ deduced, not written (`Application.gen_call_args`); an over-application
 yields what is left of the callee's type after its declared arrows and the
 outer call's arguments, read through a function alias such as `st A := nat
 -> A * nat`, also where the inner call is kept as a constant
-(`Calls.record_call_sig`).
+(`Calls.record_call_sig`). Ephyra round 25: a call that fills its callee's
+declared parameters is written as the call, not eta-expanded to the arrows
+its instantiation adds, so its result is the callable the written type
+argument spells (`Application.eta_fun`); an argument at a forwarding
+reference is built at the grouping of its parameter at the written type
+arguments (`Calls.parameter_at_written`); a constructed argument whose
+annotation unfolds a function alias the parameter writes is built at the
+parameter (`Types.regrouped_through_aliases`); a `let` in argument
+position is written against the slot as its body would be; an argument of
+a local function or an applied local fixpoint is generated with its
+parameter, not the enclosing result, as the return type in force.
 
 ### 6.2 The single coercion
 

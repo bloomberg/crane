@@ -16267,3 +16267,14 @@
   (alias runtest)
   (deps local_fix_alias_acc_join.t.exe)
   (action (run ./local_fix_alias_acc_join.t.exe))))
+
+(subdir local_fix_inlined_dict_destination
+ (rule
+  (targets local_fix_inlined_dict_destination.t.exe)
+  (deps LocalFixInlinedDictDestination.vo local_fix_inlined_dict_destination.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_inlined_dict_destination.t.exe local_fix_inlined_dict_destination.t.cpp local_fix_inlined_dict_destination.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_inlined_dict_destination.t.exe)
+  (action (run ./local_fix_inlined_dict_destination.t.exe))))
