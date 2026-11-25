@@ -16,7 +16,6 @@ From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.STMonad
 .
 
@@ -25,33 +24,28 @@ Local Open Scope monad_scope.
 
 Section Fibonacci.
 
-  Context {T S : Type}.
-  Context {ltu : T -> T -> Prop}.
-  Context `{Ix_Correct T ltu}.
-  Context {HST : STRefClass T}.
-
-  Let V : T -> Type := fun _ => nat.
-  Let E0 := (STEvent T S V) +' exceptE Err.
+  Context {R : STRefs}.
+  Notation E0 := (STEvent R (fun _ : nat => nat) +' exceptE Err).
 
   (** Run [k] steps of [(x, y) := (y, x + y)] and return [x]. *)
-  Fixpoint fib_loop (k : nat) (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
+  Fixpoint fib_loop (k : nat) (x y : STRef nat) : itree E0 nat :=
     match k with
-    | 0 => readSTRef (idx := idx_x) x
+    | 0 => readSTRef x
     | Datatypes.S k' =>
-        x' <- readSTRef (idx := idx_x) x;;
-        y' <- readSTRef (idx := idx_y) y;;
-        writeSTRef (idx := idx_x) x y';;
-        writeSTRef (idx := idx_y) y (x' + y');;
-        fib_loop k' x y idx_x idx_y
+        x' <- readSTRef x;;
+        y' <- readSTRef y;;
+        writeSTRef x y';;
+        writeSTRef y (x' + y');;
+        fib_loop k' x y
     end.
 
   Definition fib_ST (n : nat) : itree E0 nat :=
     if Nat.ltb n 2
     then Ret n
     else
-      x <- newSTRef zero 0;;
-      y <- newSTRef (suc zero) 1;;
-      fib_loop n x y zero (suc zero).
+      x <- newSTRef 0;;
+      y <- newSTRef 1;;
+      fib_loop n x y.
 
 End Fibonacci.
 
@@ -65,11 +59,7 @@ Definition fib_fun (n : nat) : nat :=
   fib' n.
 
 Module StFibonacci.
-  (* The index instances are unfolded so that they are extracted here. *)
-  Definition nat_idx : @Ix nat Nat.le := Eval unfold nat_ix in nat_ix.
-  Definition nat_stref : STRefClass nat := Eval unfold nat_ix_stref in nat_ix_stref.
-
-  Definition fib_ST := Eval unfold fib_ST, fib_loop in (@fib_ST nat unit Nat.le).
+  Definition fib_ST := Eval unfold fib_ST, fib_loop in (@fib_ST cpp_refs).
   Definition fib_fun := Eval unfold fib_fun in fib_fun.
 End StFibonacci.
 

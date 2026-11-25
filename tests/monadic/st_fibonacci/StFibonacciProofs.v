@@ -22,7 +22,6 @@ From ITree Require Import
 From Crane Require Import
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.MonadFacts
   Monads.STMonad
   Monads.STMonadFacts
@@ -59,49 +58,46 @@ Qed.
 
 Section FibonacciProofs.
 
-  Let T := nat.
-  Let ltu := Nat.le.
-  Existing Instance nat_ix_correct.
-  Existing Instance nat_ix_stref.
-  Context {S : Type}.
-  Let V : T -> Type := fun _ => nat.
+  Notation V := (fun _ : nat => nat).
 
-  (** The two references have different indices ([zero] and [suc zero]), so
-      a write to one leaves the other's cell alone. *)
+  (** [x] and [y] are different locations, holding [a] and [b]. *)
   Lemma fib_loop_spec :
-    forall k (a b : nat) (m : @mem nat V) (x y : STRef S nat),
-    st_lookup V (STRefToIx S nat x, zero) m = Some a ->
-    st_lookup V (STRefToIx S nat y, suc zero) m = Some b ->
-    st_spec (E := exceptE Err) (fib_loop k x y zero (suc zero)) m
+    forall k (a b : nat) (m : mem V) (x y : nat),
+    x <> y -> st_get x m = Some a -> st_get y m = Some b ->
+    st_spec (E := exceptE Err) (fib_loop (R := model_refs) k x y) m
       (fun _ r => r = fib_seq a b k).
   Proof.
-    induction k as [|k IH]; intros a b m x y hx hy; cbn [fib_loop].
-    - eapply (st_spec_readSTRef (V := V) zero); [ exact hx | reflexivity ].
-    - apply st_spec_bind. eapply (st_spec_readSTRef (V := V) zero); [ exact hx |]. cbv beta.
-      apply st_spec_bind. eapply (st_spec_readSTRef (V := V) (suc zero)); [ exact hy |]. cbv beta.
-      apply st_spec_bind, (st_spec_writeSTRef (V := V) zero). cbv beta.
-      apply st_spec_bind, (st_spec_writeSTRef (V := V) (suc zero)). cbv beta.
-      apply IH.
-      + rewrite hmap_lookup_add_ne by (intros [= _ H]; discriminate H).
-        exact (hmap_lookup_add_eq (V := idx_key_type V) _ _ _).
-      + exact (hmap_lookup_add_eq (V := idx_key_type V) _ _ _).
+    induction k as [|k IH]; intros a b m x y Hxy hx hy; cbn [fib_loop].
+    - eapply st_spec_readSTRef; [ exact hx | reflexivity ].
+    - apply st_spec_bind. eapply st_spec_readSTRef; [ exact hx |]. cbv beta.
+      apply st_spec_bind. eapply st_spec_readSTRef; [ exact hy |]. cbv beta.
+      apply st_spec_bind, st_spec_writeSTRef. cbv beta.
+      apply st_spec_bind, st_spec_writeSTRef. cbv beta.
+      apply IH; [ exact Hxy | | ].
+      + rewrite st_get_put_ne by exact Hxy. apply st_get_put_eq.
+      + apply st_get_put_eq.
   Qed.
 
 End FibonacciProofs.
 
-Lemma fib_ST_eq_fib_fun : forall {S : Type} (n : nat),
-    Ret (fib_fun n) ≈ runST (S := S) (fun S0 => fib_ST n).
+Lemma fib_ST_eq_fib_fun : forall (n : nat),
+    Ret (fib_fun n) ≈ runST (fun R => fib_ST (R := R) n).
 Proof.
-  intros S n.
-  destruct (st_spec_runST (S := S) (fun S0 => fib_ST (S := S0) n) (fun r => r = fib_fun n))
+  intros n.
+  destruct (st_spec_runST (fun R => fib_ST (R := R) n) (fun r => r = fib_fun n))
     as (r & Hrun & ->); [| symmetry; exact Hrun ].
   unfold fib_ST. destruct (Nat.ltb_spec n 2) as [Hn | Hn].
   - apply st_spec_ret. destruct n as [|[|n]]; [ reflexivity | reflexivity | lia ].
-  - apply st_spec_bind, (st_spec_newSTRef (V := fun _ => nat) zero). cbv beta.
-    apply st_spec_bind, (st_spec_newSTRef (V := fun _ => nat) (suc zero)). cbv beta.
-    eapply st_spec_weaken; [| apply fib_loop_spec ].
+  - apply st_spec_bind, st_spec_newSTRef. cbv beta.
+    apply st_spec_bind, st_spec_newSTRef. cbv beta.
+    set (m1 := st_put _ 0 _).
+    (* the second location is past the first, which is in use *)
+    assert (Hfresh : st_fresh (V := fun _ : nat => nat) HMap.empty <> st_fresh m1).
+    { intros Heq. assert (Hin : st_get (V := fun _ : nat => nat) (st_fresh HMap.empty) m1 = Some 0)
+        by apply st_get_put_eq.
+      rewrite Heq, st_get_fresh in Hin by lia. discriminate. }
+    eapply st_spec_weaken; [| apply fib_loop_spec; [ exact Hfresh | | ] ].
     + intros _ r ->. symmetry. apply fib_fun_eq_seq.
-    + rewrite hmap_lookup_add_ne by (intros [= _ H]; discriminate H).
-      exact (hmap_lookup_add_eq (V := idx_key_type (fun _ : nat => nat)) _ _ _).
-    + exact (hmap_lookup_add_eq (V := idx_key_type (fun _ : nat => nat)) _ _ _).
+    + rewrite st_get_put_ne by exact Hfresh. apply st_get_put_eq.
+    + apply st_get_put_eq.
 Qed.

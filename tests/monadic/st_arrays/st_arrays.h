@@ -3,7 +3,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <algorithm>
 #include <array_storage.h>
 #include <atomic>
 #include <concepts>
@@ -11,7 +10,6 @@
 #include <crane_st.h>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -20,39 +18,23 @@
 #include <utility>
 #include <variant>
 
+template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-struct STRefNat;
-template <typename I, typename T>
-concept Ix = requires {
-  {
-    I::range(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<List<T>>;
-  {
-    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<std::optional<uint64_t>>;
-  {
-    I::rangeSize(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<uint64_t>;
-  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
-  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
-  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
-  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::zero() } -> std::convertible_to<T>;
-};
-template <typename I, typename T>
-concept STRefClass = requires {
-  { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
-  { I::STRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
+enum class STRefs;
+template <typename I, typename V, typename A>
+concept Code = requires {
+  { I::code() } -> std::convertible_to<uint64_t>;
 };
 
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
+struct StArrays {
+  static uint64_t array_simp_fixed_init();
+  static std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
+  array_simp_list();
+  static List<uint64_t> swap_first_and_last_list(const List<uint64_t> &x0_);
+  static uint64_t nth(uint64_t n, const List<uint64_t> &l, uint64_t default0);
 };
-
-struct Nat {};
 
 template <typename A> struct List {
   // TYPES
@@ -206,96 +188,13 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct STRefNat {
-  // DATA
-  uint64_t s;
+enum class STRefs { BUILD_STREFS };
 
-  // ACCESSORS
-  STRefNat clone() const { return {s}; }
-
-  // CREATORS
-  static STRefNat mkstref(uint64_t s) { return {s}; }
-
-  uint64_t STRefToIxNat() const;
+template <typename T1> struct code_const {
+  constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-struct STMonad {
-  template <typename _tcI0, typename T1 = void, typename T2, typename T3 = void,
-            typename T4>
-    requires STRefClass<_tcI0, T2>
-  static void swapArray(const T2 &_x, std::span<T4> arr, const T2 &i,
-                        const T2 &j);
-};
-
-struct StArrays {
-  struct nat_idx {
-    static List<uint64_t> range(uint64_t fp, uint64_t sp) {
-      auto _once1 = (UINT64_C(1) + sp);
-      return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
-    }
-
-    constexpr static std::optional<uint64_t> index(uint64_t fp, uint64_t sp,
-                                                   uint64_t i) {
-      if ((fp <= i && i <= sp)) {
-        return std::make_optional<uint64_t>((((i - fp) > i ? 0 : (i - fp))));
-      } else {
-        return std::optional<uint64_t>();
-      }
-    }
-
-    constexpr static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
-      auto _once2 = (UINT64_C(1) + sp);
-      return (((_once2 - fp) > _once2 ? 0 : (_once2 - fp)));
-    }
-
-    constexpr static uint64_t toNat(uint64_t n) { return n; }
-
-    constexpr static uint64_t fromNat(uint64_t n) { return n; }
-
-    constexpr static uint64_t suc(uint64_t x) { return (x + 1); }
-
-    constexpr static uint64_t sub(uint64_t a0, uint64_t a1) {
-      return (((a0 - a1) > a0 ? 0 : (a0 - a1)));
-    }
-
-    constexpr static uint64_t max(uint64_t a0, uint64_t a1) {
-      return std::max(a0, a1);
-    }
-
-    constexpr static uint64_t zero() { return UINT64_C(0); }
-  };
-
-  static_assert(Ix<nat_idx, uint64_t>);
-
-  struct nat_stref {
-    static crane::obj mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
-
-    static uint64_t STRefToIx(crane::obj _p_a0) {
-      STRefNat a0 = crane::any_cast<STRefNat>(_p_a0);
-      return a0.STRefToIxNat();
-    }
-  };
-
-  static_assert(STRefClass<nat_stref, uint64_t>);
-  static uint64_t array_simp_fixed_init();
-  static std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
-  array_simp_list();
-  static List<uint64_t> swap_first_and_last_list(const List<uint64_t> &xs);
-  static uint64_t nth(uint64_t n, const List<uint64_t> &l, uint64_t default0);
-};
-
-template <typename _tcI0, typename T1, typename T2, typename T3, typename T4>
-  requires STRefClass<_tcI0, T2>
-void STMonad::swapArray(const T2 &, std::span<T4> arr, const T2 &i,
-                        const T2 &j) {
-  T4 vi = std::span<const T4>{arr}[i];
-  T4 vj = std::span<const T4>{arr}[j];
-  arr[i] = std::move(vj);
-  arr[j] = std::move(vi);
-  return;
-}
-
-inline uint64_t STRefNat::STRefToIxNat() const {
-  const auto &[s] = *this;
-  return s;
-}
+uint64_t array_simp_fixed_init(STRefs _x);
+std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
+array_simp_list(STRefs _x);
+List<uint64_t> swap_first_and_last_list(STRefs _x, const List<uint64_t> &xs);

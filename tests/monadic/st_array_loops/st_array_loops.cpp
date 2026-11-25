@@ -63,8 +63,7 @@ uint64_t StArrayLoops::sum_from(std::span<const uint64_t> arr, uint64_t i,
 
 std::pair<uint64_t, List<uint64_t>> StArrayLoops::loops_list(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
-      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(
-          UINT64_C(0), (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))),
+      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(n),
                                                        UINT64_C(2));
   zero_from(std::span<uint64_t>{*arr}, UINT64_C(1), UINT64_C(2));
   uint64_t s = sum_from(std::span<const uint64_t>{*arr}, UINT64_C(0), n);

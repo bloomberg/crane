@@ -1,5 +1,35 @@
 #include "st_fibonacci.h"
 
+uint64_t StFibonacci::fib_ST(uint64_t n) {
+  if (n < UINT64_C(2)) {
+    return n;
+  } else {
+    std::shared_ptr<uint64_t> x = std::make_shared<uint64_t>(UINT64_C(0));
+    std::shared_ptr<uint64_t> y = std::make_shared<uint64_t>(UINT64_C(1));
+    auto fib_loop =
+        [](uint64_t k, const std::shared_ptr<uint64_t> &x0,
+           const std::shared_ptr<uint64_t> &y0)
+             -> uint64_t {
+          // Loop replaces the tail recursion: each recursive call updates the
+          // loop variables.
+          uint64_t _loop_k = k;
+          while (true) {
+            if (_loop_k <= 0) {
+              return *x0.get();
+            } else {
+              uint64_t k_ = _loop_k - 1;
+              uint64_t x_ = *x0.get();
+              uint64_t y_ = *y0.get();
+              *x0.get() = y_;
+              *y0.get() = (x_ + y_);
+              _loop_k = k_;
+            }
+          }
+        };
+    return fib_loop(n, std::move(x), std::move(y));
+  }
+}
+
 uint64_t StFibonacci::fib_fun(uint64_t n) {
   // Explicit stack replaces the non-tail recursion of fib_fun: _call frames are
   // pending calls, _after frames resume a caller.
@@ -51,33 +81,4 @@ uint64_t StFibonacci::fib_fun(uint64_t n) {
     }
   }
   return _result;
-}
-
-List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
-  // Builds the result front to back: _write points at the empty tail the next
-  // cell fills.
-  std::optional<List<uint64_t>> _root{};
-  std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_len = len;
-  uint64_t _loop_start = start;
-  while (true) {
-    if (_loop_len <= 0) {
-      auto _value = List<uint64_t>::nil();
-      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-              : _root.emplace(std::move(_value)));
-      break;
-    } else {
-      uint64_t len0 = _loop_len - 1;
-      auto _cell = typename List<uint64_t>::Cons(_loop_start, nullptr);
-      List<uint64_t> &_node =
-          (_write ? *(*_write =
-                          std::make_shared<List<uint64_t>>(std::move(_cell)))
-                  : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-      _loop_len = len0;
-      _loop_start = (_loop_start + 1);
-      continue;
-    }
-  }
-  return std::move(*_root);
 }

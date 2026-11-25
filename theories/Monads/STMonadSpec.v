@@ -1,27 +1,24 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Total-correctness specifications for ST programs over arrays indexed by
-    [nat] that hold values of any type.
+(** Total-correctness specifications for ST programs.
 
-    [st_spec t m Q] says that [t], interpreted from store [m] by [interp_st],
-    terminates without raising, in a store and with a result satisfying [Q].
-    It composes through [bind] ([st_spec_bind]), with one rule per reference
-    and array operation and a loop rule for [for_each_with]; [st_spec_runST] turns a
-    specification of a whole program into an equation on [runST]. Unlike the
-    [interp_st_*] equations of [STMonadArrayFacts], which fix the value type
-    to [nat], these rules work for arrays of records, pairs and so on. *)
+    [st_spec t m Q] says that [t], interpreted from store [m] by
+    [interp_st], terminates without raising, in a store and with a result
+    satisfying [Q].  It composes through [bind] ([st_spec_bind]), with one
+    rule per operation and a loop rule for [for_each_with]; [st_spec_runST]
+    turns a specification of a whole program into an equation on [runST].
+
+    A program is specified in the model, [model_refs], where a reference is
+    a location and an array its first location and size.  The store holds a
+    value of type [A] at a location and [A]'s code: [st_get] and [st_put]
+    read and write it there, through [code_ok]. *)
 
 From Stdlib Require Import
   Arith.PeanoNat
   Classes.EquivDec
   Lia
   List
-.
-
-From ExtLib Require Import
-  Structures.Monad
-  Structures.Reducible
 .
 
 From ITree Require Import
@@ -33,10 +30,10 @@ From ITree Require Import
 From Crane Require Import
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.MonadFacts
   Monads.STMonad
   Monads.STMonadFacts
+  Utils.HAList
   Utils.HMap
 .
 
@@ -44,28 +41,84 @@ Import Monads.
 Import ListNotations.
 Local Open Scope monad_scope.
 
-(** Lookup and update on the store, at the key type and instance with which
-    [handle_STEvent] uses them, so that rewriting with them matches the
-    handler's terms. *)
-Notation st_lookup V :=
-  (@lookup (nat * nat) (idx_key_type V) (@mem nat V) (hmap_from_idx (V := idx_key_type V))).
-Notation st_add V :=
-  (@add (nat * nat) (idx_key_type V) (@mem nat V) (hmap_from_idx (V := idx_key_type V))).
+Section Store.
+
+  Context {V : nat -> Type}.
+
+  (** The key is written as a pair, so that its code gives the value's type
+      [V c]. *)
+  Lemma lookup_add_eq (l c : nat) (v : V c) (m : mem V) :
+    lookup (l, c) (add (l, c) v m) = Some v.
+  Proof. exact (hmap_lookup_add_eq (hmap := st_hmap V) (l, c) v m). Qed.
+
+  Lemma lookup_add_ne (l c l' c' : nat) (v : V c') (m : mem V) :
+    (l, c) <> (l', c') -> lookup (l, c) (add (l', c') v m) = lookup (l, c) m.
+  Proof. exact (hmap_lookup_add_ne (hmap := st_hmap V) (l, c) (l', c') v m). Qed.
+
+  (** The value of type [A] at location [l]. *)
+  Definition st_get {A : Type} `{Code V A} (l : nat) (m : mem V) : option A :=
+    match code_ok V A in _ = X return option X with
+    | eq_refl => lookup (l, code V A) m
+    end.
+
+  Definition st_put {A : Type} `{Code V A} (l : nat) (a : A) (m : mem V) : mem V :=
+    match code_ok V A in _ = X return X -> mem V with
+    | eq_refl => fun a => add (l, code V A) a m
+    end a.
+
+  Lemma st_get_put_eq {A} `{Code V A} l a m : st_get l (st_put l a m) = Some a.
+  Proof.
+    destruct H as [c e]. subst A. cbn [st_get st_put code code_ok].
+    apply lookup_add_eq.
+  Qed.
+
+  Lemma st_get_put_ne {A} `{Code V A} l l' a m : l <> l' -> st_get l (st_put l' a m) = st_get l m.
+  Proof.
+    destruct H as [c e]. subst A. cbn [st_get st_put code code_ok]. intros Hne.
+    apply lookup_add_ne. intros [=]. contradiction.
+  Qed.
+
+  Lemma st_fresh_step_ge (l : mem V) :
+    forall acc, acc <= fold_halist (nat * nat) (key_type V) (fun k _ acc => Nat.max (fst k) acc) acc l.
+  Proof.
+    induction l as [|[[n' j'] v'] l IH]; intros acc; cbn; [ lia |].
+    etransitivity; [| apply IH ]. lia.
+  Qed.
+
+  Lemma st_fresh_gt (m : mem V) : forall k j w, lookup (k, j) m = Some w -> k < st_fresh m.
+  Proof.
+    unfold st_fresh.
+    enough (Hgen : forall acc k j w, lookup (k, j) m = Some w ->
+              k <= fold_halist (nat * nat) (key_type V) (fun k _ acc => Nat.max (fst k) acc) acc m)
+      by (intros k j w Hlk; apply Nat.lt_succ_r; eapply Hgen; exact Hlk).
+    induction m as [|[[n' j'] v'] m IH]; intros acc k j w Hlk; cbn -[equiv_dec] in Hlk |- *;
+      [ discriminate |].
+    match type of Hlk with context [match ?d with left _ => _ | right _ => _ end] =>
+      destruct d as [e | ne]
+    end.
+    - injection e as -> ->. etransitivity; [| apply st_fresh_step_ge ]. lia.
+    - eapply IH. exact Hlk.
+  Qed.
+
+  (** Nothing is stored at or past the fresh location. *)
+  Lemma st_get_fresh {A} `{Code V A} m k : st_fresh m <= k -> st_get k m = None.
+  Proof.
+    destruct H as [c e]. subst A. cbn [st_get code code_ok]. intros Hk.
+    destruct (lookup (k, c) m) as [w |] eqn:Hlk; [| reflexivity ].
+    apply st_fresh_gt in Hlk. lia.
+  Qed.
+
+End Store.
 
 Section STSpec.
 
-  Context {E : Type -> Type} `{exceptE Err -< E}.
-  Context {S : Type} {V : nat -> Type}.
+  Context {E : Type -> Type} `{exceptE Err -< E} {V : nat -> Type}.
+  Notation E' := (STEvent model_refs V +' E).
 
-  Notation mem := (@mem nat V).
-  Notation E' := (STEvent nat S V +' E).
-  Notation add := (st_add V).
-  Notation lookup := (st_lookup V).
+  Definition st_spec {A} (t : itree E' A) (m : mem V) (Q : mem V -> A -> Prop) : Prop :=
+    exists m' v, interp_st _ t m ≈ Ret (m', v) /\ Q m' v.
 
-  Definition st_spec {A} (t : itree E' A) (m : mem) (Q : mem -> A -> Prop) : Prop :=
-    exists m' v, interp_st Nat.le A t m ≈ Ret (m', v) /\ Q m' v.
-
-  Lemma st_spec_ret {A} (v : A) m (Q : mem -> A -> Prop) :
+  Lemma st_spec_ret {A} (v : A) m (Q : mem V -> A -> Prop) :
     Q m v -> st_spec (Ret v) m Q.
   Proof. intros HQ. exists m, v. split; [ apply interp_st_Ret_eutt | exact HQ ]. Qed.
 
@@ -77,158 +130,133 @@ Section STSpec.
     exists m2, v2. split; [ eapply interp_st_bind_Ret_l; eassumption | exact HQ ].
   Qed.
 
-  Lemma st_spec_weaken {A} (t : itree E' A) m (Q Q' : mem -> A -> Prop) :
+  Lemma st_spec_weaken {A} (t : itree E' A) m (Q Q' : mem V -> A -> Prop) :
     (forall m' v, Q m' v -> Q' m' v) -> st_spec t m Q -> st_spec t m Q'.
   Proof. intros HQ (m' & v & Ht & Hv). exists m', v. auto. Qed.
 
-  (** The key [newSTRef] allocates in [m]: one past the largest key in use,
-      as the handler computes it. *)
-  Definition st_fresh_step : {k : nat * nat & idx_key_type V k} -> nat -> nat :=
-    fun '(existT _ (n, _) _) acc => max n acc.
+  (** An operation whose handler returns [Ret (m', v)]. *)
+  Local Ltac run_op HQ :=
+    eexists _, _; split; [| exact HQ ];
+    unfold newSTRef, writeSTRef; cbn [code code_ok];
+    rewrite interp_st_trigger; cbn; reflexivity.
 
-  Definition st_fresh (m : mem) : nat := suc (fold st_fresh_step zero m).
+  Lemma st_spec_newSTRef {A} `{Code V A} (v : A) m (Q : mem V -> nat -> Prop) :
+    Q (st_put (st_fresh m) v m) (st_fresh m) ->
+    st_spec (newSTRef (R := model_refs) v) m Q.
+  Proof. destruct H0 as [c e]. subst A. intros HQ. run_op HQ. Qed.
 
-  Lemma st_fresh_step_ge (l : mem) : forall acc, acc <= fold st_fresh_step acc l.
+  Lemma st_spec_readSTRef {A} `{Code V A} (ref : nat) m v (Q : mem V -> A -> Prop) :
+    st_get ref m = Some v -> Q m v ->
+    st_spec (readSTRef (R := model_refs) ref) m Q.
   Proof.
-    induction l as [|[[n' j'] v'] l IH]; intros acc; cbn; [ lia |].
-    etransitivity; [| apply IH ]. cbn. lia.
+    destruct H0 as [c e]. subst A. cbn [st_get st_put code code_ok]. intros Hlk HQ. exists m, v. split; [| exact HQ ].
+    unfold readSTRef. cbn [code code_ok]. rewrite interp_st_trigger. cbn -[lookup]. rewrite Hlk.
+    reflexivity.
   Qed.
 
-  Lemma st_fresh_gt m : forall k j w, lookup (k, j) m = Some w -> k < st_fresh m.
+  Lemma st_spec_writeSTRef {A} `{Code V A} (ref : nat) (a : A) m (Q : mem V -> unit -> Prop) :
+    Q (st_put ref a m) tt ->
+    st_spec (writeSTRef (R := model_refs) ref a) m Q.
+  Proof. destruct H0 as [c e]. subst A. intros HQ. run_op HQ. Qed.
+
+  (** The handler's array loops leave the cells below their start alone,
+      and put their values from it on. *)
+  Lemma fill_below c (v : V c) n : forall key m j c', j < key ->
+    lookup (j, c') (fill c v key n m) = lookup (j, c') m.
   Proof.
-    unfold st_fresh. cbn [suc zero nat_ix].
-    enough (Hgen : forall acc k j w, lookup (k, j) m = Some w -> k <= fold st_fresh_step acc m)
-      by (intros k j w Hlk; apply Nat.lt_succ_r; eapply Hgen; exact Hlk).
-    induction m as [|[[n' j'] v'] m IH]; intros acc k j w Hlk; cbn -[equiv_dec] in Hlk |- *;
-      [ discriminate |].
-    match type of Hlk with context [match ?d with left _ => _ | right _ => _ end] =>
-      destruct d as [e | ne]
-    end.
-    - injection e as -> ->. etransitivity; [| apply st_fresh_step_ge ]. cbn. lia.
-    - eapply IH. exact Hlk.
+    induction n as [|n IH]; intros key m j c' Hj; [ reflexivity |]. cbn [fill].
+    rewrite IH by lia. apply lookup_add_ne. intros [=]; lia.
   Qed.
 
-  (** No key in use is the fresh one. *)
-  Lemma st_lookup_fresh m j : lookup (st_fresh m, j) m = None.
+  Lemma fill_at c (v : V c) n : forall key m k, k < n -> lookup (key + k, c) (fill c v key n m) = Some v.
   Proof.
-    destruct (lookup (st_fresh m, j) m) as [w |] eqn:Hlk; [| reflexivity ].
-    apply st_fresh_gt in Hlk. lia.
+    induction n as [|n IH]; intros key m k Hk; [ lia |]. cbn [fill]. destruct k as [|k].
+    - rewrite Nat.add_0_r, fill_below by lia. apply lookup_add_eq.
+    - replace (key + S k) with (S key + k) by lia. apply IH. lia.
   Qed.
 
-  Lemma st_spec_newSTRef idx (v : V idx) m (Q : mem -> STRef S (V idx) -> Prop) :
-    Q (add (st_fresh m, idx) v m) (mkSTRef S (V idx) (st_fresh m)) ->
-    st_spec (newSTRef (E := E') idx v) m Q.
+  Lemma fill_list_below c (xs : list (V c)) : forall key m j c', j < key ->
+    lookup (j, c') (fill_list c key xs m) = lookup (j, c') m.
   Proof.
-    intros HQ. eexists _, _. split; [| exact HQ ].
-    unfold newSTRef. rewrite interp_st_trigger. reflexivity.
+    induction xs as [|x xs IH]; intros key m j c' Hj; [ reflexivity |]. cbn [fill_list].
+    rewrite IH by lia. apply lookup_add_ne. intros [=]; lia.
   Qed.
 
-  Lemma st_spec_readSTRef idx (r : STRef S (V idx)) m v (Q : mem -> V idx -> Prop) :
-    lookup (STRefToIx S (V idx) r, idx) m = Some v ->
-    Q m v ->
-    st_spec (readSTRef (E := E') (idx := idx) r) m Q.
+  Lemma fill_list_at c (xs : list (V c)) : forall key m k, k < length xs ->
+    lookup (key + k, c) (fill_list c key xs m) = nth_error xs k.
   Proof.
-    intros Hlk HQ. exists m, v. split; [| exact HQ ].
-    unfold readSTRef. rewrite interp_st_trigger. cbn -[lookup add].
-    match goal with |- context [lookup ?k m] =>
-      change (lookup k m) with (lookup (STRefToIx S (V idx) r, idx) m)
-    end.
-    rewrite Hlk. reflexivity.
+    induction xs as [|x xs IH]; intros key m k Hk; cbn [length] in Hk; [ lia |]. cbn [fill_list].
+    destruct k as [|k].
+    - rewrite Nat.add_0_r, fill_list_below by lia. apply lookup_add_eq.
+    - replace (key + S k) with (S key + k) by lia. apply IH. lia.
   Qed.
 
-  Lemma st_spec_writeSTRef idx (r : STRef S (V idx)) (v : V idx) m (Q : mem -> unit -> Prop) :
-    Q (add (STRefToIx S (V idx) r, idx) v m) tt ->
-    st_spec (writeSTRef (E := E') (idx := idx) r v) m Q.
+  Lemma read_cells_spec c b (m : mem V) : forall len s (vs : list (V c)),
+    length vs = len ->
+    (forall k, k < len -> lookup (b + (s + k), c) m = nth_error vs k) ->
+    read_cells c b (seq s len) m = Some vs.
   Proof.
-    intros HQ. eexists _, tt. split; [| exact HQ ].
-    unfold writeSTRef. rewrite interp_st_trigger. reflexivity.
+    induction len as [|len IH]; intros s vs Hlen Hcells; destruct vs as [|v vs]; cbn in Hlen;
+      try lia; [ reflexivity |]. cbn [seq read_cells].
+    pose proof (Hcells 0 ltac:(lia)) as H0. rewrite Nat.add_0_r in H0. cbn [nth_error] in H0.
+    rewrite H0.
+    rewrite (IH (S s) vs) by (try lia; intros k Hk; replace (S s + k) with (s + S k) by lia;
+                              apply (Hcells (S k)); lia).
+    reflexivity.
   Qed.
 
-  (** Cell [i] of an array over [lo .. hi] lives at key [base + (i - lo)]. *)
-  Lemma arr_key_nat idx base lo hi i :
-    lo <= i <= hi ->
-    @arr_key nat S Nat.le nat_ix V idx (MkSTArray nat S (V idx) base lo hi) i
-    = Some (base + (i - lo)).
+  (** A new array of [n] elements occupies [n] locations from some base, each
+      holding [def]. *)
+  Lemma st_spec_newArray {A} `{Code V A} n (def : A) m (Q : mem V -> ArrLoc A -> Prop) :
+    (forall base m', (forall k, k < n -> st_get (base + k) m' = Some def) -> Q m' (MkArrLoc base n)) ->
+    st_spec (newArray (R := model_refs) n def) m Q.
   Proof.
-    intros [Hlo Hhi]. unfold arr_key. cbn -[Nat.sub].
-    rewrite (proj2 (Nat.leb_le lo i) Hlo), (proj2 (Nat.leb_le i hi) Hhi).
-    cbn -[Nat.sub]. f_equal. induction (i - lo); cbn; lia.
+    destruct H0 as [c e]. subst A. intros HQ. eexists _, _. split.
+    - unfold newArray. cbn [code code_ok]. rewrite interp_st_trigger. cbn. reflexivity.
+    - apply HQ. intros k Hk. cbn [st_get code code_ok]. apply fill_at. exact Hk.
   Qed.
 
-  Lemma st_spec_readArray idx base lo hi i m (Q : mem -> V idx -> Prop) v :
-    lo <= i <= hi ->
-    lookup (base + (i - lo), idx) m = Some v ->
-    Q m v ->
-    st_spec (readArray (E := E') (idx := idx) (MkSTArray nat S (V idx) base lo hi) i) m Q.
+  Lemma st_spec_newListArray {A} `{Code V A} (xs : list A) m (Q : mem V -> ArrLoc A -> Prop) :
+    (forall base m', (forall k, k < length xs -> st_get (base + k) m' = nth_error xs k) ->
+       Q m' (MkArrLoc base (length xs))) ->
+    st_spec (newListArray (R := model_refs) xs) m Q.
   Proof.
-    intros Hi Hlk HQ. exists m, v. split; [| exact HQ].
-    unfold readArray. rewrite interp_st_trigger. cbn -[arr_lookup lookup].
-    unfold arr_lookup. rewrite arr_key_nat by exact Hi. rewrite Hlk. reflexivity.
+    destruct H0 as [c e]. subst A. intros HQ. eexists _, _. split.
+    - unfold newListArray. cbn [code code_ok]. rewrite interp_st_trigger. cbn. reflexivity.
+    - apply HQ. intros k Hk. cbn [st_get code code_ok]. apply fill_list_at. exact Hk.
   Qed.
 
-  Lemma st_spec_writeArray idx base lo hi i (v : V idx) m (Q : mem -> unit -> Prop) :
-    lo <= i <= hi ->
-    Q (add (base + (i - lo), idx) v m) tt ->
-    st_spec (writeArray (E := E') (MkSTArray nat S (V idx) base lo hi) i v) m Q.
+  Lemma st_spec_readArray {A} `{Code V A} base n i m v (Q : mem V -> A -> Prop) :
+    i < n -> st_get (base + i) m = Some v -> Q m v ->
+    st_spec (readArray (R := model_refs) (MkArrLoc base n) i) m Q.
   Proof.
-    intros Hi HQ. eexists _, tt. split; [| exact HQ].
-    unfold writeArray. rewrite interp_st_trigger. cbn -[arr_key lookup add].
-    rewrite arr_key_nat by exact Hi. reflexivity.
+    destruct H0 as [c e]. subst A. cbn [st_get st_put code code_ok]. intros Hi Hlk HQ. exists m, v. split; [| exact HQ ].
+    unfold readArray. cbn [code code_ok]. rewrite interp_st_trigger. cbn -[Nat.ltb lookup].
+    rewrite (proj2 (Nat.ltb_lt i n) Hi), Hlk. reflexivity.
   Qed.
 
-  Section Fill.
-
-    Context (idx : nat) (def : V idx).
-
-    (** The handler's fill loop for [newArray], as a top-level function. *)
-    Fixpoint fill_def (ps : list nat) (m : mem) (key : nat) : mem * nat :=
-      match ps with
-      | nil => (m, key)
-      | _ :: rest => fill_def rest (add (key, idx) def m) (Datatypes.S key)
-      end.
-
-    Lemma fill_def_below ps : forall m key j,
-      j < key -> lookup (j, idx) (fst (fill_def ps m key)) = lookup (j, idx) m.
-    Proof.
-      induction ps as [|p ps IH]; intros m key j Hj; [ reflexivity |].
-      cbn [fill_def]. rewrite IH by lia. apply hmap_lookup_add_ne. intros [=]; lia.
-    Qed.
-
-    Lemma fill_def_at ps : forall m key k,
-      k < length ps -> lookup (key + k, idx) (fst (fill_def ps m key)) = Some def.
-    Proof.
-      induction ps as [|p ps IH]; intros m key k Hk; cbn [length] in Hk; [ lia |].
-      cbn [fill_def]. destruct k as [|k].
-      - rewrite Nat.add_0_r, fill_def_below by lia.
-        exact (hmap_lookup_add_eq (V := idx_key_type V) _ _ _).
-      - replace (key + Datatypes.S k) with (Datatypes.S key + k) by lia. apply IH. lia.
-    Qed.
-
-  End Fill.
-
-  (** A new array over [lo .. hi] occupies [Datatypes.S hi - lo] consecutive
-      keys from some base, each holding the default. *)
-  Lemma st_spec_newArray idx lo hi (def : V idx) m
-    (Q : mem -> STArray nat S (V idx) -> Prop) :
-    (forall base m',
-        (forall k, k < Datatypes.S hi - lo -> lookup (base + k, idx) m' = Some def) ->
-        Q m' (MkSTArray nat S (V idx) base lo hi)) ->
-    st_spec (newArray (E := E') idx lo hi def) m Q.
+  Lemma st_spec_writeArray {A} `{Code V A} base n i (v : A) m (Q : mem V -> unit -> Prop) :
+    i < n -> Q (st_put (base + i) v m) tt ->
+    st_spec (writeArray (R := model_refs) (MkArrLoc base n) i v) m Q.
   Proof.
-    intros HQ. unfold st_spec, newArray. setoid_rewrite interp_st_trigger.
-    cbn -[lookup add Nat.sub].
-    match goal with |- context[?F (seq lo (Datatypes.S hi - lo)) m ?b] =>
-      change F with (fill_def idx def);
-      pose proof (fill_def_at idx def (seq lo (Datatypes.S hi - lo)) m b) as Hfill;
-      destruct (fill_def idx def (seq lo (Datatypes.S hi - lo)) m b) as [m' key]
-    end.
-    eexists _, _. split; [ reflexivity |]. apply HQ. intros k Hk.
-    apply Hfill. rewrite length_seq. exact Hk.
+    destruct H0 as [c e]. subst A. cbn [st_get st_put code code_ok]. intros Hi HQ. eexists _, tt. split; [| exact HQ ].
+    unfold writeArray. cbn [code code_ok]. rewrite interp_st_trigger. cbn -[Nat.ltb add].
+    rewrite (proj2 (Nat.ltb_lt i n) Hi). reflexivity.
+  Qed.
+
+  Lemma st_spec_getElems {A} `{Code V A} base n (vs : list A) m (Q : mem V -> list A -> Prop) :
+    length vs = n -> (forall k, k < n -> st_get (base + k) m = nth_error vs k) -> Q m vs ->
+    st_spec (getElems (R := model_refs) (MkArrLoc base n)) m Q.
+  Proof.
+    destruct H0 as [c e]. subst A. cbn [st_get st_put code code_ok]. intros Hlen Hcells HQ. exists m, vs. split; [| exact HQ ].
+    unfold getElems. cbn [code code_ok]. rewrite interp_st_trigger. cbn -[read_cells seq].
+    rewrite (read_cells_spec c base m n 0 vs Hlen) by (intros k Hk; apply Hcells; exact Hk).
+    reflexivity.
   Qed.
 
   (** Loop rule, with an invariant [I] on the elements still to visit, the
       accumulator and the store. *)
-  Lemma st_spec_for_each_with {X B} (I : list X -> B -> mem -> Prop)
+  Lemma st_spec_for_each_with {X B} (I : list X -> B -> mem V -> Prop)
     (f : B -> X -> itree E' B) :
     (forall x xs v m, I (x :: xs) v m -> st_spec (f v x) m (fun m' v' => I xs v' m')) ->
     forall xs v m, I xs v m -> st_spec (for_each_with xs v f) m (fun m' v' => I [] v' m').
@@ -243,13 +271,13 @@ End STSpec.
 
 Section RunST.
 
-  Context {E : Type -> Type} `{exceptE Err -< E} {V : nat -> Type} {S : Type}.
+  Context {E : Type -> Type} `{exceptE Err -< E} {V : nat -> Type}.
 
-  (** A program specified from the empty store computes, under [runST], a
-      result its specification describes. *)
-  Lemma st_spec_runST {A} (f : forall S', itree (STEvent nat S' V +' E) A) (Q : A -> Prop) :
-    st_spec (S := unit) (V := V) (f unit) HMap.empty (fun _ v => Q v) ->
-    exists v, runST (S := S) f ≈ Ret v /\ Q v.
+  (** A program specified in the model from the empty store computes,
+      under [runST], a result its specification describes. *)
+  Lemma st_spec_runST {A} (f : forall R : STRefs, itree (STEvent R V +' E) A) (Q : A -> Prop) :
+    st_spec (f model_refs) (@HMap.empty _ _ _ (st_hmap V)) (fun _ v => Q v) ->
+    exists v, runST f ≈ Ret v /\ Q v.
   Proof.
     intros (m' & v & Hrun & HQ). exists v. split; [ eapply runST_Ret, Hrun | exact HQ ].
   Qed.

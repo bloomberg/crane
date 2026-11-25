@@ -41,7 +41,6 @@ From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.STMonad
 .
 From Crane Require Mapping.Descriptor.
@@ -52,23 +51,23 @@ Local Open Scope monad_scope.
 
 Module StArrayHelpers.
 
-  Notation NatE := (STEvent nat unit (fun _ : nat => nat) +' exceptE Err).
-  Notation BoolE := (STEvent nat unit (fun _ : nat => bool) +' exceptE Err).
-  Notation NatArray := (STArray nat unit nat).
-  Notation BoolArray := (STArray nat unit bool).
+  Notation NatE := (STEvent cpp_refs (fun _ : nat => nat) +' exceptE Err).
+  Notation BoolE := (STEvent cpp_refs (fun _ : nat => bool) +' exceptE Err).
+  Notation NatArray := (@STArray cpp_refs nat).
+  Notation BoolArray := (@STArray cpp_refs bool).
 
   (** Only reads a cell. *)
   Definition peek (arr : NatArray) (i : nat) : itree NatE nat :=
-    readArray (idx := 0) arr i.
+    readArray arr i.
 
   (** Reads one cell and writes it back. *)
   Definition bump (arr : NatArray) (i : nat) : itree NatE unit :=
-    v <- readArray (idx := 0) arr i;;
-    writeArray (idx := 0) arr i (S v).
+    v <- readArray arr i;;
+    writeArray arr i (S v).
 
   (** A write two calls deep. *)
   Definition middle (arr : NatArray) (i : nat) : itree NatE unit :=
-    writeArray (idx := 0) arr i 42.
+    writeArray arr i 42.
 
   Definition outer (arr : NatArray) : itree NatE unit :=
     middle arr 0;;
@@ -76,7 +75,7 @@ Module StArrayHelpers.
 
   (** Swaps the first and last cells: [swapArray] is called, not unfolded. *)
   Definition swap_ends (arr : NatArray) (last : nat) : itree NatE unit :=
-    swapArray (idx := 0) arr 0 last.
+    swapArray arr 0 last.
 
   (** Returns one of its arrays: it keeps them, so takes them by value. *)
   Definition pick (b : bool) (arr1 arr2 : NatArray) : NatArray :=
@@ -85,14 +84,14 @@ Module StArrayHelpers.
   (** Writes its first array and passes both to [pick], which keeps them:
       by value too. *)
   Definition write_then_pick (arr1 arr2 : NatArray) : itree NatE NatArray :=
-    writeArray (idx := 0) arr1 1 7;;
+    writeArray arr1 1 7;;
     Ret (pick true arr1 arr2).
 
   (** Returns its array through the monad's [Ret], a legacy mapping whose
       argument Crane takes to be only read: borrowed, and copied where it is
       returned. *)
   Definition keep (arr : NatArray) : itree NatE NatArray :=
-    writeArray (idx := 0) arr 1 7;;
+    writeArray arr 1 7;;
     Ret arr.
 
   (** Reseats the handle to a fresh array of [n] zeros. *)
@@ -103,14 +102,14 @@ Module StArrayHelpers.
   Fixpoint zero_from (arr : NatArray) (i n : nat) : itree NatE unit :=
     match n with
     | O => Ret tt
-    | S m => writeArray (idx := 0) arr i 0;; zero_from arr (S i) m
+    | S m => writeArray arr i 0;; zero_from arr (S i) m
     end.
 
   Fixpoint sum_from (arr : NatArray) (i n : nat) : itree NatE nat :=
     match n with
     | O => Ret 0
     | S m =>
-        x <- readArray (idx := 0) arr i;;
+        x <- readArray arr i;;
         r <- sum_from arr (S i) m;;
         Ret (x + r)
     end.
@@ -120,78 +119,73 @@ Module StArrayHelpers.
 
   (** Writes a cell, then refills the array canonically. *)
   Definition write_and_refill (arr : NatArray) (v : nat) : itree NatE unit :=
-    writeArray (idx := 0) arr 0 v;;
+    writeArray arr 0 v;;
     refill arr v.
 
   (** Replaces its array, then writes the new one. *)
   Definition regrow_then_write (arr : NatArray) (n : nat) : itree NatE unit :=
     regrow arr n;;
-    writeArray (idx := 0) arr 0 n.
+    writeArray arr 0 n.
 
   (** A [bool] array: reads one cell and writes its negation back. *)
   Definition flip (arr : BoolArray) (i : nat) : itree BoolE unit :=
-    b <- readArray (idx := 0) arr i;;
-    writeArray (idx := 0) arr i (negb b).
-
-  (** Runs an ST computation; [runST] only interprets into an [itree].
-      Extracted as the identity. *)
-  Axiom run_nat : forall (A : Type), itree NatE A -> A.
-  Axiom run_bool : forall (A : Type), itree BoolE A -> A.
+    b <- readArray arr i;;
+    writeArray arr i (negb b).
 
   Definition helpers_list (xs : list nat) : list nat :=
-    run_nat (list nat)
-      (arr <- newListArray 0 0 (length xs - 1) xs;;
+    run_st
+      (arr <- newListArray xs;;
        bump arr 1;;
        outer arr;;
        swap_ends arr (length xs - 1);;
-       getElems (idx := 0) arr).
+       getElems arr).
 
   Definition keep_list (n : nat) : list nat * list nat :=
-    run_nat (list nat * list nat)
-      (arr <- newArray 0 0 (n - 1) 3;;
-       other <- newArray 0 0 1 4;;
+    run_st
+      (arr <- newArray n 3;;
+       other <- newArray 2 4;;
        kept <- keep arr;;
        picked <- write_then_pick kept other;;
-       writeArray (idx := 0) picked 0 8;;
-       elems <- getElems (idx := 0) arr;;
-       others <- getElems (idx := 0) other;;
+       writeArray picked 0 8;;
+       elems <- getElems arr;;
+       others <- getElems other;;
        Ret (elems, others)).
 
   Definition refill_list (n : nat) : nat * list nat :=
-    run_nat (nat * list nat)
-      (arr <- newArray 0 0 2 1;;
+    run_st
+      (arr <- newArray 3 1;;
        write_and_refill arr n;;
        first <- peek arr 0;;
-       elems <- getElems (idx := 0) arr;;
+       elems <- getElems arr;;
        Ret (first, elems)).
 
   Definition loops_list (n : nat) : nat * list nat :=
-    run_nat (nat * list nat)
-      (arr <- newArray 0 0 (n - 1) 2;;
+    run_st
+      (arr <- newArray n 2;;
        zero_from arr 1 2;;
        s <- sum_from arr 0 n;;
-       elems <- getElems (idx := 0) arr;;
+       elems <- getElems arr;;
        Ret (s, elems)).
 
   Definition regrow_list (n : nat) : list nat :=
-    run_nat (list nat)
-      (arr <- newArray 0 0 1 5;;
+    run_st
+      (arr <- newArray 2 5;;
        regrow_then_write arr n;;
-       getElems (idx := 0) arr).
+       getElems arr).
 
   Definition flip_list (bs : list bool) : list bool :=
-    run_bool (list bool)
-      (arr <- newListArray 0 0 (length bs - 1) bs;;
+    run_st
+      (arr <- newListArray bs;;
        flip arr 0;;
        flip arr 2;;
-       getElems (idx := 0) arr).
+       getElems arr).
 
   Definition bools_filled (n : nat) : bool * list bool :=
-    run_bool (bool * list bool)
-      (arr <- newArray 0 0 (n - 1) false;;
+    run_st
+      (arr <- newArray n false;;
        flip arr 1;;
-       b <- readArray (idx := 0) arr 1;;
-       elems <- getElems (idx := 0) arr;;
+       b <- readArray arr 1;;
+       elems <- getElems arr;;
        Ret (b, elems)).
 
 End StArrayHelpers.
@@ -220,7 +214,5 @@ Open Scope pstring_scope.
          ReturnValue
          [WritesComponent {| path_argument := "arr"; path_components := ["contents"] |} None] |}.
 
-Crane Extract Inlined Constant StArrayHelpers.run_nat => "%a0".
-Crane Extract Inlined Constant StArrayHelpers.run_bool => "%a0".
 
 Crane Extraction "st_array_helpers" StArrayHelpers.

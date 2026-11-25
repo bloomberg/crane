@@ -189,13 +189,3 @@
   (deps itree_two_self_calls.t.exe)
   (action (run ./itree_two_self_calls.t.exe))))
 
-(subdir hk_argument_after_phantom
- (rule
-  (targets hk_argument_after_phantom.t.exe)
-  (deps HkArgumentAfterPhantom.vo hk_argument_after_phantom.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_argument_after_phantom.t.exe hk_argument_after_phantom.t.cpp hk_argument_after_phantom.cpp)))
- (rule
-  (alias runtest)
-  (deps hk_argument_after_phantom.t.exe)
-  (action (run ./hk_argument_after_phantom.t.exe))))

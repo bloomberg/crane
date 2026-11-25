@@ -1,5 +1,21 @@
 #include "st_quicksort.h"
 
+template <typename T1>
+void quicksort_ST(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi) {
+  if (lo < hi) {
+    uint64_t p = partition<T1>(
+        r, arr, lo, hi,
+        (lo +
+         (UINT64_C(2) ? (((hi - lo) > hi ? 0 : (hi - lo))) / UINT64_C(2) : 0)));
+    quicksort_ST<T1>(r, arr, lo,
+                     (((p - UINT64_C(1)) > p ? 0 : (p - UINT64_C(1)))));
+    quicksort_ST<T1>(r, arr, (p + UINT64_C(1)), hi);
+    return;
+  } else {
+    return;
+  }
+}
+
 List<uint64_t> StQuicksort::quicksort_fun(const List<uint64_t> &x) {
   // Explicit stack replaces the non-tail recursion of quicksort_fun: _call
   // frames are pending calls, _after frames resume a caller.
@@ -63,16 +79,12 @@ List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
     return List<uint64_t>::nil();
   } else {
-    auto _once1 = xs.length();
     std::shared_ptr<crane::array_storage<uint64_t>> arr =
-        crane::st::new_list_array<uint64_t>(crane::st::extent(
-            UINT64_C(0),
-            (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1))))),
-                                            xs);
-    auto _once2 = xs.length();
-    quicksort_ST<void>(
-        std::span<uint64_t>{*arr}, UINT64_C(0),
-        (((_once2 - UINT64_C(1)) > _once2 ? 0 : (_once2 - UINT64_C(1)))));
+        crane::st::new_list_array<uint64_t>(xs);
+    auto _once1 = xs.length();
+    quicksort_ST(
+        STRefs::BUILD_STREFS, std::span<uint64_t>{*arr}, UINT64_C(0),
+        (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
     return crane::st::elems<List<uint64_t>>(std::span<const uint64_t>{*arr});
   }
 }

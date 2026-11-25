@@ -34,7 +34,7 @@ std::pair<std::pair<std::pair<int64_t, int64_t>, bool>, int64_t>
 acc_test1_ext() {
   std::shared_ptr<int64_t> _lc1_bal_ref =
       std::make_shared<int64_t>(INT64_C(100));
-  Account<std::monostate> acc = Account<std::monostate>{
+  Account acc = Account{
       [=](std::monostate) { return *_lc1_bal_ref.get(); },
       [=](uint64_t amt) {
         int64_t bal = *_lc1_bal_ref.get();
@@ -78,7 +78,7 @@ std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
 acc_test2_ext() {
   std::shared_ptr<int64_t> _lc1_bal_ref =
       std::make_shared<int64_t>(INT64_C(100));
-  Account<std::monostate> acc1 = Account<std::monostate>{
+  Account acc1 = Account{
       [=](std::monostate) { return *_lc1_bal_ref.get(); },
       [=](uint64_t amt) {
         int64_t bal = *_lc1_bal_ref.get();
@@ -104,7 +104,7 @@ acc_test2_ext() {
       }};
   std::shared_ptr<int64_t> _lc2_bal_ref =
       std::make_shared<int64_t>(INT64_C(150));
-  Account<std::monostate> acc2 = Account<std::monostate>{
+  Account acc2 = Account{
       [=](std::monostate) { return *_lc2_bal_ref.get(); },
       [=](uint64_t amt) {
         int64_t bal = *_lc2_bal_ref.get();
@@ -158,7 +158,7 @@ std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
 bankacc_test1_ext() {
   std::shared_ptr<int64_t> _lc2_bal_ref =
       std::make_shared<int64_t>(INT64_C(100));
-  Account<std::monostate> _lc1_checking_ = Account<std::monostate>{
+  Account _lc1_checking_ = Account{
       [=](std::monostate) { return *_lc2_bal_ref.get(); },
       [=](uint64_t amt) {
         int64_t bal = *_lc2_bal_ref.get();
@@ -184,7 +184,7 @@ bankacc_test1_ext() {
       }};
   std::shared_ptr<int64_t> _lc3_bal_ref =
       std::make_shared<int64_t>(INT64_C(150));
-  Account<std::monostate> _lc1_saving_ = Account<std::monostate>{
+  Account _lc1_saving_ = Account{
       [=](std::monostate) { return *_lc3_bal_ref.get(); },
       [=](uint64_t amt) {
         int64_t bal = *_lc3_bal_ref.get();
@@ -208,9 +208,8 @@ bankacc_test1_ext() {
               static_cast<uint64_t>(bal) - static_cast<uint64_t>(amt)));
         }
       }};
-  BankAccountCollection<std::monostate> acc =
-      BankAccountCollection<std::monostate>{std::move(_lc1_checking_),
-                                            std::move(_lc1_saving_)};
+  BankAccountCollection acc =
+      BankAccountCollection{std::move(_lc1_checking_), std::move(_lc1_saving_)};
   int64_t a = acc.checking.getBalance(std::monostate{});
   std::optional<int64_t> result = acc.checking.withdraw(a);
   if (result.has_value()) {

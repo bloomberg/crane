@@ -20,15 +20,13 @@
 #include <utility>
 #include <variant>
 
-struct nat_ix_stref;
+template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-struct STRefNat;
-template <typename I, typename T>
-concept STRefClass = requires {
-  { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
-  { I::STRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
+template <typename I, typename V, typename A>
+concept Code = requires {
+  { I::code() } -> std::convertible_to<uint64_t>;
 };
 
 struct ListDef {
@@ -255,29 +253,9 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct STRefNat {
-  // DATA
-  uint64_t s;
-
-  // ACCESSORS
-  STRefNat clone() const { return {s}; }
-
-  // CREATORS
-  static STRefNat mkstref(uint64_t s) { return {s}; }
-
-  uint64_t STRefToIxNat() const;
+template <typename T1> struct code_const {
+  constexpr static uint64_t code() { return UINT64_C(0); }
 };
-
-struct nat_ix_stref {
-  static crane::obj mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
-
-  static uint64_t STRefToIx(crane::obj _p_a0) {
-    STRefNat a0 = crane::any_cast<STRefNat>(_p_a0);
-    return a0.STRefToIxNat();
-  }
-};
-
-static_assert(STRefClass<nat_ix_stref, uint64_t>);
 
 struct UnitAccumLocalFix {
   /// for_each_with at B := unit, unfolded below into a local fixpoint.
@@ -309,8 +287,3 @@ struct UnitAccumLocalFix {
   /// A unit accumulator threaded beside a nat one.
   static uint64_t sum_with_unit(const List<uint64_t> &l);
 };
-
-inline uint64_t STRefNat::STRefToIxNat() const {
-  const auto &[s] = *this;
-  return s;
-}

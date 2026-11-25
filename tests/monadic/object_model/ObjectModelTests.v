@@ -1,75 +1,43 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* An object model using STRefs for mutable state *)
+(** An object model using ST references for mutable state: objects are
+    records of methods closing over their references (after OOHaskell,
+    https://github.com/nkaretnikov/OOHaskell/blob/master/samples/SimpleST.hs).
+    The account invariant -- the balance is never negative -- holds after
+    construction and is preserved by every method ([st_spec] lemmas). *)
 
 From Stdlib Require Import
   Arith.PeanoNat
-  Arith.Peano_dec
-  Init.Peano
   Lia
-  List
-  Morphisms
-  RelationClasses
-  Relation_Definitions
-  Setoid
-  Strings.String
-  Classes.EquivDec
-  Basics
   ZArith
 .
 
-From ExtLib Require Import
-  CmpDec
-  Data.Bool
-  Data.List
-  Data.Map.FMapAList
-  Data.Monads.EitherMonad
-  Data.Pair
-  Data.String
-  Structures.Functor
-  Structures.Maps
-  Structures.Traversable
-  Structures.Reducible
-.
-
-
 From ITree Require Import
   Events.Exception
-  Events.FailFacts
-  Events.MapDefault
-  Events.MapDefaultFacts
-  Events.State
-  Events.StateFacts
   ITree
   ITreeFacts
 .
-            
 
 From Crane Require Import
   Monads.ITree
   Monads.Error
-  Monads.Indices
   Monads.STMonad
   Monads.STMonadFacts
-  Monads.MonadFacts
-  Utils.HMap
-  Utils.HAList
+  Monads.STMonadSpec
   Extraction.
+
+Import Monads.
+Local Open Scope monad_scope.
 
 Section Classes.
 
+  Context {R : STRefs}.
+  Notation V := (fun _ : nat => Z).
+  Notation E0 := (STEvent R V +' exceptE Err).
 
-  Context (S : Type).
-  Let T := nat.
-  Let ltu := Nat.le.
-  Let V : T -> Type := fun _ => Z.
-  Let E0 := (STEvent T S V) +' exceptE Err.
-
-  Local Notation ref := (newSTRef).
   Local Notation "x :== y" := (writeSTRef x y) (at level 0).
   Local Notation "! x" := (readSTRef x) (at level 50).
-  
 
   Record Point := mkPoint {
       getX : unit -> itree E0 Z;
@@ -77,13 +45,8 @@ Section Classes.
       offsetX : unit -> itree E0 Z;
     }.
 
-
-  
-  (* NOTE: might wanna enforce unique indices with a global effect
-           draw indices from a index generator. *)
-  (* Modeling off of examples in OOHaskell, starting from https://github.com/nkaretnikov/OOHaskell/blob/master/samples/SimpleST.hs#L69 *)
-  Definition class_pointST {idx : T} (init : Z) : itree E0 Point :=
-    ref <- newSTRef 0 init ;;
+  Definition class_pointST (init : Z) : itree E0 Point :=
+    ref <- newSTRef init;;
     let moveD :=
       fun move_amt =>
         i <- readSTRef ref;;
@@ -93,78 +56,72 @@ Section Classes.
       Ret (i - init)%Z in
     Ret (mkPoint (fun _ => readSTRef ref) moveD (fun _ => offsetX)).
 
-
   Definition testtoST1 : itree E0 (Z * Z * Z) :=
-    p <- @class_pointST 0 1;;
+    p <- class_pointST 1;;
     a <- getX p tt;;
     moveD p 2;;
     b <- getX p tt;;
     c <- offsetX p tt;;
     Ret (a,b,c).
 
-
   Definition testtoST2 : itree E0 (Z * Z * Z * Z) :=
-      p1 <- @class_pointST 0 1;;
-      p2 <- @class_pointST 1 10;;
-      a <- getX p1 tt;;
-      b <- getX p2 tt;;
-	    (* reading from one and putting into the other *)
-      v1 <- getX p1 tt;; moveD p2 v1;;
-      c <- getX p1 tt;;
-      d <- getX p2 tt;;
-      Ret (a,b,c,d)
-  .
+    p1 <- class_pointST 1;;
+    p2 <- class_pointST 10;;
+    a <- getX p1 tt;;
+    b <- getX p2 tt;;
+    (* reading from one and putting into the other *)
+    v1 <- getX p1 tt;; moveD p2 v1;;
+    c <- getX p1 tt;;
+    d <- getX p2 tt;;
+    Ret (a,b,c,d).
 
-  
   Record Account := mkAccount {
       getBalance : unit -> itree E0 Z;
       deposit : nat -> itree E0 Z;
       withdraw : Z -> itree E0 (option Z);
     }.
 
-  Definition getBalance_imp (idx : T) (ref : STRef S Z) : unit -> itree E0 Z :=
-    fun _ => readSTRef (idx := idx) ref.
+  Definition getBalance_imp (ref : STRef Z) : unit -> itree E0 Z :=
+    fun _ => readSTRef ref.
 
-  Definition deposit_imp (idx : T) (ref : STRef S Z) : nat -> itree E0 Z :=
+  Definition deposit_imp (ref : STRef Z) : nat -> itree E0 Z :=
     fun amt : nat =>
-      bal <- readSTRef (idx := idx) ref;;
+      bal <- readSTRef ref;;
       let new_bal := (bal + (Z.of_nat amt))%Z in
-      writeSTRef (idx := idx) ref new_bal;;
+      writeSTRef ref new_bal;;
       Ret new_bal.
 
-  Definition withdraw_imp (idx : T) (ref : STRef S Z) : Z -> itree E0 (option Z) :=
-      fun amt : Z =>
-        bal <- readSTRef (idx := idx) ref;;
-        let new_bal := (bal - amt)%Z in
-        if (new_bal <? 0)%Z then
-          Ret None
-        else
-          writeSTRef (idx := idx) ref new_bal;; 
-          Ret (Some new_bal).
+  Definition withdraw_imp (ref : STRef Z) : Z -> itree E0 (option Z) :=
+    fun amt : Z =>
+      bal <- readSTRef ref;;
+      let new_bal := (bal - amt)%Z in
+      if (new_bal <? 0)%Z then
+        Ret None
+      else
+        writeSTRef ref new_bal;;
+        Ret (Some new_bal).
 
-
-  Definition class_Account (idx : T) (init : Z) : itree E0 Account :=
-    bal_ref <- ref idx init ;;
+  Definition class_Account (init : Z) : itree E0 Account :=
+    bal_ref <- newSTRef init;;
     Ret
       {| getBalance _ := !bal_ref;
-         deposit amt := 
+         deposit amt :=
             bal <- !bal_ref;;
             let new_bal := (bal + (Z.of_nat amt))%Z in
              bal_ref :== new_bal;;
              Ret new_bal;
-        withdraw amt := 
+        withdraw amt :=
             bal <- !bal_ref;;
             let new_bal := (bal - amt)%Z in
             if (new_bal <? 0)%Z then
               Ret None
             else
-              bal_ref :== new_bal;; 
+              bal_ref :== new_bal;;
               Ret (Some new_bal);
       |}.
 
-
   Definition testAccount1 : itree E0 (Z * Z * bool * Z) :=
-    acc <- @class_Account 0%nat 100;;
+    acc <- class_Account 100;;
     a <- getBalance acc tt;;
     b <- deposit acc 50;; (* deposit 50 *)
     c <- withdraw acc 160;; (* attempt to withdraw more than we can *)
@@ -178,8 +135,8 @@ Section Classes.
 
   (* Fully transfer amounts between two accounts *)
   Definition testAccount2 : itree E0 (Z * bool * Z * Z) :=
-    acc1 <- @class_Account 0%nat 100;;
-    acc2 <- @class_Account 1%nat 150;;
+    acc1 <- class_Account 100;;
+    acc2 <- class_Account 150;;
     a <- getBalance acc1 tt;;
     result <- withdraw acc1 a;;
     match result with
@@ -193,213 +150,23 @@ Section Classes.
         Ret (a,false,b,c)
     end.
 
-  #[export] Instance hmap_nat_v : HMap (@idx_key T T) (idx_key_type V) mem :=
-    HMap_halist (idx_key T) (idx_key_type V).
+  Record BankAccountCollection :=
+    mkBankAccount {
+      checking : Account;
+      saving   : Account;
+    }.
 
-  Record account_impl  (idx : T) (ref : STRef S Z) (acc : Account) := 
-    mkAccountImpl {
-        getBalance_impld_by : getBalance acc = getBalance_imp idx ref;
-        withdraw_impld_by : withdraw acc = withdraw_imp idx ref;
-        deposit_impld_by : deposit acc = deposit_imp idx ref;
-      }.
-
-  Definition account_wf (acc : Account) (idx : T) (ref : STRef S Z)
-    (m : @mem T V)  : Prop :=
-    account_impl idx ref acc  /\
-    exists v, HMap.lookup (STRefToIx S Z ref, idx) m = Some v /\ (v >= 0)%Z.
-
-  Definition max_idx (m : @mem T V) :=
-    Datatypes.S (fold (fun '(existT _ (n, _) _) (acc : nat) => Nat.max n acc) 0%nat m).
-
-  Opaque HAList.halist_lookup HAList.halist_add
-        HAList.HMap_halist HAList.HMapOk_halist.
-
-  Lemma interp_st_class_account : forall
-    (init : Z)
-    (idx : T)
-    (l : @mem T V),
-      interp_st ltu (Account) (@class_Account idx init) l
-        ≈
-    ITreeDefinition.Ret
-    (HMap.add (max_idx l, idx)
-         init l,
-     {|
-       getBalance := getBalance_imp idx (MkSTRef S (V 0%nat) (max_idx l));
-       deposit := deposit_imp idx (MkSTRef S (V 0%nat) (max_idx l));
-       withdraw := withdraw_imp idx (MkSTRef S (V 0%nat) (max_idx l))
-     |}).
-    Proof using Type.
-      intros init idx l.
-      unfold class_Account.
-      change T with nat in *.
-      unfold E0.
-      rewrite interp_st_bind.
-      unfold newSTRef. rewrite interp_st_trigger. cbn.
-      change_to_monad.
-      change (V _) with Z in *.
-      monad_simpl_inner.
-      change_to_monad.
-      rewrite interp_st_ret.
-      unfold max_idx.
-      unfold getBalance_imp,deposit_imp,withdraw_imp.
-      change_to_monad.
-      reflexivity.
-    Qed.
-
-
-    
-
-  Lemma class_account_is_wf : forall (acc : Account) (idx : T) (mem mem2 : @mem T V ) (init : Z),
-      (init >= 0)%Z ->
-      interp_st ltu _ (@class_Account idx init) mem ≈ Ret (mem2, acc) ->
-      exists ref, account_wf acc idx ref mem2. 
-    Proof using Type.
-      intros.
-      unfold account_wf.
-      rewrite interp_st_class_account in H0.
-      eapply eutt_inv_Ret in H0.
-      inversion H0.
-      unfold getBalance. unfold getBalance_imp in *.
-      unfold readSTRef.
-      exists (MkSTRef S (V 0) (max_idx mem)).
-      split. 
-      - econstructor.
-        + econstructor.
-        + split; reflexivity.
-        + econstructor.
-      - exists init. 
-        split.
-        + eapply st_lookup_add_eq. 
-        + assumption.
-    Qed.
-      
-    Local Ltac unfold_instances :=
-      change T with nat in *;
-      unfold E0 in *;
-      unfold V in *.
-
-  Lemma withdraw_cannot_return_negative :
-    forall (acc : Account) (idx : T) (ref : STRef S Z) (amt new_bal : Z) (m0 m1 : @mem T V) (o : option Z),
-      account_wf acc idx ref m0 ->
-      interp_st ltu _ (withdraw acc amt) m0 ≈ Ret (m1 , o) ->
-      account_wf acc idx ref m1.
-    Proof using Type. 
-      intros acc idx ref amt b m0 m1 o Hwdrw Hintrp.
-      unfold account_wf in *. destruct Hwdrw as [Hback Hlookup].
-      split. try assumption.
-      destruct Hback as [Hgetb Hwdrw Hdepos].
-      rewrite Hwdrw in Hintrp.
-      unfold withdraw_imp in Hintrp. unfold_instances.
-      rewrite interp_st_bind in Hintrp.
-      unfold readSTRef in Hintrp.
-      rewrite interp_st_trigger in Hintrp. cbn in Hintrp.
-      destruct Hlookup as [v [Hlookup Hvnz]].
-      change (lookup (STRefToIxNat S Z ref, idx) m0) with (lookup (STRefToIx S Z ref, idx) m0) in Hintrp. 
-      replace (lookup (STRefToIx S Z ref, idx) m0) with
-              (Some v) in Hintrp.
-      change (@ITree.bind ?E) with (@Monad.bind (itree E) _) in Hintrp.
-      setoid_rewrite Ret_is_ret in Hintrp.
-      repeat (repeat setoid_rewrite Monad.bind_bind in Hintrp;
-          repeat setoid_rewrite bind_Ret_l in Hintrp;
-          repeat setoid_rewrite bind_Ret_r in Hintrp).
-      destruct (v - amt <? 0)%Z eqn:Hv.
-      setoid_rewrite Ret_is_ret in Hintrp.
-      rewrite interp_st_ret in Hintrp.
-      eapply eutt_inv_Ret in Hintrp. inversion Hintrp. subst.
-      exists v. split; assumption.
-      exists (v - amt)%Z.
-      unfold_instances.
-      change (@Monad.bind (itree ?E) _) with (@ITree.bind E) in Hintrp.
-      rewrite interp_st_bind_eutt in Hintrp.
-      unfold writeSTRef in Hintrp.
-      rewrite interp_st_trigger in Hintrp. cbn in Hintrp.
-      change (@ITree.bind ?E) with (@Monad.bind (itree E) _) in Hintrp.
-      setoid_rewrite bind_Ret_l in Hintrp.
-      cbv beta iota in Hintrp.
-      rewrite interp_st_Ret in Hintrp.
-      eapply eutt_inv_Ret in Hintrp.
-      inversion Hintrp. subst. split.
-      - eapply st_lookup_add_eq.
-      - lia.  
-     Qed.
-
-
-  Lemma deposit_preserves_wf :
-    forall (acc : Account) (idx : T) (ref : STRef S Z) (amt : nat) (new_bal : Z) (m0 m1 : @mem T V) (out_val : Z),
-      account_wf acc idx ref m0 ->
-      interp_st ltu _ (deposit acc amt) m0 ≈ Ret (m1 , out_val) ->
-      account_wf acc idx ref m1.
-    Proof using Type.
-      intros acc idx ref amt b m0 m1 o Hwdrw Hintrp.
-      unfold account_wf in *. destruct Hwdrw as [Hback Hlookup].
-      split; try assumption.
-      destruct Hback as [Hgetb Hwdrw Hdepos].
-      rewrite Hdepos in Hintrp. unfold deposit_imp in Hintrp. unfold_instances.
-      rewrite interp_st_bind in Hintrp. unfold readSTRef in *. rewrite interp_st_trigger in Hintrp. cbn in Hintrp.  
-      destruct Hlookup as [v [Hlookup Hvnz]].
-      change (lookup (STRefToIxNat S Z ref, idx) m0) with (lookup (STRefToIx S Z ref, idx) m0) in Hintrp. 
-      replace (lookup (STRefToIx S Z ref, idx) m0) with
-              (Some v) in Hintrp.
-      change (@ITree.bind ?E) with (@Monad.bind (itree E) _) in Hintrp.
-      setoid_rewrite Ret_is_ret in Hintrp.
-      repeat (repeat setoid_rewrite Monad.bind_bind in Hintrp;
-          repeat setoid_rewrite bind_Ret_l in Hintrp;
-          repeat setoid_rewrite bind_Ret_r in Hintrp).
-      exists (v + Z.of_nat amt)%Z. unfold_instances.
-      change (@Monad.bind (itree ?E) _) with (@ITree.bind E) in Hintrp.
-      rewrite interp_st_bind_eutt in Hintrp.
-      unfold writeSTRef in Hintrp.
-      rewrite interp_st_trigger in Hintrp. cbn in Hintrp.
-      change (@ITree.bind ?E) with (@Monad.bind (itree E) _) in Hintrp.
-      setoid_rewrite bind_Ret_l in Hintrp.
-      cbv beta iota in Hintrp.
-      rewrite interp_st_Ret in Hintrp.
-      eapply eutt_inv_Ret in Hintrp. inversion Hintrp. subst.
-      split.
-      - apply st_lookup_add_eq. 
-      - lia.
-    Qed.
-
-
-
-  Lemma getBalance_preserves_wf :
-    forall (acc : Account) (idx : T) (ref : STRef S Z) (out_val : Z) (m0 m1 : @mem T V),
-      account_wf acc idx ref m0 ->
-      interp_st ltu _ (getBalance acc tt) m0 ≈ Ret (m1 , out_val) ->
-      account_wf acc idx ref m1.
-    Proof using Type.
-      intros acc idx ref out_val m0 m1 Hwf Hintrp.
-      destruct Hwf as [[Hgetbal Hwth Hdep] Hlookup]; rewrite Hgetbal in Hintrp.
-      unfold getBalance_imp in Hintrp.
-      unfold readSTRef in Hintrp.
-      unfold_instances.
-      rewrite interp_st_trigger in Hintrp; cbn in Hintrp.
-      destruct Hlookup as [v [Hlookup Hv]].
-      change (STRefToIxNat S Z ref, idx) with (STRefToIx S Z ref, idx) in Hintrp.
-      rewrite Hlookup in Hintrp.
-      eapply eutt_inv_Ret in Hintrp. inversion Hintrp. subst.
-      split; try (repeat split; assumption). 
-      exists out_val. split; try (repeat split; assumption).
-    Qed.
-
-    
-    Record BankAccountCollection :=
-      mkBankAccount {
-        checking : Account;
-        saving   : Account;
-      }.
-
-    Definition class_BankAccount (idx : T) (init_checking init_saving : Z) : itree E0 BankAccountCollection :=
-      checking' <- @class_Account idx init_checking;;
-      saving' <- @class_Account (suc idx) init_saving;;
-      Ret
-        {| checking := checking';
-           saving := saving';
-        |}.
+  Definition class_BankAccount (init_checking init_saving : Z) : itree E0 BankAccountCollection :=
+    checking' <- class_Account init_checking;;
+    saving' <- class_Account init_saving;;
+    Ret
+      {| checking := checking';
+         saving := saving';
+      |}.
 
   (* Fully transfer amounts between two accounts *)
   Definition testBankAccount1 : itree E0 (Z * bool * Z * Z) :=
-    acc <- class_BankAccount 0%nat 100 150;; 
+    acc <- class_BankAccount 100 150;;
     a <- getBalance (checking acc) tt;;
     result <- withdraw (checking acc) a;;
     match result with
@@ -413,63 +180,118 @@ Section Classes.
         Ret (a,false,b,c)
     end.
 
-
 End Classes.
 
+(** * The account invariant *)
+
+Section AccountProofs.
+
+  Notation V := (fun _ : nat => Z).
+
+  (** [acc]'s methods are those of the reference [ref]. *)
+  Record account_impl (ref : nat) (acc : @Account model_refs) :=
+    mkAccountImpl {
+        getBalance_impld_by : getBalance acc = getBalance_imp (R := model_refs) ref;
+        withdraw_impld_by : withdraw acc = withdraw_imp (R := model_refs) ref;
+        deposit_impld_by : deposit acc = deposit_imp (R := model_refs) ref;
+      }.
+
+  (** [acc] is backed by [ref], which holds a balance that is not negative. *)
+  Definition account_wf (acc : @Account model_refs) (ref : nat) (m : mem V) : Prop :=
+    account_impl ref acc /\ exists v, st_get (V := V) ref m = Some v /\ (v >= 0)%Z.
+
+  Lemma class_account_is_wf (init : Z) (m : mem V) :
+    (init >= 0)%Z ->
+    st_spec (E := exceptE Err) (class_Account (R := model_refs) init) m
+      (fun m' acc => exists ref, account_wf acc ref m').
+  Proof.
+    intros Hinit. unfold class_Account.
+    apply st_spec_bind, st_spec_newSTRef. cbv beta. apply st_spec_ret.
+    exists (st_fresh m). split; [ constructor; reflexivity |].
+    exists init. split; [ apply st_get_put_eq | exact Hinit ].
+  Qed.
+
+  Lemma withdraw_preserves_wf (acc : @Account model_refs) ref amt (m : mem V) :
+    account_wf acc ref m ->
+    st_spec (E := exceptE Err) (withdraw acc amt) m (fun m' _ => account_wf acc ref m').
+  Proof.
+    intros [[Hget Hwdrw Hdep] (v & Hv & Hpos)]. rewrite Hwdrw. unfold withdraw_imp.
+    apply st_spec_bind. eapply st_spec_readSTRef; [ exact Hv |]. cbv beta.
+    destruct (v - amt <? 0)%Z eqn:Hneg.
+    - apply st_spec_ret. split; [ constructor; assumption |]. exists v. auto.
+    - apply st_spec_bind, st_spec_writeSTRef. cbv beta. apply st_spec_ret.
+      split; [ constructor; assumption |]. exists (v - amt)%Z.
+      split; [ apply st_get_put_eq |]. apply Z.ltb_ge in Hneg. lia.
+  Qed.
+
+  Lemma deposit_preserves_wf (acc : @Account model_refs) ref amt (m : mem V) :
+    account_wf acc ref m ->
+    st_spec (E := exceptE Err) (deposit acc amt) m (fun m' _ => account_wf acc ref m').
+  Proof.
+    intros [[Hget Hwdrw Hdep] (v & Hv & Hpos)]. rewrite Hdep. unfold deposit_imp.
+    apply st_spec_bind. eapply st_spec_readSTRef; [ exact Hv |]. cbv beta.
+    apply st_spec_bind, st_spec_writeSTRef. cbv beta. apply st_spec_ret.
+    split; [ constructor; assumption |]. exists (v + Z.of_nat amt)%Z.
+    split; [ apply st_get_put_eq | lia ].
+  Qed.
+
+  Lemma getBalance_preserves_wf (acc : @Account model_refs) ref (m : mem V) :
+    account_wf acc ref m ->
+    st_spec (E := exceptE Err) (getBalance acc tt) m (fun m' _ => account_wf acc ref m').
+  Proof.
+    intros [[Hget Hwdrw Hdep] (v & Hv & Hpos)]. rewrite Hget. unfold getBalance_imp.
+    eapply st_spec_readSTRef; [ exact Hv |].
+    split; [ constructor; assumption |]. exists v. auto.
+  Qed.
+
+End AccountProofs.
+
+(** * The examples, run in the model *)
 
 Transparent HAList.halist_lookup HAList.halist_add
             HAList.HMap_halist HAList.HMapOk_halist.
 
-Definition run_test1 : itree (exceptE Err) (Z * Z * Z) :=
-  runST (T := nat) (ltu := Nat.le) (V := fun _ : nat => Z) (S := unit) testtoST1.
+Definition run_test1 : itree (exceptE Err) (Z * Z * Z) := runST (fun R => testtoST1 (R := R)).
 
 Lemma point_run_burn1 : burn 100 run_test1 = Ret (1, 3, 2)%Z.
 Proof. lazy. reflexivity. Qed.
 
-Definition run_test2 : itree (exceptE Err) (Z * Z * Z * Z) :=
-  runST (T := nat) (ltu := Nat.le) (V := fun _ : nat => Z) (S := unit) testtoST2.
+Definition run_test2 : itree (exceptE Err) (Z * Z * Z * Z) := runST (fun R => testtoST2 (R := R)).
 
 Lemma point_run_burn2 : burn 100 run_test2 = Ret (1, 10, 1, 11)%Z.
 Proof. lazy. reflexivity. Qed.
 
-Definition run_acc1 : itree (exceptE Err) (Z * Z * bool * Z) :=
-  runST (T := nat) (ltu := Nat.le) (V := fun _ : nat => Z) (S := unit) testAccount1.
+Definition run_acc1 : itree (exceptE Err) (Z * Z * bool * Z) := runST (fun R => testAccount1 (R := R)).
 
 Lemma acc_run_burn1 : burn 100 run_acc1 = Ret (100, 150, false, 150)%Z.
 Proof. lazy. reflexivity. Qed.
 
-Definition run_acc2 : itree (exceptE Err) (Z * bool * Z * Z) :=
-  runST (T := nat) (ltu := Nat.le) (V := fun _ : nat => Z) (S := unit) testAccount2.
+Definition run_acc2 : itree (exceptE Err) (Z * bool * Z * Z) := runST (fun R => testAccount2 (R := R)).
 
 Lemma acc_run_burn2 : burn 100 run_acc2 = Ret (100, true, 250, 0)%Z.
 Proof. lazy. reflexivity. Qed.
 
 Definition run_bank_acc1 : itree (exceptE Err) (Z * bool * Z * Z) :=
-  runST (T := nat) (ltu := Nat.le) (V := fun _ : nat => Z) (S := unit) testBankAccount1.
+  runST (fun R => testBankAccount1 (R := R)).
 
 Lemma bank_acc_run_burn1 : burn 100 run_bank_acc1 = Ret (100, true, 250, 0)%Z.
 Proof. lazy. reflexivity. Qed.
 
-
-
-
-
-
 From Crane Require Import Mapping.ZInt Mapping.NatIntStd.
 
 Definition testtoST1_ext :=
-  Eval unfold testtoST1, class_pointST in (testtoST1 unit).
+  Eval unfold testtoST1, class_pointST in (@testtoST1 cpp_refs).
 Definition testtoST2_ext :=
-  Eval unfold testtoST2, class_pointST in (testtoST2 unit).
+  Eval unfold testtoST2, class_pointST in (@testtoST2 cpp_refs).
 
 Definition acc_test1_ext :=
-  Eval unfold testAccount1, class_Account  in (testAccount1 unit).
+  Eval unfold testAccount1, class_Account in (@testAccount1 cpp_refs).
 
 Definition acc_test2_ext :=
-  Eval unfold testAccount2, class_Account in (testAccount2 unit).
+  Eval unfold testAccount2, class_Account in (@testAccount2 cpp_refs).
 
 Definition bankacc_test1_ext :=
-  Eval unfold testBankAccount1, class_BankAccount, class_Account in (testBankAccount1 unit).
+  Eval unfold testBankAccount1, class_BankAccount, class_Account in (@testBankAccount1 cpp_refs).
 
 Crane Extraction "object_model"
   testtoST1_ext
@@ -478,17 +300,3 @@ Crane Extraction "object_model"
   acc_test2_ext
   bankacc_test1_ext
 .
-
-
-
-
-
-
-
-
-
-  
-
-
-
-  

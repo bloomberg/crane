@@ -7,7 +7,6 @@ From Stdlib Require Import
 From Crane Require Import
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.STMonad
 .
 
@@ -27,13 +26,10 @@ Local Open Scope monad_scope.
 
 Section FibstCofixRepro.
 
-  Context {T : Type} {ltu : T -> T -> Prop}.
-  Context `{Ix_Correct T ltu}.
-  Context {HST: STRefClass T}.
+  Context {R : STRefs}.
 
-  Let V : T -> Type := fun _ => nat.
-  Let S := unit.
-  Let E0 := (STEvent T S V) +' exceptE Err.
+  Let V : nat -> Type := fun _ => nat.
+  Let E0 := (STEvent R V) +' exceptE Err.
 
   (** Reproduces a version of fibST in STMonadtest.v.  It recurses without
       end by construction: [n] is not decremented on each recursive call.
@@ -53,34 +49,31 @@ Section FibstCofixRepro.
       took [go] to escape, as a cofixpoint's body is suspended -- but a
       cofixpoint into a monad generated as sequencing is not. *)
   Definition fibst_repro (n : nat) : itree E0 nat :=
-    let cofix go (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
+    let cofix go (x y : STRef nat) : itree E0 nat :=
       match n with
-      | 0 => @readSTRef _ _ _ _ _ _ idx_x x
+      | 0 => readSTRef (E := E0) (V := V) x
       | Datatypes.S n =>
-          x' <- @readSTRef _ _ _ _ _ _ idx_x x;;
-          y' <- @readSTRef _ _ _ _ _ _ idx_y y;;
-          @writeSTRef _ _ _ _ _ _ idx_x x y';;
-          @writeSTRef _ _ _ _ _ _ idx_y y (x' + y');;
-          Tau (go x y idx_x idx_y)
+          x' <- readSTRef (E := E0) (V := V) x;;
+          y' <- readSTRef (E := E0) (V := V) y;;
+          writeSTRef (E := E0) (V := V) x y';;
+          writeSTRef (E := E0) (V := V) y (x' + y');;
+          Tau (go x y)
       end in
     if (Nat.leb n 2)
     then Ret n
     else
-      x <- newSTRef zero 0;;
-      y <- newSTRef (suc zero) 1;;
-      go x y zero (suc zero).
+      x <- newSTRef (E := E0) (V := V) 0;;
+      y <- newSTRef (E := E0) (V := V) 1;;
+      go x y.
 
 End FibstCofixRepro.
 
 Module FibstCofixReproTests.
-  Definition nat_idx : @Ix nat Nat.le := Eval unfold nat_ix in nat_ix.
-  Definition nat_stref : STRefClass nat := Eval unfold nat_ix_stref in nat_ix_stref.
+  Definition fibst_repro := @fibst_repro cpp_refs.
 End FibstCofixReproTests.
 
 Require Import Crane.Mapping.NatIntStd.
 
 Set Crane Loopify.
 
-Crane Extraction "fibst_cofix_repro"
-  FibstCofixReproTests
-  fibst_repro.
+Crane Extraction "fibst_cofix_repro" FibstCofixReproTests.

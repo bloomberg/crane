@@ -961,6 +961,163 @@ bool Z_as_Int::ge_lt_dec(const Z &i, const Z &j) {
 
 Z Z_as_Int::i2z(Z n) { return n; }
 
+std::shared_ptr<crane::array_storage<node>> make_ST(STRefs, uint64_t n) {
+  std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
+      std::make_shared<crane::array_storage<std::pair<uint64_t, uint64_t>>>(
+          crane::st::extent(n), std::make_pair(UINT64_C(0), UINT64_C(0)));
+  STMonad::template for_each_with<void, uint64_t, std::monostate>(
+      ListDef::seq(UINT64_C(0), n), std::monostate{},
+      [=](std::monostate, uint64_t i) {
+        std::span<std::pair<uint64_t, uint64_t>>{*a}[i] =
+            std::make_pair(i, UINT64_C(0));
+        return std::monostate{};
+      });
+  return a;
+}
+
+uint64_t find_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a,
+                 uint64_t fuel, uint64_t x) {
+  // Explicit stack replaces the non-tail recursion of find_ST: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
+    uint64_t x;
+    uint64_t fuel;
+  };
+
+  struct _after_find_ST_in_false {
+    uint64_t x;
+    uint64_t k;
+  };
+
+  using _frame = std::variant<_call, _after_find_ST_in_false>;
+  uint64_t _result{};
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{x, fuel});
+  while (!_stack.empty()) {
+    _frame &_popped = _stack.back();
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
+      uint64_t x = _f.x;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = std::move(x);
+      } else {
+        uint64_t fuel_ = fuel - 1;
+        std::pair<uint64_t, uint64_t> x_ =
+            std::span<const std::pair<uint64_t, uint64_t>>{a}[x];
+        const auto &[p, k] = x_;
+        if (p == x) {
+          _result = std::move(x);
+        } else {
+          _stack.emplace_back(_after_find_ST_in_false{x, k});
+          _stack.emplace_back(_call{p, fuel_});
+        }
+      }
+    } else {
+      auto _f = std::move(std::get<_after_find_ST_in_false>(_popped));
+      _stack.pop_back();
+      uint64_t x = _f.x;
+      uint64_t k = _f.k;
+      uint64_t r0 = std::move(_result);
+      a[x] = std::make_pair(r0, k);
+      _result = std::move(r0);
+    }
+  }
+  return _result;
+}
+
+void union_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
+              uint64_t x, uint64_t y) {
+  uint64_t rx = find_ST(r, a, n, x);
+  uint64_t ry = find_ST(r, a, n, y);
+  if (rx == ry) {
+    return;
+  } else {
+    std::pair<uint64_t, uint64_t> x_ =
+        std::span<const std::pair<uint64_t, uint64_t>>{a}[rx];
+    const auto &[_x, kx] = x_;
+    std::pair<uint64_t, uint64_t> x_0 =
+        std::span<const std::pair<uint64_t, uint64_t>>{a}[ry];
+    const auto &[_x0, ky] = x_0;
+    if (kx < ky) {
+      a[rx] = std::make_pair(ry, kx);
+      return;
+    } else {
+      if (ky < kx) {
+        a[ry] = std::make_pair(rx, ky);
+        return;
+      } else {
+        a[ry] = std::make_pair(rx, ky);
+        a[rx] = std::make_pair(rx, (kx + 1));
+        return;
+      }
+    }
+  }
+}
+
+bool same_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
+             uint64_t x, uint64_t y) {
+  uint64_t rx = find_ST(r, a, n, x);
+  uint64_t ry = find_ST(r, a, n, y);
+  return rx == ry;
+}
+
+List<bool> run_ST(STRefs r, uint64_t n,
+                  std::span<std::pair<uint64_t, uint64_t>> a,
+                  const List<Op> &ops) {
+  // Explicit stack replaces the non-tail recursion of run_ST: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
+    const List<Op> *ops;
+  };
+
+  struct _after_run_ST_in_Same {
+    bool b;
+  };
+
+  using _frame = std::variant<_call, _after_run_ST_in_Same>;
+  List<bool> _result{};
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&ops});
+  while (!_stack.empty()) {
+    _frame &_popped = _stack.back();
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
+      const List<Op> &ops = *_f.ops;
+      if (std::holds_alternative<typename List<Op>::Nil>(ops.v())) {
+        _result = List<bool>::nil();
+      } else {
+        const auto &[a0, a1] = std::get<typename List<Op>::Cons>(ops.v());
+        if (std::holds_alternative<typename Op::Union>(a0.v())) {
+          const auto &[x0, y0] = std::get<typename Op::Union>(a0.v());
+          union_ST(r, n, a, x0, y0);
+          _stack.emplace_back(_call{crane_raw(a1)});
+        } else {
+          const auto &[x0, y0] = std::get<typename Op::Same>(a0.v());
+          bool b = same_ST(r, n, a, x0, y0);
+          _stack.emplace_back(_after_run_ST_in_Same{b});
+          _stack.emplace_back(_call{crane_raw(a1)});
+        }
+      }
+    } else {
+      auto _f = std::move(std::get<_after_run_ST_in_Same>(_popped));
+      _stack.pop_back();
+      bool b = _f.b;
+      List<bool> bs = std::move(_result);
+      _result = List<bool>::cons(b, std::move(bs));
+    }
+  }
+  return _result;
+}
+
+List<bool> union_find_ST(STRefs r, uint64_t n, const List<Op> &ops) {
+  std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
+      make_ST(r, n);
+  return run_ST(r, n, std::span<std::pair<uint64_t, uint64_t>>{*a}, ops);
+}
+
 node get(const NatMap::template bst<std::pair<uint64_t, uint64_t>> &s,
          uint64_t x) {
   auto _cs = NatMap::template find<node>(x, s);
@@ -1101,7 +1258,7 @@ List<bool> run_fun(uint64_t n,
 }
 
 List<bool> UnionFind::union_find_ST(uint64_t x0_, const List<Op> &x1_) {
-  return ::template union_find_ST<std::monostate>(x0_, x1_);
+  return ::union_find_ST(STRefs::BUILD_STREFS, x0_, x1_);
 }
 
 List<bool> UnionFind::union_find_fun(uint64_t n, const List<Op> &ops) {

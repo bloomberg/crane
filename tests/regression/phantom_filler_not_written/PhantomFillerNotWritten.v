@@ -1,48 +1,56 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** A recursive function generic over an event family [E'], taking an ST
-    array whose phantom state [S] the C++ type does not mention.  Its
+(** A recursive function generic over an event family [E'], taking a mapped
+    value whose phantom type [S] the C++ type does not mention.  Its
     self-call writes no value for [S]: the template head writes [S]'s filler
     ([void]) only so that it can write [E'] after it.  The filler was read as
-    the call's instantiation of [S], so the array argument was checked
-    against [STArray nat void nat] and the typed-fit check failed. *)
+    the call's instantiation of [S], so the argument was checked against
+    [Cell void nat] and the typed-fit check failed. *)
 
-From Stdlib Require Import Arith.PeanoNat Arith.Wf_nat Lia List.
+From Stdlib Require Import Arith.PeanoNat List PrimString.
 From ITree Require Import ITree Events.Exception.
-From Crane Require Import Mapping.NatIntStd Monads.ITree Monads.Error
-  Monads.Indices Monads.STMonad.
+From Crane Require Import Extraction Mapping.NatIntStd Monads.ITree Monads.Error Mapping.Descriptor.
 Import Monads.
 Import ListNotations.
 Local Open Scope monad_scope.
 
+(** A cell whose phantom [S] its C++ type, [std::shared_ptr<A>], does not
+    mention. *)
+Axiom Cell : Type -> Type -> Type.
+
+#[export] Instance cell_mapping (S A : Type) : TypeMapping (Cell S A) :=
+  {| type_headers := ["memory"];
+     type_cpp := Crane.Cpp.Apply "std::shared_ptr"
+                   [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "contents")];
+     type_components :=
+       [{| component_name := "contents"; component_type := KnownType A |}];
+     type_copy := RetainIdentity;
+     type_access := ReadOnlyHandle HandleByConstReference;
+     type_views := NoViews (Cell S A);
+     type_interface := AbstractInterface;
+     type_model := Identity;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}%pstring.
+
 Module PhantomFillerNotWritten.
-Section Scan.
+Section Count.
   Context {S : Type}.
-  Let V : nat -> Type := fun _ => nat.
 
-  (** The sum of [arr[i..hi-1]], by recursion on the accessibility of
-      [hi - i]. *)
-  Fixpoint sum_from {E' : Type -> Type} `{STEvent nat S V -< E'}
-    (arr : STArray nat S nat) (hi i : nat) (acc : Acc lt (hi - i)) {struct acc}
-    : itree E' nat :=
-    match Sumbool.sumbool_of_bool (Nat.ltb i hi) with
-    | left Hlt =>
-      v <- readArray (E := E') (V := V) (idx := 0) arr i;;
-      r <- @sum_from E' _ arr hi (Datatypes.S i)
-             (@Acc_inv _ _ _ acc (hi - Datatypes.S i)
-                ltac:(apply Nat.ltb_lt in Hlt; lia));;
-      Ret (v + r)
-    | right _ => Ret 0
+  (** Counts [n] down in [E'], passing the cell along. *)
+  Fixpoint count_down {E' : Type -> Type} (c : Cell S nat) (n : nat) : itree E' nat :=
+    match n with
+    | O => Ret 0
+    | Datatypes.S n' => r <- @count_down E' c n';; Ret (Datatypes.S r)
     end.
+End Count.
 
-End Scan.
+(** Runs the tree: extracted as the identity. *)
+Axiom run : forall {A : Type}, itree (exceptE Err) A -> A.
 
-Definition sum_list (xs : list nat)
-  : itree (STEvent nat unit (fun _ => nat) +' exceptE Err) nat :=
-  arr <- newListArray 0 0 (length xs - 1) xs;;
-  sum_from arr (length xs) 0 (lt_wf _).
-
+Definition run_count (c : Cell unit nat) (n : nat) : nat := run (count_down c n).
 End PhantomFillerNotWritten.
 
+Crane Extract Inlined Constant PhantomFillerNotWritten.run => "%a0".
 Crane Extraction "phantom_filler_not_written" PhantomFillerNotWritten.

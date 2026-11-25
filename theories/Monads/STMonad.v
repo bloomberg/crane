@@ -1,298 +1,132 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** Local mutable state: references and arrays in the [itree] of a program,
+    run by [runST].
+
+    A program is written against an abstract [STRefs], the type of
+    references and the type of arrays and nothing more, and [runST] takes it
+    polymorphic in them: [forall R : STRefs, itree (STEvent R V +' E) A].
+    Inside the program a reference is of an abstract type, so the program
+    cannot look into one, forge one, or return one from the run.  [runST]
+    interprets the program with [model_refs], where a reference is a
+    location in a store; extraction maps the reference and array types of
+    every [STRefs] to C++, a [std::shared_ptr] and an [array_storage].
+
+    Values of different types share the store through codes: [V c] is the
+    type of the values stored at code [c], and a value of type [A] is stored
+    at the code a [Code V A] instance gives it, so no operation takes a code
+    argument.  [code_const] gives every type its code where all values have
+    one type. *)
+
 From Stdlib Require Import
   Arith.PeanoNat
-  Arith.Peano_dec
   Classes.EquivDec
-  Init.Peano
   List
-  Morphisms
-  RelationClasses
-  Relation_Definitions
-  Setoid
   PrimString
 .
 
-From ExtLib Require Import
-  CmpDec
-  Data.Bool
-  Data.List
-  Data.Monads.EitherMonad
-  Data.Pair
-  Data.String
-  Data.Option
-  Structures.Functor
-  Structures.Traversable
-  Structures.Reducible
-.
-
-(* NOTE: *must* import this before the ITree Eq.Paco2 import.*)
-From Paco Require Import paco.
-
 From ITree Require Import
-  Basics.HeterogeneousRelations
-  Eq.Paco2
   Events.Exception
-  Events.FailFacts
-  Events.MapDefault
-  Events.MapDefaultFacts
   Events.State
-  Events.StateFacts
   ITree
-  ITreeFacts
 .
 
 From Crane Require Import
   Extraction
-  Monads.ITree
   Monads.Error
-  Monads.Indices
+  Monads.ITree
   Utils.HAList
   Utils.HMap
 .
 
 Import Monads.
 Import ListNotations.
-Import ProperNotations.
 Local Open Scope monad_scope.
-Local Open Scope string_scope.
 
+(** The types a program sees: references and arrays holding values of a
+    type. *)
+Class STRefs : Type := {
+  STRef : Type -> Type;
+  STArray : Type -> Type
+}.
 
+(** [A] is stored at code [code], whose values [V code] are of type [A]. *)
+Class Code (V : nat -> Type) (A : Type) : Type := {
+  code : nat;
+  code_ok : V code = A
+}.
+Arguments code V A {Code}.
+Arguments code_ok V A {Code}.
 
+#[export] Instance code_const (A : Type) : Code (fun _ : nat => A) A :=
+  {| code := 0; code_ok := eq_refl |}.
 
-Class STRefClass (T : Type) : Type :=
-  {
-    STRef : forall S A : Type, Type;
-    mkSTRef : forall S A : Type, T -> STRef S A;
-    STRefToIx : forall S A : Type, STRef S A -> T;
-  }.
+Variant STEvent (R : STRefs) (V : nat -> Type) : Type -> Type :=
+| NewSTRef (c : nat) (v : V c) : STEvent R V (@STRef R (V c))
+| ReadSTRef (c : nat) (ref : @STRef R (V c)) : STEvent R V (V c)
+| WriteSTRef (c : nat) (ref : @STRef R (V c)) (v : V c) : STEvent R V unit
+| NewArray (c : nat) (n : nat) (def : V c) : STEvent R V (@STArray R (V c))
+| NewListArray (c : nat) (elems : list (V c)) : STEvent R V (@STArray R (V c))
+| ReadArray (c : nat) (arr : @STArray R (V c)) (i : nat) : STEvent R V (V c)
+| WriteArray (c : nat) (arr : @STArray R (V c)) (i : nat) (v : V c) : STEvent R V unit
+| GetElems (c : nat) (arr : @STArray R (V c)) : STEvent R V (list (V c)).
 
+Section Operations.
 
-Section STRefNatDefs.
+  Context {R : STRefs} {V : nat -> Type} {E : Type -> Type} `{STEvent R V -< E}.
 
-  Variable (T : Type).
-  
+  (** Each operation stores [A] at [code V A], through [code_ok]. *)
+  Definition newSTRef {A : Type} `{Code V A} (v : A) : itree E (STRef A) :=
+    match code_ok V A in _ = X return X -> itree E (STRef X) with
+    | eq_refl => fun v => trigger (NewSTRef R V (code V A) v)
+    end v.
 
-  Variant STRefNat : Type -> Type -> Type :=
-  | MkSTRef (S A : Type) (idx : nat) : STRefNat S A.
+  Definition readSTRef {A : Type} `{Code V A} (ref : STRef A) : itree E A :=
+    match code_ok V A in _ = X return STRef X -> itree E X with
+    | eq_refl => fun ref => trigger (ReadSTRef R V (code V A) ref)
+    end ref.
 
-  
-  Definition STRefToIxNat (S A : Type) (ref : STRefNat S A) : nat :=
-   match ref with
-   | MkSTRef _ _ idx => idx
-   end. 
+  Definition writeSTRef {A : Type} `{Code V A} (ref : STRef A) (a : A) : itree E unit :=
+    match code_ok V A in _ = X return STRef X -> X -> itree E unit with
+    | eq_refl => fun ref a => trigger (WriteSTRef R V (code V A) ref a)
+    end ref a.
 
-  Variant STArray (S A : Type) : Type :=
-    | MkSTArray (base lo hi : T) : STArray S A.
+  (** An array of [n] elements, indexed from [0]. *)
+  Definition newArray {A : Type} `{Code V A} (n : nat) (def : A) : itree E (STArray A) :=
+    match code_ok V A in _ = X return X -> itree E (STArray X) with
+    | eq_refl => fun def => trigger (NewArray R V (code V A) n def)
+    end def.
 
-  Definition stArrayBase {S A} (arr : STArray S A) : T :=
-    match arr with MkSTArray _ _ base _ _ => base end.
+  Definition newListArray {A : Type} `{Code V A} (elems : list A) : itree E (STArray A) :=
+    match code_ok V A in _ = X return list X -> itree E (STArray X) with
+    | eq_refl => fun elems => trigger (NewListArray R V (code V A) elems)
+    end elems.
 
-  Definition stArrayBounds {S A} (arr : STArray S A) : T * T :=
-    match arr with MkSTArray _ _ _ lo hi => (lo, hi) end.
+  Definition readArray {A : Type} `{Code V A} (arr : STArray A) (i : nat) : itree E A :=
+    match code_ok V A in _ = X return STArray X -> itree E X with
+    | eq_refl => fun arr => trigger (ReadArray R V (code V A) arr i)
+    end arr.
 
-End STRefNatDefs.
-
-#[export] Instance nat_ix_stref : STRefClass nat :=
-  {| STRef := STRefNat;
-    mkSTRef := MkSTRef ;
-    STRefToIx := STRefToIxNat |}.
-
-Section STEventDefine.  
-  Variable (T : Type).
-  Context `{STRefClass T}.
-
-  Variant STEvent (S : Type) (V : T -> Type) : Type -> Type :=
-    | NewSTRef (idx : T) (v : V idx) : STEvent S V (STRef S (V idx))
-    | ReadSTRef (idx : T) : STRef S (V idx) -> STEvent S V (V idx)
-    | WriteSTRef (idx : T) : STRef S (V idx) -> (V idx) -> STEvent S V unit
-    | NewArray (idx : T) (lo hi : T) (def : V idx) 
-      : STEvent S V (STArray T S (V idx))
-    | NewListArray (idx : T) (lo hi : T) (elems : list (V idx))
-      : STEvent S V (STArray T S (V idx))
-    | ReadArray (idx : T) : STArray T S (V idx) -> T -> STEvent S V (V idx)
-    | WriteArray (idx : T) : STArray T S (V idx) -> T -> V idx -> STEvent S V unit
-    | GetElems (idx : T) : STArray T S (V idx) -> STEvent S V (list (V idx))
-  .
-
-End STEventDefine.
-  
-  
-Section Translation.
-
-  Context {E : Type -> Type}.
-  Context {T S : Type}.
-  Context (ltu : T -> T -> Prop).
-  Context `{Ix_Correct T ltu}.
-  Context `{STRefClass T}.
-  Context {V : T -> Type}.
-  Context `{STEvent T S V -< E}. 
-  Context `{exceptE Err -< E}.
-  
-
-  (* Smart constructors  *)
-
-  (* NOTE: explicit index here because we cannot infer it automatically, yet. *)
-  Definition newSTRef (idx : T) (v : (V idx)) : itree E (STRef S (V idx)) :=
-    trigger (NewSTRef T S V idx v).
-
-  Definition readSTRef {idx : T} (ref : STRef S (V idx)) : itree E (V idx) :=
-    trigger (ReadSTRef T S V idx ref).
-
-  Definition writeSTRef {idx : T} (ref : STRef S (V idx)) (a : (V idx)) : itree E unit :=
-    trigger (WriteSTRef T S V idx ref a).
-
-  Definition newArray (idx : T) (lo hi : T) (def : V idx)
-    : itree E (STArray T S (V idx)) :=
-    trigger (NewArray T S V idx lo hi def).
-
-  (* NOTE: explicit index here because we cannot infer it. *)
-  Definition newListArray (idx : T) (lo hi : T) (elems : list (V idx))
-    : itree E (STArray T S (V idx)) :=
-    trigger (NewListArray T S V idx lo hi elems).
-
-  Definition readArray {idx : T} (arr : STArray T S (V idx)) (i : T)
-    : itree E (V idx) :=
-    trigger (ReadArray T S V idx arr i).
-
-  Definition writeArray {idx : T} (arr : STArray T S (V idx)) (i : T) (v : V idx)
+  Definition writeArray {A : Type} `{Code V A} (arr : STArray A) (i : nat) (v : A)
     : itree E unit :=
-    trigger (WriteArray T S V idx arr i v).
+    match code_ok V A in _ = X return STArray X -> X -> itree E unit with
+    | eq_refl => fun arr v => trigger (WriteArray R V (code V A) arr i v)
+    end arr v.
 
-  Definition getElems {idx : T} (arr : STArray T S (V idx))
-    : itree E (list (V idx)) :=
-    trigger (GetElems T S V idx arr).
+  Definition getElems {A : Type} `{Code V A} (arr : STArray A) : itree E (list A) :=
+    match code_ok V A in _ = X return STArray X -> itree E (list X) with
+    | eq_refl => fun arr => trigger (GetElems R V (code V A) arr)
+    end arr.
 
   (** Exchange the elements at positions [i] and [j] of [arr]. *)
-  Definition swapArray {idx : T} (arr : STArray T S (V idx)) (i j : T)
-    : itree E unit :=
-    vi <- readArray (idx := idx) arr i;;
-    vj <- readArray (idx := idx) arr j;;
-    writeArray (idx := idx) arr i vj;;
-    writeArray (idx := idx) arr j vi.
+  Definition swapArray {A : Type} `{Code V A} (arr : STArray A) (i j : nat) : itree E unit :=
+    vi <- readArray arr i;;
+    vj <- readArray arr j;;
+    writeArray arr i vj;;
+    writeArray arr j vi.
 
-
-  (* key type definitions *)
-
-  Definition pkey (J K : Type) := (J * K)%type.
-  Definition pkey_type {J K} (V : K -> Type) (pk : pkey J K) := V (snd pk).
-  Definition idx_key := pkey T. 
-  Definition idx_key_type {K} (V : K -> Type) (ik : idx_key K) := V (snd ik).
-
-
-  Context {M : Type}.
-  Context `{HMap (idx_key T) (idx_key_type V) M}.
-  Context `{Foldable M (sigT (idx_key_type V))}.
-
-  Fixpoint suc_n (n : nat) (t : T) : T :=
-    match n with
-    | O => t
-    | Datatypes.S n' => suc (suc_n n' t)
-    end.
-
-  Definition arr_key (idx : T) (arr : STArray T S (V idx)) (i : T)
-    : option T :=
-    let 'MkSTArray _ _ _ base fb sb := arr in 
-    match index fb sb i with
-    | Some n => Some (suc_n n base)
-    | None => None
-    end.
-
-  Definition arr_lookup (idx : T) (arr : STArray T S (V idx)) (i : T) (mem : M)
-    : option (V idx) :=
-    match arr_key idx arr i with
-    | Some key => lookup (key, idx) mem
-    | None => None
-    end.
-
-  (* The handler for STEvents itself *)
-  Definition handle_STEvent `{EqDec T eq} 
-    : forall (A : Type), STEvent T S V A -> stateT M (itree E) A :=
-    fun _ e mem =>
-    match e with
-    | NewSTRef _ _ _ idx v =>
-        let n := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem)
-        in Ret (add (n, idx) v mem, mkSTRef S (V idx) n)
-    | ReadSTRef _ _ _ idx s =>
-        match lookup (STRefToIx S (V idx) s, idx) mem with
-        | Some v => Ret (mem, v)
-        | None => failwith "Lookup failed!"%pstring
-        end
-    | WriteSTRef _ _ _ idx s v => Ret (add (STRefToIx S (V idx) s, idx) v mem, tt)
-    | NewArray _ _ _ idx lo hi def =>
-        let base := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem) in
-        let positions := range lo hi in
-        let fix fill (ps : list T) (m : M) (key : T) {struct ps} : M * T :=
-        match ps with
-        | nil => (m, key) 
-        | _ :: rest => fill rest (add (key, idx) def m) (suc key)
-        end in
-        let (mem', _ ) := fill positions mem base in
-        Ret (mem', MkSTArray T S (V idx) base lo hi)
-    | NewListArray _ _ _ idx lo hi elems =>
-        let base := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem) in
-        let fix fill (es : list (V idx)) (m : M) (key : T) {struct es} : M * T :=
-          match es with
-          | nil => (m, key)
-          | v :: rest => fill rest (add (key, idx) v m) (suc key)
-          end in
-        let '(mem', _) := fill elems mem base in
-        Ret (mem', MkSTArray T S (V idx) base lo hi)
-    | ReadArray _ _ _ idx arr i =>
-        match arr_lookup idx arr i mem with
-        | Some v => Ret (mem, v)
-        | None => failwith "Array read failed"
-        end
-    | WriteArray _ _ _ idx arr i v =>
-      match arr_key idx arr i with
-      | Some key => Ret (add (key, idx) v mem, tt)
-      | None => failwith "Array index out of range"
-      end
-    | GetElems _ _ _ idx arr =>
-        let '(fb,sb) := stArrayBounds T arr in
-        let positions := range fb sb in
-        let fix collect (ps : list T) : option (list (V idx)) :=
-          match ps with
-          | nil => Some nil
-          | p :: rest =>
-            match arr_lookup idx arr p mem with
-            | Some v =>
-              match collect rest with
-              | Some elems => Some (v :: elems)
-              | None => None
-              end
-            | None => None
-            end
-          end in
-        match collect positions with
-        | Some elems => Ret (mem, elems)
-        | None => failwith "Array getElems failed"
-        end
-    end.
-
-(* Interpretation in Rocq *)
-
-  Definition handle_STEvent_leave_rest
-    (A : Type) (e : (STEvent T S V +' E) A)
-    : stateT M (itree (E)) A :=
-    match e with
-    | inl1 e0 => handle_STEvent A e0
-    | inr1 e0 => fun st : M => r <- trigger e0;; Ret (st, r)
-    end.
-  
-  #[export] Instance hmap_from_idx :
-    HMap T V (halist T V) := @HMap_halist T V eq_equivalence _.
-
-  #[export] Instance map_idx_correct :
-    HMapOk hmap_from_idx := HMapOk_halist T V.
-
-  Definition interp_st
-    : itree (STEvent T S V +' E) ~> stateT M (itree (E)) :=
-    interp_state handle_STEvent_leave_rest.
-
-  
-End Translation.
+End Operations.
 
 (** Left fold of a monadic step over a list, threading an accumulator: the
     shape of an imperative [for] loop. Written as a [Fixpoint] because the
@@ -304,59 +138,164 @@ Fixpoint for_each_with {E : Type -> Type} {A B : Type}
   | h :: t => v' <- f v h;; for_each_with t v' f
   end.
 
-Definition runST {A : Type}
-  {T S : Type} {ltu : T -> T -> Prop}
-  `{Ix T ltu}
-  `{Ix_Correct T}
-  `{EqDec T eq}
-  `{STRefClass T}
-  {E : Type -> Type}
-  {V : T -> Type} `{exceptE Err -< E}
-  (f : forall (S : Type), itree ((STEvent T S V) +' E) A)
-  : itree E A :=
-  fmap snd (interp_st ltu _ (f unit) HMap.empty).
+(** * The model *)
 
-(* CPP Bindings *)
+(** An array is the location of its first element and its size. *)
+Variant ArrLoc (A : Type) : Type := MkArrLoc (base size : nat).
+Arguments MkArrLoc {A} base size.
 
-Crane Extract Skip Ix_Correct.
-Crane Extract Skip CmpDec_Correct.
+(** A reference is a location; an array its first location and size. *)
+Definition model_refs : STRefs := {| STRef := fun _ => nat; STArray := ArrLoc |}.
+
+(** The store maps a location and a code to a value of the code's type. *)
+Definition key_type (V : nat -> Type) (k : nat * nat) : Type := V (snd k).
+Definition mem (V : nat -> Type) : Type := halist (nat * nat) (key_type V).
+
+(** Decided by a transparent term, so that a lookup in a closed store
+    computes. *)
+Definition st_key_eq_dec (x y : nat * nat) : {x = y} + {x <> y}.
+Proof. decide equality; apply Nat.eq_dec. Defined.
+
+#[export] Instance st_key_eqdec : EqDec (nat * nat) eq := st_key_eq_dec.
+
+#[export] Instance st_hmap (V : nat -> Type) : HMap (nat * nat) (key_type V) (mem V) :=
+  @HMap_halist (nat * nat) (key_type V) eq_equivalence st_key_eqdec.
+
+#[export] Instance st_hmap_ok (V : nat -> Type) : HMapOk (st_hmap V) :=
+  HMapOk_halist (nat * nat) (key_type V).
+
+Section Model.
+
+  Context {V : nat -> Type} {E : Type -> Type} `{exceptE Err -< E}.
+
+  (** The location a new reference or array starts at: one past the largest
+      location in use. *)
+  Definition st_fresh (m : mem V) : nat :=
+    S (fold_halist (nat * nat) (key_type V) (fun k _ acc => Nat.max (fst k) acc) 0 m).
+
+  (** [n] cells from [key] on, each holding [v]. *)
+  Fixpoint fill (c : nat) (v : V c) (key n : nat) (m : mem V) : mem V :=
+    match n with
+    | O => m
+    | S n' => fill c v (S key) n' (add (key, c) v m)
+    end.
+
+  (** The cells from [key] on, holding [xs]. *)
+  Fixpoint fill_list (c : nat) (key : nat) (xs : list (V c)) (m : mem V) : mem V :=
+    match xs with
+    | [] => m
+    | x :: xs' => fill_list c (S key) xs' (add (key, c) x m)
+    end.
+
+  (** The cells [base + k] for each [k] of [ks]. *)
+  Fixpoint read_cells (c base : nat) (ks : list nat) (m : mem V) : option (list (V c)) :=
+    match ks with
+    | [] => Some []
+    | k :: ks' =>
+      match lookup (base + k, c) m, read_cells c base ks' m with
+      | Some v, Some vs => Some (v :: vs)
+      | _, _ => None
+      end
+    end.
+
+  Definition handle_STEvent : STEvent model_refs V ~> stateT (mem V) (itree E) :=
+    fun _ e m =>
+    match e with
+    | NewSTRef _ _ c v => let l := st_fresh m in Ret (add (l, c) v m, l)
+    | ReadSTRef _ _ c l =>
+      match lookup (l, c) m with
+      | Some v => Ret (m, v)
+      | None => failwith "readSTRef: no such reference"%pstring
+      end
+    | WriteSTRef _ _ c l v => Ret (add (l, c) v m, tt)
+    | NewArray _ _ c n def =>
+      let b := st_fresh m in Ret (fill c def b n m, MkArrLoc b n)
+    | NewListArray _ _ c elems =>
+      let b := st_fresh m in Ret (fill_list c b elems m, MkArrLoc b (List.length elems))
+    | ReadArray _ _ c a i =>
+      let '(MkArrLoc b n) := a in
+      if Nat.ltb i n then
+        match lookup (b + i, c) m with
+        | Some v => Ret (m, v)
+        | None => failwith "readArray: no such cell"%pstring
+        end
+      else failwith "readArray: index out of range"%pstring
+    | WriteArray _ _ c a i v =>
+      let '(MkArrLoc b n) := a in
+      if Nat.ltb i n then Ret (add (b + i, c) v m, tt)
+      else failwith "writeArray: index out of range"%pstring
+    | GetElems _ _ c a =>
+      let '(MkArrLoc b n) := a in
+      match read_cells c b (seq 0 n) m with
+      | Some vs => Ret (m, vs)
+      | None => failwith "getElems: no such cell"%pstring
+      end
+    end.
+
+  Definition handle_STEvent_leave_rest : (STEvent model_refs V +' E) ~> stateT (mem V) (itree E) :=
+    fun _ e m =>
+    match e with
+    | inl1 e0 => handle_STEvent _ e0 m
+    | inr1 e0 => r <- trigger e0;; Ret (m, r)
+    end.
+
+  Definition interp_st : itree (STEvent model_refs V +' E) ~> stateT (mem V) (itree E) :=
+    interp_state handle_STEvent_leave_rest.
+
+End Model.
+
+(** A program polymorphic in its references and arrays, run from the empty
+    store. *)
+Definition runST {V : nat -> Type} {E : Type -> Type} `{exceptE Err -< E} {A : Type}
+  (f : forall R : STRefs, itree (STEvent R V +' E) A) : itree E A :=
+  ITree.map snd (interp_st _ (f model_refs) (@empty _ _ _ (st_hmap V))).
+
+(** * Extraction *)
+
+(** The references and arrays the extracted program is written against:
+    their types are mapped below, whatever [STRefs] they come from. *)
+Axiom cpp_refs : STRefs.
+
+(** Runs a program in C++: the extracted program performs its effects
+    where it is written, so running it is calling it. *)
+Axiom run_st : forall {V : nat -> Type} {A : Type},
+  itree (STEvent cpp_refs V +' exceptE Err) A -> A.
+
 Crane Extract Skip STEvent.
-Crane Extract Skip CmpDec.
-Crane Extract Skip max.
-Crane Extract Skip mkSTRef.
-Crane Extract Skip STRefToIx.
-(* NOTE: skipping STRefClass seems to drop too much typing information,
- and the value types within references are not inferred. *)
-(* Crane Extract Skip STRefClass. *)
+Crane Extract Skip code_ok.
+Crane Extract Inlined Constant run_st => "%a0".
+(** [STRefs] holds only types, so it is a one-constructor enum in C++. *)
+Crane Extract Inlined Constant cpp_refs => "STRefs::BUILD_STREFS".
+
 (** References and arrays are typed mappings: a reference is a
     [std::shared_ptr<A>] and an array a
     [std::shared_ptr<crane::array_storage<A>>], each a mutable handle passed
-    by const reference and owned by the shared pointer ([NativeRAII]).  An
-    array has a read view, [std::span<const A>], and a writable view,
-    [std::span<A>], both borrow-only (a copy of the elements would not be
-    the same array): a generated function that only reads an array takes
-    the read view, one that writes its elements the writable view, one that
-    keeps it the handle by value, and one that replaces it the handle by
-    reference.  [crane::array_storage] (theories/cpp/array_storage.h)
+    by const reference and owned by the shared pointer ([NativeRAII]).  A
+    reference has a read view, [const A*], and a writable view, [A*]; an
+    array a read view, [std::span<const A>], and a writable view,
+    [std::span<A>]; all borrow-only (a copy would not be the same reference
+    or array): a generated function that only reads one takes the read
+    view, one that writes it the writable view, one that keeps it the
+    handle by value.  [crane::array_storage] (theories/cpp/array_storage.h)
     stores one addressable element each, [bool] included, so the views are
-    valid at every element type.  A reference has no view.
-    Shared pointers do not collect cycles of references. *)
+    valid at every element type.  Shared pointers do not collect cycles of
+    references. *)
 
 From Crane Require Import Mapping.Descriptor.
 
-(** The index [idx] of an operation only selects the element type [V idx]:
-    no operation reads it at run time. *)
-Crane Extraction Implicit newSTRef [idx].
-Crane Extraction Implicit readSTRef [idx].
-Crane Extraction Implicit writeSTRef [idx].
-Crane Extraction Implicit newArray [idx].
-Crane Extraction Implicit newListArray [idx].
-Crane Extraction Implicit readArray [idx].
-Crane Extraction Implicit writeArray [idx].
-Crane Extraction Implicit getElems [idx].
+(** The [STRefs] a program is written against is a C++ value with nothing
+    in it: the operations take no such argument. *)
+Crane Extraction Implicit newSTRef [R].
+Crane Extraction Implicit readSTRef [R].
+Crane Extraction Implicit writeSTRef [R].
+Crane Extraction Implicit newArray [R].
+Crane Extraction Implicit newListArray [R].
+Crane Extraction Implicit readArray [R].
+Crane Extraction Implicit writeArray [R].
+Crane Extraction Implicit getElems [R].
 
-#[export] Instance st_ref_mapping (T : Type) (H : STRefClass T) (S A : Type)
-  : TypeMapping (@STRef T H S A) :=
+#[export] Instance st_ref_mapping (R : STRefs) (A : Type)
+  : TypeMapping (@STRef R A) :=
   {| type_headers := ["memory"%pstring];
      type_cpp := Crane.Cpp.Apply "std::shared_ptr"
                    [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "contents")];
@@ -383,8 +322,8 @@ Crane Extraction Implicit getElems [idx].
 
 (** A reference used only through its views where it is created lives in
     a local: [A x = v;], its views [&x]. *)
-#[export] Instance st_ref_local (T : Type) (H : STRefClass T) (S A : Type)
-  : LocalStorage (@STRef T H S A) :=
+#[export] Instance st_ref_local (R : STRefs) (A : Type)
+  : LocalStorage (@STRef R A) :=
   {| local_view := "&%value"; local_tag := tt |}%pstring.
 
 #[export] Instance new_st_ref_mapping : OperationMapping (Ref (@newSTRef)) :=
@@ -419,7 +358,7 @@ Crane Extraction Implicit getElems [idx].
          [WritesComponent {| path_argument := "ref"; path_components := ["contents"] |} (Some "a");
           InvalidatesElementBorrows {| path_argument := "ref"; path_components := ["contents"] |}] |}%pstring.
 
-#[export] Instance st_array_mapping (T S A : Type) : TypeMapping (STArray T S A) :=
+#[export] Instance st_array_mapping (R : STRefs) (A : Type) : TypeMapping (@STArray R A) :=
   {| type_headers := ["array_storage.h"; "memory"];
      type_cpp :=
        Crane.Cpp.Apply "std::shared_ptr"
@@ -454,11 +393,10 @@ Crane Extraction Implicit getElems [idx].
 #[export] Instance new_array_mapping : OperationMapping (Ref (@newArray)) :=
   {| operation_headers := ["crane_st.h"; "memory"];
      operation_cpp :=
-       Expr "std::make_shared<crane::array_storage<%stored(contents)>>(crane::st::extent(%arg(lo), %arg(hi)), %arg(def))";
+       Expr "std::make_shared<crane::array_storage<%stored(contents)>>(crane::st::extent(%arg(n)), %arg(def))";
      operation_contract :=
        EffectfulOperation
-         [{| argument_name := "lo"; argument_use := Read |};
-          {| argument_name := "hi"; argument_use := Read |};
+         [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "def"; argument_use := Take |}]
          (ReturnFreshIdentity
             [{| initial_component := "contents";
@@ -469,12 +407,10 @@ Crane Extraction Implicit getElems [idx].
 #[export] Instance new_list_array_mapping : OperationMapping (Ref (@newListArray)) :=
   {| operation_headers := ["crane_st.h"];
      operation_cpp :=
-       Expr "crane::st::new_list_array<%stored(contents)>(crane::st::extent(%arg(lo), %arg(hi)), %arg(elems))";
+       Expr "crane::st::new_list_array<%stored(contents)>(%arg(elems))";
      operation_contract :=
        EffectfulOperation
-         [{| argument_name := "lo"; argument_use := Read |};
-          {| argument_name := "hi"; argument_use := Read |};
-          {| argument_name := "elems"; argument_use := Read |}]
+         [{| argument_name := "elems"; argument_use := Read |}]
          (ReturnFreshIdentity
             [{| initial_component := "contents";
                 initial_source_argument := Some "elems";
@@ -515,3 +451,18 @@ Crane Extraction Implicit getElems [idx].
          [{| argument_name := "arr"; argument_use := Read |}]
          ReturnValue
          [ReadsComponent {| path_argument := "arr"; path_components := ["contents"] |}] |}%pstring.
+
+Crane Extraction Implicit swapArray [R].
+
+(** [Write] gives the template the writable view, [std::span<A>]. *)
+#[export] Instance swap_array_mapping : OperationMapping (Ref (@swapArray)) :=
+  {| operation_headers := ["span"; "utility"];
+     operation_cpp := Expr "std::swap(%arg(arr)[%arg(i)], %arg(arr)[%arg(j)])";
+     operation_contract :=
+       EffectfulOperation
+         [{| argument_name := "arr"; argument_use := Write |};
+          {| argument_name := "i"; argument_use := Read |};
+          {| argument_name := "j"; argument_use := Read |}]
+         ReturnValue
+         [WritesComponent {| path_argument := "arr"; path_components := ["contents"] |} None;
+          InvalidatesElementBorrows {| path_argument := "arr"; path_components := ["contents"] |}] |}%pstring.

@@ -258,35 +258,48 @@ Each has a `*Defs.v` file with the shared definitions.
 
 A Haskell-style `ST` monad for local mutable state, distinct from STM.
 `STMonadFacts.v`, `STMonadSpec.v` and `STMonadArrayFacts.v` hold the
-reasoning principles (not extracted); `Indices.v` defines `Ix` (index types,
-after Haskell's `Data.Ix`) and `Ix_Correct`.
+reasoning principles (not extracted).
+
+A program is written against an abstract `STRefs` (the type of references
+and of arrays, nothing more) and `runST` takes it polymorphic in it,
+`forall R : STRefs, itree (STEvent R V +' E) A`: inside the program a
+reference is of an abstract type, so it cannot be inspected, forged or
+returned from the run. `runST` interprets the program in a model where a
+reference is a location; extraction instantiates it at `cpp_refs` and runs
+it with `run_st`, the identity. Values of different types share the store
+through codes, `V : nat -> Type`; a `Code V A` instance gives `A` its code
+(`code_const` does where every value has one type), so no operation takes
+one.
 
 The array and reference types are typed mappings:
 
 | Rocq | C++ | Views |
 | --- | --- | --- |
-| `STRef S A` | `std::shared_ptr<A>` | none |
-| `STArray T S A` | `std::shared_ptr<crane::array_storage<A>>` | `std::span<const A>` (read), `std::span<A>` (write), borrow-only |
+| `STRef A` | `std::shared_ptr<A>` | `const A*` (read), `A*` (write), borrow-only |
+| `STArray A` | `std::shared_ptr<crane::array_storage<A>>` | `std::span<const A>` (read), `std::span<A>` (write), borrow-only |
 
 | Operation | C++ | Contract |
 | --- | --- | --- |
 | `newSTRef v` | `std::make_shared<A>(v)` | takes `v`, fresh identity |
 | `readSTRef r` | `*r` | reads `r` |
 | `writeSTRef r a` | `*r = a` | writes `r`, takes `a` |
-| `newArray lo hi def`, `newListArray lo hi elems` | a new `array_storage` | fresh identity |
+| `newArray n def`, `newListArray elems` | a new `array_storage` | fresh identity |
 | `readArray arr i` | `arr[i]` | reads `arr` |
 | `writeArray arr i v` | `arr[i] = v` | writes `arr`, takes `v` |
+| `swapArray arr i j` | `std::swap(arr[i], arr[j])` | writes `arr` |
 | `getElems arr` | the elements as a list | reads `arr` |
 
 So a helper that reads and writes one array extracts as its own function
 taking `std::span<A>` (or `const std::shared_ptr<...>&` where it keeps the
-array) instead of being inlined into its caller. `crane::array_storage<bool>`
-stores addressable `bool`s, so the span mapping holds for every element
-type. Arrays are reference counted; cycles through an array are not
-collected.
+array) instead of being inlined into its caller. A reference used only
+through its views where it is created is a local (`A x = v;`).
+`crane::array_storage<bool>` stores addressable `bool`s, so the span mapping
+holds for every element type. Arrays and references are reference counted;
+cycles through them are not collected.
 
 Recursive `ST` code is an ordinary `Fixpoint`; one that is not structural
-recursion runs on fuel (`tests/monadic/st_quicksort`).
+recursion recurses on an accessibility proof, which is erased
+(`tests/monadic/st_quicksort`).
 
 ### `Monads/GlobalState.v`, `Monads/Error.v`
 

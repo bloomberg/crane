@@ -23,7 +23,6 @@ From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.STMonad
 .
 
@@ -33,61 +32,60 @@ Local Open Scope monad_scope.
 
 Section Quicksort.
 
-  Context {S : Type}.
-
-  Let V : nat -> Type := fun _ => nat.
-  Let E0 := (STEvent nat S V) +' exceptE Err.
+  Context {R : STRefs}.
+  Notation V := (fun _ : nat => nat).
+  Notation E0 := (STEvent R V +' exceptE Err).
 
   (** The Lomuto scan of [arr[i..hi-1]] against the pivot value [pv]: an
       element [<= pv] is swapped to [s], the next free slot of the small
       region [lo..s-1].  Returns the final [s], with its bounds.  It
-      recurses on the accessibility of [hi - i], which is erased. *)
-  Fixpoint lomuto_scan {E' : Type -> Type} `{STEvent nat S V -< E'} (arr : STArray nat S nat) (pv lo hi i s : nat)
+      recurses on the accessibility of [hi - i], which is erased; the
+      proofs are left as holes and closed below the definition. *)
+  #[refine] Fixpoint lomuto_scan {E' : Type -> Type} `{STEvent R V -< E'}
+    (arr : STArray nat) (pv lo hi i s : nat)
     (Hs : lo <= s <= i) (Hi : i <= hi) (acc : Acc lt (hi - i)) {struct acc}
     : itree E' {p : nat | lo <= p <= hi} :=
     match Sumbool.sumbool_of_bool (Nat.ltb i hi) with
     | left Hlt =>
-      v <- readArray (E := E') (V := V) (idx := 0) arr i;;
+      v <- readArray (E := E') (V := V) arr i;;
       if Nat.leb v pv
-      then swapArray (E := E') (V := V) (idx := 0) arr i s;;
-           @lomuto_scan E' _ arr pv lo hi (Datatypes.S i) (Datatypes.S s)
-             ltac:(lia) ltac:(apply Nat.ltb_lt in Hlt; lia)
-             (@Acc_inv _ _ _ acc (hi - Datatypes.S i) ltac:(apply Nat.ltb_lt in Hlt; lia))
-      else @lomuto_scan E' _ arr pv lo hi (Datatypes.S i) s
-             ltac:(lia) ltac:(apply Nat.ltb_lt in Hlt; lia)
-             (@Acc_inv _ _ _ acc (hi - Datatypes.S i) ltac:(apply Nat.ltb_lt in Hlt; lia))
-    | right Hge =>
-      Ret (exist (fun p => lo <= p <= hi) s ltac:(apply Nat.ltb_ge in Hge; cbv beta; lia))
+      then swapArray (E := E') (V := V) arr i s;;
+           @lomuto_scan E' _ arr pv lo hi (Datatypes.S i) (Datatypes.S s) _ _
+             (@Acc_inv _ _ _ acc (hi - Datatypes.S i) _)
+      else @lomuto_scan E' _ arr pv lo hi (Datatypes.S i) s _ _
+             (@Acc_inv _ _ _ acc (hi - Datatypes.S i) _)
+    | right Hge => Ret (exist (fun p => lo <= p <= hi) s _)
     end.
+  Proof. all: first [ apply Nat.ltb_lt in Hlt | apply Nat.ltb_ge in Hge ]; lia. Defined.
 
   (** Lomuto partition of [arr[lo..hi]] around [arr[pividx]]; returns the
       final position of the pivot, within [lo..hi]. *)
-  Definition partition {E' : Type -> Type} `{STEvent nat S V -< E'} (arr : STArray nat S nat) (lo hi pividx : nat)
-    (Hlo : lo <= hi) : itree E' {p : nat | lo <= p <= hi} :=
-    pv <- readArray (E := E') (V := V) (idx := 0) arr pividx;;
-    swapArray (E := E') (V := V) (idx := 0) arr pividx hi;;
-    p <- @lomuto_scan E' _ arr pv lo hi lo lo ltac:(lia) Hlo (lt_wf (hi - lo));;
-    swapArray (E := E') (V := V) (idx := 0) arr (proj1_sig p) hi;;
+  #[refine] Definition partition {E' : Type -> Type} `{STEvent R V -< E'}
+    (arr : STArray nat) (lo hi pividx : nat) (Hlo : lo <= hi)
+    : itree E' {p : nat | lo <= p <= hi} :=
+    pv <- readArray (E := E') (V := V) arr pividx;;
+    swapArray (E := E') (V := V) arr pividx hi;;
+    p <- @lomuto_scan E' _ arr pv lo hi lo lo _ Hlo (lt_wf (hi - lo));;
+    swapArray (E := E') (V := V) arr (proj1_sig p) hi;;
     Ret p.
+  Proof. lia. Defined.
 
   (** In-place quicksort of [arr[lo..hi]].  The pivot comes out of an
       effectful [partition], so the recursion is not structural: it is on
       the accessibility of [hi - lo], which [partition]'s bounds decrease.
       The proofs are erased; no counter runs. *)
-  Fixpoint quicksort_ST {E' : Type -> Type} `{STEvent nat S V -< E'} (arr : STArray nat S nat) (lo hi : nat)
-    (acc : Acc lt (hi - lo)) {struct acc} : itree E' unit :=
+  #[refine] Fixpoint quicksort_ST {E' : Type -> Type} `{STEvent R V -< E'}
+    (arr : STArray nat) (lo hi : nat) (acc : Acc lt (hi - lo)) {struct acc} : itree E' unit :=
     match Sumbool.sumbool_of_bool (Nat.ltb lo hi) with
     | left Hlt =>
-      p <- @partition E' _ arr lo hi (lo + (hi - lo) / 2)
-             ltac:(apply Nat.ltb_lt in Hlt; lia);;
+      p <- @partition E' _ arr lo hi (lo + (hi - lo) / 2) _;;
       @quicksort_ST E' _ arr lo (proj1_sig p - 1)
-        (@Acc_inv _ _ _ acc (proj1_sig p - 1 - lo)
-           ltac:(apply Nat.ltb_lt in Hlt; destruct p as [q Hq]; simpl; lia));;
+        (@Acc_inv _ _ _ acc (proj1_sig p - 1 - lo) _);;
       @quicksort_ST E' _ arr (proj1_sig p + 1) hi
-        (@Acc_inv _ _ _ acc (hi - (proj1_sig p + 1))
-           ltac:(apply Nat.ltb_lt in Hlt; destruct p as [q Hq]; simpl; lia))
+        (@Acc_inv _ _ _ acc (hi - (proj1_sig p + 1)) _)
     | right _ => Ret tt
     end.
+  Proof. all: apply Nat.ltb_lt in Hlt; try (destruct p as [q Hq]; cbn [proj1_sig]); lia. Defined.
 
   (** [Acc_intro_generator] puts [2^10] layers of [Acc_intro] in front of
       [lt_wf], so that the sort also computes in Rocq. *)
@@ -95,10 +93,9 @@ Section Quicksort.
     match xs with
     | [] => Ret []
     | _ :: _ =>
-      let hi := length xs - 1 in
-      arr <- newListArray 0 0 hi xs;;
-      quicksort_ST arr 0 hi (Acc_intro_generator 10 lt_wf (hi - 0));;
-      getElems (idx := 0) arr
+      arr <- newListArray (E := E0) (V := V) xs;;
+      quicksort_ST arr 0 (length xs - 1) (Acc_intro_generator 10 lt_wf _);;
+      getElems (E := E0) (V := V) arr
     end.
 
 End Quicksort.
@@ -123,7 +120,7 @@ Module StQuicksort.
   Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
   Definition quicksort_ST_mine :=
     Eval unfold quicksort_ST_list in
-      (@quicksort_ST_list unit).
+      (@quicksort_ST_list cpp_refs).
 
   Definition nth := Eval unfold List.nth in (@List.nth nat).
 
@@ -138,14 +135,10 @@ Module StQuicksort.
   Definition list_to_string (l : list nat) : PrimString.string :=
     PrimString.cat "[ " (PrimString.cat (list_to_string_helper l) " ]").
 
-  (** Turns the ST computation into its result; [runST] only interprets into
-      [itree void1 A]. Extracted as the identity. *)
-  Axiom runST' : forall (A : Type), itree (STEvent nat unit (fun _ : nat => nat) +' exceptE Err) A -> A.
-
   Definition input_lst1 := [212498; 127; 5981; 2749812; 74879; 126; 4; 51; 2412; 10645].
 
   Definition test_quicksort_ST (_ : unit) : PrimString.string :=
-    runST' PrimString.string
+    run_st
       (out <- quicksort_ST_mine input_lst1;;
        Ret (list_to_string out)).
 
@@ -158,7 +151,6 @@ Set Crane Loopify.
     Loopify cannot yet lower two self-calls in sequence at [itree E unit]
     (tests/wip/itree_two_self_calls). *)
 Crane NoLoopify quicksort_ST.
-Crane Extract Inlined Constant StQuicksort.runST' => "%a0".
 
 Crane Extraction "st_quicksort" StQuicksort.
 

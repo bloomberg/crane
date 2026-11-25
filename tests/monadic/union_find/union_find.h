@@ -21,7 +21,7 @@
 #include <utility>
 #include <variant>
 
-struct nat_ix_stref;
+template <typename T1> struct code_const;
 template <typename A> struct List;
 enum class Comparison;
 struct Positive;
@@ -29,12 +29,11 @@ struct Z;
 template <typename Err> struct ExceptE;
 struct Err;
 template <typename X> struct Compare;
-struct STRefNat;
+enum class STRefs;
 struct Op;
-template <typename I, typename T>
-concept STRefClass = requires {
-  { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
-  { I::STRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
+template <typename I, typename V, typename A>
+concept Code = requires {
+  { I::code() } -> std::convertible_to<uint64_t>;
 };
 
 struct Datatypes {
@@ -470,34 +469,16 @@ struct BinInt {
   static bool eq_dec(const Z &x, const Z &y);
 };
 
-struct STRefNat {
-  // DATA
-  uint64_t s;
-
-  // ACCESSORS
-  STRefNat clone() const { return {s}; }
-
-  // CREATORS
-  static STRefNat mkstref(uint64_t s) { return {s}; }
-
-  uint64_t STRefToIxNat() const;
-};
+enum class STRefs { BUILD_STREFS };
 
 struct STMonad {
   template <typename T1 = void, typename T2, typename T3, typename F2>
   static T3 for_each_with(const List<T2> &xs, const T3 &v, F2 &&f);
 };
 
-struct nat_ix_stref {
-  static crane::obj mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
-
-  static uint64_t STRefToIx(crane::obj _p_a0) {
-    STRefNat a0 = crane::any_cast<STRefNat>(_p_a0);
-    return a0.STRefToIxNat();
-  }
+template <typename T1> struct code_const {
+  constexpr static uint64_t code() { return UINT64_C(0); }
 };
-
-static_assert(STRefClass<nat_ix_stref, uint64_t>);
 
 template <OrderedType X> struct Coq_Raw {
   using MX = OrderedTypeFacts<X>;
@@ -3068,170 +3049,17 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename T1 = void>
-std::shared_ptr<crane::array_storage<node>> make_ST(uint64_t n) {
-  auto _once1 = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
-  auto _once2 = std::make_pair(UINT64_C(0), UINT64_C(0));
-  std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
-      std::make_shared<crane::array_storage<node>>(
-          crane::st::extent(UINT64_C(0), std::move(_once1)), std::move(_once2));
-  STMonad::template for_each_with<void, uint64_t, std::monostate>(
-      ListDef::seq(UINT64_C(0), n), std::monostate{},
-      [=](std::monostate, uint64_t i) {
-        std::span<node>{*a}[i] = std::make_pair(i, UINT64_C(0));
-        return std::monostate{};
-      });
-  return a;
-}
-
-template <typename T1 = void>
-uint64_t find_ST(std::span<std::pair<uint64_t, uint64_t>> a, uint64_t fuel,
-                 uint64_t x) {
-  // Explicit stack replaces the non-tail recursion of find_ST: _call frames are
-  // pending calls, _after frames resume a caller.
-  struct _call {
-    uint64_t x;
-    uint64_t fuel;
-  };
-
-  struct _after_find_ST_in_false {
-    uint64_t x;
-    uint64_t k;
-  };
-
-  using _frame = std::variant<_call, _after_find_ST_in_false>;
-  uint64_t _result{};
-  crane::small_vector<_frame> _stack;
-  _stack.emplace_back(_call{x, fuel});
-  while (!_stack.empty()) {
-    _frame &_popped = _stack.back();
-    if (std::holds_alternative<_call>(_popped)) {
-      auto _f = std::move(std::get<_call>(_popped));
-      _stack.pop_back();
-      uint64_t x = _f.x;
-      uint64_t fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = std::move(x);
-      } else {
-        uint64_t fuel_ = fuel - 1;
-        std::pair<uint64_t, uint64_t> x_ =
-            std::span<const std::pair<uint64_t, uint64_t>>{a}[x];
-        const auto &[p, k] = x_;
-        if (p == x) {
-          _result = std::move(x);
-        } else {
-          _stack.emplace_back(_after_find_ST_in_false{x, k});
-          _stack.emplace_back(_call{p, fuel_});
-        }
-      }
-    } else {
-      auto _f = std::move(std::get<_after_find_ST_in_false>(_popped));
-      _stack.pop_back();
-      uint64_t x = _f.x;
-      uint64_t k = _f.k;
-      uint64_t r = std::move(_result);
-      a[x] = std::make_pair(r, k);
-      _result = std::move(r);
-    }
-  }
-  return _result;
-}
-
-template <typename T1 = void>
-void union_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
-              uint64_t x, uint64_t y) {
-  uint64_t rx = find_ST<crane::obj>(a, n, x);
-  uint64_t ry = find_ST<crane::obj>(a, n, y);
-  if (rx == ry) {
-    return;
-  } else {
-    std::pair<uint64_t, uint64_t> x_ =
-        std::span<const std::pair<uint64_t, uint64_t>>{a}[rx];
-    const auto &[_x, kx] = x_;
-    std::pair<uint64_t, uint64_t> x_0 =
-        std::span<const std::pair<uint64_t, uint64_t>>{a}[ry];
-    const auto &[_x0, ky] = x_0;
-    if (kx < ky) {
-      a[rx] = std::make_pair(ry, kx);
-      return;
-    } else {
-      if (ky < kx) {
-        a[ry] = std::make_pair(rx, ky);
-        return;
-      } else {
-        a[ry] = std::make_pair(rx, ky);
-        a[rx] = std::make_pair(rx, (kx + 1));
-        return;
-      }
-    }
-  }
-}
-
-template <typename T1 = void>
-bool same_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t x,
-             uint64_t y) {
-  uint64_t rx = find_ST<crane::obj>(a, n, x);
-  uint64_t ry = find_ST<crane::obj>(a, n, y);
-  return rx == ry;
-}
-
-template <typename T1 = void>
-List<bool> run_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
-                  const List<Op> &ops) {
-  // Explicit stack replaces the non-tail recursion of run_ST: _call frames are
-  // pending calls, _after frames resume a caller.
-  struct _call {
-    const List<Op> *ops;
-  };
-
-  struct _after_run_ST_in_Same {
-    bool b;
-  };
-
-  using _frame = std::variant<_call, _after_run_ST_in_Same>;
-  List<bool> _result{};
-  crane::small_vector<_frame> _stack;
-  _stack.emplace_back(_call{&ops});
-  while (!_stack.empty()) {
-    _frame &_popped = _stack.back();
-    if (std::holds_alternative<_call>(_popped)) {
-      auto _f = std::move(std::get<_call>(_popped));
-      _stack.pop_back();
-      const List<Op> &ops = *_f.ops;
-      if (std::holds_alternative<typename List<Op>::Nil>(ops.v())) {
-        _result = List<bool>::nil();
-      } else {
-        const auto &[a0, a1] = std::get<typename List<Op>::Cons>(ops.v());
-        if (std::holds_alternative<typename Op::Union>(a0.v())) {
-          const auto &[x0, y0] = std::get<typename Op::Union>(a0.v());
-          union_ST<crane::obj>(n, a, x0, y0);
-          _stack.emplace_back(_call{crane_raw(a1)});
-        } else {
-          const auto &[x0, y0] = std::get<typename Op::Same>(a0.v());
-          bool b = same_ST<crane::obj>(n, a, x0, y0);
-          _stack.emplace_back(_after_run_ST_in_Same{b});
-          _stack.emplace_back(_call{crane_raw(a1)});
-        }
-      }
-    } else {
-      auto _f = std::move(std::get<_after_run_ST_in_Same>(_popped));
-      _stack.pop_back();
-      bool b = _f.b;
-      List<bool> bs = std::move(_result);
-      _result = List<bool>::cons(b, std::move(bs));
-    }
-  }
-  return _result;
-}
-
-template <typename T1 = void>
-List<bool> union_find_ST(uint64_t n, const List<Op> &ops) {
-  std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
-      make_ST<crane::obj>(n);
-  return run_ST<crane::obj>(n, std::span<std::pair<uint64_t, uint64_t>>{*a},
-                            ops);
-}
-
+std::shared_ptr<crane::array_storage<node>> make_ST(STRefs _x, uint64_t n);
+uint64_t find_ST(STRefs r, std::span<std::pair<uint64_t, uint64_t>> a,
+                 uint64_t fuel, uint64_t x);
+void union_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
+              uint64_t x, uint64_t y);
+bool same_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
+             uint64_t x, uint64_t y);
+List<bool> run_ST(STRefs r, uint64_t n,
+                  std::span<std::pair<uint64_t, uint64_t>> a,
+                  const List<Op> &ops);
+List<bool> union_find_ST(STRefs r, uint64_t n, const List<Op> &ops);
 using NatMap = Make<Nat_as_OT>;
 using uf = NatMap::template t<node>;
 [[gnu::used]] inline const uf empty_uf = NatMap::template empty<node>();
@@ -3273,9 +3101,4 @@ T3 STMonad::for_each_with(const List<T2> &xs, const T3 &v, F2 &&f) {
       _loop_xs = crane_raw(a1);
     }
   }
-}
-
-inline uint64_t STRefNat::STRefToIxNat() const {
-  const auto &[s] = *this;
-  return s;
 }
