@@ -68,6 +68,61 @@ Local Open Scope pstring_scope.
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
+(** A [sig]'s proof is erased, so a [sig] is its witness: [exist x h] is
+    [x], and a match binds the witness to the value itself.  [sig2] has two
+    erased proofs and is its witness too. *)
+#[export] Instance sig_mapping (A : Type) (P : A -> Prop) : TypeMapping (sig P) :=
+  {| type_headers := [];
+     type_cpp := Crane.Cpp.StoredComponent "witness";
+     type_components :=
+       [{| component_name := "witness";
+           component_type := FieldType (Ref (@exist A P)) 0 |}];
+     type_copy := CopyComponents ["witness"];
+     type_access := ReadOnlyValue (ReadByComponents ["witness"]);
+     type_views := NoViews (sig P);
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref (@exist A P);
+             ctor_build := Expr "%a0";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "true";
+                       case_fields := [(0, CanonicalBorrowProjection "%scrut")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+
+#[export] Instance sig2_mapping (A : Type) (P Q : A -> Prop) : TypeMapping (sig2 P Q) :=
+  {| type_headers := [];
+     type_cpp := Crane.Cpp.StoredComponent "witness";
+     type_components :=
+       [{| component_name := "witness";
+           component_type := FieldType (Ref (@exist2 A P Q)) 0 |}];
+     type_copy := CopyComponents ["witness"];
+     type_access := ReadOnlyValue (ReadByComponents ["witness"]);
+     type_views := NoViews (sig2 P Q);
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref (@exist2 A P Q);
+             ctor_build := Expr "%a0";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "true";
+                       case_fields := [(0, CanonicalBorrowProjection "%scrut")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+
+(** [proj1_sig] is the witness, in place. *)
+#[export] Instance proj1_sig_mapping : OperationMapping (Ref (@proj1_sig)) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(e)";
+     operation_contract :=
+       PureOperation [{| argument_name := "e"; argument_use := Read |}]
+         (ReturnBorrowed CanonicalBorrow {| path_argument := "e"; path_components := ["witness"] |}) [] |}.
+
 (** A [sumbool] is the [bool] of which side holds, so the [sumbool] of a
     [bool] is that [bool]. *)
 #[export] Instance sumbool_of_bool_mapping : OperationMapping (Ref Sumbool.sumbool_of_bool) :=
