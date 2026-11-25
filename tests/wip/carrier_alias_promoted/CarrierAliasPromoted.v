@@ -1,30 +1,29 @@
-(** Crane bug: the carrier alias for [itree E] with [E] mentioning a
-    promoted class instance's type field is emitted at file scope with the
-    instance variable free.
+(** The carrier for [itree E] with [E] mentioning a promoted class
+    instance's type field, in a function's result type ([stateT nat
+    (itree memE) nat]).  Reduced from Vellvm on 0b9b536f0 (the handlers of
+    [InterpretationStack.on_mem] etc.).
 
-    Observed (0b9b536f0):
-      template <typename _CraneTcArg>
-      using _crane_carrier_tc_b2b3658f40108d9d =
-          Itree<memE<typename _tcI0::PTR...>, _CraneTcArg>;   // _tcI0 free at file scope
-      ...
-      template <typename _tcI0> ...
-      static stateT<Nat, _crane_carrier_tc_b2b3658f40108d9d, Nat> get_st(Nat n)
-    Diagnostics:
-      error: use of undeclared identifier '_tcI0'
-      error: use of undeclared identifier '_crane_carrier_tc_b2b3658f40108d9d'
-      error: no matching function for call to 'get_st'
-    Expected: the holder that 0b9b536f0 uses for a plain family in a result
-    type ([_crane_carrier_tch<...>::template c]), instantiated at the
-    function's own [_tcI0]-dependent family.
+    The defect it was filed for (a file-scope alias with [_tcI0] free) is
+    gone: [get_st] is now written against the holder
+    [crane_carrier_tch<_tcI0>::template c].
 
-    Reduced from Vellvm on 0b9b536f0: the artifact's .cpp opens with
-      template <typename _CraneTcArg>
-      using _crane_carrier_tc_c043b3081d64c112 = Itree<
-          MCFGEbot<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr, std::any>,
-          _CraneTcArg>;
-    and the handlers ([InterpretationStack.on_mem] etc.) use it in
-    [stateT<State<...>, _crane_carrier_tc_c043b3081d64c112, T1>]
-    (41 parse errors). *)
+    Open (diagnosed 2026-11-24): [is_three]'s match over [observe r].  [r]
+    is declared [Itree<memE<typename natParams::ptr>, pair<Nat, Nat>>]: its
+    body names [natParams] ([get_st<natParams>]), so
+    [Decl_state.with_body_resolutions] resolves the promoted [ptr].
+    [is_three]'s body names only [r], so nothing resolves [ptr] there and
+    the match spells the scrutinee's constructors at the struct's
+    [using ptr = crane::obj]: [std::get<ItreeF<memE<crane::obj>, ...>::RetF>]
+    on a variant of [ItreeF<memE<Nat>, ...>] fails [static_assert] in
+    [std::get].  [type_resolutions_of_referenced_globals] reads a
+    referenced global's resolutions only off a recorded class shape of its
+    type ([@dval natIPtr]), and [r]'s type ([itree (@memE natParams) _])
+    records none: the instance sits under the head.  The connection is in
+    the Rocq type at [extract_constant] ([Base.Table.instance_class_shapes]),
+    which records only the head's own class arguments; recording the
+    instances an argument's family is applied to, or resolving a reader's
+    types through the resolutions its referenced globals were declared
+    under, would close it. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.

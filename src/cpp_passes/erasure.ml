@@ -1459,6 +1459,27 @@ let invoke_capturing_initialisers (d : settled) : settled =
 
 (** {2 Methods and projections} *)
 
+(* The type arguments a reference to the method [n] at [tys] writes
+   ({!Unit_plan.Cpp_names.method_type_args}), and the erased instantiation
+   for each variable the method's head must be written at that the use does
+   not instantiate: the index of a natural transformation named unapplied,
+   [@handle E : AE ~> itree E], which the lambda of its value binds, read
+   by the slot the value fills at the erased index. *)
+let method_type_args u n (tys : ty list) =
+  let written = Unit_plan.Cpp_names.method_type_args u.Unit_plan.Context.callables n tys in
+  let unsupplied =
+    match Core_plan.Callable_abi.lookup u.Unit_plan.Context.callables n with
+    | None -> []
+    | Some abi ->
+      List.filter_map
+        (fun (p : Core_plan.Callable_abi.template_parameter) ->
+          match (p.origin, p.write) with
+          | From_scheme v, Writable when Core.Scheme.Var.ordinal v > List.length tys -> Some Cpp_ir.Type.Any
+          | _ -> None )
+        (Core_plan.Callable_abi.template_head abi)
+  in
+  written @ unsupplied
+
 (* The lambda a methodified function [n] is written as where it is a value,
    its receiver at [pos].  It takes the function's parameters at the types the
    method was declared at, not [const auto &]: a generic lambda has no
@@ -1505,7 +1526,7 @@ let method_value u n (tys : ty list) pos : expr =
       access = Dot;
       receiver = receiver_pos;
       params;
-      type_args = Unit_plan.Cpp_names.method_type_args u.Unit_plan.Context.callables n tys }
+      type_args = method_type_args u n tys }
 
 (* Whether a global is written as a function of its own, not a mapping's
    text. *)
@@ -1532,7 +1553,7 @@ let lower_method_calls u (d : settled) : settled =
             match receiver with This -> (Arrow, This) | Dereference p -> (Arrow, p) | receiver -> (Dot, receiver)
           in
           let args = List.map fe rest in
-          let type_args = Unit_plan.Cpp_names.method_type_args u.Unit_plan.Context.callables n tys in
+          let type_args = method_type_args u n tys in
           Method_call {method_ = n; access; receiver; type_args; args}
         | None, _ -> Map.expr (rw ()) e ) )
     | Entity (n, tys, ci) when not_inline ci -> (

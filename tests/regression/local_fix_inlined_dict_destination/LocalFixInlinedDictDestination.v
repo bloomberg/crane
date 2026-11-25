@@ -2,15 +2,15 @@
     unrolled in place; its non-empty branch calls a class-polymorphic
     function ([mconcat] over the [Mon (list A)] instance), and the result,
     appended to, is the argument of another local fixpoint whose result type
-    differs ([list bool]). The generated C++ is right, but the typed-fit check
-    finds the unrolled body's [list nat] value stored in a destination typed
-    [list bool], the outer local fixpoint's result. With [mconcat] replaced by
-    a literal, without the [++], or with the outer fixpoint at top level, the
-    check passes.
-    Expected: extracts under CRANE_CHECK_IR, [result = 4]. Actual: "Crane IR
-    check (typed fit): a value of type list<nat> put in a slot of type
-    list<bool> (destination, unrelated)". Seen under BDE and std mappings,
-    also with primitive-array elements. *)
+    differs ([list bool]). The generated C++ was right, but the typed-fit
+    check found the unrolled body's [list nat] value stored in a destination
+    typed [list bool]: the argument of the applied local fixpoint was
+    generated with the enclosing result [list bool] as its return type, which
+    [app]'s result bindings read as [A := bool].
+
+    Fixed: an argument of an applied local fixpoint is generated with its
+    parameter's type as the return type in force
+    ([Local_functions.gen_applied_fix]). *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Stdlib Require Import List.

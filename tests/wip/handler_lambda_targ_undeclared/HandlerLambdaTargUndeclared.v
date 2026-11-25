@@ -1,58 +1,32 @@
-(* An eta-expanded handler lambda, inside a definition parameterised by a
-   typeclass, names a type variable the enclosing head never declares.
+(** An eta-expanded handler, inside a definition parameterised by a
+    typeclass, passed to a combinator that applies it as a rank-2
+    natural transformation.  Reduced from Vellvm's
+    Semantics/InterpretationStack.v:60-90 (fused_local and siblings).
 
-   Expected: the inner lambda is generic over the event's index, the way the
-   same program emits when the typeclass context is removed:
+    Fixed since filing: the lambda no longer names an undeclared [T2] (the
+    eta site binds the index, as [crane::obj] where nothing deduces it), and
+    [handle_local_debug]'s body, [Ret (s, s + width)] at the index its match
+    refined, is converted at [T2] ([itree_ret(std::make_pair(s,
+    crane_convert<T2>(...)))]).
 
-     []<typename _T2>(const LocalE<_T2>& a0) -> decltype(auto) {
-       return handle_local_debug<_T2, ...>(a0); }
-
-   Actual: it was emitted monomorphic, wrapped in an IIFE, and its return type
-   named T2, which is not a template parameter of anything in scope:
-
-     template <Params _tcI0, typename T1>
-     Monads::template stateT<Big, std::shared_ptr, T1> fused_local(LocalE e) {
-       return on_ls<LocalE, T1>(handle_local_stack<LocalE, T1>(
-           []() {
-             return [](LocalE _x0)
-                 -> Monads::template stateT<lenv, std::shared_ptr, T2> {
-               return handle_local_debug<_tcI0, LocalE>(_x0); };
-           }(), e)); }
-
-     error: use of undeclared identifier 'T2'
-
-   The typeclass context decides which of two broken forms comes out. Delete
-   `Context {Pa : Params}` from both sections (and the use of `width`) and the
-   identical program emits the generic form above instead -- which does not
-   compile either: `LocalE` is an enum, so `const LocalE<_T2> &` does not
-   parse, and the `std::invoke_result_t` filler for the second argument is
-   nonsense. That face is filed as eta_handler_event_as_template. Both faces
-   are the same defect: an eta-expanded handler quantifies an index C++ cannot
-   deduce, and neither the lambda nor its consumer says so.
-
-   The free name is now gone: eta-expansion binds the index it invents, as a
-   template parameter of the lambda it is building. What is left is the half
-   that binding exposes. LocalE is an enum -- erasure took the index out of
-   the parameter -- so no argument deduces it, and a template parameter
-   nothing can supply is worse than the erasure it replaced: the lambda comes
-   out returning stateT<lenv, itree_tc, std::any>, which is honest, and which
-   handle_local_stack cannot convert back to its declared T2.
-
-   Deducing it is not on: the enum carries nothing. The index has to be
-   supplied, by the one place that knows it -- the consumer, whose own return
-   type is stateT<lenv, itree_tc, T2> -- as h.template operator()<T2>(e). No
-   machinery for that exists yet; the rank-2 path at translation.ml:5630
-   drops an undeducible carrier for exactly the same reason, so this shape is
-   outside what either path handles.
-
-   The sibling shape does work, and is the one Vellvm is made of: where the
-   event type still carries the index (memM<T2> rather than a bare enum), the
-   lambda's parameter deduces it, the template parameter survives, and no
-   consumer change is needed.
-
-   Reduced from Vellvm's Semantics/InterpretationStack.v:60-90, where
-   fused_local, fused_intrinsic, fused_memory and the OOME/UBE cases of the
-   fused handler chain produce nine copies of this error. *)
+    Open (diagnosed 2026-11-24): [handle_local_stack]'s [h T e].  [h]'s Rocq
+    type [LocalE ~> stateT lenv (itree E)] quantifies [T] inside a parameter
+    type, so its Core type erases the quantified variable to [Unknown], and
+    [Unknown] unifies with anything: extraction records no coercion where
+    [h T e : stateT lenv (itree E) Unknown] meets [T].  [h] is a deduced
+    [F0 &&], and the eta lambda the caller passes returns
+    [stateT<lenv, itree_tc, crane::obj>]; the body [return h(e);] needs
+    [crane_convert<stateT<lenv, itree_tc, T2>>(h(e))] ([crane_cast_to] for
+    [crane::fn] converts the result).  Nothing on the consumer side asks: no
+    Core coercion, and the typed-fit/[Coerce.decide] pair is skipped because
+    the slot names a type variable.  Making [decide] convert a box inside a
+    mapped type to a concrete type was tried and is too broad (dozens of
+    typed-fit failures across regression: pairs, lists and event-only
+    mismatches C++ resolves); the decision needs the Core fact that the
+    callee is a parameter of rank-2 type applied at a type, which Core does
+    not keep.  The same layer is open in mrec_ctx_wrapped_in_ret
+    ([ctx0(d)]) and eta_handler_event_as_template ([crane::apply2(h, e,
+    s)]). *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.

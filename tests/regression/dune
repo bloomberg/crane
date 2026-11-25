@@ -16267,3 +16267,101 @@
   (alias runtest)
   (deps event_param_dropped.t.exe)
   (action (run ./event_param_dropped.t.exe))))
+
+(subdir pick_curried_fn_overapply
+ (rule
+  (targets pick_curried_fn_overapply.t.exe)
+  (deps PickCurriedFnOverapply.vo pick_curried_fn_overapply.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pick_curried_fn_overapply.t.exe pick_curried_fn_overapply.t.cpp pick_curried_fn_overapply.cpp)))
+ (rule
+  (alias runtest)
+  (deps pick_curried_fn_overapply.t.exe)
+  (action (run ./pick_curried_fn_overapply.t.exe))))
+
+(subdir twice_fn_transformer_step
+ (rule
+  (targets twice_fn_transformer_step.t.exe)
+  (deps TwiceFnTransformerStep.vo twice_fn_transformer_step.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} twice_fn_transformer_step.t.exe twice_fn_transformer_step.t.cpp twice_fn_transformer_step.cpp)))
+ (rule
+  (alias runtest)
+  (deps twice_fn_transformer_step.t.exe)
+  (action (run ./twice_fn_transformer_step.t.exe))))
+
+(subdir fn_list_state_alias_fit
+ (rule
+  (targets fn_list_state_alias_fit.t.exe)
+  (deps FnListStateAliasFit.vo fn_list_state_alias_fit.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fn_list_state_alias_fit.t.exe fn_list_state_alias_fit.t.cpp fn_list_state_alias_fit.cpp)))
+ (rule
+  (alias runtest)
+  (deps fn_list_state_alias_fit.t.exe)
+  (action (run ./fn_list_state_alias_fit.t.exe))))
+
+(subdir twice_composed_fn_destination
+ (rule
+  (targets twice_composed_fn_destination.t.exe)
+  (deps TwiceComposedFnDestination.vo twice_composed_fn_destination.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} twice_composed_fn_destination.t.exe twice_composed_fn_destination.t.cpp twice_composed_fn_destination.cpp)))
+ (rule
+  (alias runtest)
+  (deps twice_composed_fn_destination.t.exe)
+  (action (run ./twice_composed_fn_destination.t.exe))))
+
+(subdir local_fix_alias_acc_join
+ (rule
+  (targets local_fix_alias_acc_join.t.exe)
+  (deps LocalFixAliasAccJoin.vo local_fix_alias_acc_join.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_alias_acc_join.t.exe local_fix_alias_acc_join.t.cpp local_fix_alias_acc_join.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_alias_acc_join.t.exe)
+  (action (run ./local_fix_alias_acc_join.t.exe))))
+
+(subdir local_fix_inlined_dict_destination
+ (rule
+  (targets local_fix_inlined_dict_destination.t.exe)
+  (deps LocalFixInlinedDictDestination.vo local_fix_inlined_dict_destination.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_inlined_dict_destination.t.exe local_fix_inlined_dict_destination.t.cpp local_fix_inlined_dict_destination.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_inlined_dict_destination.t.exe)
+  (action (run ./local_fix_inlined_dict_destination.t.exe))))
+(subdir interp_state_dict
+ (rule
+  (targets interp_state_dict.t.exe)
+  (deps InterpStateDict.vo interp_state_dict.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} interp_state_dict.t.exe interp_state_dict.t.cpp interp_state_dict.cpp)))
+ (rule
+  (alias runtest)
+  (deps interp_state_dict.t.exe)
+  (action (run ./interp_state_dict.t.exe))))
+
+(subdir case_handler_concrete_result
+ (rule
+  (targets case_handler_concrete_result.t.exe)
+  (deps CaseHandlerConcreteResult.vo case_handler_concrete_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} case_handler_concrete_result.t.exe case_handler_concrete_result.t.cpp case_handler_concrete_result.cpp)))
+ (rule
+  (alias runtest)
+  (deps case_handler_concrete_result.t.exe)
+  (action (run ./case_handler_concrete_result.t.exe))))
+
+(subdir applied_typename_not_hk
+ (rule
+  (targets applied_typename_not_hk.t.exe)
+  (deps AppliedTypenameNotHk.vo applied_typename_not_hk.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} applied_typename_not_hk.t.exe applied_typename_not_hk.t.cpp applied_typename_not_hk.cpp)))
+ (rule
+  (alias runtest)
+  (deps applied_typename_not_hk.t.exe)
+  (action (run ./applied_typename_not_hk.t.exe))))

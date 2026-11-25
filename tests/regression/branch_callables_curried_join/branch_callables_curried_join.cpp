@@ -198,40 +198,33 @@ uint64_t BranchCallablesCurriedJoin::v11(const List<uint64_t> &l) {
 }
 
 uint64_t BranchCallablesCurriedJoin::v12(const List<uint64_t> &l) {
-  return app2([&]() {
-    auto _pa1 = l.template map<BranchCallablesCurriedJoin::tree>(
-        [](uint64_t) { return tree::leaf(); });
-    return [=](BranchCallablesCurriedJoin::ptree<bool> _x0,
-               bool _x1)
-                -> String {
-      return _pa1.template fold_left<
-          crane::fn<String(BranchCallablesCurriedJoin::ptree<bool>, bool)>>(
-          [](crane::fn<String(BranchCallablesCurriedJoin::ptree<bool>, bool)>,
-             const BranchCallablesCurriedJoin::tree &x)
-               -> crane::fn<
-              String(BranchCallablesCurriedJoin::ptree<bool>, bool)> {
-            if (std::holds_alternative<
-                    typename BranchCallablesCurriedJoin::tree::Leaf>(x.v())) {
-              return [](BranchCallablesCurriedJoin::ptree<bool>,
-                        bool) { return String::emptystring(); };
-            } else {
-              crane::fn<String(uint64_t, bool)> cf = [](uint64_t,
-                                                        bool) {
-                return String::string0(Ascii::ascii0(true, false, false, false,
-                                                     false, true, true, false),
-                                       String::emptystring());
-              };
-              return [=, cf = std::move(cf)](
-                  BranchCallablesCurriedJoin::ptree<bool>,
-                  bool eta0_) { return cf(UINT64_C(0), eta0_); };
-            }
-          },
-          [](BranchCallablesCurriedJoin::ptree<bool>,
-             bool) {
-            return String::string0(Ascii::ascii0(false, true, false, true, true,
-                                                 true, true, false),
+  return app2(l.template map<BranchCallablesCurriedJoin::tree>(
+      [](uint64_t) { return tree::leaf(); })
+                  .template fold_left<
+      crane::fn<String(BranchCallablesCurriedJoin::ptree<bool>, bool)>>(
+      [](crane::fn<String(BranchCallablesCurriedJoin::ptree<bool>, bool)>,
+         const BranchCallablesCurriedJoin::tree &x)
+           -> crane::fn<String(BranchCallablesCurriedJoin::ptree<bool>, bool)> {
+        if (std::holds_alternative<
+                typename BranchCallablesCurriedJoin::tree::Leaf>(x.v())) {
+          return [](BranchCallablesCurriedJoin::ptree<bool>,
+                    bool) { return String::emptystring(); };
+        } else {
+          crane::fn<String(uint64_t, bool)> cf = [](uint64_t,
+                                                    bool) {
+            return String::string0(Ascii::ascii0(true, false, false, false,
+                                                 false, true, true, false),
                                    String::emptystring());
-          })(_x0, _x1);
-    };
-  }());
+          };
+          return [=, cf = std::move(cf)](
+              BranchCallablesCurriedJoin::ptree<bool>,
+              bool eta0_) { return cf(UINT64_C(0), eta0_); };
+        }
+      },
+      [](BranchCallablesCurriedJoin::ptree<bool>,
+         bool) {
+        return String::string0(
+            Ascii::ascii0(false, true, false, true, true, true, true, false),
+            String::emptystring());
+      }));
 }

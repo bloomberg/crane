@@ -291,17 +291,42 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
        arguments the call writes, which may take a function type the way
        the call's expected result does. *)
     let arg_expected_ty =
-      match (arg_slot, arg_expected_ty) with
-      | Exactly s, Some e when s <> e && Cpp_ir.Types.same_arrows s e -> Some s
+      let grouping =
+        match arg_slot with
+        | Exactly s -> Some s
+        (* A callable C++ deduces is still invoked as the parameter's type
+           at those type arguments says ([is_invocable_r_v<T1, F0 &, T1>]). *)
+        | Forwarded -> (
+          match
+            Option.bind (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
+              (Calls.parameter_at_written cx env ~written_by_var)
+          with
+          | Some (t, false) -> Some t
+          | _ -> None )
+        | _ -> None
+      in
+      match (grouping, arg_expected_ty) with
+      | Some s, Some e when s <> e && Cpp_ir.Types.same_arrows s e -> Some s
       | _ -> arg_expected_ty
     in
     let arg_typed =
-      Knot.gen_expr_typed cx (Slot.at ~ret ?expected_ty:arg_expected_ty ~slot:
+      let at =
+        Slot.at ~ret ?expected_ty:arg_expected_ty ~slot:
           { slot with
             Slot.expected_core_ty = arg_expected_core_ty;
             call_result = expected_result;
-            stated_core_ty = param_core_ty } ())
-        env core_arg
+            stated_core_ty = param_core_ty } ()
+      in
+      (* An inline mapping's text takes the argument at the type it comes
+         with, and where what it builds of it keeps that instantiation
+         ([itree_ret(%a0)]), or goes on into a position that does
+         ([itree_ret(std::make_pair(%a0, %a1))]), nothing converts it
+         after. *)
+      let deduced =
+        Base.Table.is_inline_custom id
+        && (slot.Slot.deduced || match Slot.expected slot with Some t -> Coerce.keeps_instantiation t | None -> false)
+      in
+      Knot.gen_expr_typed cx { at with Slot.deduced } env core_arg
     in
     let expr = arg_typed.expr in
     let expr : Cpp_ir.Lowered.Expr.t =
@@ -1440,12 +1465,14 @@ let eta_fun cx (slot : Slot.slot) env f args :
           in
           (* A call that already fills its callee -- [fold_right compose id
              fs] at [A := nat -> nat] -- is missing only its result's own
-             parameter.  Rocq evaluates it once, where it is written, and its
+             parameters.  Rocq evaluates it once, where it is written, and its
              result is the closure; eta-expanded, the lambda would make the
-             whole call again every time it is applied. *)
+             whole call again every time it is applied, and would apply the
+             result to the missing parameters grouped as the instantiation
+             flattens them rather than as the type argument the call writes
+             spells its codomain. *)
           let saturated =
             (not (is_inline_custom id))
-            && List.length missing_args = 1
             && match callee_arity with Some arity -> List.length args >= arity | None -> false
           in
           if saturated then
@@ -1998,27 +2025,27 @@ let eta_fun cx (slot : Slot.slot) env f args :
        the callee's own where the term shows it, else, for a local binder,
        the type its binding site recorded.  Only a type that states every
        part: an erased one says less than the argument's annotation. *)
+    let declared_core_params =
+      match (callee_param_tys, f) with
+      | (_ :: _ as l), _ -> l
+      | [], (Core.Expr.Bound_variable {index = j; _}
+            | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _}
+            | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _}
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _}) ->
+        let rec params = function
+          | Core.Type.Arrow {parameter = t; result = rest} -> (
+            match resolve_meta t with
+            | Core.Type.Erased _ -> params rest
+            | t when Base.Table.is_typeclass_type t -> params rest
+            | t -> t :: params rest )
+          | Core.Type.Meta {contents = Some t} -> params t
+          | _ -> []
+        in
+        (match get_env_type_opt cx j with Some t -> params t | None -> [])
+      | [], _ -> []
+    in
     let declared_core_dom i =
-      let params =
-        match (callee_param_tys, f) with
-        | (_ :: _ as l), _ -> l
-        | [], (Core.Expr.Bound_variable {index = j; _}
-              | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _}
-              | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _}
-              | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _}) ->
-          let rec params = function
-            | Core.Type.Arrow {parameter = t; result = rest} -> (
-              match resolve_meta t with
-              | Core.Type.Erased _ -> params rest
-              | t when Base.Table.is_typeclass_type t -> params rest
-              | t -> t :: params rest )
-            | Core.Type.Meta {contents = Some t} -> params t
-            | _ -> []
-          in
-          (match get_env_type_opt cx j with Some t -> params t | None -> [])
-        | [], _ -> []
-      in
-      match List.nth_opt params i with
+      match List.nth_opt declared_core_params i with
       | Some t when not (core_type_contains_erased t) -> Some t
       | _ -> arg_slot.Slot.expected_core_ty
     in
@@ -2063,7 +2090,25 @@ let eta_fun cx (slot : Slot.slot) env f args :
            The parameter's Core type says, and the slot, which every form
            hands on to the positions whose value is the argument's, refines
            the erased parts by it. *)
-        | _ -> gen_expr_typed cx (Slot.at ~ret ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} ()) env x
+        | _ ->
+          (* An argument is not a tail position: where the callee's
+             declaration states the parameter, that, not the enclosing
+             function's result, is the return type in force while it is
+             generated, and a match there, an immediately invoked lambda,
+             returns to it ({!Calls.argument_position}). *)
+          let dom =
+            match List.nth_opt declared_core_params i with
+            | Some t when not (core_type_contains_erased t) -> (
+              match Types.param_expected_cpp_ty cx env declared_core_params i with
+              | Some d when not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any d) -> Some d
+              | _ -> None )
+            | _ -> None
+          in
+          let ret = if Option.has_some dom then dom else ret in
+          let expected_ty = match x with Core.Expr.Match _ -> dom | _ -> None in
+          gen_expr_typed cx
+            (Slot.at ~ret ?expected_ty ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} ())
+            env x
       in
       let expr = value.expr in
       match List.nth_opt callee_param_tys i with

@@ -1,21 +1,15 @@
-(** Crane bug: the carrier holder for [itree AllE] (e888c04f0's
-    [_crane_carrier_tch<_tcI0>]) is emitted before the family alias it names.
+(** The carrier holder for [itree AllE] with [AllE := memE +' failE] over
+    a promoted class field.  In Vellvm the holder was printed before the
+    alias it names ([vellvm_bench.h:1383: use of undeclared identifier
+    'MCFGEbot'], e888c04f0).
 
-    Observed (e888c04f0):
-      template <typename _P0> struct _crane_carrier_tch {   // h:340
-        template <typename _CraneTcArg> using c = Itree<AllE<...>, _CraneTcArg>;
-      ...
-      template <typename ptr, typename x> using AllE = Sum1<memE<ptr>, FailE, x>;   // h:372, later
-    Diagnostic:
-      error: use of undeclared identifier 'AllE'
-      error: no matching function for call to 'get_st'
-    Here [AllE] is also nested in the module struct (the placement issue of
-    partial_app_carrier / carrier_alias_promoted).  In Vellvm the alias is
-    at file scope but simply later: the holder is at h:1380 and
-    [using MCFGEbot = Sum1<...>] at h:15664, giving
-      vellvm_bench.h:1383: error: use of undeclared identifier 'MCFGEbot'
-    (Vellvm's only parse error on e888c04f0).  The holder needs to follow
-    everything its body names. *)
+    That ordering defect no longer reproduces here: [get_st] compiles.
+
+    Open (diagnosed 2026-11-24): the same defect as carrier_alias_promoted.
+    [is_three] matches [observe r] at the struct's [using ptr =
+    crane::obj] ([ItreeF<Sum1<memE<crane::obj>, FailE, crane::obj>, ...>])
+    while [r] is an [Itree<Sum1<memE<Nat>, ...>>], resolved through
+    [natParams] in [r]'s own body; [std::get] fails its [static_assert]. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.

@@ -1258,6 +1258,17 @@ let gen_applied_fix cx (slot : Slot.slot) env (k : Destination.t) ~x ~ids ~funs 
     List.rev
       (List.mapi
          (fun i a ->
+           (* An argument is not a tail position: the parameter, where it
+              states its type, is the return type in force while it is
+              generated, not the enclosing function's result. *)
+           let ret =
+             match List.nth_opt params i with
+             | Some (_, ty) when not (core_type_contains_erased ty) -> (
+               match Types.cpp_of_core cx env ty with
+               | t when Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t -> ret
+               | t -> Some t )
+             | _ -> ret
+           in
            (* A function value passed for a parameter of a function type is
               written against it: a lambda takes every parameter the type
               does ({!Lambda.gen_lambda}). *)

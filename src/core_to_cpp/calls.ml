@@ -1569,7 +1569,7 @@ let rec core_arg_to_template_type cx ?expected env core_arg : Cpp_ir.Lowered.Typ
       (Core_plan.Instance_methods.instance_tvars ty (Core_plan.Instance_methods.class_type ty))
   in
   let instance_type_args r ts =
-    Base.Type_util.filter_erased_type_args
+    Base.Type_util.filter_erased_type_args ~preserve_positions:true
       (Types.build_template_params cx ~site:Cpp_ir.Types.Declared env []
          (List.filter_map (Base.Core_util.Var_types.find_tvar ts) (struct_vars r ts)) )
   in
@@ -1992,15 +1992,19 @@ let plan_call cx ~ret ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (in
   (* The callee's variables as the call's expected result instantiates
      them: its declared codomain, named [T1]..[Tn] and with a plain family's
      application taken off, matched against that type.  Read by the argument
-     loop below for a parameter the substitution left erased. *)
+     loop below for a parameter the substitution left erased.  Nothing for
+     an over-applied call: its position states the type of its result
+     applied to the excess arguments, not of its result. *)
   let result_tvar_map =
     lazy
-      (binding_results_of id (fun () ->
-           callee_result_bindings cx env id
-             ~explicit:(expected_ty <> None)
-             ( match expected_ty with
-             | Some _ -> expected_ty
-             | None -> ret ) ) )
+      ( if excess_args <> [] then ([], [])
+        else
+          binding_results_of id (fun () ->
+              callee_result_bindings cx env id
+                ~explicit:(expected_ty <> None)
+                ( match expected_ty with
+                | Some _ -> expected_ty
+                | None -> ret ) ) )
   in
   {
     instantiated = inst;
@@ -2091,6 +2095,19 @@ let spell_as_declared (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.
   in
   spell orig t
 
+(** The parameter declared [orig] at the type arguments a call writes
+    ([written_by_var]), and whether a variable it names is left to C++ to
+    deduce; [None] where the declaration has no C++ type. *)
+let parameter_at_written cx env ~written_by_var (orig : Core.Type.t) =
+  match Types.cpp_of_core cx env orig with
+  | exception e when CErrors.noncritical e -> None
+  | declared ->
+    let t = Cpp_ir.Types.substitute (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var) declared in
+    let deduced =
+      IntSet.exists (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var = None) (collect_tvars_set IntSet.empty orig)
+    in
+    Some (t, deduced)
+
 (** The slot an argument of the call to [id] fills at the parameter
     declared at the Core type [orig]: what C++ checks it against.  A
     forwarding reference for a deduced callable; for an inline mapping, a
@@ -2110,14 +2127,9 @@ let argument_slot cx env id ~deduced_callable ~written_by_var ~(expected : Cpp_i
       Base.Probe.hit "argument-without-parameter" (fun () -> Pp.string_of_ppcmds (GlobRef.print id));
       slot_of expected
     | Some orig -> (
-      match Types.cpp_of_core cx env orig with
-      | exception e when CErrors.noncritical e -> slot_of expected
-      | declared ->
-        let t = Cpp_ir.Types.substitute (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var) declared in
-        let deduced =
-          IntSet.exists (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var = None) (collect_tvars_set IntSet.empty orig)
-        in
-        if deduced || Base.Table.is_custom id then Template_parameter (Some t) else Exactly t )
+      match parameter_at_written cx env ~written_by_var orig with
+      | None -> slot_of expected
+      | Some (t, deduced) -> if deduced || Base.Table.is_custom id then Template_parameter (Some t) else Exactly t )
 
 let argument_position cx ~ret ~local_callable env id plan i core_arg =
   let {
@@ -2250,8 +2262,11 @@ let argument_position cx ~ret ~local_callable env id plan i core_arg =
         (Core_plan.Param_pos.positioned fn_param_core_tys_orig)
     | _ -> false
   in
+  (* A let in argument position is the value its body is: [let cf := ...
+     in fun c => cf (c 1)] is a lambda written against the slot. *)
+  let rec let_body = function Core.Expr.Let {body; _} -> let_body body | e -> e in
   let arg_expected_ty =
-    match core_arg with
+    match let_body core_arg with
     (* A lambda under a coercion is written against the slot all the
        same. *)
     | Core.Expr.Lambda _
@@ -2287,7 +2302,19 @@ let argument_position cx ~ret ~local_callable env id plan i core_arg =
        about the type the constructor's own annotation knows better: it
        carries this producer's instantiation, which the parameter type may
        have erased.  So take the currying and nothing else. *)
-    | Core.Expr.Construct _ -> param_expected_recurried ()
+    | Core.Expr.Construct {result_type; _} -> (
+      match param_expected_recurried () with
+      | Some _ as t -> t
+      (* An annotation that spells the slot's type through a function
+         alias unfolded ([list (nat -> nat -> nat * nat)] for [list (nat ->
+         st nat)]) is the same type grouped otherwise: the slot's grouping
+         is the one the callee reads. *)
+      | None -> (
+        match param_expected_subst () with
+        | Some p ->
+          let own = Types.cpp_of_core cx env result_type in
+          if Types.regrouped_through_aliases cx env p own then Some p else None
+        | None -> None ) )
     (* A match in argument position becomes an immediately-invoked lambda,
        whose branches have to agree on one return type -- and the branches
        are where a value is spelled for the first time, so nothing inside

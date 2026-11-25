@@ -135,11 +135,11 @@ struct CaseHandlerConcreteResult {
   static std::shared_ptr<ITree<uint64_t>> tr();
 
   template <typename T1> static std::shared_ptr<ITree<T1>> hl(AE) {
-    return itree_ret(UINT64_C(1));
+    return itree_ret(crane_convert<T1>(UINT64_C(1)));
   }
 
   template <typename T1> static std::shared_ptr<ITree<T1>> hr(AE) {
-    return itree_ret(UINT64_C(2));
+    return itree_ret(crane_convert<T1>(UINT64_C(2)));
   }
 
   static uint64_t result(uint64_t fuel,

@@ -705,6 +705,11 @@ and gen_crossing cx (slot : Slot.slot) env ~coercion ~boxed t occ :
       if Erasure.classify_erasure cx (Some ty) = `Opaque then `Opaque else `Box
     | _ -> `None
   in
+  let refined into =
+    match inner_typed.ty with
+    | Typed f -> Coerce.crossing_index_plan ~deduced:slot.Slot.deduced ~from:f ~into
+    | _ -> None
+  in
   ( match expected_ty with
     | Some ty when not (Cpp_ir.Types.prints_as_any ty) && ty <> Void
                   && not (match ty with Entity_application (g, _, _) -> Base.Table.is_erased_type_const g | _ -> false) ->
@@ -771,6 +776,10 @@ and gen_crossing cx (slot : Slot.slot) env ~coercion ~boxed t occ :
                   then_ = [Return (Some (Convert (ty, inner)))];
                   else_ = [Throw Cpp_build.dead_branch_message] } ]
         | Some (from, _) when Coerce.absurd_coercion cx from ty -> Abort (Cpp_build.dead_branch_message, ty)
+        (* A value at the index its match refined, or at the box a callee
+           erased the index to ({!Coerce.crossing_index_plan}). *)
+        | Some _ when Option.has_some (refined ty) ->
+          Coerce.built (Option.get (refined ty)) inner_typed (Exactly ty)
         (* Only the boxed dimension: the pointer- and converting-constructor
            dimensions at this boundary have already been settled by the
            sub-expression that produced [inner]. *)

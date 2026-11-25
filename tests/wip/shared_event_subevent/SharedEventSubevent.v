@@ -2,7 +2,22 @@
     [ReSum] instances and dispatched by a [case_] of handlers: each event is
     boxed into [crane::obj] on the way into the erased instance and read back
     at its own type, or at the all-[crane::obj] instantiation the erased
-    [case_] reads it at, on the way out. *)
+    [case_] reads it at, on the way out.
+
+    Fixed 2026-11-24: [interp]'s dictionaries were written as the bare
+    [MonadIter_itree] (the event argument [void1] erased dropped the whole
+    list), which no template accepts; they are [MonadIter_itree<crane::obj>].
+
+    Open (diagnosed 2026-11-24): the program now compiles and throws
+    [std::bad_any_cast] at run time.  The candidates are the casts of the
+    dispatch: [Case_sum1_Handler] reads its event with
+    [crane::any_cast<Sum1<crane::obj, crane::obj, crane::obj>>], and each
+    [case_] step reads its handler with
+    [crane::any_cast<Handler<crane::obj, crane::obj>>]; under
+    [Set Crane SharedVariant] an event is boxed as itself (a counted word,
+    [crane::obj::viewed_as]), so a box of [Sum1<AE, Sum1<BE, CE, _>, _>]
+    read at the all-[crane::obj] instantiation is the likely mismatch.  Not
+    narrowed further: lldb does not run here. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.

@@ -1,23 +1,25 @@
-(** ITree's own [Recursion.mrec], which reaches C++ with three defects
-    stacked in one call.
+(** ITree's own [Recursion.mrec], which reaches C++ with defects stacked
+    in one call.  [mrec ctx := fun R d => interp_mrec ctx (ctx _ d)].
 
-    [mrec ctx := fun R d => interp_mrec ctx (ctx _ d)].
+    1. Fixed: [ctx _ d] was passed to [interp_mrec] wrapped in [ret].
+    2. Fixed: the call named no type arguments for [mrec]'s undeducible
+       result index.
+    3. Fixed 2026-11-24: [ctx], methodified onto [CountE<ptr>], was declared
+       returning [ITree<ptr>]: the method renumbering mapped the receiver's
+       type argument (the phantom index of [CountE]) onto the struct's first
+       variable, which is the promoted [ptr], and the call dropped it as
+       carried.  The receiver's arguments now land after the promoted
+       parameters, a killed phantom is the method's own variable on both
+       sides, and the method value writes its unsupplied index erased:
+       [_x0.template ctx<_tcI0, crane::obj>(false)].
 
-    1. Fixed: [ctx _ d] was passed to [interp_mrec] as
-       [ITree<T3>::ret(ctx(d))] -- a tree wrapped in [ret].  [ctx] is a
-       rank-2 [D ~> itree E] parameter, so its application arrives under a
-       coercion, and the test for "already a tree" did not look through one.
-
-    2. Fixed: the call named no type arguments, so [mrec]'s result index,
-       which no parameter deduces, was left to a deduction that cannot make
-       it.  An erased event family made the whole list look unwritable, as if
-       it were higher-kinded; it is declared a plain [typename].
-
-    3. Open: [ctx]'s result index is erased with its rank-2 quantifier, so
-       [ctx0(d)] is an [ITree<std::any>] where [interp_mrec] wants
-       [ITree<T3>]; and [ctx], methodified onto [CountE], is a member
-       template whose index an eta lambda cannot supply
-       ([tests/wip/eta_handler_event_as_template]).
+    4. Open (diagnosed 2026-11-24): in [Recursion::mrec], [ctx0(d)] -- the
+       rank-2 parameter [ctx : D ~> itree (D +' E)] applied at [R] -- is an
+       [ITree<crane::obj>] (its index erased with the quantifier, to
+       [Unknown], so extraction records no coercion), while [interp_mrec]
+       takes [ITree<T3>].  It needs [crane_convert<std::shared_ptr<ITree<T3>>>]
+       on the consumer side; see handler_lambda_targ_undeclared for why
+       nothing decides that today.
 
     Reported by the Vellvm-side session at install #18 (group F). *)
 
@@ -36,9 +38,8 @@ Section S.
       [CallE] is: named as a type argument it needs its promoted arguments. *)
   Variant CountE : Type -> Type := Count : nat -> ptr -> CountE nat.
 
-  (** Takes a [bool] first, so it stays a function rather than becoming a
-      member template of [CountE] -- that shape has a defect of its own
-      ([tests/wip/eta_handler_event_as_template]). *)
+  (** Takes a [bool] first; it is still made a member template of
+      [CountE], its receiver the event after the [bool]. *)
   Definition ctx (verbose : bool) : CountE ~> itree (CountE +' void1) :=
     fun _ e => match e with
                | Count 0 _ => Ret 0

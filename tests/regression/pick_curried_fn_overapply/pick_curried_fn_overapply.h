@@ -23,19 +23,13 @@ struct PickCurriedFnOverapply {
 
   static inline const uint64_t result = []() {
     return twice<crane::fn<uint64_t(uint64_t)>>(
-        [](crane::fn<uint64_t(uint64_t)> _x0) {
-          return [=](uint64_t _x1) -> uint64_t {
-            return pick<crane::fn<
-                crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>(
-                true,
-                [](crane::fn<uint64_t(uint64_t)> g) {
-                  return [=, g = std::move(g)](uint64_t n) {
-                    return g((n + 1));
-                  };
-                },
-                [](crane::fn<uint64_t(uint64_t)> g) { return g; })(_x0, _x1);
-          };
-        },
+        pick<crane::fn<
+            crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>(
+            true,
+            [](crane::fn<uint64_t(uint64_t)> g) {
+              return [=, g = std::move(g)](uint64_t n) { return g((n + 1)); };
+            },
+            [](crane::fn<uint64_t(uint64_t)> g) { return g; }),
         [](uint64_t n) { return (n * UINT64_C(10)); })(UINT64_C(1));
   }();
 };

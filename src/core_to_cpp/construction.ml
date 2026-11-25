@@ -150,8 +150,15 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
   (* Convert value arguments to C++ expressions.  An erased proof or type
      argument ([Core.Expr.Erased_value]) is the empty box its erased slot takes; see that
      case of {!gen_expr_typed}. *)
+  (* The constructor's text takes the argument at the type it comes with,
+     and where what it builds keeps that instantiation ([itree_ret(%a0)]),
+     or goes on into a position that does, nothing converts it after
+     ({!Slot.slot.deduced}). *)
+  let deduced =
+    slot.Slot.deduced || match expected_ty with Some t -> Coerce.keeps_instantiation t | None -> false
+  in
   let gen_ctor_arg ~ret ?expected_ty ?(slot = slot) e =
-    gen_stored_value_typed cx (Slot.at ~ret ?expected_ty ~slot ()) env e
+    gen_stored_value_typed cx {(Slot.at ~ret ?expected_ty ~slot ()) with Slot.deduced} env e
   in
   let c = custom cx env ~ret ~expected_ty ~slot ty r in
   let ty_args_for_expected = c.ty_args_for_expected and field_types_for_wrap = c.field_types in
