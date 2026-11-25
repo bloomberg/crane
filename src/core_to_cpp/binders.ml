@@ -156,7 +156,17 @@ let rec type_shape : Cpp_ir.Lowered.Type.t -> string = function
   | Erased _ -> "erased"
   | Apply (h, args) -> "app(" ^ type_shape h ^ ")<" ^ String.concat "," (List.map type_shape args) ^ ">"
   | In_namespace (_, t) -> "ns " ^ type_shape t
-  | _ -> "other"
+  | Pointer t -> "ptr " ^ type_shape t
+  | Void -> "void"
+  | Type_constructor t -> "tycon(" ^ type_shape t ^ ")"
+  | Carrier_parameter -> "carrier"
+  | Decay t -> "decay " ^ type_shape t
+  | Non_deduced t -> "nondeduced " ^ type_shape t
+  | Rebind (f, x) -> "rebind(" ^ type_shape f ^ "," ^ type_shape x ^ ")"
+  | Type_of _ -> "decltype"
+  | Decltype_auto -> "decltype(auto)"
+  | Foreign _ -> "foreign"
+  | Obligation _ -> "obligation"
 
 let planned_binder_type cx ~use ~agree i occ =
   let show = function Some t -> type_shape t | None -> "none" in

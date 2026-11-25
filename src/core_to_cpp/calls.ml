@@ -1418,7 +1418,12 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
         (List.mapi
            (fun k p ->
              match (p.Core_plan.Callable_abi.origin, List.nth_opt all_type_args k) with
-             | Core_plan.Callable_abi.From_scheme v, Some t -> [(v, t)]
+             (* A parameter the plan has no value for is written with its
+                filler only so that a later one can be: the filler is no
+                instantiation of the variable. *)
+             | Core_plan.Callable_abi.From_scheme v, Some t
+               when Option.has_some (Core.Scheme.Var.assoc_opt v (at_plain_positions regular)) ->
+               [(v, t)]
              | _ -> [] )
            (Core_plan.Callable_abi.template_head abi) )
     in

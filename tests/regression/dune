@@ -16365,3 +16365,14 @@
   (alias runtest)
   (deps applied_typename_not_hk.t.exe)
   (action (run ./applied_typename_not_hk.t.exe))))
+
+(subdir phantom_filler_not_written
+ (rule
+  (targets phantom_filler_not_written.t.exe)
+  (deps PhantomFillerNotWritten.vo phantom_filler_not_written.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} phantom_filler_not_written.t.exe phantom_filler_not_written.t.cpp phantom_filler_not_written.cpp)))
+ (rule
+  (alias runtest)
+  (deps phantom_filler_not_written.t.exe)
+  (action (run ./phantom_filler_not_written.t.exe))))
