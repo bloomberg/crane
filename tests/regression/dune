@@ -16245,3 +16245,14 @@
   (alias runtest)
   (deps fibst_cofix_repro.t.exe)
   (action (run ./fibst_cofix_repro.t.exe))))
+
+(subdir template_param_redef
+ (rule
+  (targets template_param_redef.t.exe)
+  (deps Use.vo template_param_redef.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} template_param_redef.t.exe template_param_redef.t.cpp template_param_redef.cpp)))
+ (rule
+  (alias runtest)
+  (deps template_param_redef.t.exe)
+  (action (run ./template_param_redef.t.exe))))
