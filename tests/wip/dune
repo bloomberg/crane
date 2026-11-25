@@ -195,17 +195,6 @@
   (deps case_handler_concrete_result.t.exe)
   (action (run ./case_handler_concrete_result.t.exe))))
 
-(subdir interp_state_dict
- (rule
-  (targets interp_state_dict.t.exe)
-  (deps InterpStateDict.vo interp_state_dict.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} interp_state_dict.t.exe interp_state_dict.t.cpp interp_state_dict.cpp)))
- (rule
-  (alias runtest)
-  (deps interp_state_dict.t.exe)
-  (action (run ./interp_state_dict.t.exe))))
-
 (subdir nullary_unit_effect_dropped
  (rule
   (targets nullary_unit_effect_dropped.t.exe)

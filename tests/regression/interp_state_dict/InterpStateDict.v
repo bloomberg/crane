@@ -4,11 +4,15 @@ From ITree Require Import ITree Events.State.
 Require Crane.Extraction.
 Require Import Crane.Mapping.NatIntStd.
 
-(** A counter interpreted through coq-itree's [interp_state].  Known issue:
-    the call writes [State::interp_state<Monad_itree, Functor_itree, ...>],
-    and clang rejects [Monad_itree] as the argument for the [Monad]-concept
-    parameter ("invalid explicitly-specified argument for template parameter
-    '_tcI0'"). *)
+(** A counter interpreted through coq-itree's [interp_state].
+
+    Fixed: the call wrote [State::interp_state<MonadIter_itree,
+    Monad_itree, ...>], and clang rejected the bare [MonadIter_itree] for
+    the [MonadIter]-concept parameter: the instance's struct takes the
+    event family as a template parameter, and the use's argument for it
+    ([void1]) is erased, which dropped the whole argument list.  An
+    instance's struct is never named without its arguments, so an erased
+    one is written as the box ([MonadIter_itree<crane::obj>]). *)
 Module InterpStateDict.
 
 Variant cnt : Type -> Type := Tick : cnt unit | Get : cnt nat.

@@ -1569,7 +1569,7 @@ let rec core_arg_to_template_type cx ?expected env core_arg : Cpp_ir.Lowered.Typ
       (Core_plan.Instance_methods.instance_tvars ty (Core_plan.Instance_methods.class_type ty))
   in
   let instance_type_args r ts =
-    Base.Type_util.filter_erased_type_args
+    Base.Type_util.filter_erased_type_args ~preserve_positions:true
       (Types.build_template_params cx ~site:Cpp_ir.Types.Declared env []
          (List.filter_map (Base.Core_util.Var_types.find_tvar ts) (struct_vars r ts)) )
   in
