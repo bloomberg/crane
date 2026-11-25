@@ -23,15 +23,16 @@ let dead_branch_message = "unreachable: impossible dependent match branch"
 
 (** The statement returning [x] from a function whose result is [void]: [x]
     runs for its side effects, then a bare [return;].  A pure [x] (a
-    variable, an enumerator, a literal) is dropped.  User text -- an inline
-    custom's replacement, a foreign template's -- is kept: only the text says
-    what it does, and [throw 0] is as much a [unit] as [std::monostate{}].
-    The continuation of a body whose result is [void], so a value a branch
-    hands back -- a [unit] accumulator, say -- is returned as nothing, as the
-    signature declares. *)
+    variable, an enumerator, a literal, the text a mapped constructor builds
+    its value with, such as [tt]'s [std::monostate{}]) is dropped.  Any other
+    inline custom's replacement is kept: only the text says what it does, and
+    a constant's [throw 0] is as much a [unit].  The continuation of a body whose
+    result is [void], so a value a branch hands back -- a [unit] accumulator,
+    say -- is returned as nothing, as the signature declares. *)
 let return_into_void (x : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Stmt.t =
   match x with
-  | Enum_value _ | Local _ | Literal (Int _) | Literal (Float _) -> Return None
+  | Enum_value _ | Local _ | Literal (Int _) | Literal (Float _) | Foreign_text _ -> Return None
+  | Entity (Names.GlobRef.ConstructRef _, _, Some ci) when ci.inline <> None -> Return None
   | _ -> Block [Expression x; Return None]
 
 (** [mk_lambda ?tparams params ret body ~capture] is {!Cpp_ir.Build.lambda}
