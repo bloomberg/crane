@@ -16223,3 +16223,14 @@
   (alias runtest)
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
+
+(subdir rocq_bug_3287
+ (rule
+  (targets rocq_bug_3287.t.exe)
+  (deps RocqBug3287.vo rocq_bug_3287.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_3287.t.exe rocq_bug_3287.t.cpp rocq_bug_3287.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_bug_3287.t.exe)
+  (action (run ./rocq_bug_3287.t.exe))))

@@ -89,9 +89,9 @@ let type_of env sg c =
   Retyping.get_type_of ~polyprop:false env sg (Termops.strip_outer_cast sg c)
 
 (** The sort quality of [c]'s type, outer casts stripped. *)
-let sort_of env sg c =
+let sort_of ?(polyprop = false) env sg c =
   Retyping.get_sort_quality_of
-    ~polyprop:false
+    ~polyprop
     env
     sg
     (Termops.strip_outer_cast sg c)
@@ -134,13 +134,28 @@ let info_of_sort s = info_of_quality (UnivGen.QualityOrSet.of_sort s)
 
 (** The {!flag} of a term of type [t]: [t] is reduced and its products are
     stripped; a sort at the end makes the term a [TypeScheme]. *)
-let rec flag_of_type env sg t : flag =
+let rec flag_of_type ?polyprop env sg t : flag =
   let t = whd_all env sg t in
   match EConstr.kind sg t with
   | Prod (x, t, c) ->
-    flag_of_type (EConstr.push_rel (LocalAssum (x, t)) env) sg c
+    flag_of_type ?polyprop (EConstr.push_rel (LocalAssum (x, t)) env) sg c
   | Sort s -> (info_of_sort (EConstr.ESorts.kind sg s), TypeScheme)
-  | _ -> (info_of_quality (sort_of env sg t), Default)
+  | _ -> (info_of_quality (sort_of ?polyprop env sg t), Default)
+
+(** The flag of a declaration whose type is [t].  A type that is a proposition
+    only through a template-polymorphic inductive instantiated at [Prop] --
+    [(I, I) : True * True] -- makes {!flag_of_type} raise
+    [SingletonInductiveBecomesProp], as it must for a term inside an
+    informative body, where the instance would have to be extracted.  The
+    declaration itself is a proof, though, and is erased whole: nothing of the
+    instance is extracted.  A use of it that eliminates into [Type] still
+    meets the error where it is extracted. *)
+let declaration_flag env sg t : flag =
+  try flag_of_type env sg t
+  with SingletonInductiveBecomesProp _ as exn -> (
+    match flag_of_type ~polyprop:true env sg t with
+    | (Logic, _) as f -> f
+    | Info, _ -> raise exn )
 
 (** {2 Two particular cases of [flag_of_type]} *)
 
@@ -3442,7 +3457,7 @@ let extract_constant access env kn cb =
     Core.Decl.Value {entity = r; body = e; type_ = t}
   in
   try
-    match flag_of_type env sg typ with
+    match declaration_flag env sg typ with
     | Logic, TypeScheme ->
       warn_log ();
       let s, vl = type_sign_vl env sg typ in
@@ -3501,7 +3516,7 @@ let extract_constant_spec env kn cb =
   let r = GlobRef.ConstRef kn in
   let typ = EConstr.of_constr cb.const_type in
   try
-    match flag_of_type env sg typ with
+    match declaration_flag env sg typ with
     | Logic, TypeScheme ->
       let s, vl = type_sign_vl env sg typ in
       Core.Signature.Declaration.Type {entity = r;
