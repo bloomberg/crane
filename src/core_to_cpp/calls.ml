@@ -2091,6 +2091,19 @@ let spell_as_declared (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.
   in
   spell orig t
 
+(** The parameter declared [orig] at the type arguments a call writes
+    ([written_by_var]), and whether a variable it names is left to C++ to
+    deduce; [None] where the declaration has no C++ type. *)
+let parameter_at_written cx env ~written_by_var (orig : Core.Type.t) =
+  match Types.cpp_of_core cx env orig with
+  | exception e when CErrors.noncritical e -> None
+  | declared ->
+    let t = Cpp_ir.Types.substitute (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var) declared in
+    let deduced =
+      IntSet.exists (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var = None) (collect_tvars_set IntSet.empty orig)
+    in
+    Some (t, deduced)
+
 (** The slot an argument of the call to [id] fills at the parameter
     declared at the Core type [orig]: what C++ checks it against.  A
     forwarding reference for a deduced callable; for an inline mapping, a
@@ -2110,14 +2123,9 @@ let argument_slot cx env id ~deduced_callable ~written_by_var ~(expected : Cpp_i
       Base.Probe.hit "argument-without-parameter" (fun () -> Pp.string_of_ppcmds (GlobRef.print id));
       slot_of expected
     | Some orig -> (
-      match Types.cpp_of_core cx env orig with
-      | exception e when CErrors.noncritical e -> slot_of expected
-      | declared ->
-        let t = Cpp_ir.Types.substitute (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var) declared in
-        let deduced =
-          IntSet.exists (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var = None) (collect_tvars_set IntSet.empty orig)
-        in
-        if deduced || Base.Table.is_custom id then Template_parameter (Some t) else Exactly t )
+      match parameter_at_written cx env ~written_by_var orig with
+      | None -> slot_of expected
+      | Some (t, deduced) -> if deduced || Base.Table.is_custom id then Template_parameter (Some t) else Exactly t )
 
 let argument_position cx ~ret ~local_callable env id plan i core_arg =
   let {

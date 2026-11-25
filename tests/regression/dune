@@ -16223,3 +16223,14 @@
   (alias runtest)
   (deps pick_curried_fn_overapply.t.exe)
   (action (run ./pick_curried_fn_overapply.t.exe))))
+
+(subdir twice_fn_transformer_step
+ (rule
+  (targets twice_fn_transformer_step.t.exe)
+  (deps TwiceFnTransformerStep.vo twice_fn_transformer_step.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} twice_fn_transformer_step.t.exe twice_fn_transformer_step.t.cpp twice_fn_transformer_step.cpp)))
+ (rule
+  (alias runtest)
+  (deps twice_fn_transformer_step.t.exe)
+  (action (run ./twice_fn_transformer_step.t.exe))))
