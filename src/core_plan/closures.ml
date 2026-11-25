@@ -71,7 +71,22 @@ let suspended_tail ~effects body =
     body;
   !found
 
+(* Whether the cofixpoint whose members are [ids] has its bodies suspended:
+   not where every member yields a monad generated as sequencing, [itree E
+   nat] under the direct-style ITree mapping.  Such a value is the running
+   of its effects, a [Tau] is no constructor, and the corecursion is an
+   ordinary call, as a fixpoint's. *)
+let suspends_bodies ids =
+  not
+    (Array.for_all
+       (fun (_, ty) ->
+         match Base.Type_util.codomain_monad ty with
+         | Some m -> Effects.mode_of_monad m = Effects.Sequential
+         | None -> false )
+       ids )
+
 let rec group ~effects ~n_outer ~suspends ~lex ~suspended ?continuation ~cofix ids bodies =
+  let cofix = cofix && suspends_bodies ids in
   if Base.Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) then Lifted
   else if
     escapes_in_bodies ~effects ~n_outer ~suspends ~lex ~cofix ids bodies

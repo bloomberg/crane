@@ -9,10 +9,10 @@
 // iteration still sees the original `n`.  The computation is therefore
 // genuinely non-terminating by construction — there is no finite result.
 //
-// This is intentional and stays in tests/wip: fibst_repro(5) can never return
-// a value.  What we CAN and DO verify here is memory safety: Crane's loopify
-// pass turns the erased-cofixpoint's eager tail self-recursion (which would
-// otherwise blow the C++ call stack -> SIGSEGV / UB) into a constant-stack
+// fibst_repro(5) can never return a value.  What we CAN and DO verify here is
+// memory safety: Crane's loopify pass turns the erased-cofixpoint's eager tail
+// self-recursion (which would otherwise blow the C++ call stack -> SIGSEGV /
+// UB) into a constant-stack
 // `while (true)` loop.  So the divergence must manifest as a safe infinite
 // loop, never as a crash.
 //

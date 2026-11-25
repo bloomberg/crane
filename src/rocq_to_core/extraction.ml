@@ -442,14 +442,20 @@ let rec returns_type_sort c =
     the context under [fix monad_fold_right A B f l b] holds a second [A] and
     [B] shadowing the first.  Core has no type lambdas, so both spellings
     are the one type variable, and a named binder therefore takes the number
-    its name already has. *)
+    its name already has.
+
+    A [let]-bound type is its definition, unfolded wherever it is read
+    ({!extract_spine}), and no variable of the scheme: a section's [Let S :=
+    unit] is a [let] at the head of every body that uses it, and is not in
+    the declaration's type. *)
 let db_from_rel_context env =
   let outer_first = List.rev (Environ.rel_context env) in
   let seen = ref [] in
   snd
     (List.fold_left
        (fun (rank, acc) decl ->
-         if not (returns_type_sort (Context.Rel.Declaration.get_type decl)) then
+         if Context.Rel.Declaration.is_local_def decl
+            || not (returns_type_sort (Context.Rel.Declaration.get_type decl)) then
            (rank, 0 :: acc)
          else
            match Context.Rel.Declaration.get_name decl with
@@ -468,10 +474,14 @@ let db_from_rel_context env =
    them.  [None] outside such a body. *)
 let signature_type_binders = ref (None : int option)
 
-(* The type binders of [env]'s context. *)
+(* The type binders of [env]'s context, a [let]-bound type not among them
+   ({!db_from_rel_context}). *)
 let type_binders env =
   List.length
-    (List.filter (fun d -> returns_type_sort (Context.Rel.Declaration.get_type d)) (Environ.rel_context env))
+    (List.filter
+       (fun d ->
+         Context.Rel.Declaration.is_local_assum d && returns_type_sort (Context.Rel.Declaration.get_type d))
+       (Environ.rel_context env))
 
 (** Whether [ty], the Rocq type [t] extracted under [env] through
     {!db_from_rel_context}, names only type variables of the definition whose
@@ -1800,7 +1810,13 @@ and seed_binder_type ?(late = false) env sg ~is_fix t1 a =
     | Some ty when is_fix && names_signature_variables ~leading:true env sg t1 ty -> (
       (* A fixpoint binding types of its own, [let fix go {C}
          (l : list C) (x : B)]: what the annotation says of [x] it
-         says whatever [C] is, so each [C] is left to inference. *)
+         says whatever [C] is, so each [C] is left to inference.  Only a
+         fixpoint that binds a type has a [C]; in any other annotation an
+         [Unknown] is what the declaration's own type has there too -- the
+         argument an unapplied family [ev : Type -> Type] is eta-expanded
+         at, in [itree ev nat] -- and opened, nothing would solve it: it
+         would generalise into a type variable of the fixpoint's own that
+         no call supplies. *)
       let rec open_ = function
         | Core.Type.Unknown -> new_meta ()
         | Core.Type.Meta {contents = Some t} -> open_ t
@@ -1816,7 +1832,10 @@ and seed_binder_type ?(late = false) env sg ~is_fix t1 a =
           let t = open_ t in
           if informative_type t then Some t else None
       in
-      match leading ty with Some ty -> try_mgu a (rigidify ty) | None -> ())
+      match ty with
+      | Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument; _} -> (
+        match leading ty with Some ty -> try_mgu a (rigidify ty) | None -> () )
+      | _ -> try_mgu a (rigidify ty) )
     | _ -> ()
 
 (** [fill_binder_type env sg t a]: what inference left open in the binder
@@ -1888,7 +1907,7 @@ and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
     ( try
         check_default env sg t1;
         let a = new_meta () in
-        seed_binder_type env sg ~is_fix:(match EConstr.kind sg c1 with Fix _ -> true | _ -> false) t1 a;
+        seed_binder_type env sg ~is_fix:(match EConstr.kind sg c1 with Fix _ | CoFix _ -> true | _ -> false) t1 a;
         let c1' =
           match EConstr.kind sg c1 with
           | Fix _ ->
