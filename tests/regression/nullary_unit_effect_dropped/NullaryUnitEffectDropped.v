@@ -1,8 +1,8 @@
-(* A nullary inlined constant in the tail of a [unit]-returning function is
-   dropped: [f] extracts to [void f(Unit) { return; }], losing the throw.
-   Give [give_up] an argument and the call is kept.  Likely [cofix_wrap] in
-   src/gen_functions.ml, which treats a void tail that is a [CPPglob] with
-   an inline custom as a pure value. *)
+(* A nullary inlined constant in the tail of a [unit]-returning function was
+   dropped: [f] extracted to [void f() { return; }], losing the throw.  Fixed:
+   [Cpp_build.return_into_void] treated an inline custom's text (and foreign
+   template text) as a pure value and dropped it; only the text says what it
+   does, so it is now kept as an expression statement before the [return;]. *)
 From Crane Require Import Extraction.
 From Crane Require Import Monads.ITree.
 

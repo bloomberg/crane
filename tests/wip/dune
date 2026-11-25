@@ -206,17 +206,6 @@
   (deps interp_state_dict.t.exe)
   (action (run ./interp_state_dict.t.exe))))
 
-(subdir nullary_unit_effect_dropped
- (rule
-  (targets nullary_unit_effect_dropped.t.exe)
-  (deps NullaryUnitEffectDropped.vo nullary_unit_effect_dropped.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} nullary_unit_effect_dropped.t.exe nullary_unit_effect_dropped.t.cpp nullary_unit_effect_dropped.cpp)))
- (rule
-  (alias runtest)
-  (deps nullary_unit_effect_dropped.t.exe)
-  (action (run ./nullary_unit_effect_dropped.t.exe))))
-
 
 (subdir shared_event_subevent
  (rule
