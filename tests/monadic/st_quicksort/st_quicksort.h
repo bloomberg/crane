@@ -3,7 +3,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <algorithm>
 #include <array_storage.h>
 #include <atomic>
 #include <concepts>
@@ -22,36 +21,16 @@
 #include <utility>
 #include <variant>
 
+struct nat_ix_stref;
 template <typename A> struct List;
+template <typename A> struct Sig;
 template <typename Err> struct ExceptE;
 struct Err;
 struct STRefNat;
 template <typename I, typename T>
-concept Ix = requires {
-  {
-    I::range(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<List<T>>;
-  {
-    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<std::optional<uint64_t>>;
-  {
-    I::rangeSize(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<uint64_t>;
-  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
-  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
-  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
-  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::zero() } -> std::convertible_to<T>;
-};
-template <typename I, typename T>
 concept STRefClass = requires {
   { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
   { I::STRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
-};
-
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
 };
 
 struct Nat {};
@@ -234,6 +213,28 @@ public:
   }
 };
 
+template <typename A> struct Sig {
+  // DATA
+  A x;
+
+  // ACCESSORS
+  Sig<A> clone() const { return {x}; }
+
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
+      } else {
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
+      }
+    }()};
+  }
+
+  // CREATORS
+  static Sig<A> exist(A x) { return {std::move(x)}; }
+};
+
 template <typename Err> struct ExceptE {
   // DATA
   Err a0;
@@ -286,67 +287,85 @@ struct STMonad {
     requires STRefClass<_tcI0, T2>
   static void swapArray(const T2 &_x, std::span<T4> arr, const T2 &i,
                         const T2 &j);
-  template <typename T1 = void, typename T2, typename T3, typename F2>
-  static T3 for_each_with(const List<T2> &xs, const T3 &v, F2 &&f);
 };
 
-template <typename _tcI0, typename _tcI1, typename T1, typename T2 = void,
-          typename T3 = void>
-  requires STRefClass<_tcI0, T1> && Ix<_tcI1, T1>
-T1 partition(std::shared_ptr<crane::array_storage<uint64_t>> arr, T1 arr_idx,
-             const T1 &left, const T1 &right, const T1 &pivotIndex) {
-  uint64_t pivotValue = std::span<const uint64_t>{*arr}[pivotIndex];
-  STMonad::template swapArray<_tcI0>(arr_idx, std::span<uint64_t>{*arr},
-                                     pivotIndex, right);
-  T1 storeIndex = STMonad::template for_each_with<void, T1, T1>(
-      _tcI1::range(left, _tcI1::sub(right, _tcI1::suc(_tcI1::zero()))), left,
-      [=](const T1 &storeIndex, const T1 &i) {
-        uint64_t val = std::span<const uint64_t>{*arr}[i];
-        if (val <= pivotValue) {
-          STMonad::template swapArray<_tcI0>(arr_idx, std::span<uint64_t>{*arr},
-                                             i, storeIndex);
-          return _tcI1::suc(storeIndex);
-        } else {
-          return storeIndex;
-        }
-      });
-  STMonad::template swapArray<_tcI0>(
-      std::move(arr_idx), std::span<uint64_t>{*arr}, storeIndex, right);
-  return storeIndex;
+struct nat_ix_stref {
+  static crane::obj mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
+
+  static uint64_t STRefToIx(crane::obj _p_a0) {
+    STRefNat a0 = crane::any_cast<STRefNat>(_p_a0);
+    return a0.STRefToIxNat();
+  }
+};
+
+static_assert(STRefClass<nat_ix_stref, uint64_t>);
+
+template <typename T1 = void, typename T2 = void>
+Sig<uint64_t> lomuto_scan(std::span<uint64_t> arr, uint64_t pv, uint64_t,
+                          uint64_t hi, uint64_t i, uint64_t s) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  uint64_t _loop_s = s;
+  uint64_t _loop_i = i;
+  while (true) {
+    if (_loop_i < hi) {
+      uint64_t v = std::span<const uint64_t>{arr}[_loop_i];
+      if (v <= pv) {
+        STMonad::template swapArray<nat_ix_stref, crane::obj, uint64_t,
+                                    crane::obj, uint64_t>(UINT64_C(0), arr,
+                                                          _loop_i, _loop_s);
+        _loop_s = (_loop_s + 1);
+        _loop_i = (_loop_i + 1);
+      } else {
+        _loop_i = (_loop_i + 1);
+      }
+    } else {
+      return Sig<uint64_t>::exist(_loop_s);
+    }
+  }
 }
 
-template <typename _tcI0, typename _tcI1, typename T1, typename T2 = void>
-  requires STRefClass<_tcI0, T1> && Ix<_tcI1, T1>
-void quicksort_ST(uint64_t fuel,
-                  std::shared_ptr<crane::array_storage<uint64_t>> arr,
-                  T1 arr_idx, const T1 &l, const T1 &r) {
-  if (fuel <= 0) {
+template <typename T1 = void, typename T2 = void>
+Sig<uint64_t> partition(std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
+                        uint64_t pividx) {
+  uint64_t pv = std::span<const uint64_t>{arr}[pividx];
+  STMonad::template swapArray<nat_ix_stref>(UINT64_C(0), arr, pividx, hi);
+  Sig<uint64_t> p = lomuto_scan<crane::obj, void>(arr, pv, lo, hi, lo, lo);
+  STMonad::template swapArray<nat_ix_stref>(
+      UINT64_C(0),
+      arr,
+      [&]() {
+        const auto &[x] = p;
+        return x;
+      }(),
+      hi);
+  return p;
+}
+
+template <typename T1 = void, typename T2 = void>
+void quicksort_ST(std::span<uint64_t> arr, uint64_t lo, uint64_t hi) {
+  if (lo < hi) {
+    Sig<uint64_t> p = partition<crane::obj, T2>(
+        arr, lo, hi,
+        (lo +
+         (UINT64_C(2) ? (((hi - lo) > hi ? 0 : (hi - lo))) / UINT64_C(2) : 0)));
+    auto _once1 = [&]() {
+      const auto &[x] = p;
+      return x;
+    }();
+    quicksort_ST<crane::obj, T2>(
+        arr, lo,
+        (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
+    quicksort_ST<crane::obj, T2>(
+        arr,
+        ([&]() {
+          auto &[x0] = p;
+          return x0;
+        }() + UINT64_C(1)),
+        hi);
     return;
   } else {
-    uint64_t fuel_ = fuel - 1;
-    if (_tcI1::toNat(l) < _tcI1::toNat(r)) {
-      uint64_t leftn = _tcI1::toNat(l);
-      uint64_t rightn = _tcI1::toNat(r);
-      uint64_t pivotIndexn =
-          (leftn +
-           (UINT64_C(2) ? (((rightn - leftn) > rightn ? 0 : (rightn - leftn))) /
-                          UINT64_C(2)
-                        : 0));
-      T1 newPivot = partition<_tcI0, _tcI1>(arr, arr_idx, l, r,
-                                            _tcI1::fromNat(pivotIndexn));
-      auto _once1 = _tcI1::toNat(newPivot);
-      quicksort_ST<_tcI0, _tcI1, T1, T2>(
-          fuel_, arr, arr_idx, l,
-          _tcI1::fromNat(
-              (((_once1 - UINT64_C(1)) > _once1 ? 0
-                                                : (_once1 - UINT64_C(1))))));
-      quicksort_ST<_tcI0, _tcI1, T1, T2>(
-          fuel_, std::move(arr), std::move(arr_idx),
-          _tcI1::fromNat((_tcI1::toNat(std::move(newPivot)) + UINT64_C(1))), r);
-      return;
-    } else {
-      return;
-    }
+    return;
   }
 }
 
@@ -368,55 +387,6 @@ List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
 }
 
 struct StQuicksort {
-  struct nat_idx {
-    static List<uint64_t> range(uint64_t fp, uint64_t sp) {
-      auto _once1 = (UINT64_C(1) + sp);
-      return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
-    }
-
-    constexpr static std::optional<uint64_t> index(uint64_t fp, uint64_t sp,
-                                                   uint64_t i) {
-      if ((fp <= i && i <= sp)) {
-        return std::make_optional<uint64_t>((((i - fp) > i ? 0 : (i - fp))));
-      } else {
-        return std::optional<uint64_t>();
-      }
-    }
-
-    constexpr static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
-      auto _once2 = (UINT64_C(1) + sp);
-      return (((_once2 - fp) > _once2 ? 0 : (_once2 - fp)));
-    }
-
-    constexpr static uint64_t toNat(uint64_t n) { return n; }
-
-    constexpr static uint64_t fromNat(uint64_t n) { return n; }
-
-    constexpr static uint64_t suc(uint64_t x) { return (x + 1); }
-
-    constexpr static uint64_t sub(uint64_t a0, uint64_t a1) {
-      return (((a0 - a1) > a0 ? 0 : (a0 - a1)));
-    }
-
-    constexpr static uint64_t max(uint64_t a0, uint64_t a1) {
-      return std::max(a0, a1);
-    }
-
-    constexpr static uint64_t zero() { return UINT64_C(0); }
-  };
-
-  static_assert(Ix<nat_idx, uint64_t>);
-
-  struct nat_stref {
-    static crane::obj mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
-
-    static uint64_t STRefToIx(crane::obj _p_a0) {
-      STRefNat a0 = crane::any_cast<STRefNat>(_p_a0);
-      return a0.STRefToIxNat();
-    }
-  };
-
-  static_assert(STRefClass<nat_stref, uint64_t>);
   static List<uint64_t> quicksort_fun(const List<uint64_t> &x);
   static List<uint64_t> quicksort_ST_mine(const List<uint64_t> &xs);
   static uint64_t nth(uint64_t n, const List<uint64_t> &l, uint64_t default0);
@@ -457,24 +427,6 @@ void STMonad::swapArray(const T2 &, std::span<T4> arr, const T2 &i,
   arr[i] = std::move(vj);
   arr[j] = std::move(vi);
   return;
-}
-
-template <typename T1, typename T2, typename T3, typename F2>
-T3 STMonad::for_each_with(const List<T2> &xs, const T3 &v, F2 &&f) {
-  // Loop replaces the tail recursion: each recursive call updates the loop
-  // variables.
-  T3 _loop_v = v;
-  const List<T2> *_loop_xs = &xs;
-  while (true) {
-    if (std::holds_alternative<typename List<T2>::Nil>(_loop_xs->v())) {
-      return _loop_v;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T2>::Cons>(_loop_xs->v());
-      T3 v_ = f(_loop_v, a0);
-      _loop_v = std::move(v_);
-      _loop_xs = crane_raw(a1);
-    }
-  }
 }
 
 inline uint64_t STRefNat::STRefToIxNat() const {

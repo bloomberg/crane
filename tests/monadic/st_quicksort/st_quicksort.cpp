@@ -64,18 +64,15 @@ List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
     return List<uint64_t>::nil();
   } else {
     auto _once1 = xs.length();
-    auto _once2 = nat_idx::zero();
-    auto _once3 = nat_idx::fromNat(
-        (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
     std::shared_ptr<crane::array_storage<uint64_t>> arr =
-        crane::st::new_list_array<uint64_t>(
-            crane::st::extent(std::move(_once2), std::move(_once3)), xs);
-    auto _once4 = xs.length();
-    quicksort_ST<StQuicksort::nat_stref, StQuicksort::nat_idx, uint64_t,
-                 std::monostate>(
-        xs.length(), arr, nat_idx::zero(), nat_idx::zero(),
-        nat_idx::fromNat(
-            (((_once4 - UINT64_C(1)) > _once4 ? 0 : (_once4 - UINT64_C(1))))));
+        crane::st::new_list_array<uint64_t>(crane::st::extent(
+            UINT64_C(0),
+            (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1))))),
+                                            xs);
+    auto _once2 = xs.length();
+    quicksort_ST<void>(
+        std::span<uint64_t>{*arr}, UINT64_C(0),
+        (((_once2 - UINT64_C(1)) > _once2 ? 0 : (_once2 - UINT64_C(1)))));
     return crane::st::elems<List<uint64_t>>(std::span<const uint64_t>{*arr});
   }
 }
@@ -163,33 +160,4 @@ std::string StQuicksort::test_quicksort_ST() {
 
 std::string StQuicksort::test_quicksort_fun() {
   return list_to_string(quicksort_fun(input_lst1));
-}
-
-List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
-  // Builds the result front to back: _write points at the empty tail the next
-  // cell fills.
-  std::optional<List<uint64_t>> _root{};
-  std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_len = len;
-  uint64_t _loop_start = start;
-  while (true) {
-    if (_loop_len <= 0) {
-      auto _value = List<uint64_t>::nil();
-      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-              : _root.emplace(std::move(_value)));
-      break;
-    } else {
-      uint64_t len0 = _loop_len - 1;
-      auto _cell = typename List<uint64_t>::Cons(_loop_start, nullptr);
-      List<uint64_t> &_node =
-          (_write ? *(*_write =
-                          std::make_shared<List<uint64_t>>(std::move(_cell)))
-                  : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-      _loop_len = len0;
-      _loop_start = (_loop_start + 1);
-      continue;
-    }
-  }
-  return std::move(*_root);
 }

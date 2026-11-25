@@ -6,6 +6,7 @@
 
 From Stdlib Require Import
   Arith.PeanoNat
+  Arith.Wf_nat
   Lia
   List
 .
@@ -32,56 +33,72 @@ Local Open Scope monad_scope.
 
 Section Quicksort.
 
-  Context {T S : Type}.
-  Context {ltu : T -> T -> Prop}.
-  Context `{Ix_Correct T ltu}.
-  Context {HST : STRefClass T}.
+  Context {S : Type}.
 
-  Let V : T -> Type := fun _ => nat.
-  Let E0 := (STEvent T S V) +' exceptE Err.
+  Let V : nat -> Type := fun _ => nat.
+  Let E0 := (STEvent nat S V) +' exceptE Err.
 
-  (** Lomuto partition of [arr[left..right]] around [arr[pivotIndex]];
-      returns the final position of the pivot. *)
-  Definition partition {E' : Type -> Type} `{STEvent T S V -< E'}
-    (arr : STArray T S nat) (arr_idx left right pivotIndex : T) : itree E' T :=
-    pivotValue <- readArray (idx := arr_idx) arr pivotIndex;;
-    swapArray (idx := arr_idx) arr pivotIndex right;;
-    storeIndex <- for_each_with (range left (sub right (suc zero))) left
-      (fun storeIndex i =>
-        val <- readArray (idx := arr_idx) arr i;;
-        if Nat.leb val pivotValue
-        then swapArray (idx := arr_idx) arr i storeIndex;;
-             Ret (suc storeIndex)
-        else Ret storeIndex);;
-    swapArray (idx := arr_idx) arr storeIndex right;;
-    Ret storeIndex.
-
-  (** The recursion is not structural (the pivot comes out of an effectful
-      [partition]), so it runs on [fuel]: a segment of [n] elements needs
-      [n] steps. *)
-  Fixpoint quicksort_ST (fuel : nat) (arr : STArray T S nat) (arr_idx l r : T)
-    : itree E0 unit :=
-    match fuel with
-    | O => Ret tt
-    | Datatypes.S fuel' =>
-      if Nat.ltb (toNat l) (toNat r) then
-        let leftn := toNat l in
-        let rightn := toNat r in
-        let pivotIndexn := leftn + ((rightn - leftn) / 2) in
-        newPivot <- partition arr arr_idx l r (fromNat pivotIndexn);;
-        quicksort_ST fuel' arr arr_idx l (fromNat (toNat newPivot - 1));;
-        quicksort_ST fuel' arr arr_idx (fromNat (toNat newPivot + 1)) r
-      else Ret tt
+  (** The Lomuto scan of [arr[i..hi-1]] against the pivot value [pv]: an
+      element [<= pv] is swapped to [s], the next free slot of the small
+      region [lo..s-1].  Returns the final [s], with its bounds.  It
+      recurses on the accessibility of [hi - i], which is erased. *)
+  Fixpoint lomuto_scan {E' : Type -> Type} `{STEvent nat S V -< E'} (arr : STArray nat S nat) (pv lo hi i s : nat)
+    (Hs : lo <= s <= i) (Hi : i <= hi) (acc : Acc lt (hi - i)) {struct acc}
+    : itree E' {p : nat | lo <= p <= hi} :=
+    match Sumbool.sumbool_of_bool (Nat.ltb i hi) with
+    | left Hlt =>
+      v <- readArray (E := E') (V := V) (idx := 0) arr i;;
+      if Nat.leb v pv
+      then swapArray (E := E') (V := V) (idx := 0) arr i s;;
+           @lomuto_scan E' _ arr pv lo hi (Datatypes.S i) (Datatypes.S s)
+             ltac:(lia) ltac:(apply Nat.ltb_lt in Hlt; lia)
+             (@Acc_inv _ _ _ acc (hi - Datatypes.S i) ltac:(apply Nat.ltb_lt in Hlt; lia))
+      else @lomuto_scan E' _ arr pv lo hi (Datatypes.S i) s
+             ltac:(lia) ltac:(apply Nat.ltb_lt in Hlt; lia)
+             (@Acc_inv _ _ _ acc (hi - Datatypes.S i) ltac:(apply Nat.ltb_lt in Hlt; lia))
+    | right Hge =>
+      Ret (exist (fun p => lo <= p <= hi) s ltac:(apply Nat.ltb_ge in Hge; cbv beta; lia))
     end.
 
+  (** Lomuto partition of [arr[lo..hi]] around [arr[pividx]]; returns the
+      final position of the pivot, within [lo..hi]. *)
+  Definition partition {E' : Type -> Type} `{STEvent nat S V -< E'} (arr : STArray nat S nat) (lo hi pividx : nat)
+    (Hlo : lo <= hi) : itree E' {p : nat | lo <= p <= hi} :=
+    pv <- readArray (E := E') (V := V) (idx := 0) arr pividx;;
+    swapArray (E := E') (V := V) (idx := 0) arr pividx hi;;
+    p <- @lomuto_scan E' _ arr pv lo hi lo lo ltac:(lia) Hlo (lt_wf (hi - lo));;
+    swapArray (E := E') (V := V) (idx := 0) arr (proj1_sig p) hi;;
+    Ret p.
+
+  (** In-place quicksort of [arr[lo..hi]].  The pivot comes out of an
+      effectful [partition], so the recursion is not structural: it is on
+      the accessibility of [hi - lo], which [partition]'s bounds decrease.
+      The proofs are erased; no counter runs. *)
+  Fixpoint quicksort_ST {E' : Type -> Type} `{STEvent nat S V -< E'} (arr : STArray nat S nat) (lo hi : nat)
+    (acc : Acc lt (hi - lo)) {struct acc} : itree E' unit :=
+    match Sumbool.sumbool_of_bool (Nat.ltb lo hi) with
+    | left Hlt =>
+      p <- @partition E' _ arr lo hi (lo + (hi - lo) / 2)
+             ltac:(apply Nat.ltb_lt in Hlt; lia);;
+      @quicksort_ST E' _ arr lo (proj1_sig p - 1)
+        (@Acc_inv _ _ _ acc (proj1_sig p - 1 - lo)
+           ltac:(apply Nat.ltb_lt in Hlt; destruct p as [q Hq]; simpl; lia));;
+      @quicksort_ST E' _ arr (proj1_sig p + 1) hi
+        (@Acc_inv _ _ _ acc (hi - (proj1_sig p + 1))
+           ltac:(apply Nat.ltb_lt in Hlt; destruct p as [q Hq]; simpl; lia))
+    | right _ => Ret tt
+    end.
+
+  (** [Acc_intro_generator] puts [2^10] layers of [Acc_intro] in front of
+      [lt_wf], so that the sort also computes in Rocq. *)
   Definition quicksort_ST_list (xs : list nat) : itree E0 (list nat) :=
     match xs with
     | [] => Ret []
     | _ :: _ =>
-      let lastIndex := fromNat (length xs - 1) in
-      arr <- newListArray zero zero lastIndex xs;;
-      quicksort_ST (length xs) arr zero zero lastIndex;;
-      getElems (idx := zero) arr
+      let hi := length xs - 1 in
+      arr <- newListArray 0 0 hi xs;;
+      quicksort_ST arr 0 hi (Acc_intro_generator 10 lt_wf (hi - 0));;
+      getElems (idx := 0) arr
     end.
 
 End Quicksort.
@@ -102,15 +119,11 @@ Proof.
 Defined.
 
 Module StQuicksort.
-  (* The index instances are unfolded so that they are extracted here. *)
-  Definition nat_idx : @Ix nat Nat.le := Eval unfold nat_ix in nat_ix.
-  Definition nat_stref : STRefClass nat := Eval unfold nat_ix_stref in nat_ix_stref.
-
   Transparent quicksort_fun.
   Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
   Definition quicksort_ST_mine :=
     Eval unfold quicksort_ST_list in
-      (@quicksort_ST_list nat unit Nat.le nat_idx nat_stref).
+      (@quicksort_ST_list unit).
 
   Definition nth := Eval unfold List.nth in (@List.nth nat).
 
