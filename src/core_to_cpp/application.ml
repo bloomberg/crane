@@ -162,7 +162,7 @@ let project_through_instance cx (slot : Slot.slot) env (use : Core.Global_use.t)
 (** [gen_call_args ~slot ?expected_ty env id plan] -- the C++ arguments of
     the call of the global [id] that [plan] describes, each generated against
     the parameter it is passed at.  The dictionaries' promoted variables are in scope for them. *)
-let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
+let gen_call_args cx (slot : Slot.slot) ~written_by_var ?(filled = []) env id plan :
     Typed.t list =
   let ret = slot.Slot.ret in
   let {
@@ -285,6 +285,17 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
     let arg_slot : Cpp_ir.Lowered.Slot_type.t =
       Calls.argument_slot cx env id ~deduced_callable ~written_by_var ~expected:arg_expected_ty
         (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
+    in
+    (* The argument is checked against its parameter at the type arguments
+       the call gives a value: a phantom's filler, written only so that a
+       later parameter can be, is none. *)
+    let checked_slot =
+      if filled = [] then arg_slot
+      else
+        Calls.argument_slot cx env id ~deduced_callable
+          ~written_by_var:(List.filter (fun (v, _) -> not (List.exists (Core.Scheme.Var.equal v) filled)) written_by_var)
+          ~expected:arg_expected_ty
+          (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
     in
     (* The argument is built at the slot's grouping where the two are one
        type grouped otherwise: the slot is the parameter at the type
@@ -650,7 +661,7 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var env id plan :
     | _ -> as_value ()
     in
     let passed = Typed_checks.adapted ~before:arg_typed arg_expected_ty passed in
-    Typed_checks.fit cx ~site:"argument" passed arg_slot;
+    Typed_checks.fit cx ~site:"argument" passed checked_slot;
     passed
   ) regular_core_args
 
@@ -735,14 +746,8 @@ let eta_fun cx (slot : Slot.slot) env f args :
       let slot = if closed_head then {slot with Slot.building_constant = true} else slot in
       with_promoted_var_map cx (instance_promoted_map @ cx.ctx.lexical.promoted_var_map)
         (fun () ->
-          (* An argument is checked against its parameter at the type
-             arguments the call gives a value: a phantom's filler is none. *)
-          let written_by_var =
-            List.filter
-              (fun (v, _) -> not (List.exists (Core.Scheme.Var.equal v) lowered.Calls.filled))
-              lowered.Calls.written_by_var
-          in
-          gen_call_args cx (Slot.at ~ret ~slot ?expected_ty ()) ~written_by_var env id plan)
+          gen_call_args cx (Slot.at ~ret ~slot ?expected_ty ()) ~written_by_var:lowered.Calls.written_by_var
+            ~filled:lowered.Calls.filled env id plan)
     in
     let args = List.map (fun (a : Typed.t) -> a.expr) typed_args in
     let ty = lowered.Calls.callee_type
