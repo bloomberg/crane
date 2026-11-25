@@ -26,7 +26,7 @@ From Crane Require Import
   Monads.MonadFacts
   Monads.STMonad
   Monads.STMonadFacts
-  Monads.STMonadTactics
+  Monads.STMonadSpec
   Utils.HMap
 .
 
@@ -66,58 +66,42 @@ Section FibonacciProofs.
   Context {S : Type}.
   Let V : T -> Type := fun _ => nat.
 
-  Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.HMapOk_halist.
-  Opaque add lookup STRefToIx zero suc.
-  Lemma fib_loop_correct :
-    forall k (a b : nat) (m : mem) (x y : STRef S nat),
-    lookup (STRefToIx S nat x, zero) m = Some a ->
-    lookup (STRefToIx S nat y, suc zero) m = Some b ->
-    fmap snd (interp_st ltu nat (fib_loop k x y zero (suc zero)) m)
-    ≈ Ret (fib_seq a b k).
+  (** The two references have different indices ([zero] and [suc zero]), so
+      a write to one leaves the other's cell alone. *)
+  Lemma fib_loop_spec :
+    forall k (a b : nat) (m : @mem nat V) (x y : STRef S nat),
+    st_lookup V (STRefToIx S nat x, zero) m = Some a ->
+    st_lookup V (STRefToIx S nat y, suc zero) m = Some b ->
+    st_spec (E := exceptE Err) (fib_loop k x y zero (suc zero)) m
+      (fun _ r => r = fib_seq a b k).
   Proof.
-    induction k; intros a b m x y hx hy; simpl fib_loop.
-    - etransitivity.
-      { eapply eutt_fmap. repeat stforward. rewrite hx. reflexivity. }
-      setoid_rewrite map_ret. reflexivity.
-    - etransitivity.
-      { eapply eutt_fmap. repeat stforward_refine. reflexivity. }
-      setoid_rewrite map_bind. rewrite hx.
-      monad_simpl_inner.
-      setoid_rewrite map_bind. rewrite hy.
-      repeat setoid_rewrite bind_Ret_l.
-      apply IHk.
-      + etransitivity; [ apply hmap_lookup_add_ne; intros [=] |].
-        rewrite mapsto_lookup. apply mapsto_add_eq. Unshelve. all: try typeclasses eauto.
-      + rewrite mapsto_lookup. apply mapsto_add_eq. Unshelve. all: try typeclasses eauto.
-  Qed.
-
-  Lemma fib_ST_full_correct : forall n,
-    fmap snd (interp_st (S := S) ltu nat
-      (x <- newSTRef zero 0;; y <- newSTRef (suc zero) 1;; fib_loop n x y zero (suc zero))
-      HMap.empty)
-    ≈ Ret (fib_seq 0 1 n).
-  Proof.
-    intro n.
-    etransitivity.
-    { eapply eutt_fmap. repeat stforward_refine. reflexivity. }
-    setoid_rewrite map_bind.
-    monad_simpl_inner.
-    apply fib_loop_correct.
-    + etransitivity; [ apply hmap_lookup_add_ne; intros [=] |].
-      rewrite mapsto_lookup. apply mapsto_add_eq. Unshelve. all: try typeclasses eauto.
-    + rewrite mapsto_lookup. apply mapsto_add_eq. Unshelve. all: try typeclasses eauto.
+    induction k as [|k IH]; intros a b m x y hx hy; cbn [fib_loop].
+    - eapply (st_spec_readSTRef (V := V) zero); [ exact hx | reflexivity ].
+    - apply st_spec_bind. eapply (st_spec_readSTRef (V := V) zero); [ exact hx |]. cbv beta.
+      apply st_spec_bind. eapply (st_spec_readSTRef (V := V) (suc zero)); [ exact hy |]. cbv beta.
+      apply st_spec_bind, (st_spec_writeSTRef (V := V) zero). cbv beta.
+      apply st_spec_bind, (st_spec_writeSTRef (V := V) (suc zero)). cbv beta.
+      apply IH.
+      + rewrite hmap_lookup_add_ne by (intros [= _ H]; discriminate H).
+        exact (hmap_lookup_add_eq (V := idx_key_type V) _ _ _).
+      + exact (hmap_lookup_add_eq (V := idx_key_type V) _ _ _).
   Qed.
 
 End FibonacciProofs.
 
 Lemma fib_ST_eq_fib_fun : forall {S : Type} (n : nat),
-    ret (fib_fun n) ≈ runST (S := S) (fun S0 => fib_ST n).
+    Ret (fib_fun n) ≈ runST (S := S) (fun S0 => fib_ST n).
 Proof.
-  intros S n. unfold runST, fib_ST. symmetry.
-  destruct (Nat.ltb_spec n 2) as [Hn | Hn].
-  - etransitivity.
-    { eapply eutt_fmap. change_to_monad. rewrite interp_st_ret. reflexivity. }
-    setoid_rewrite map_ret. apply eqit_Ret.
-    destruct n as [|[|n]]; [ reflexivity | reflexivity | lia ].
-  - rewrite fib_fun_eq_seq. exact (@fib_ST_full_correct unit n).
+  intros S n.
+  destruct (st_spec_runST (S := S) (fun S0 => fib_ST (S := S0) n) (fun r => r = fib_fun n))
+    as (r & Hrun & ->); [| symmetry; exact Hrun ].
+  unfold fib_ST. destruct (Nat.ltb_spec n 2) as [Hn | Hn].
+  - apply st_spec_ret. destruct n as [|[|n]]; [ reflexivity | reflexivity | lia ].
+  - apply st_spec_bind, (st_spec_newSTRef (V := fun _ => nat) zero). cbv beta.
+    apply st_spec_bind, (st_spec_newSTRef (V := fun _ => nat) (suc zero)). cbv beta.
+    eapply st_spec_weaken; [| apply fib_loop_spec ].
+    + intros _ r ->. symmetry. apply fib_fun_eq_seq.
+    + rewrite hmap_lookup_add_ne by (intros [= _ H]; discriminate H).
+      exact (hmap_lookup_add_eq (V := idx_key_type (fun _ : nat => nat)) _ _ _).
+    + exact (hmap_lookup_add_eq (V := idx_key_type (fun _ : nat => nat)) _ _ _).
 Qed.

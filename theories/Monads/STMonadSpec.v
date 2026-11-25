@@ -6,20 +6,22 @@
 
     [st_spec t m Q] says that [t], interpreted from store [m] by [interp_st],
     terminates without raising, in a store and with a result satisfying [Q].
-    It composes through [bind] ([st_spec_bind]), with one rule per array
-    operation and a loop rule for [for_each_with]; [st_spec_runST] turns a
+    It composes through [bind] ([st_spec_bind]), with one rule per reference
+    and array operation and a loop rule for [for_each_with]; [st_spec_runST] turns a
     specification of a whole program into an equation on [runST]. Unlike the
     [interp_st_*] equations of [STMonadArrayFacts], which fix the value type
     to [nat], these rules work for arrays of records, pairs and so on. *)
 
 From Stdlib Require Import
   Arith.PeanoNat
+  Classes.EquivDec
   Lia
   List
 .
 
 From ExtLib Require Import
   Structures.Monad
+  Structures.Reducible
 .
 
 From ITree Require Import
@@ -78,6 +80,69 @@ Section STSpec.
   Lemma st_spec_weaken {A} (t : itree E' A) m (Q Q' : mem -> A -> Prop) :
     (forall m' v, Q m' v -> Q' m' v) -> st_spec t m Q -> st_spec t m Q'.
   Proof. intros HQ (m' & v & Ht & Hv). exists m', v. auto. Qed.
+
+  (** The key [newSTRef] allocates in [m]: one past the largest key in use,
+      as the handler computes it. *)
+  Definition st_fresh_step : {k : nat * nat & idx_key_type V k} -> nat -> nat :=
+    fun '(existT _ (n, _) _) acc => max n acc.
+
+  Definition st_fresh (m : mem) : nat := suc (fold st_fresh_step zero m).
+
+  Lemma st_fresh_step_ge (l : mem) : forall acc, acc <= fold st_fresh_step acc l.
+  Proof.
+    induction l as [|[[n' j'] v'] l IH]; intros acc; cbn; [ lia |].
+    etransitivity; [| apply IH ]. cbn. lia.
+  Qed.
+
+  Lemma st_fresh_gt m : forall k j w, lookup (k, j) m = Some w -> k < st_fresh m.
+  Proof.
+    unfold st_fresh. cbn [suc zero nat_ix].
+    enough (Hgen : forall acc k j w, lookup (k, j) m = Some w -> k <= fold st_fresh_step acc m)
+      by (intros k j w Hlk; apply Nat.lt_succ_r; eapply Hgen; exact Hlk).
+    induction m as [|[[n' j'] v'] m IH]; intros acc k j w Hlk; cbn -[equiv_dec] in Hlk |- *;
+      [ discriminate |].
+    match type of Hlk with context [match ?d with left _ => _ | right _ => _ end] =>
+      destruct d as [e | ne]
+    end.
+    - injection e as -> ->. etransitivity; [| apply st_fresh_step_ge ]. cbn. lia.
+    - eapply IH. exact Hlk.
+  Qed.
+
+  (** No key in use is the fresh one. *)
+  Lemma st_lookup_fresh m j : lookup (st_fresh m, j) m = None.
+  Proof.
+    destruct (lookup (st_fresh m, j) m) as [w |] eqn:Hlk; [| reflexivity ].
+    apply st_fresh_gt in Hlk. lia.
+  Qed.
+
+  Lemma st_spec_newSTRef idx (v : V idx) m (Q : mem -> STRef S (V idx) -> Prop) :
+    Q (add (st_fresh m, idx) v m) (mkSTRef S (V idx) (st_fresh m)) ->
+    st_spec (newSTRef (E := E') idx v) m Q.
+  Proof.
+    intros HQ. eexists _, _. split; [| exact HQ ].
+    unfold newSTRef. rewrite interp_st_trigger. reflexivity.
+  Qed.
+
+  Lemma st_spec_readSTRef idx (r : STRef S (V idx)) m v (Q : mem -> V idx -> Prop) :
+    lookup (STRefToIx S (V idx) r, idx) m = Some v ->
+    Q m v ->
+    st_spec (readSTRef (E := E') (idx := idx) r) m Q.
+  Proof.
+    intros Hlk HQ. exists m, v. split; [| exact HQ ].
+    unfold readSTRef. rewrite interp_st_trigger. cbn -[lookup add].
+    match goal with |- context [lookup ?k m] =>
+      change (lookup k m) with (lookup (STRefToIx S (V idx) r, idx) m)
+    end.
+    rewrite Hlk. reflexivity.
+  Qed.
+
+  Lemma st_spec_writeSTRef idx (r : STRef S (V idx)) (v : V idx) m (Q : mem -> unit -> Prop) :
+    Q (add (STRefToIx S (V idx) r, idx) v m) tt ->
+    st_spec (writeSTRef (E := E') (idx := idx) r v) m Q.
+  Proof.
+    intros HQ. eexists _, tt. split; [| exact HQ ].
+    unfold writeSTRef. rewrite interp_st_trigger. reflexivity.
+  Qed.
 
   (** Cell [i] of an array over [lo .. hi] lives at key [base + (i - lo)]. *)
   Lemma arr_key_nat idx base lo hi i :

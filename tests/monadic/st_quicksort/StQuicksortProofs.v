@@ -3,10 +3,11 @@
 
 (** [quicksort_ST_list] computes [quicksort_fun].
 
-    The in-place sort is related to the list model of [STMonadArrayFacts]:
-    [partition] permutes a segment around a pivot ([interp_st_partition]),
-    and [quicksort_ST] sorts a segment and leaves the rest of the array
-    untouched ([quicksort_ST_segment]). Both sorts return a sorted
+    The in-place sort is specified in the [st_spec] logic of [STMonadSpec],
+    over the list model of [STMonadArrayFacts]: [partition] permutes a
+    segment around a pivot ([partition_spec]), and [quicksort_ST] sorts a
+    segment and leaves the rest of the array untouched
+    ([quicksort_ST_segment]). Both sorts return a sorted
     permutation of their input, and a sorted permutation is unique. *)
 
 From Stdlib Require Import
@@ -40,6 +41,7 @@ From Crane Require Import
   Monads.STMonad
   Monads.STMonadArrayFacts
   Monads.STMonadFacts
+  Monads.STMonadSpec
   Utils.HMap
 .
 
@@ -145,86 +147,50 @@ Section QuicksortProofs.
     = Ret [1; 2; 3; 4; 5; 6; 7; 8; 9].
   Proof using Type. lazy. reflexivity. Qed.
 
-  Opaque add lookup STRefToIx zero suc.
 
-  (** The scan loop's [interp_st] effect matches [lomuto] on the list model,
-      over the [n = hi - i] positions it has left, whatever the proofs it
-      is given. *)
-  Lemma interp_st_lomuto_scan :
-    forall n base hi_arr pv lo hi i s full (m : @mem nat V),
-      hi - i = n -> s <= i -> arr_rep m base full -> hi_arr < length full -> hi <= hi_arr ->
-      exists m',
-        arr_rep m' base (fst (lomuto full pv (seq i n) s))
-        /\ forall Hs Hi (acc : Acc lt (hi - i)), exists p,
-             interp_st ltu _
-               (lomuto_scan (E' := E0) (MkSTArray nat S nat base 0 hi_arr) pv lo hi i s Hs Hi acc) m
-             ≈ Ret (m', p)
-             /\ proj1_sig p = snd (lomuto full pv (seq i n) s).
+  (** The scan loop matches [lomuto] on the list model, over the
+      [n = hi - i] positions it has left. *)
+  Lemma lomuto_scan_spec :
+    forall n base hi_arr pv lo hi i s Hs Hi (acc : Acc lt (hi - i)) full (m : @mem nat V),
+      hi - i = n -> arr_rep m base full -> hi_arr < length full -> hi <= hi_arr ->
+      st_spec (lomuto_scan (E' := E0) (MkSTArray nat S nat base 0 hi_arr) pv lo hi i s Hs Hi acc) m
+        (fun m' p => proj1_sig p = snd (lomuto full pv (seq i n) s)
+                     /\ arr_rep m' base (fst (lomuto full pv (seq i n) s))).
   Proof.
-    induction n as [|n IH]; intros base hi_arr pv lo hi i s full m Hn Hsi Hrep Hhl Hhia;
-      cbn [seq lomuto].
-    - exists m. split; [ exact Hrep |]. intros Hs Hi [next]. cbn [lomuto_scan].
+    induction n as [|n IH];
+      intros base hi_arr pv lo hi i s Hs Hi [next] full m Hn Hrep Hhl Hhia;
+      cbn [lomuto_scan seq lomuto];
       destruct (Sumbool.sumbool_of_bool (Nat.ltb i hi)) as [Hlt | Hge];
-        [ pose proof (proj1 (Nat.ltb_lt _ _) Hlt); lia |].
-      eexists. split; [ apply interp_st_Ret_eutt | reflexivity ].
-    - assert (Hi' : i < hi) by lia.
-      destruct (Nat.leb (nth i full 0) pv) eqn:Hle.
-      + edestruct (IH base hi_arr pv lo hi (Datatypes.S i) (Datatypes.S s) (list_swap full i s))
-          as (m' & Hrep' & Hrun);
-          [ lia | lia | apply arr_rep_swap; eauto; lia | rewrite list_swap_length; lia | lia |].
-        exists m'. split; [ exact Hrep' |]. intros Hs Hi [next]. cbn [lomuto_scan].
-        destruct (Sumbool.sumbool_of_bool (Nat.ltb i hi)) as [Hlt | Hge];
-          [| pose proof (proj1 (Nat.ltb_ge _ _) Hge); lia ].
-        match goal with
-        | |- context [lomuto_scan _ _ _ _ (Datatypes.S i) _ ?a ?b ?c] =>
-          destruct (Hrun a b c) as (p & Hp & Hpv)
-        end.
-        exists p. split; [| exact Hpv ].
-        eapply interp_st_bind_Ret_l;
-          [ apply interp_st_readArray, arr_lookup_rep; eauto; lia |].
-        cbv beta. rewrite Hle.
-        eapply interp_st_bind_Ret_l; [ apply interp_st_swapArray; eauto; lia |].
-        exact Hp.
-      + edestruct (IH base hi_arr pv lo hi (Datatypes.S i) s full m)
-          as (m' & Hrep' & Hrun); try lia; auto.
-        exists m'. split; [ exact Hrep' |]. intros Hs Hi [next]. cbn [lomuto_scan].
-        destruct (Sumbool.sumbool_of_bool (Nat.ltb i hi)) as [Hlt | Hge];
-          [| pose proof (proj1 (Nat.ltb_ge _ _) Hge); lia ].
-        match goal with
-        | |- context [lomuto_scan _ _ _ _ (Datatypes.S i) _ ?a ?b ?c] =>
-          destruct (Hrun a b c) as (p & Hp & Hpv)
-        end.
-        exists p. split; [| exact Hpv ].
-        eapply interp_st_bind_Ret_l;
-          [ apply interp_st_readArray, arr_lookup_rep; eauto; lia |].
-        cbv beta. rewrite Hle. exact Hp.
+      try (pose proof (proj1 (Nat.ltb_lt _ _) Hlt); lia);
+      try (pose proof (proj1 (Nat.ltb_ge _ _) Hge); lia).
+    - apply st_spec_ret. split; [ reflexivity | exact Hrep ].
+    - pose proof (proj1 (Nat.ltb_lt _ _) Hlt).
+      apply st_spec_bind. eapply st_spec_readArray_rep; [ eassumption | lia | lia |].
+      cbv beta. destruct (Nat.leb (nth i full 0) pv).
+      + apply st_spec_bind. eapply st_spec_swapArray_rep; [ eassumption | lia | lia | lia |].
+        intros m' Hrep'. apply IH; [ lia | exact Hrep' | rewrite list_swap_length; lia | lia ].
+      + apply IH; auto; lia.
   Qed.
 
-  Transparent add lookup STRefToIx zero suc.
 
   (** Correctness of the in-place [partition]: it permutes the segment [lo,hi],
       leaves everything outside untouched, and returns a pivot position [p] with
       the standard partition invariant. *)
-  Lemma interp_st_partition :
-    forall (base hi_arr lo hi pividx : nat) (full : list nat) (m : @mem nat V),
+  Lemma partition_spec :
+    forall (base hi_arr lo hi pividx : nat) Hlo (full : list nat) (m : @mem nat V),
       arr_rep m base full ->
       lo < hi -> hi <= hi_arr -> hi_arr < length full ->
       lo <= pividx -> pividx <= hi ->
-      exists m' full' p,
-        arr_rep m' base full'
-        /\ length full' = length full
-        /\ Permutation full full'
-        /\ (forall j, j < lo \/ hi < j -> nth j full' 0 = nth j full 0)
-        /\ lo <= p /\ p <= hi
-        /\ (forall j, lo <= j -> j < p -> nth j full' 0 <= nth p full' 0)
-        /\ (forall j, p < j -> j <= hi -> nth p full' 0 <= nth j full' 0)
-        /\ forall Hlo, exists p0,
-             proj1_sig p0 = p
-             /\ interp_st ltu _
-                  (partition (E' := E0) (MkSTArray nat S nat base 0 hi_arr) lo hi pividx Hlo) m
-                ≈ Ret (m', p0).
+      st_spec (partition (E' := E0) (MkSTArray nat S nat base 0 hi_arr) lo hi pividx Hlo) m
+        (fun m' p0 => exists full',
+           arr_rep m' base full'
+           /\ length full' = length full
+           /\ Permutation full full'
+           /\ (forall j, j < lo \/ hi < j -> nth j full' 0 = nth j full 0)
+           /\ (forall j, lo <= j -> j < proj1_sig p0 -> nth j full' 0 <= nth (proj1_sig p0) full' 0)
+           /\ (forall j, proj1_sig p0 < j -> j <= hi -> nth (proj1_sig p0) full' 0 <= nth j full' 0)).
   Proof.
-    intros base hi_arr lo hi pividx full m Hrep Hlohi Hhia Hlen Hlop Hpvh.
+    intros base hi_arr lo hi pividx Hlo full m Hrep Hlohi Hhia Hlen Hlop Hpvh.
     set (pv := nth pividx full 0).
     set (full_a := list_swap full pividx hi).
     assert (Hlen_a : length full_a = length full) by apply list_swap_length.
@@ -236,49 +202,37 @@ Section QuicksortProofs.
     destruct Hpb as (Hpermb & _).
     { intros i Hi. apply in_seq in Hi. lia. }
     { rewrite length_seq. lia. }
+    cbn [fst] in Hpermb.
     (* the pivot value ends up at [storeIndex] after the final swap *)
     assert (Hnp : nth storeIndex (list_swap full_b storeIndex hi) 0 = pv).
     { rewrite nth_list_swap_left, (Hunch_b hi) by lia.
       apply nth_list_swap_right. lia. }
-    (* the scan loop on the store *)
-    edestruct (interp_st_lomuto_scan (hi - lo) base hi_arr pv lo hi lo lo full_a
-                 (add (base + hi, 0%nat) pv (add (base + pividx, 0%nat) (nth hi full 0) m)))
-      as (m_loop & Hrep_loop & Hloop);
-      [ reflexivity | lia | apply arr_rep_swap; auto; lia | lia | lia |].
-    rewrite ELB in Hrep_loop, Hloop. cbn [fst snd] in Hrep_loop, Hloop.
-    cbn [fst] in Hpermb.
-    assert (Hfin := arr_rep_swap base full_b storeIndex hi m_loop Hrep_loop
-                      ltac:(lia) ltac:(lia)).
-    eexists _, (list_swap full_b storeIndex hi), storeIndex.
+    (* the program *)
+    unfold partition.
+    apply st_spec_bind. eapply st_spec_readArray_rep; [ eassumption | lia | lia |]. cbv beta.
+    apply st_spec_bind. eapply st_spec_swapArray_rep; [ eassumption | lia | lia | lia |].
+    intros m1 Hrep1. fold full_a in Hrep1.
+    apply st_spec_bind. eapply st_spec_weaken;
+      [| apply (lomuto_scan_spec (hi - lo)); [ reflexivity | exact Hrep1 | lia | lia ] ].
+    intros m2 p0 [Hp0 Hrep2]. fold pv in Hp0, Hrep2.
+    rewrite ELB in Hp0, Hrep2. cbn [fst snd] in Hp0, Hrep2. rewrite Hp0.
+    apply st_spec_bind. eapply st_spec_swapArray_rep; [ exact Hrep2 | lia | lia | lia |].
+    intros m3 Hrep3. apply st_spec_ret. rewrite Hp0.
+    exists (list_swap full_b storeIndex hi).
     repeat split.
-    - exact Hfin.
+    - exact Hrep3.
     - rewrite list_swap_length; lia.
     - etransitivity; [ apply (list_swap_perm full pividx hi); lia |].
       etransitivity; [ exact Hpermb |].
       apply list_swap_perm; lia.
     - intros j Hj. rewrite nth_list_swap_other, Hunch_b by lia.
       apply nth_list_swap_other; lia.
-    - exact Hst1.
-    - lia.
     - intros j Hjlo Hjp. rewrite Hnp, nth_list_swap_other by lia.
       apply Hsmall_b; lia.
     - intros j Hjp Hjhi. rewrite Hnp. apply Nat.lt_le_incl.
       destruct (Nat.eq_dec j hi).
       + subst j. rewrite nth_list_swap_right by lia. apply Hbig_b; lia.
       + rewrite nth_list_swap_other by lia. apply Hbig_b; lia.
-    - intros Hlo. unfold partition.
-      match goal with
-      | |- context [lomuto_scan _ _ _ _ _ _ ?a ?b ?c] =>
-        destruct (Hloop a b c) as (p0 & Hp0 & Hpv)
-      end.
-      exists p0. split; [ exact Hpv |].
-      eapply interp_st_bind_Ret_l;
-        [ apply interp_st_readArray, arr_lookup_rep; eauto; lia |].
-      eapply interp_st_bind_Ret_l; [ apply interp_st_swapArray; eauto; lia |].
-      eapply interp_st_bind_Ret_l; [ exact Hp0 |].
-      rewrite Hpv.
-      eapply interp_st_bind_Ret_l; [ apply interp_st_swapArray; eauto; lia |].
-      apply interp_st_Ret_eutt.
   Qed.
 
   (** Segment machinery: permutation and pairwise sortedness of a sub-range. *)
@@ -365,43 +319,38 @@ Section QuicksortProofs.
       whole array is permuted, and everything outside [lo,hi] is untouched.
       Induction on [d >= hi - lo]; the result does not depend on the
       accessibility proof. *)
-  Lemma quicksort_ST_segment : forall base d lo hi full m,
-    arr_rep m base full -> hi < length full -> hi - lo <= d ->
-    exists m' full',
-      (forall acc : Acc lt (hi - lo),
-         interp_st ltu unit
-           (quicksort_ST (E' := E0) (MkSTArray nat S nat base 0 (length full - 1)) lo hi acc) m
-         ≈ Ret (m', tt))
-      /\ arr_rep m' base full'
-      /\ length full' = length full
-      /\ Permutation full full'
-      /\ (forall j, j < lo \/ hi < j -> nth j full' 0 = nth j full 0)
-      /\ SortedSeg full' lo hi
-      /\ (hi <= lo -> full' = full).
+  Lemma quicksort_ST_segment : forall base hi_arr d lo hi full m (acc : Acc lt (hi - lo)),
+    arr_rep m base full -> length full = Datatypes.S hi_arr -> hi <= hi_arr -> hi - lo <= d ->
+    st_spec (quicksort_ST (E' := E0) (MkSTArray nat S nat base 0 hi_arr) lo hi acc) m
+      (fun m' _ => exists full',
+         arr_rep m' base full'
+         /\ length full' = length full
+         /\ Permutation full full'
+         /\ (forall j, j < lo \/ hi < j -> nth j full' 0 = nth j full 0)
+         /\ SortedSeg full' lo hi
+         /\ (hi <= lo -> full' = full)).
   Proof.
-    intros base. induction d as [|d IH]; intros lo hi full m Hrep Hhl Hd;
-      destruct (le_gt_dec hi lo) as [Hle | Hgt]; try lia.
-    1, 2: (* hi <= lo: nothing to do *)
-      exists m, full; split;
-      [ intros [next]; cbn [quicksort_ST];
-        destruct (Sumbool.sumbool_of_bool (Nat.ltb lo hi)) as [Hlt | Hge];
-        [ pose proof (proj1 (Nat.ltb_lt _ _) Hlt); lia | apply interp_st_Ret_eutt ] |];
+    intros base hi_arr. induction d as [|d IH]; intros lo hi full m [next] Hrep Hlen Hhl Hd;
+      cbn [quicksort_ST];
+      destruct (Sumbool.sumbool_of_bool (Nat.ltb lo hi)) as [Hlt | Hge];
+      try (pose proof (proj1 (Nat.ltb_lt _ _) Hlt); lia).
+    1, 3: (* hi <= lo: nothing to do *)
+      pose proof (proj1 (Nat.ltb_ge _ _) Hge);
+      apply st_spec_ret; exists full;
       repeat split; auto using Permutation_refl;
       intros a b Ha Hab Hb; replace b with a by lia; reflexivity.
     (* lo < hi *)
-    set (pividx := lo + (hi - lo) / 2).
+    pose proof (proj1 (Nat.ltb_lt _ _) Hlt) as Hgt.
     assert (Hdiv : (hi - lo) / 2 <= hi - lo) by (apply Nat.Div0.div_le_upper_bound; lia).
-    edestruct (interp_st_partition base (length full - 1) lo hi pividx full m)
-      as (m1 & full1 & p & Hrep1 & Hlen1 & Hperm1 & Hunch1 &
-          Hp_lo & Hp_hi & Hleft & Hright & Hpart); auto; try (unfold pividx; lia).
-    edestruct (IH lo (p - 1) full1 m1)
-      as (m2 & full2 & Hrun1 & Hrep2 & Hlen2 & Hperm2 & Hunch2 & Hsort2 & Hnoop1);
-      auto; try lia.
-    edestruct (IH (p + 1) hi full2 m2)
-      as (m3 & full3 & Hrun2 & Hrep3 & Hlen3 & Hperm3 & Hunch3 & Hsort3 & Hnoop2);
-      auto; try lia.
-    rewrite Hlen1 in Hrun1. rewrite Hlen2, Hlen1 in Hrun2.
-    exists m3, full3.
+    apply st_spec_bind. eapply st_spec_weaken;
+      [| apply partition_spec; [ exact Hrep | lia | lia | lia | lia | lia ] ].
+    intros m1 [p [Hp_lo Hp_hi]] (full1 & Hrep1 & Hlen1 & Hperm1 & Hunch1 & Hleft & Hright).
+    cbn [proj1_sig] in *.
+    apply st_spec_bind. eapply st_spec_weaken; [| apply IH; [ exact Hrep1 | lia | lia | lia ] ].
+    intros m2 _ (full2 & Hrep2 & Hlen2 & Hperm2 & Hunch2 & Hsort2 & Hnoop1).
+    eapply st_spec_weaken; [| apply IH; [ exact Hrep2 | lia | lia | lia ] ].
+    intros m3 _ (full3 & Hrep3 & Hlen3 & Hperm3 & Hunch3 & Hsort3 & Hnoop2).
+    exists full3.
     (* the values around the pivot *)
     set (pivot := nth p full1 0).
     assert (F2' : forall j, j <= p -> nth j full3 0 = nth j full2 0)
@@ -420,17 +369,6 @@ Section QuicksortProofs.
       apply (seg_forall_perm (fun x => pivot <= x) full2 full3 (p + 1) hi);
         auto; try lia.
       intros k Hk1 Hk2. rewrite (Hunch2 k) by lia. apply Hright; lia. }
-    split.
-    { intros [next]. cbn [quicksort_ST].
-      destruct (Sumbool.sumbool_of_bool (Nat.ltb lo hi)) as [Hlt | Hge];
-        [| pose proof (proj1 (Nat.ltb_ge _ _) Hge); lia ].
-      match goal with
-      | |- context [partition _ _ _ _ ?h] => destruct (Hpart h) as (p0 & Hp0 & Hpart')
-      end.
-      eapply interp_st_bind_Ret_l; [ exact Hpart' |].
-      destruct p0 as [q Hq]. cbn [proj1_sig] in Hp0 |- *. subst q.
-      eapply interp_st_bind_Ret_l; [ apply Hrun1 |].
-      apply Hrun2. }
     repeat split.
     - exact Hrep3.
     - lia.
@@ -522,24 +460,20 @@ Qed.
 Lemma qsort_fun_eq_qsort_ST : forall {S : Type} (l : list nat),
     Ret (quicksort_fun l) ≈ runST (S := S) (fun S0 => quicksort_ST_list l).
 Proof.
-  intros S l. symmetry. destruct l as [| x l'].
-  - (* [quicksort_ST_list []] returns [Ret []] directly *)
-    apply (runST_Ret _ HMap.empty). apply interp_st_Ret_eutt.
-  - set (xs := x :: l').
-    assert (Hpos : 0 < length xs) by (simpl; lia).
-    edestruct (interp_st_newListArray (S := unit) (length xs - 1) xs)
-      as (m0 & Hnew & Hrep0).
-    edestruct (quicksort_ST_segment (S := unit) 1 (length xs - 1) 0 (length xs - 1) xs m0)
-      as (m1 & full1 & Hrun & Hrep1 & Hlenf1 & Hperm1 & Hunch1 & Hsort1 & _);
-      auto; try lia.
-    (* the ST result is [quicksort_fun xs] by uniqueness of sorted permutations *)
-    replace (quicksort_fun xs) with full1.
-    2: { apply sorted_perm_unique.
-         - apply SortedSeg_StronglySorted. intros i j Hij Hjl. apply Hsort1; lia.
-         - apply quicksort_fun_sorted.
-         - rewrite <- Hperm1. apply quicksort_fun_perm. }
-    apply (runST_Ret _ m1). unfold quicksort_ST_list, xs. fold xs.
-    eapply interp_st_bind_Ret_l; [ exact Hnew |].
-    eapply interp_st_bind_Ret_l; [ apply Hrun |].
-    apply interp_st_getElems; auto. lia.
+  intros S l.
+  destruct (st_spec_runST (S := S) (fun S0 => quicksort_ST_list (S := S0) l)
+              (fun out => out = quicksort_fun l)) as (out & Hrun & ->).
+  2: { symmetry. exact Hrun. }
+  destruct l as [| x l']; unfold quicksort_ST_list; cbv beta iota zeta.
+  - apply st_spec_ret. reflexivity.
+  - apply st_spec_bind, st_spec_newListArray_rep. intros m0 Hrep0.
+    apply st_spec_bind. eapply st_spec_weaken;
+      [| apply (quicksort_ST_segment 1 _ (length (x :: l') - 1)); [ exact Hrep0 | cbn; lia | lia | lia ] ].
+    intros m1 _ (full1 & Hrep1 & Hlenf1 & Hperm1 & Hunch1 & Hsort1 & _).
+    eapply st_spec_getElems_rep; [ exact Hrep1 | cbn in *; lia |].
+    (* a sorted permutation is unique *)
+    apply sorted_perm_unique.
+    + apply SortedSeg_StronglySorted. intros i j Hij Hjl. apply Hsort1; cbn in *; lia.
+    + apply quicksort_fun_sorted.
+    + rewrite <- Hperm1. apply quicksort_fun_perm.
 Qed.

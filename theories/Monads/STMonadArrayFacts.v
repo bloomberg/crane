@@ -33,6 +33,7 @@ From Crane Require Import
   Monads.MonadFacts
   Monads.STMonad
   Monads.STMonadFacts
+  Monads.STMonadSpec
   Utils.HMap
 .
 
@@ -298,6 +299,40 @@ Section NatArrayModel.
         rewrite (surjective_pairing p) end.
       reflexivity.
     - intros k Hk. apply fill_ext_at. exact Hk.
+  Qed.
+
+  (** The array operations as [st_spec] rules over [arr_rep]: what a program
+      knows of an array is the list it represents. *)
+  Lemma st_spec_readArray_rep base hi full i m (Q : @mem nat V -> nat -> Prop) :
+    arr_rep m base full -> i <= hi -> hi < length full -> Q m (nth i full 0) ->
+    st_spec (@readArray E0 nat _ _ _ _ 0 (MkSTArray nat S nat base 0 hi) i) m Q.
+  Proof.
+    intros Hrep Hi Hh HQ. exists m, (nth i full 0).
+    split; [ apply interp_st_readArray, arr_lookup_rep; auto | exact HQ ].
+  Qed.
+
+  Lemma st_spec_swapArray_rep base hi full l r m (Q : @mem nat V -> unit -> Prop) :
+    arr_rep m base full -> l <= hi -> r <= hi -> hi < length full ->
+    (forall m', arr_rep m' base (list_swap full l r) -> Q m' tt) ->
+    st_spec (@swapArray E0 nat S _ V _ 0 (MkSTArray nat S nat base 0 hi) l r) m Q.
+  Proof.
+    intros Hrep Hl Hr Hh HQ. eexists _, tt.
+    split; [ apply interp_st_swapArray; eauto | apply HQ, arr_rep_swap; auto; lia ].
+  Qed.
+
+  Lemma st_spec_getElems_rep base hi full m (Q : @mem nat V -> list nat -> Prop) :
+    arr_rep m base full -> length full = Datatypes.S hi -> Q m full ->
+    st_spec (@getElems E0 nat _ _ _ _ 0 (MkSTArray nat S nat base 0 hi)) m Q.
+  Proof.
+    intros Hrep Hlen HQ. exists m, full. split; [ apply interp_st_getElems; auto | exact HQ ].
+  Qed.
+
+  Lemma st_spec_newListArray_rep lastIndex xs (Q : @mem nat V -> STArray nat S nat -> Prop) :
+    (forall m0, arr_rep m0 1 xs -> Q m0 (MkSTArray nat S nat 1 0 lastIndex)) ->
+    st_spec (@newListArray E0 nat _ _ _ _ 0 0 lastIndex xs) HMap.empty Q.
+  Proof.
+    intros HQ. destruct (interp_st_newListArray lastIndex xs) as (m0 & Hrun & Hrep).
+    exists m0, (MkSTArray nat S nat 1 0 lastIndex). split; [ exact Hrun | apply HQ, Hrep ].
   Qed.
 
 End NatArrayModel.
