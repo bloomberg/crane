@@ -68,6 +68,14 @@ Local Open Scope pstring_scope.
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
+(** A [sumbool] is the [bool] of which side holds, so the [sumbool] of a
+    [bool] is that [bool]. *)
+#[export] Instance sumbool_of_bool_mapping : OperationMapping (Ref Sumbool.sumbool_of_bool) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(b)";
+     operation_contract :=
+       PureOperation [{| argument_name := "b"; argument_use := Read |}] ReturnValue [] |}.
+
 #[export] Instance negb_mapping : OperationMapping (Ref negb) :=
   {| operation_headers := [];
      operation_cpp := Expr "!(%arg(b))";
