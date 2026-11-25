@@ -292,7 +292,13 @@ let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slo
     undecided a || undecided b || cpp_ty_eq a b || a = b
     ||
     match (a, b) with
-    | Entity_application (g, xs, _), Entity_application (g', ys, _) -> GlobRef.CanOrd.equal g g' && all xs ys
+    | Entity_application (g, xs, _), Entity_application (g', ys, _) when GlobRef.CanOrd.equal g g' -> all xs ys
+    (* A typed-mapped type is the C++ type its mapping spells: [sig A P] is
+       [A]. *)
+    | Entity_application (g, xs, _), _ when Base.Mapping_plan.is_type_head g ->
+      agree (Base.Mapping_plan.cpp_type (Base.Mapping_plan.find g) xs) b
+    | _, Entity_application (g, ys, _) when Base.Mapping_plan.is_type_head g ->
+      agree a (Base.Mapping_plan.cpp_type (Base.Mapping_plan.find g) ys)
     | Named (x, xs), Named (y, ys) -> Id.equal x y && all xs ys
     | External (x, xs), External (y, ys) -> String.equal x y && all xs ys
     | Function (d, c), Function (d', c') -> all d d' && agree c c'

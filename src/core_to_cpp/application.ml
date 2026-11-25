@@ -734,7 +734,15 @@ let eta_fun cx (slot : Slot.slot) env f args :
     let typed_args =
       let slot = if closed_head then {slot with Slot.building_constant = true} else slot in
       with_promoted_var_map cx (instance_promoted_map @ cx.ctx.lexical.promoted_var_map)
-        (fun () -> gen_call_args cx (Slot.at ~ret ~slot ?expected_ty ()) ~written_by_var:lowered.Calls.written_by_var env id plan)
+        (fun () ->
+          (* An argument is checked against its parameter at the type
+             arguments the call gives a value: a phantom's filler is none. *)
+          let written_by_var =
+            List.filter
+              (fun (v, _) -> not (List.exists (Core.Scheme.Var.equal v) lowered.Calls.filled))
+              lowered.Calls.written_by_var
+          in
+          gen_call_args cx (Slot.at ~ret ~slot ?expected_ty ()) ~written_by_var env id plan)
     in
     let args = List.map (fun (a : Typed.t) -> a.expr) typed_args in
     let ty = lowered.Calls.callee_type

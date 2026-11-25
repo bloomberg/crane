@@ -752,6 +752,10 @@ type lowered_call = {
   abi : Core_plan.Callable_abi.t;
   application : Core_plan.Template_application.t;
   written_by_var : (Core.Scheme.Var.t * Cpp_ir.Lowered.Type.t) list;
+  filled : Core.Scheme.Var.t list;
+      (** the variables of [written_by_var] the call writes only with the
+          filler of a phantom parameter, so that a later parameter can be
+          written: no instantiation of the variable *)
 }
 
 (** [call_type_args ~caller ?expected_ty env id plan args] -- the type
@@ -1418,12 +1422,7 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
         (List.mapi
            (fun k p ->
              match (p.Core_plan.Callable_abi.origin, List.nth_opt all_type_args k) with
-             (* A parameter the plan has no value for is written with its
-                filler only so that a later one can be: the filler is no
-                instantiation of the variable. *)
-             | Core_plan.Callable_abi.From_scheme v, Some t
-               when Option.has_some (Core.Scheme.Var.assoc_opt v (at_plain_positions regular)) ->
-               [(v, t)]
+             | Core_plan.Callable_abi.From_scheme v, Some t -> [(v, t)]
              | _ -> [] )
            (Core_plan.Callable_abi.template_head abi) )
     in
@@ -1446,6 +1445,15 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
     abi = abi;
     application = application;
     written_by_var = written_tvar_args;
+    filled =
+      List.filter_map
+        (fun (p : Core_plan.Callable_abi.template_parameter) ->
+          match p.origin with
+          | Core_plan.Callable_abi.From_scheme v
+            when not (Option.has_some (Core.Scheme.Var.assoc_opt v (at_plain_positions regular))) ->
+            Some v
+          | _ -> None )
+        (Core_plan.Callable_abi.template_head abi);
   }
 
 (** The callee [id]'s type variables as the type [expected] that its result
