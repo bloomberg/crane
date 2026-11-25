@@ -499,20 +499,3 @@ Crane Extraction Implicit getElems [idx].
          [{| argument_name := "arr"; argument_use := Read |}]
          ReturnValue
          [ReadsComponent {| path_argument := "arr"; path_components := ["contents"] |}] |}%pstring.
-
-(* Recursion is mapped to a while loop that models the stack explicitly. *)
-(* NOTE: should this go in ITree base as part of the erased translation? *)
-Crane Extract Skip Module Recursion.
-Crane Extract Inlined Constant rec =>
-        "[&]() { static std::vector<%t1> _stack;
-                _stack.push_back(%a1);
-                while (!_stack.empty()) {
-                  %t1 _arg = _stack.back();
-                  _stack.pop_back();
-                  %a0(_arg);
-        } } ();".
-
-Crane Extract Inlined Constant call => "(_stack.push_back(%a0), std::monostate{})".
-Crane Extract Skip callE.
-
-

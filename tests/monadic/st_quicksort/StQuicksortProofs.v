@@ -269,48 +269,6 @@ Section QuicksortProofs.
       + rewrite nth_list_swap_other by lia. apply Hbig_b; lia.
   Qed.
 
-  (** Unfolding the [rec]/[mrec] recursion of [quicksort_ST] to [E0] level. *)
-
-  Lemma partition_interp_id :
-    forall (arr : STArray nat S nat) (arr_idx l r pv : nat),
-      interp (recursive quicksort_ST_body) (partition arr arr_idx l r pv)
-      ≈ partition (E' := E0) arr arr_idx l r pv.
-  Proof.
-    intros. unfold partition, E0, V, T.
-    rewrite interp_recursive_bind. apply eutt_eq_bind'; [ apply interp_recursive_readArray | intros pivotValue ].
-    rewrite interp_recursive_bind. apply eutt_eq_bind'; [ apply interp_recursive_swapArray | intros _ ].
-    rewrite interp_recursive_bind. apply eutt_eq_bind'.
-    { apply interp_recursive_for_each_with. intros b a.
-      rewrite interp_recursive_bind. apply eutt_eq_bind'; [ apply interp_recursive_readArray | intros val ].
-      destruct (Nat.leb val pivotValue); [| apply interp_recursive_Ret ].
-      rewrite interp_recursive_bind. apply eutt_eq_bind'; [ apply interp_recursive_swapArray | intros _ ].
-      apply interp_recursive_Ret. }
-    intros storeIndex.
-    rewrite interp_recursive_bind. apply eutt_eq_bind'; [ apply interp_recursive_swapArray | intros _ ].
-    apply interp_recursive_Ret.
-  Qed.
-
-  Lemma quicksort_ST_unfold :
-    forall (arr : STArray nat S nat) (arr_idx l r : nat),
-      quicksort_ST arr arr_idx l r
-      ≈ (if Nat.ltb (toNat l) (toNat r)
-         then newPivot <- partition arr arr_idx l r
-                            (fromNat (toNat l + (toNat r - toNat l) / 2)) ;;
-              quicksort_ST arr arr_idx l (fromNat (toNat newPivot - 1)) ;;
-              quicksort_ST arr arr_idx (fromNat (toNat newPivot + 1)) r
-         else ITreeDefinition.Ret tt).
-  Proof.
-    intros arr arr_idx l r.
-    unfold quicksort_ST at 1.
-    rewrite rec_as_interp.
-    unfold quicksort_ST_body at 2.
-    cbn match.
-    destruct (Nat.ltb (toNat l) (toNat r)); [| rewrite interp_ret; reflexivity ].
-    rewrite interp_bind. apply eutt_eq_bind'; [ apply partition_interp_id | intros np ].
-    rewrite interp_bind. apply eutt_eq_bind'; [| intros _ ];
-      rewrite interp_recursive_call; reflexivity.
-  Qed.
-
   (** Segment machinery: permutation and pairwise sortedness of a sub-range. *)
 
   Definition seg (l : list nat) (a b : nat) : list nat :=
@@ -393,12 +351,12 @@ Section QuicksortProofs.
 
   (** In-place quicksort correctness: the segment [lo,hi] is sorted, the
       whole array is permuted, and everything outside [lo,hi] is untouched.
-      Strong induction on the measure [d >= hi - lo]. *)
+      Induction on the fuel [S d], with [d >= hi - lo]. *)
   Lemma quicksort_ST_segment : forall base d lo hi full m,
     arr_rep m base full -> hi < length full -> hi - lo <= d ->
     exists m' full',
       interp_st ltu unit
-        (quicksort_ST (MkSTArray nat S nat base 0 (length full - 1)) 0 lo hi) m
+        (quicksort_ST (Datatypes.S d) (MkSTArray nat S nat base 0 (length full - 1)) 0 lo hi) m
         ≈ Ret (m', tt)
       /\ arr_rep m' base full'
       /\ length full' = length full
@@ -411,7 +369,7 @@ Section QuicksortProofs.
       destruct (le_gt_dec hi lo) as [Hle | Hgt]; try lia.
     1, 2: (* hi <= lo: nothing to do *)
       exists m, full; split;
-      [ rewrite quicksort_ST_unfold; cbn [toNat fromNat nat_ix];
+      [ cbn [quicksort_ST toNat fromNat nat_ix];
         destruct (Nat.ltb_spec lo hi); [ lia | apply interp_st_Ret_eutt ] |];
       repeat split; auto using Permutation_refl;
       intros a b Ha Hab Hb; replace b with a by lia; reflexivity.
@@ -448,7 +406,7 @@ Section QuicksortProofs.
         auto; try lia.
       intros k Hk1 Hk2. rewrite (Hunch2 k) by lia. apply Hright; lia. }
     split.
-    { rewrite quicksort_ST_unfold. cbn [toNat fromNat nat_ix].
+    { cbn [quicksort_ST toNat fromNat nat_ix].
       destruct (Nat.ltb_spec lo hi); [| lia ].
       eapply interp_st_bind_Ret_l; [ exact Hpart |].
       eapply interp_st_bind_Ret_l; [ exact Hrun1 |].
@@ -549,9 +507,10 @@ Proof.
     apply (runST_Ret _ HMap.empty). apply interp_st_Ret_eutt.
   - set (xs := x :: l').
     assert (Hpos : 0 < length xs) by (simpl; lia).
+    assert (Hlen : length xs = Datatypes.S (length l')) by reflexivity.
     edestruct (interp_st_newListArray (S := unit) (length xs - 1) xs)
       as (m0 & Hnew & Hrep0).
-    edestruct (quicksort_ST_segment (S := unit) 1 (length xs - 1) 0 (length xs - 1) xs m0)
+    edestruct (quicksort_ST_segment (S := unit) 1 (length l') 0 (length xs - 1) xs m0)
       as (m1 & full1 & Hrun & Hrep1 & Hlenf1 & Hperm1 & Hunch1 & Hsort1 & _);
       auto; try lia.
     (* the ST result is [quicksort_fun xs] by uniqueness of sorted permutations *)

@@ -6,8 +6,7 @@
     An array [MkSTArray base 0 hi] whose cells [base .. base + hi] hold the
     list [full] is related to [full] by [arr_rep]; in-place writes and swaps
     are modelled by [upd] and [list_swap]. The [interp_st_*] lemmas give the
-    effect of each array operation on the store, and the [interp_recursive_*]
-    lemmas let array code run unchanged under [rec]. *)
+    effect of each array operation on the store. *)
 
 From Stdlib Require Import
   Arith.PeanoNat
@@ -302,58 +301,3 @@ Section NatArrayModel.
   Qed.
 
 End NatArrayModel.
-
-(** Under [rec body], array code that makes no recursive call runs as is. *)
-Section RecursiveArrays.
-
-  Let T := nat.
-  Existing Instance nat_ix_stref.
-  Context {S : Type}.
-  Let V : T -> Type := fun _ => nat.
-  Let E0 := (STEvent T S V) +' exceptE Err.
-  Context {A B : Type} (body : A -> itree (callE A B +' E0) B).
-  Let D := callE A B.
-
-  Lemma interp_recursive_bind {R U : Type}
-    (t : itree (D +' E0) R) (k : R -> itree (D +' E0) U) :
-    interp (recursive body) (ITree.bind t k)
-    ≈ ITree.bind (interp (recursive body) t) (fun r => interp (recursive body) (k r)).
-  Proof. unfold D, E0, V, T. rewrite interp_bind. reflexivity. Qed.
-
-  Lemma interp_recursive_Ret {R} (x : R) :
-    interp (recursive body) (ITreeDefinition.Ret x : itree (D +' E0) R)
-    ≈ ITreeDefinition.Ret x.
-  Proof. unfold D, E0, V, T. rewrite interp_ret. reflexivity. Qed.
-
-  Lemma interp_recursive_readArray (idx : nat) (arr : STArray nat S nat) (i : nat) :
-    interp (recursive body) (readArray (E := D +' E0) (idx := idx) arr i)
-    ≈ readArray (E := E0) (idx := idx) arr i.
-  Proof. unfold readArray, D, E0, V, T. rewrite interp_trigger. reflexivity. Qed.
-
-  Lemma interp_recursive_writeArray (idx : nat) (arr : STArray nat S nat) (i v : nat) :
-    interp (recursive body) (writeArray (E := D +' E0) (idx := idx) arr i v)
-    ≈ writeArray (E := E0) (idx := idx) arr i v.
-  Proof. unfold writeArray, D, E0, V, T. rewrite interp_trigger. reflexivity. Qed.
-
-  Lemma interp_recursive_swapArray (idx : nat) (arr : STArray nat S nat) (i j : nat) :
-    interp (recursive body) (swapArray (E := D +' E0) (idx := idx) arr i j)
-    ≈ swapArray (E := E0) (idx := idx) arr i j.
-  Proof.
-    unfold swapArray.
-    rewrite interp_recursive_bind. apply eutt_eq_bind'; [ apply interp_recursive_readArray | intros vi ].
-    rewrite interp_recursive_bind. apply eutt_eq_bind'; [ apply interp_recursive_readArray | intros vj ].
-    rewrite interp_recursive_bind. apply eutt_eq_bind'; [ apply interp_recursive_writeArray | intros _ ].
-    apply interp_recursive_writeArray.
-  Qed.
-
-  Lemma interp_recursive_for_each_with {X Acc} (xs : list X) (v : Acc)
-    (fD : Acc -> X -> itree (D +' E0) Acc) (f : Acc -> X -> itree E0 Acc) :
-    (forall b a, interp (recursive body) (fD b a) ≈ f b a) ->
-    interp (recursive body) (for_each_with xs v fD) ≈ for_each_with xs v f.
-  Proof.
-    revert v. induction xs as [|h t IH]; intros v Hf; cbn [for_each_with].
-    - apply interp_recursive_Ret.
-    - rewrite interp_recursive_bind. apply eutt_eq_bind'; auto.
-  Qed.
-
-End RecursiveArrays.

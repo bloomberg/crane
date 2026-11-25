@@ -178,3 +178,13 @@
 
 
 
+(subdir itree_two_self_calls
+ (rule
+  (targets itree_two_self_calls.t.exe)
+  (deps ItreeTwoSelfCalls.vo itree_two_self_calls.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_two_self_calls.t.exe itree_two_self_calls.t.cpp itree_two_self_calls.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_two_self_calls.t.exe)
+  (action (run ./itree_two_self_calls.t.exe))))
