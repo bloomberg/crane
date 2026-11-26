@@ -206,7 +206,7 @@ and binding : l Binding.t -> r Binding.t = function
     template is not instantiated. *)
 and custom_match (m : l Custom_match.t) : r Custom_match.t =
   let param (p : l Custom_match.param) : r Custom_match.param =
-    {name = p.name; type_ = type_ p.type_; binder = p.binder} in
+    {name = p.name; type_ = type_ p.type_; used = p.used; binder = p.binder} in
   { return_type = type_ m.return_type;
     scrutinee = expr m.scrutinee;
     type_args = list type_ m.type_args;

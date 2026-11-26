@@ -16409,3 +16409,14 @@
   (alias runtest)
   (deps st_dead_stores.t.exe)
   (action (run ./st_dead_stores.t.exe))))
+
+(subdir st_readable_forms
+ (rule
+  (targets st_readable_forms.t.exe)
+  (deps StReadableForms.vo st_readable_forms.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_readable_forms.t.exe st_readable_forms.t.cpp st_readable_forms.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_readable_forms.t.exe)
+  (action (run ./st_readable_forms.t.exe))))

@@ -864,6 +864,29 @@ let instantiate_foreign (d : settled) : settled =
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
   Map.decl (rw ()) (Map.decl (instantiating ~boxing) d)
 
+(** A value bound to a variable only to be taken apart by the structured
+    binding that follows -- [std::pair<A, B> x_ = a[i]; const auto &[p, k] =
+    x_;] -- is taken apart where it is computed: [auto [p, k] = a[i];].  The
+    binding holds the value by value ([auto], not [const auto &]), as the
+    variable did, so it does not alias what the value was read from.  Only
+    where nothing else reads the variable, and it was declared by value. *)
+let bind_scrutinees_in_place (d : settled) : settled =
+  let rec stmts (ss : stmt list) : stmt list =
+    match ss with
+    | Bind_variable (x, Declare (t, _), init) :: Custom_match m :: rest
+      when (match t with Reference _ -> false | _ -> true)
+           && (match m.scrutinee with Local y | Move (Local y) -> Id.equal x y | _ -> false)
+           && Cpp_ir.Foreign_template.structured_binding m.template <> None
+           && not
+                (Cpp_ir.Variables.mem x
+                   (Cpp_ir.Variables.free_in_body
+                      (List.concat_map (fun (b : phase Custom_match.branch) -> b.body) m.branches @ rest))) ->
+      stmts (Custom_match {m with scrutinee = init; hold = Owned} :: rest)
+    | s :: rest -> Map.stmt (rw ()) s :: stmts rest
+    | [] -> []
+  and rw () = rewriter ~stmts ~expr:(fun e -> Map.expr (rw ()) e) ~stmt:(fun s -> Map.stmt (rw ()) s) ~type_:same_type () in
+  Map.decl (rw ()) d
+
 (** Scalar replacement: a local's address dereferenced, [*&x], is [x].  A
     mapped identity {!Local_storage} keeps in a local is reached through its
     view, the local's address [&x]; an operation reading or writing through
@@ -895,11 +918,88 @@ let drop_local_derefs (d : settled) : settled =
   in
   let rec fe (e : expr) : expr =
     match Map.expr (rw ()) e with
-    | Foreign (use, f) -> Foreign (use, simplify f)
+    | Foreign (use, f) -> (
+      (* A read through the view that is the local alone is the local. *)
+      match simplify f with
+      | {pieces = [Value 0]; values = [v]; _} when f.pieces <> [Value 0] -> v
+      | f -> Foreign (use, f) )
     | e -> e
-  and fs s = Map.stmt (rw ()) s
+  and fs s : stmt =
+    match (Map.stmt (rw ()) s : stmt) with
+    (* A custom match's scrutinee written with its pointer operator was
+       parenthesised; the local the dereference became is not. *)
+    | Custom_match ({pieces = Instantiated ps; scrutinee; _} as m) ->
+      let parenthesised = Cpp_ir.Written.written_with_leading_pointer_operator scrutinee in
+      let ps = List.map (function Custom_match.Scrutinee _ -> Custom_match.Scrutinee {parenthesised} | p -> p) ps in
+      Custom_match {m with pieces = Instantiated ps}
+    | s -> s
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
   Map.decl (rw ()) d
+
+(* What [s] itself binds other than by a declaration -- by reference, or at
+   a type not said there: a structured binding's names, a range loop's
+   variable, a match's bindings. *)
+let bound_otherwise (s : stmt) : Id.t list =
+  match s with
+  | Structured_binding (xs, _) -> xs
+  | For_range (x, _, _) | If_declaration {name = x; _} -> [x]
+  | Match (_, branches, _) ->
+    List.concat_map
+      (fun (b : phase Match.branch) ->
+        (match b.var with Some x -> [x] | None -> [])
+        @ List.map (fun (f : phase Match.field_binding) -> f.name) b.field_bindings)
+      branches
+  | Custom_match m ->
+    List.concat_map
+      (fun (b : phase Custom_match.branch) -> List.map (fun (p : phase Custom_match.param) -> p.name) b.params)
+      m.branches
+  | _ -> []
+
+(* The variable a statement assigns, and the value: [x = e;] in any of its
+   forms, or a mapping's store [%a0 = %a1] on a local that scalar
+   replacement left ({!drop_local_derefs}). *)
+let store (s : stmt) : (Id.t * expr) option =
+  match s with
+  | Bind_variable (x, Existing, e) | Assign (Local x, e) | Expression (Binary (Assign, Local x, e)) -> Some (x, e)
+  | Expression (Foreign (_, {pieces = [Value 0; Text t; Value 1]; values = [Local x; e]; _})) when String.trim t = "=" ->
+    Some (x, e)
+  | _ -> None
+
+(* The variables [ss] assign, at any depth: {!Cpp_ir.Variables.assigned},
+   and the mapping stores {!store} reads. *)
+let assigned_in (ss : stmt list) =
+  let acc = ref (Cpp_ir.Variables.assigned ss) in
+  let rec v : phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> Cpp_ir.Children.expr v e); stmt = (fun s -> fs s); type_ = ignore}
+  and fs (s : stmt) =
+    (match store s with Some (x, _) -> acc := Id.Set.add x !acc | None -> ());
+    Cpp_ir.Children.stmt v s
+  in
+  List.iter fs ss;
+  !acc
+
+(* [d] with [f params body] for each function's and method's body, [params]
+   its parameters. *)
+let on_bodies f (d : settled) : settled =
+  let rec member ((m, a, b) : _ Cpp_ir.Field.member) : _ Cpp_ir.Field.member =
+    match m with
+    | Method mt -> (Method {mt with body = f mt.params mt.body}, a, b)
+    | Nested_struct (x, ms) -> (Nested_struct (x, List.map member ms), a, b)
+    | Out_of_line_declaration (Method mt) -> (Out_of_line_declaration (Method {mt with body = f mt.params mt.body}), a, b)
+    | _ -> (m, a, b)
+  in
+  let rec decl (d : decl) : decl =
+    match d with
+    | Function ({shape = Definition (ps, body); _} as fn) -> Function {fn with shape = Definition (ps, f ps body)}
+    | Template (ps, c, d) -> Template (ps, c, decl d)
+    | Namespace (x, ds) -> Namespace (x, List.map decl ds)
+    | Struct s -> Struct {s with fields = List.map member s.fields}
+    | Merged_struct_members s -> Merged_struct_members {s with fields = List.map member s.fields}
+    | Member_definition ({member = Method mt; _} as md) ->
+      Member_definition {md with member = Method {mt with body = f mt.params mt.body}}
+    | _ -> d
+  in
+  decl d
 
 (** Dead stores: a variable declared by value that nothing reads, only
     assigns, is not kept.  Each assignment to it goes -- [x = e;], or a
@@ -916,14 +1016,6 @@ let drop_local_derefs (d : settled) : settled =
     whole body: a variable declared more than once, or at a reference type,
     is left alone. *)
 let drop_dead_stores (d : settled) : settled =
-  let store (s : stmt) : (Id.t * expr) option =
-    match s with
-    | Bind_variable (x, Existing, e) | Assign (Local x, e) | Expression (Binary (Assign, Local x, e)) -> Some (x, e)
-    | Expression (Foreign (_, {pieces = [Value 0; Text t; Value 1]; values = [Local x; e]; _}))
-      when String.trim t = "=" ->
-      Some (x, e)
-    | _ -> None
-  in
   (* Whether evaluating [e] has no effect: it calls no function but a
      constructor or a mapping's text whose type is no monadic action, and
      no mapped operation but a pure one, and runs no lambda. *)
@@ -981,23 +1073,12 @@ let drop_dead_stores (d : settled) : settled =
         if effect_free e then self := Some x;
         fe e;
         self := saved
-      | None, Bind_variable (x, Declare (t, _), init) ->
+      | None, Bind_variable (x, (Declare (t, _) | Declare_deduced (Typed t, _)), init) ->
         declare x t;
         fe init
       | None, (Declare (x, t, _) | Declare_value_initialized (x, t)) -> declare x t
       | None, s ->
-        (* What [s] binds itself, other than by a declaration: by reference
-           or at a type not said here. *)
-        let bound =
-          match s with
-          | Structured_binding (xs, _) -> xs
-          | For_range (x, _, _) | If_declaration {name = x; _} -> [x]
-          | Match (_, branches, _) ->
-            List.concat_map (fun (b : phase Match.branch) -> (match b.var with Some x -> [x] | None -> []) @ List.map (fun (f : phase Match.field_binding) -> f.name) b.field_bindings) branches
-          | Custom_match m -> List.concat_map (fun (b : phase Custom_match.branch) -> List.map (fun (p : phase Custom_match.param) -> p.name) b.params) m.branches
-          | _ -> []
-        in
-        List.iter (fun x -> Hashtbl.replace decls x false) bound;
+        List.iter (fun x -> Hashtbl.replace decls x false) (bound_otherwise s);
         Cpp_ir.Children.stmt v s
     in
     List.iter fs ss;
@@ -1009,7 +1090,7 @@ let drop_dead_stores (d : settled) : settled =
     let rec note (s : stmt) =
       ( match (store s, s) with
       | Some (x, e), _ when unread x && not (removable e) -> Hashtbl.replace kept x ()
-      | None, Bind_variable (x, Declare _, init) when unread x && not (removable init) -> Hashtbl.replace kept x ()
+      | None, Bind_variable (x, (Declare _ | Declare_deduced _), init) when unread x && not (removable init) -> Hashtbl.replace kept x ()
       | _ -> () );
       Cpp_ir.Children.stmt nv s
     and nv : phase Cpp_ir.Children.visitor = {expr = (fun e -> Cpp_ir.Children.expr nv e); stmt = note; type_ = ignore} in
@@ -1025,7 +1106,7 @@ let drop_dead_stores (d : settled) : settled =
       match (store s, s) with
       | Some (x, e), _ when dead x -> (
         match removed e with Some r -> r | None -> blocked := true; [s] )
-      | None, Bind_variable (x, Declare _, init) when dead x -> (
+      | None, Bind_variable (x, (Declare _ | Declare_deduced _), init) when dead x -> (
         match removed init with Some r -> r | None -> blocked := true; [s] )
       | None, (Declare (x, _, _) | Declare_value_initialized (x, _)) when dead x -> []
       | _ -> [Map.stmt (rw ()) s]
@@ -1043,26 +1124,124 @@ let drop_dead_stores (d : settled) : settled =
   let rec fixpoint params ss n =
     match body params ss with Some ss' when n > 0 -> fixpoint params ss' (n - 1) | Some ss' -> ss' | None -> ss
   in
-  let fix params ss = fixpoint params ss 4 in
-  let rec member ((f, a, b) : _ Cpp_ir.Field.member) : _ Cpp_ir.Field.member =
-    match f with
-    | Method m -> (Method {m with body = fix m.params m.body}, a, b)
-    | Nested_struct (x, ms) -> (Nested_struct (x, List.map member ms), a, b)
-    | Out_of_line_declaration (Method m) -> (Out_of_line_declaration (Method {m with body = fix m.params m.body}), a, b)
-    | _ -> (f, a, b)
+  on_bodies (fun params ss -> fixpoint params ss 4) d
+
+(** Copies of a local, propagated: [T x = y;], where [x] and [y] are
+    variables declared once by value at a type copied as its bits
+    ({!Plain_moves.bit_copied}), is dropped, and what follows reads [y] for
+    [x], where that reads the same value: nothing after the copy writes [x]
+    or takes its address, and [y] is written, if at all, by a statement of
+    the same list after which nothing reads [x] -- [uint64_t y_ = y; x =
+    y_; y = x_ + y_;] is [x = y; y = x_ + y;].  A lambda reading [x] is
+    left alone where [y] is written after it: it may run after the write.
+    Scalar replacement leaves such copies: [uint64_t x1 = r1;] for a read of
+    a reference kept in a local. *)
+let propagate_copies (d : settled) : settled =
+  let body params (ss : stmt list) =
+    let decls = Hashtbl.create 16 in
+    let declare x (t : ty) =
+      Hashtbl.replace decls x (match Hashtbl.find_opt decls x with Some _ -> false | None -> Plain_moves.bit_copied t)
+    in
+    List.iter (fun (x, t) -> declare x t) params;
+    let rec note (s : stmt) =
+      ( match s with
+      | Bind_variable (x, (Declare (t, _) | Declare_deduced (Typed t, _)), _) | Declare (x, t, _) | Declare_value_initialized (x, t) ->
+        declare x t
+      | s -> List.iter (fun x -> Hashtbl.replace decls x false) (bound_otherwise s) );
+      Cpp_ir.Children.stmt nv s
+    and nv : phase Cpp_ir.Children.visitor =
+      {expr = (fun e -> ne e); stmt = note; type_ = ignore}
+    and ne (e : expr) =
+      (match e with Lambda l -> List.iter (fun (t, x) -> Option.iter (fun x -> declare x t) x) l.params | _ -> ());
+      Cpp_ir.Children.expr nv e
+    in
+    List.iter note ss;
+    let plain x = Hashtbl.find_opt decls x = Some true in
+    (* Whether [ss] may write [x] other than by assigning it: by its address,
+       or as a mutable reference argument. *)
+    let escapes x (ss : stmt list) =
+      let found = ref false in
+      let is_x (e : expr) = match e with Local y -> Id.equal x y | _ -> false in
+      let rec v : phase Cpp_ir.Children.visitor = {expr = (fun e -> fe e); stmt = (fun s -> Cpp_ir.Children.stmt v s); type_ = ignore}
+      and fe (e : expr) =
+        ( match e with
+        | Unary (Address_of, a) when is_x a -> found := true
+        | Foreign (_, f) ->
+          let values = Array.of_list f.values in
+          let rec scan = function
+            | Cpp_ir.Foreign.Text t :: Value i :: _
+              when i < Array.length values && is_x values.(i)
+                   && String.length (String.trim t) > 0
+                   && (let t = String.trim t in t.[String.length t - 1] = '&') ->
+              found := true
+            | _ :: rest -> scan rest
+            | [] -> ()
+          in
+          scan f.pieces
+        | Call ({params = Types ts; _}, _, args) when List.length ts = List.length args ->
+          List.iter2 (fun (t : ty) a -> match t with Reference (Lvalue, t') when (match t' with Const _ -> false | _ -> true) && is_x a -> found := true | _ -> ()) ts args
+        | _ -> () );
+        Cpp_ir.Children.expr v e
+      in
+      List.iter (Cpp_ir.Children.stmt v) ss;
+      !found
+    in
+    let mentions x (ss : stmt list) = Cpp_ir.Variables.mem x (Cpp_ir.Variables.free_in_body ss) in
+    let lambda_reads x (ss : stmt list) =
+      let found = ref false in
+      let rec v : phase Cpp_ir.Children.visitor = {expr = (fun e -> fe e); stmt = (fun s -> Cpp_ir.Children.stmt v s); type_ = ignore}
+      and fe (e : expr) =
+        match e with
+        | Lambda _ -> if Cpp_ir.Variables.mem x (Cpp_ir.Variables.free_in_expr e) then found := true
+        | _ -> Cpp_ir.Children.expr v e
+      in
+      List.iter (Cpp_ir.Children.stmt v) ss;
+      !found
+    in
+    let rename x y (ss : stmt list) =
+      let rec fe (e : expr) : expr = match e with Local z when Id.equal z x -> Local y | _ -> Map.expr (m ()) e
+      and fs (s : stmt) : stmt = Map.stmt (m ()) s
+      and m () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
+      List.map fs ss
+    in
+    (* [rest], after the copy [x] of [y], reading [y] for [x], where that
+       reads the same value. *)
+    let propagated x y (rest : stmt list) =
+      let declared = Cpp_ir.Variables.declared rest in
+      if Id.Set.mem x (assigned_in rest)
+         || Cpp_ir.Variables.mem x declared || Cpp_ir.Variables.mem y declared
+         || escapes x rest || escapes y rest
+      then None
+      else
+        let rec split before = function
+          | [] -> Some (List.rev before, [])
+          | s :: after when Id.Set.mem y (assigned_in [s]) -> (
+            match store s with
+            | Some (z, _) when Id.equal z y && not (mentions x after) && not (lambda_reads x (List.rev before)) ->
+              Some (List.rev (s :: before), after)
+            | _ -> None )
+          | s :: after -> split (s :: before) after
+        in
+        match split [] rest with
+        | Some (upto, after) -> Some (rename x y upto @ after)
+        | None -> None
+    in
+    let rec stmts (ss : stmt list) : stmt list =
+      match ss with
+      | (Bind_variable (x, (Declare (t, _) | Declare_deduced (Typed t, _)), Local y) as s) :: rest
+        when (not (Id.equal x y)) && plain x && plain y && Plain_moves.bit_copied t -> (
+        match propagated x y rest with
+        | Some rest -> stmts rest
+        | None -> Map.stmt (rw ()) s :: stmts rest )
+      (* What a propagation leaves of a copy put back, [x = x;], does
+         nothing. *)
+      | s :: rest when (match store s with Some (x, Local y) -> Id.equal x y | _ -> false) -> stmts rest
+      | s :: rest -> Map.stmt (rw ()) s :: stmts rest
+      | [] -> []
+    and rw () = rewriter ~stmts ~expr:(fun e -> Map.expr (rw ()) e) ~stmt:(fun s -> Map.stmt (rw ()) s) ~type_:same_type () in
+    stmts ss
   in
-  let rec decl (d : decl) : decl =
-    match d with
-    | Function ({shape = Definition (ps, body); _} as fn) -> Function {fn with shape = Definition (ps, fix ps body)}
-    | Template (ps, c, d) -> Template (ps, c, decl d)
-    | Namespace (x, ds) -> Namespace (x, List.map decl ds)
-    | Struct s -> Struct {s with fields = List.map member s.fields}
-    | Merged_struct_members s -> Merged_struct_members {s with fields = List.map member s.fields}
-    | Member_definition ({member = Method m; _} as md) ->
-      Member_definition {md with member = Method {m with body = fix m.params m.body}}
-    | _ -> d
-  in
-  decl d
+  on_bodies body d
 
 (* A type that qualifies a member in value position, [T::f(..)], spelled as
    the value it names: a named global written as an expression -- no
@@ -1155,9 +1334,21 @@ let mark_unused_bindings (d : settled) : settled =
       if List.exists (fun (fb : phase Match.field_binding) -> fb.used) fields then {b with field_bindings = fields}
       else {b with field_bindings = []; var = None}
   in
+  (* A custom match that is a structured binding of its scrutinee: each
+     binder its branch does not read. *)
+  let custom (m : phase Custom_match.t) : phase Custom_match.t =
+    if Cpp_ir.Foreign_template.structured_binding m.template = None then m
+    else
+      let branch (b : phase Custom_match.branch) : phase Custom_match.branch =
+        let read = Cpp_ir.Variables.free_in_body b.body in
+        {b with params = List.map (fun (p : phase Custom_match.param) -> {p with used = Cpp_ir.Variables.mem p.name read}) b.params}
+      in
+      {m with branches = List.map branch m.branches}
+  in
   let rec fs (s : stmt) : stmt =
     match Map.stmt (rw ()) s with
     | Match (scrut, branches, default) -> Match (scrut, List.map branch branches, default)
+    | Custom_match m -> Custom_match (custom m)
     | s -> s
   and fe e = Map.expr (rw ()) e
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in

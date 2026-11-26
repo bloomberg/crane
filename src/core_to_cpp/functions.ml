@@ -869,6 +869,9 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
     fun x -> List.assoc_opt x by_id
   in
   let reference_allowed = not (is_pinned cx n) in
+  (* A parameter every partial application of [n] supplies is passed by the
+     call the closure makes: it may be a view. *)
+  let supplied = supplied_parameters cx n in
   (* The callables kept as [crane::fn], by binder: decided here, where every
      binder is still at its source position -- [all_ids] is innermost first,
      so the [p]th is source parameter [n_params - 1 - p] -- and read by name
@@ -897,6 +900,10 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
   (* Convert Core types to C++ types and wrap with const. Owned shared_ptr params:
      pass by value (shared_ptr<T>) Borrowed shared_ptr params: pass by const ref
      (const shared_ptr<T>&) *)
+  let source_index =
+    let by_id = List.mapi (fun p (x, _, _) -> (x, n_params - 1 - p)) all_ids_with_owned in
+    fun x -> match List.assoc_opt x by_id with Some i -> i | None -> max_int
+  in
   let ids =
     List.map
       (fun (x, ty, owned) ->
@@ -909,7 +916,7 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
         let cpp_ty = Monadic.reify_monadic_param_type cx ty cpp_ty in
         let wrapped, mode =
           Ownership.wrap_param_by_ownership cx ~is_owned:owned ?access:(access_of x) ~reference_allowed
-            ~view_allowed:reference_allowed ~core:ty cpp_ty
+            ~view_allowed:(reference_allowed || source_index x < supplied) ~core:ty cpp_ty
         in
         ((x, wrapped), (x, mode)) )
       ids_with_owned

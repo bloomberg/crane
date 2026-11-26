@@ -89,6 +89,11 @@ let conditionals = Base.Pipeline_trace.pass "conditionals" Erasure.lower_conditi
 let access_moves = Base.Pipeline_trace.pass "access_moves" Erasure.lower_access_moves
 let constexpr = Base.Pipeline_trace.pass "constexpr" Erasure.decide_constexpr
 let immortal_globals = Base.Pipeline_trace.pass "immortal_globals" Erasure.immortal_globals
+
+(** A value bound only to be taken apart is taken apart where it is
+    computed ({!Erasure.bind_scrutinees_in_place}). *)
+let scrutinee_bindings = Base.Pipeline_trace.pass "scrutinee_bindings" Erasure.bind_scrutinees_in_place
+
 let foreign = Base.Pipeline_trace.pass "foreign" Erasure.instantiate_foreign
 
 (** A local's address dereferenced, written once the mappings' texts are,
@@ -98,6 +103,10 @@ let local_derefs = Base.Pipeline_trace.pass "local_derefs" Erasure.drop_local_de
 (** A variable only ever assigned, which scalar replacement leaves, is not
     kept ({!Erasure.drop_dead_stores}). *)
 let dead_stores = Base.Pipeline_trace.pass "dead_stores" Erasure.drop_dead_stores
+
+(** A copy of a local copied as its bits is the local
+    ({!Erasure.propagate_copies}). *)
+let copies = Base.Pipeline_trace.pass "copies" Erasure.propagate_copies
 
 let qualifiers = Base.Pipeline_trace.pass "qualifiers" Erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
@@ -223,7 +232,7 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     initialiser holding a lambda that captures is invoked in place.  [u] is
     the unit the declaration is of. *)
 let instantiation_passes u =
-  [foreign; local_derefs; dead_stores; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
+  [scrutinee_bindings; foreign; local_derefs; dead_stores; copies; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
 
 let pass_names =
   Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_plan.Context.detached)

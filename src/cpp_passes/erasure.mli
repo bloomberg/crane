@@ -146,6 +146,11 @@ val supply_template_args : settled -> settled
     its instantiated scrutinee. *)
 val instantiate_foreign : settled -> settled
 
+(** [bind_scrutinees_in_place decl]: a value bound to a variable only to be
+    taken apart by the structured binding that follows is taken apart where
+    it is computed, by value. *)
+val bind_scrutinees_in_place : settled -> settled
+
 (** [drop_local_derefs decl] is scalar replacement: a dereference opening a
     mapping's text, [*%arg(ref)], applied to a local's address, [&x] -- the
     view of a mapped identity {!Local_storage} keeps in a local -- is the
@@ -157,6 +162,11 @@ val drop_local_derefs : settled -> settled
     -- loses its assignments and, for a local, its declaration; a value that
     may have an effect is still evaluated. *)
 val drop_dead_stores : settled -> settled
+
+(** [propagate_copies decl]: a copy [T x = y;] of a local copied as its
+    bits is dropped and what follows reads [y], where that reads the same
+    value. *)
+val propagate_copies : settled -> settled
 
 (** [lower_qualifiers decl] spells each type qualifying a member in value
     position as what the printer writes there: a named global becomes the

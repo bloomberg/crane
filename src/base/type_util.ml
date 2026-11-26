@@ -1135,6 +1135,12 @@ let custom_referenced_positions_opt g =
     about a position it declared phantom.  What stands in an unwritten position
     is not in the rendered type at all, so nothing there is deducible, erased,
     or otherwise visible to C++. *)
+let spelled_as_argument g =
+  match Option.map String.trim (Table.find_custom_opt g) with
+  | Some text when String.length text >= 3 && String.sub text 0 2 = "%t" ->
+    int_of_string_opt (String.sub text 2 (String.length text - 2))
+  | _ -> None
+
 let type_arg_is_written g =
   match custom_referenced_positions_opt g with
   | Some referenced -> fun i -> IntSet.mem i referenced

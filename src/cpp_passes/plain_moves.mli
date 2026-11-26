@@ -16,4 +16,10 @@
 
     A pass of {!Pipeline}, after the returned moves are dropped. *)
 
+(** Whether a value of type [t] is copied as its bits: a builtin scalar, a
+    pointer, an enumeration, a typed mapping's [BitCopy] type or a type a
+    legacy mapping spells as a scalar, or one of these [const] or behind a
+    [const] reference. *)
+val bit_copied : Cpp_ir.Lowered.Type.t -> bool
+
 val transform_decl : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t

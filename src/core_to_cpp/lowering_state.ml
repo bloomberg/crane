@@ -113,9 +113,10 @@ type program_facts = {
   parameter_access : Core_plan.Access.requirement list Core.Ref.User.Map.t;
       (** what each function does with its parameters, innermost first,
           settled across calls ({!Core_plan.Access.summarize}) *)
-  pinned : Core.Ref.User.Set.t;
+  pinned : int Core.Ref.User.Map.t;
       (** the functions named as values, whose parameters keep canonical
-          forms ({!Core_plan.Access}) *)
+          forms but the leading ones every such occurrence supplies
+          ({!Core_plan.Access}) *)
 }
 
 (** The facts of a program nothing was analysed for: lowering outside an
@@ -126,7 +127,7 @@ let no_program_facts =
     partner_closure_params = Core.Ref.User.Map.empty;
     reusing_matches = Core.Ref.User.Set.empty;
     parameter_access = Core.Ref.User.Map.empty;
-    pinned = Core.Ref.User.Set.empty }
+    pinned = Core.Ref.User.Map.empty }
 
 (** What analysing and planning the unit being extracted decided that
     lowering reads, set for the extent of the unit
@@ -665,7 +666,13 @@ let own_access cx r = Core.Ref.User.Map.find_opt r cx.ctx.input.program.paramete
 
 (** Whether the function [r] is named as a value, so its parameters keep
     canonical forms. *)
-let is_pinned cx r = Core.Ref.User.Set.mem r cx.ctx.input.program.pinned
+let is_pinned cx r = Core.Ref.User.Map.mem r cx.ctx.input.program.pinned
+
+(** How many of [r]'s leading parameters every occurrence of [r] as a
+    value supplies, so that they are passed as any call passes them: all
+    where [r] is not pinned. *)
+let supplied_parameters cx r =
+  match Core.Ref.User.Map.find_opt r cx.ctx.input.program.pinned with Some k -> k | None -> max_int
 
 (** [generating_at site f] runs [f] with generation at [site]
     ({!input.generating}); the entries below are the only callers. *)

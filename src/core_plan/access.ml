@@ -181,19 +181,27 @@ let read_off ?(sequential = false) ~settled n body =
 
 type t = {
   summaries : (Names.GlobRef.t * requirement list) list;
-  pinned : Core.Ref.User.Set.t;
+  pinned : int Core.Ref.User.Map.t;
 }
 
-let empty = {summaries = []; pinned = Core.Ref.User.Set.empty}
+let empty = {summaries = []; pinned = Core.Ref.User.Map.empty}
 
-(* The globals [struc] names other than as the head of a saturated call. *)
+(* The globals [struc] names other than as the head of a saturated call,
+   each with how many of its leading parameters every such occurrence
+   supplies: none for the bare name, the arguments given for a partial
+   application.  A partial application is an ordinary call of the global
+   inside the closure it becomes, so what it supplies is passed as any
+   call passes it. *)
 let named_as_values struc =
-  let found = ref Core.Ref.User.Set.empty in
+  let found = ref Core.Ref.User.Map.empty in
+  let note g k =
+    found := Core.Ref.User.Map.update g (function Some k' -> Some (min k k') | None -> Some k) !found
+  in
   let rec scan (e : Core.Expr.t) =
     match e with
-    | Core.Expr.Global {callee = g; _} -> found := Core.Ref.User.Set.add g !found
-    | Core.Expr.Apply {callee = Core.Expr.Global _ as head; arguments = args} when not (Escape.is_partial_app head args)
-      ->
+    | Core.Expr.Global {callee = g; _} -> note g 0
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _} as head; arguments = args} ->
+      if Escape.is_partial_app head args then note g (List.length args);
       List.iter scan args
     | e -> Base.Core_util.ast_iter scan e
   in
@@ -205,14 +213,22 @@ let named_as_values struc =
   !found
 
 let exported ~pinned g reqs =
-  if Core.Ref.User.Set.mem g pinned then List.map (fun r -> {(rank_cap r) with representation = Canonical}) reqs
-  else reqs
+  match Core.Ref.User.Map.find_opt g pinned with
+  | None -> reqs
+  | Some supplied ->
+    (* [reqs] is innermost first: the [j]th is source parameter [n - 1 - j]. *)
+    let n = List.length reqs in
+    List.mapi
+      (fun j r ->
+        if n - 1 - j < supplied then if r.access = Replace_access then rank_cap r else r
+        else {(rank_cap r) with representation = Canonical})
+      reqs
 
 let summarize ?(receiver = fun _ -> None) struc =
   let fns = Ownership.functions struc in
   let pinned =
     List.fold_left
-      (fun s (r, _, _, _) -> if Option.has_some (receiver r) then Core.Ref.User.Set.add r s else s)
+      (fun s (r, _, _, _) -> if Option.has_some (receiver r) then Core.Ref.User.Map.add r 0 s else s)
       (named_as_values struc) fns
   in
   (* Every summary starts at the least requirement, so that a call met
@@ -257,7 +273,7 @@ let summarize ?(receiver = fun _ -> None) struc =
         in
         Printf.eprintf "access %s%s: %s\n%!"
           (Pp.string_of_ppcmds (Base.Table.safe_pr_global r))
-          (if Core.Ref.User.Set.mem r pinned then " (pinned)" else "")
+          (match Core.Ref.User.Map.find_opt r pinned with Some k -> Printf.sprintf " (pinned after %d)" k | None -> "")
           (String.concat " " (List.rev_map show reqs)) )
       !summaries;
   {summaries = Core.Ref.User.Map.bindings !summaries; pinned}
@@ -269,7 +285,9 @@ let physical ~reference_allowed ?(view_allowed = false) (p : Base.Mapping_plan.t
     | Replace_access -> Base.Mapping_plan.replace_form p
     | Write_access when view Base.Mapping_plan.Write_view -> Base.Mapping_plan.Physical_view Write_view
     | Write_access -> Base.Mapping_plan.write_through p
-    | Read_access when view Base.Mapping_plan.Read_view -> Base.Mapping_plan.Physical_view Read_view
+    (* An unused parameter takes nothing: its read view, which a caller
+       holding the value or either view can pass. *)
+    | (Read_access | Unused) when view Base.Mapping_plan.Read_view -> Base.Mapping_plan.Physical_view Read_view
     | Read_access | Unused -> Base.Mapping_plan.As_read
   in
   match form with

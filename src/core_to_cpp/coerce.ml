@@ -73,11 +73,8 @@ let normal al t =
     (* A custom type whose template is one of its arguments is that
        argument: an erased [itree E R], written [%t1], is [R]. *)
     | Entity_application (g, xs, _) -> (
-      match Option.map String.trim (Base.Table.find_custom_opt g) with
-      | Some text when String.length text >= 3 && String.sub text 0 2 = "%t" -> (
-        match int_of_string_opt (String.sub text 2 (String.length text - 2)) with
-        | Some k when k < List.length xs -> spelled (List.nth xs k)
-        | _ -> t )
+      match Base.Type_util.spelled_as_argument g with
+      | Some k when k < List.length xs -> spelled (List.nth xs k)
       | _ -> t )
     | t -> t
   in

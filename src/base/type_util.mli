@@ -610,6 +610,11 @@ val custom_referenced_positions_opt : Names.GlobRef.t -> IntSet.t option
     predicate {!written_type_args} filters by. *)
 val type_arg_is_written : Names.GlobRef.t -> int -> bool
 
+(** [Some k] where the custom template of the type [g] is its [k]th type
+    argument and nothing else ([%t1], an erased [itree E R]): a value of
+    [g] at some arguments is a value of that argument. *)
+val spelled_as_argument : Names.GlobRef.t -> int option
+
 (** Replace every unwritten type argument (see {!written_type_args}) by
     [void], so a predicate over the result reads the type as it is spelled. *)
 val prune_unwritten_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t

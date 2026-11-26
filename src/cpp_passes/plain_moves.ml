@@ -11,8 +11,10 @@ type stmt = Cpp_ir.Lowered.Stmt.t
 type ty = Cpp_ir.Lowered.Type.t
 
 (** Whether a value of type [t] is copied as its bits: a builtin scalar, a
-    pointer, an enumeration, a typed mapping's [BitCopy] type, or one of
-    these [const] or behind a [const] reference.  A type variable, a
+    pointer, an enumeration, a typed mapping's [BitCopy] type, a type a
+    legacy mapping spells as a scalar ([nat] as [uint64_t]), a custom
+    type spelled as such a type argument (an erased [itree E nat]), or one
+    of these [const] or behind a [const] reference.  A type variable, a
     deduced type and anything else may hold a value worth moving. *)
 let rec bit_copied (t : ty) =
   match t with
@@ -20,10 +22,18 @@ let rec bit_copied (t : ty) =
   | Pointer _ -> true
   | Named (x, []) -> Base.Table.is_trivially_copyable_cpp_name (Id.to_string x)
   | External (s, []) -> Base.Table.is_trivially_copyable_cpp_name s
-  | Entity_application (r, _, _) when Base.Mapping_plan.is_type_head r ->
-    (Base.Mapping_plan.find r).copy = Base.Mapping_descriptor.Bit_copy
-  | Entity_application (r, [], _) -> Base.Table.is_enum_inductive r
+  | Entity_application (r, xs, _) -> global_bit_copied r xs
+  | Foreign {custom = r; types = xs; _} -> global_bit_copied r xs
   | _ -> false
+
+(* Whether the global type [r] at [xs] is copied as its bits, a mapping's
+   instantiated text included. *)
+and global_bit_copied r (xs : ty list) =
+  match Base.Type_util.spelled_as_argument r with
+  | Some k -> ( match List.nth_opt xs k with Some t -> bit_copied t | None -> false )
+  | None ->
+    if Base.Mapping_plan.is_type_head r then (Base.Mapping_plan.find r).copy = Base.Mapping_descriptor.Bit_copy
+    else xs = [] && (Base.Table.is_enum_inductive r || Base.Table.is_custom_scalar_ref r)
 
 (* [env], the locals in scope copied as their bits ({!bit_copied}), after
    [x] is declared at [t]. *)

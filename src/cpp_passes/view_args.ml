@@ -494,11 +494,18 @@ let transform_body u params modes (body : stmt list) : stmt list =
       | Borrow_only -> refuse g )
     | Canonical _ | Unknown -> e
   in
-  (* [e], which holds [h], narrowed to a view of kind [k], or [None] when it
-     is no view. *)
-  let as_view f k (h : held) (e : expr) : expr option =
+  (* [e], which holds [h], narrowed to a view of kind [k] the target [t]
+     takes, or [None] when it is no view.  A writable view is an operation's
+     read view as it is: the operation's text reads through it, and C++
+     converts it wherever the text spells the read view's type
+     ([std::span<T>] to [std::span<const T>]).  A generated function's
+     parameter is narrowed to: its element type may be deduced from the read
+     view's own. *)
+  let as_view f t (h : held) (e : expr) : expr option =
+    let k = target_kind t in
     let narrowed have conv =
       if have = k then Some e
+      else if have = Plan.Write_view && (match t with Op_view _ -> true | Plan_view _ -> false) then Some e
       else
         match (have, conv) with
         | Plan.Write_view, Some c -> Some (apply c e)
@@ -595,7 +602,7 @@ let transform_body u params modes (body : stmt list) : stmt list =
               | None ->
               let h = holding_of a in
               let inner () = match a with Local _ -> a | Call _ -> call ~escapes:false ~bound a | _ -> fe a in
-              match as_view f (target_kind t) h (inner ()) with
+              match as_view f t h (inner ()) with
               | Some v -> v
               | None ->
                 let aliased =

@@ -46,8 +46,9 @@ std::shared_ptr<array_storage<T>> new_list_array(const L &xs) {
   });
 }
 
-// The elements of an array, in order, as the list type L.
-template <class L, class T> L elems(std::span<const T> array) {
+// The elements of an array, in order, as the list type L: read through its
+// read view, std::span<const T>, or its writable view, std::span<T>.
+template <class L, class T> L elems(std::span<T> array) {
   L result = L::nil();
   for (std::size_t i = array.size(); i > 0; --i) {
     result = L::cons(array[i - 1], std::move(result));
