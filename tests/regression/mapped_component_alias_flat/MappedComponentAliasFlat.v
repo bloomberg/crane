@@ -3,16 +3,22 @@
     [std::optional], a test-local [TypeMapping]) at an element type ending in
     a function-type alias, [nat -> st nat] with [st A := nat -> A * nat],
     read by a mapped operation ([mb_get], [_m.has_value() ? *_m : _d]). The
-    [Nothing] literal's component is spelled flat through the alias,
+    [Nothing] literal's component was spelled flat through the alias,
     [std::optional<crane::fn<std::pair<uint64_t, uint64_t>(uint64_t,
-    uint64_t)>>], while the default lambda is converted to the curried
+    uint64_t)>>], while the default lambda was converted to the curried
     [crane::fn<st<uint64_t>(uint64_t)>], so the conditional's operands
-    disagree. The same at [nat -> nat -> nat] (no alias) is flat on both
-    sides and compiles. Expected: compiles, [result = 4]. Actual:
-    "incompatible operand types ('const fn<std::pair<unsigned long long,
-    unsigned long long> (unsigned long long, unsigned long long)>' and
-    'fn<crane::fn<std::pair<unsigned long long, unsigned long long> (unsigned
-    long long)> (unsigned long long)>')". *)
+    disagreed ("incompatible operand types").
+
+    Fixed: the parameter's type and the literal's annotation differed in the
+    erased term argument extraction writes in each type argument's place,
+    which a typed mapping never reads, so the two were not seen as one type
+    regrouped; a typed-mapped type now carries no term arguments
+    ([Types.cpp_ir_of_core_type]).  And a custom constructor whose
+    annotation is the slot's type regrouped through an alias is built at
+    the slot's type arguments, as a generated inductive's is
+    ([Construction.gen_expr_custom_cons]).
+
+    Expected: compiles, [result = 4]. *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Corelib Require Import PrimString.

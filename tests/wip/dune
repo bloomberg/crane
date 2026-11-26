@@ -129,8 +129,6 @@
 
 ; --- A local fix captured by reference escapes through a state-monad bind.
 
-
-
 (subdir shared_event_subevent
  (rule
   (targets shared_event_subevent.t.exe)
@@ -141,20 +139,6 @@
   (alias runtest)
   (deps shared_event_subevent.t.exe)
   (action (run ./shared_event_subevent.t.exe))))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 (subdir itree_two_self_calls
  (rule
@@ -211,28 +195,6 @@
   (deps id_any_cast_flat_fn.t.exe)
   (action (run ./id_any_cast_flat_fn.t.exe))))
 
-(subdir local_fix_alias_untyped_apply
- (rule
-  (targets local_fix_alias_untyped_apply.t.exe)
-  (deps LocalFixAliasUntypedApply.vo local_fix_alias_untyped_apply.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_alias_untyped_apply.t.exe local_fix_alias_untyped_apply.t.cpp local_fix_alias_untyped_apply.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_alias_untyped_apply.t.exe)
-  (action (run ./local_fix_alias_untyped_apply.t.exe))))
-
-(subdir local_fix_inlined_fn_join
- (rule
-  (targets local_fix_inlined_fn_join.t.exe)
-  (deps LocalFixInlinedFnJoin.vo local_fix_inlined_fn_join.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_inlined_fn_join.t.exe local_fix_inlined_fn_join.t.cpp local_fix_inlined_fn_join.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_inlined_fn_join.t.exe)
-  (action (run ./local_fix_inlined_fn_join.t.exe))))
-
 (subdir local_fix_partial_nth_slot
  (rule
   (targets local_fix_partial_nth_slot.t.exe)
@@ -243,17 +205,6 @@
   (alias runtest)
   (deps local_fix_partial_nth_slot.t.exe)
   (action (run ./local_fix_partial_nth_slot.t.exe))))
-
-(subdir mapped_component_alias_flat
- (rule
-  (targets mapped_component_alias_flat.t.exe)
-  (deps MappedComponentAliasFlat.vo mapped_component_alias_flat.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mapped_component_alias_flat.t.exe mapped_component_alias_flat.t.cpp mapped_component_alias_flat.cpp)))
- (rule
-  (alias runtest)
-  (deps mapped_component_alias_flat.t.exe)
-  (action (run ./mapped_component_alias_flat.t.exe))))
 
 (subdir nested_curried_instantiation
  (rule
@@ -276,39 +227,6 @@
   (alias runtest)
   (deps nested_list_fn_slot_fit.t.exe)
   (action (run ./nested_list_fn_slot_fit.t.exe))))
-
-(subdir overapplied_alias_result_fit
- (rule
-  (targets overapplied_alias_result_fit.t.exe)
-  (deps OverappliedAliasResultFit.vo overapplied_alias_result_fit.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} overapplied_alias_result_fit.t.exe overapplied_alias_result_fit.t.cpp overapplied_alias_result_fit.cpp)))
- (rule
-  (alias runtest)
-  (deps overapplied_alias_result_fit.t.exe)
-  (action (run ./overapplied_alias_result_fit.t.exe))))
-
-(subdir sig_closure_witness_fit
- (rule
-  (targets sig_closure_witness_fit.t.exe)
-  (deps SigClosureWitnessFit.vo sig_closure_witness_fit.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_closure_witness_fit.t.exe sig_closure_witness_fit.t.cpp sig_closure_witness_fit.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_closure_witness_fit.t.exe)
-  (action (run ./sig_closure_witness_fit.t.exe))))
-
-(subdir sig_fn_match_join
- (rule
-  (targets sig_fn_match_join.t.exe)
-  (deps SigFnMatchJoin.vo sig_fn_match_join.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_fn_match_join.t.exe sig_fn_match_join.t.cpp sig_fn_match_join.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_fn_match_join.t.exe)
-  (action (run ./sig_fn_match_join.t.exe))))
 
 (subdir twice_transformer_two_arg
  (rule

@@ -459,6 +459,11 @@ val get_args_and_ret :
 (** Strip [n] leading arrows from a Core type, if possible. *)
 val strip_arrows_n : int -> 'p Core.Type.at -> 'p Core.Type.at option
 
+(** {!strip_arrows_n}, reading a function alias the arrows run into as the
+    arrows it abbreviates: [st nat] applied once more, [st A := nat -> A *
+    nat], is [nat * nat]. *)
+val strip_arrows_through_aliases : int -> 'p Core.Type.at -> 'p Core.Type.at option
+
 (** Strip reference and const qualifiers from a C++ type. *)
 val strip_cpp_ref_const : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 

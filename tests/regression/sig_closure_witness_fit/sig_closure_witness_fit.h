@@ -150,6 +150,8 @@ struct SigClosureWitnessFit {
     }
   });
 
+  /// The same as a function's result: a lambda returning a sig of a function,
+  /// the default of hd_or (argument, unrelated, fn <- closure).
   template <typename T1> static T1 hd_or(T1 d, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return d;
