@@ -194,7 +194,7 @@ let returned_types ~returned (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lower
 let declared_at cx ~(own : Cpp_ir.Lowered.Slot_type.t) (r : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t option =
   let al = Coerce.aliases_in cx in
   let arrows t = Option.map (Coerce.normal_arrows al) (Cpp_ir.Arrows.of_type t) in
-  match (own, Cpp_ir.Arrows.of_type r) with
+  match (own, Cpp_ir.Arrows.of_type (Coerce.normal al r)) with
   | Exactly (Function _ as f), Some _
     when f <> r && (match (arrows f, arrows r) with Some b, Some a -> Cpp_ir.Arrows.same_function a b | _ -> false) ->
     Some f

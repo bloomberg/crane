@@ -103,7 +103,7 @@ struct SigFnMatchJoin {
   }
 
   static inline const uint64_t result = []() {
-    crane::fn<uint64_t(uint64_t)> w = []() {
+    crane::fn<uint64_t(uint64_t)> w = []() -> crane::fn<uint64_t(uint64_t)> {
       auto &&_sv = pick<List<bool>>(true, List<bool>::nil(),
                                     List<bool>::cons(true, List<bool>::nil()));
       if (std::holds_alternative<typename List<bool>::Nil>(_sv.v())) {

@@ -40,6 +40,11 @@ let aliases_in cx =
     | Variable (Index (i, _)) when List.mem_assoc i hkt -> List.assoc i hkt
     | Entity_application (g, [], _) when Base.Table.is_custom g -> (
       match Base.Table.find_custom_opt g with Some text -> External (text, []) | None -> t )
+    (* A typed mapping whose C++ type is one of its components is that
+       component: [sig A P] is [A], as [exist x h] is [x]. *)
+    | Entity_application (g, xs, _) when Base.Mapping_plan.is_type_head g -> (
+      let plan = Base.Mapping_plan.find g in
+      match plan.canonical with Parameter _ -> Base.Mapping_plan.cpp_type plan xs | _ -> t )
     (* A variable written by its index alone is the one the scope names
        at that index. *)
     | Variable (Index (i, None)) when i >= 1 -> (

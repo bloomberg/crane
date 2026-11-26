@@ -321,28 +321,6 @@
   (deps overapplied_alias_result_fit.t.exe)
   (action (run ./overapplied_alias_result_fit.t.exe))))
 
-(subdir sig_closure_witness_fit
- (rule
-  (targets sig_closure_witness_fit.t.exe)
-  (deps SigClosureWitnessFit.vo sig_closure_witness_fit.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_closure_witness_fit.t.exe sig_closure_witness_fit.t.cpp sig_closure_witness_fit.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_closure_witness_fit.t.exe)
-  (action (run ./sig_closure_witness_fit.t.exe))))
-
-(subdir sig_fn_match_join
- (rule
-  (targets sig_fn_match_join.t.exe)
-  (deps SigFnMatchJoin.vo sig_fn_match_join.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_fn_match_join.t.exe sig_fn_match_join.t.cpp sig_fn_match_join.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_fn_match_join.t.exe)
-  (action (run ./sig_fn_match_join.t.exe))))
-
 (subdir st_dead_ref_loop_param
  (rule
   (targets st_dead_ref_loop_param.t.exe)

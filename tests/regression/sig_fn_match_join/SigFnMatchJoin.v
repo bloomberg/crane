@@ -1,16 +1,20 @@
 (** Found by Ephyra round 28. A [match] whose branches are [sig]s of a
     function ([{f : nat -> nat | True}], the witness under
     [Mapping.Shared]): one branch [exist _ (fun _ => 1) I], the other the
-    result of a call ([pick h k1 k2 0]). The match becomes an immediately
+    result of a call ([pick h k1 k2 0]). The match became an immediately
     invoked C++ lambda with no declared return type, returning a bare lambda
-    in one branch and a [crane::fn<uint64_t(uint64_t)>] in the other. With
-    the same program over plain [nat -> nat] (no [sig]) the branches are
-    joined at [crane::fn] and it compiles. Variant of
-    [sig_closure_witness_fit] (the [sig] of a function not seen as its
-    witness). Expected: compiles, [result = 1]. Actual: "return type
-    'crane::fn<unsigned long long (unsigned long long)>' must match previous
-    return type '(lambda ...)' when lambda expression has unspecified
-    explicit return type". *)
+    in one branch and a [crane::fn<uint64_t(uint64_t)>] in the other
+    ("return type 'crane::fn<...>' must match previous return type
+    '(lambda ...)'"). Over plain [nat -> nat] the branches were joined at
+    [crane::fn].
+
+    Fixed: the join asked whether the branches' type is a function type of
+    its C++ spelling as written, [sig<fn(nat) -> nat>], which is not one; it
+    now asks it of the type with aliases and component mappings unfolded
+    ([Match_types.declared_at], [Coerce.aliases_in]), so the lambda is
+    declared at the witness's [crane::fn].
+
+    Expected: compiles, [result = 1]. *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Stdlib Require Import List.
