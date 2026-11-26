@@ -200,17 +200,6 @@
   (deps hk_argument_after_phantom.t.exe)
   (action (run ./hk_argument_after_phantom.t.exe))))
 
-(subdir composed_fn_default_regroup
- (rule
-  (targets composed_fn_default_regroup.t.exe)
-  (deps ComposedFnDefaultRegroup.vo composed_fn_default_regroup.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} composed_fn_default_regroup.t.exe composed_fn_default_regroup.t.cpp composed_fn_default_regroup.cpp)))
- (rule
-  (alias runtest)
-  (deps composed_fn_default_regroup.t.exe)
-  (action (run ./composed_fn_default_regroup.t.exe))))
-
 (subdir eq_dec_self_werror
  (rule
   (targets eq_dec_self_werror.t.exe)

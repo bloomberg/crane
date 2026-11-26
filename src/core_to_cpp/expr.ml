@@ -563,7 +563,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
        region is planned at that return type too: planned under the
        enclosing function's, a coercion at the let's tail would be planned
        against a position lowering does not give it. *)
-    form @@ with_escape_analysis cx ~ret (fun _ -> (let ret = expected_ty in
+    typed_form @@ with_escape_analysis cx ~ret (fun _ -> (let ret = expected_ty in
       with_region cx ~ret a (fun () ->
         (* Returning a closure from one path and another closure, or a
            function-typed local, from the next, the lambda deduces no
@@ -571,7 +571,7 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
            type where that only regroups its arrows.  Otherwise the expected
            type is what the caller converts to, which need not be a type the
            lambda's returns share. *)
-        Match_types.value_iife ?ret:expected_ty cx env (infer_core_body_type a) (fun into ->
+        Match_types.value_iife_typed ?ret:expected_ty cx env (infer_core_body_type a) (fun into ->
             gen_stmts cx (Slot.at ~ret ~slot ()) env (Destination.Return into) a ) ) ) )
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ as a ->
     (* Bare fixpoint in expression context: wrap in IIFE, delegate to

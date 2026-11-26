@@ -1,13 +1,15 @@
 (** Found by Ephyra round 28. Variant of round 25's
-    [twice_composed_fn_destination] (fixed): the step of [twice], at
+    [twice_composed_fn_destination]: the step of [twice], at
     [A := (nat -> nat) -> nat -> nat], is [hd_or d []] whose default [d] is a
     [let] of a two-argument local function [cf] and a lambda composing it,
-    [fun c => cf (cg c)]. The typed-fit check finds the default, a flat
-    two-argument function [fn(fn(nat)->nat, nat)->nat], put in the curried
-    argument slot [fn(fn(nat)->nat)->fn(nat)->nat] (argument, regroup); the
-    C++ compiles and is right. Expected: extracts under CRANE_CHECK_IR,
-    [result = 11]. Actual: "Crane IR check (typed fit): ... (argument,
-    regroup)". *)
+    [fun c => cf (cg c)]. The [let] was lowered as an immediately invoked
+    lambda returning the curried closure its slot asks for, but typed at its
+    Core type's flat spelling [fn(fn(nat)->nat, nat)->nat], so the typed-fit
+    check refused it in the curried argument slot (argument, regroup); the
+    C++ compiled and was right.
+
+    Fixed: an undeclared immediately invoked lambda is typed as what its
+    returns are where they agree ([Match_types.value_iife_typed]). *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Stdlib Require Import List.

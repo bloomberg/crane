@@ -16453,3 +16453,14 @@
   (alias runtest)
   (deps id_any_cast_flat_fn.t.exe)
   (action (run ./id_any_cast_flat_fn.t.exe))))
+
+(subdir composed_fn_default_regroup
+ (rule
+  (targets composed_fn_default_regroup.t.exe)
+  (deps ComposedFnDefaultRegroup.vo composed_fn_default_regroup.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} composed_fn_default_regroup.t.exe composed_fn_default_regroup.t.cpp composed_fn_default_regroup.cpp)))
+ (rule
+  (alias runtest)
+  (deps composed_fn_default_regroup.t.exe)
+  (action (run ./composed_fn_default_regroup.t.exe))))

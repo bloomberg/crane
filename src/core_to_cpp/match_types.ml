@@ -241,12 +241,24 @@ let join_branches ~own ~returned cx env typ pv stmts =
     whose returns are written under [ret]: declared at the type its
     callables join at ({!join}), deduced where they need none.  Every lambda of the kind that returns from more than one place
     goes through it. *)
-let value_iife ?ret cx env (rty : Core.Type.t option) (gen : Cpp_ir.Lowered.Slot_type.t -> Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Expr.t =
+let value_iife_typed ?ret cx env (rty : Core.Type.t option) (gen : Cpp_ir.Lowered.Slot_type.t -> Cpp_ir.Lowered.Stmt.t list) :
+    Cpp_ir.Typed.t =
   (* Its returns are at its own slot: the type the caller states for
      them, else the join C++ deduces. *)
   let slot : Cpp_ir.Lowered.Slot_type.t = match ret with Some t -> Exactly t | None -> Join in
   let body, returned = Lowering_state.with_returns cx (fun () -> gen slot) in
-  Cpp_ir.Build.iife (Option.bind rty (fun rty -> join ~several:true ~own:slot ~returned cx env rty body)) body
+  let declared = Option.bind rty (fun rty -> join ~several:true ~own:slot ~returned cx env rty body) in
+  let e = Cpp_ir.Build.iife declared body in
+  (* Undeclared, it yields what its returns are where they agree: a closure
+     built at the slot's grouping is that closure, whatever grouping the
+     term's Core type flattens to. *)
+  match (declared, returned_types ~returned body) with
+  | None, (t :: rest as all)
+    when (not (List.exists Cpp_ir.Value_type.unstated all)) && List.for_all (( = ) t) rest ->
+    Cpp_ir.Typed.v ~ty:t e
+  | _ -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated e
+
+let value_iife ?ret cx env rty gen : Cpp_ir.Lowered.Expr.t = (value_iife_typed ?ret cx env rty gen).expr
 
 (** [pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     ~non_erased_def_site_field_tys] -- what a pattern-match branch pins down
