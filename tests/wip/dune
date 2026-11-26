@@ -310,17 +310,6 @@
   (deps nested_list_fn_slot_fit.t.exe)
   (action (run ./nested_list_fn_slot_fit.t.exe))))
 
-(subdir overapplied_alias_result_fit
- (rule
-  (targets overapplied_alias_result_fit.t.exe)
-  (deps OverappliedAliasResultFit.vo overapplied_alias_result_fit.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} overapplied_alias_result_fit.t.exe overapplied_alias_result_fit.t.cpp overapplied_alias_result_fit.cpp)))
- (rule
-  (alias runtest)
-  (deps overapplied_alias_result_fit.t.exe)
-  (action (run ./overapplied_alias_result_fit.t.exe))))
-
 (subdir st_dead_ref_loop_param
  (rule
   (targets st_dead_ref_loop_param.t.exe)

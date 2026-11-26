@@ -1795,15 +1795,20 @@ let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) ?declared_arity cx
           match expand_core_fun_alias a with Arrow _ as f -> drop n f | _ -> None )
         | _ -> None
     in
-    let inner_args =
+    (* How many arguments [f] applies beyond the callee's declared call:
+       none where it is that call, or that call kept as a constant; [n] where
+       it is a call of that call, or of a call of it ([hd_or d l 3] applied
+       to the argument an eta-expansion adds); [None] where it is neither. *)
+    let rec beyond (f : Cpp_ir.Lowered.Expr.t) =
       match f with
-      | Call (_, Runtime (Cpp_ir.Crane_rt.Constant _), [Call (_, _, inner)])
-      | Call ({yields = Deduced _; params = Unknown; _}, _, inner) -> List.length inner
-      | _ -> 0
+      | Call (_, Runtime (Cpp_ir.Crane_rt.Constant _), [Call (_, _, _ :: _)]) -> Some 0
+      | Call ({yields = Deduced _; params = Unknown; _}, g, (_ :: _ as inner)) -> (
+        match beyond g with Some n -> Some (n + List.length inner) | None -> Some 0 )
+      | _ -> None
     in
     let over_applied =
-      match declared_arity with
-      | Some k when inner_args > 0 -> drop (k + List.length args) core_ty
+      match (declared_arity, beyond f) with
+      | Some k, Some n -> drop (k + n + List.length args) core_ty
       | _ -> None
     in
     ( match
@@ -1831,7 +1836,14 @@ let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) ?declared_arity cx
       let f : Cpp_ir.Lowered.Expr.t =
         match f with
         | Call ({yields = Deduced _; params = Unknown; _}, g, inner_args) -> (
-          match cpp_of (Base.Type_util.core_drop_arrows (List.length inner_args) core_ty) with
+          (* A call of that call yields what is left once both took theirs. *)
+          let inner_ty () =
+            match (declared_arity, beyond f) with
+            | Some k, Some n when n > 0 -> (
+              match drop (k + n) core_ty with Some t -> t | None -> raise Not_found )
+            | _ -> Base.Type_util.core_drop_arrows (List.length inner_args) core_ty
+          in
+          match cpp_of (inner_ty ()) with
           | exception e' when CErrors.noncritical e' -> f
           | Any | Obligation Opaque_type -> f
           | inner_ty ->

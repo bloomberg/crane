@@ -16409,3 +16409,14 @@
   (alias runtest)
   (deps sig_fn_match_join.t.exe)
   (action (run ./sig_fn_match_join.t.exe))))
+
+(subdir overapplied_alias_result_fit
+ (rule
+  (targets overapplied_alias_result_fit.t.exe)
+  (deps OverappliedAliasResultFit.vo overapplied_alias_result_fit.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} overapplied_alias_result_fit.t.exe overapplied_alias_result_fit.t.cpp overapplied_alias_result_fit.cpp)))
+ (rule
+  (alias runtest)
+  (deps overapplied_alias_result_fit.t.exe)
+  (action (run ./overapplied_alias_result_fit.t.exe))))
