@@ -15,6 +15,7 @@
 struct Nat;
 template <typename E, typename R, typename itree> struct ItreeF;
 template <typename E, typename R> struct Itree;
+template <typename E1, typename E2, typename X> struct Sum1;
 
 struct Nat {
   // TYPES
@@ -286,6 +287,77 @@ public:
   }
 };
 
+template <typename E1, typename E2, typename X> struct Sum1 {
+  // TYPES
+  struct Inl1 {
+    crane::rebind_t<E1, X> a0;
+  };
+
+  struct Inr1 {
+    crane::rebind_t<E2, X> a0;
+  };
+
+  using variant_t = std::variant<Inl1, Inr1>;
+  using crane_family_tag = void;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Sum1() {}
+
+  explicit Sum1(Inl1 _v) : v_(std::move(_v)) {}
+
+  explicit Sum1(Inr1 _v) : v_(std::move(_v)) {}
+
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  Sum1(const Sum1<CraneU0, CraneU1, CraneU2> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<
+                  typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
+            const auto &[a0] =
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
+                    _other.v());
+            return Inl1{[&]() -> E1 {
+              if constexpr (crane_convertible<E1, const CraneU0 &>) {
+                return crane_convert<E1>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          } else {
+            const auto &[a0] =
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
+                    _other.v());
+            return Inr1{[&]() -> E2 {
+              if constexpr (crane_convertible<E2, const CraneU1 &>) {
+                return crane_convert<E2>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          }
+        }()) {}
+
+  static Sum1<E1, E2, X> inl1(crane::rebind_t<E1, X> a0) {
+    return Sum1<E1, E2, X>(Inl1{std::move(a0)});
+  }
+
+  static Sum1<E1, E2, X> inr1(crane::rebind_t<E2, X> a0) {
+    return Sum1<E1, E2, X>(Inr1{std::move(a0)});
+  }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
+
 template <typename I>
 concept Params = requires {
   typename I::ptr;
@@ -301,7 +373,7 @@ concept Params = requires {
   -> std::convertible_to<typename I::ptr>;
 });
 
-struct CarrierAliasPromoted {
+struct CarrierHolderBeforeAlias {
   template <typename s, template <typename> class m, typename a>
   using stateT = crane::fn<m<std::pair<s, a>>(s)>;
   using ptr = crane::obj;
@@ -319,19 +391,23 @@ struct CarrierAliasPromoted {
     static memE<ptr> load(ptr a0) { return {std::move(a0)}; }
   };
 
-  template <typename CraneP0> struct crane_carrier_tch_cb95536bb9bb9fb3 {
+  enum class FailE { FAIL };
+  template <typename ptr, typename x> using AllE = Sum1<memE<ptr>, FailE, x>;
+
+  template <typename CraneP0> struct crane_carrier_tch_39cd911840c5c5a4 {
     template <typename CraneTcArg>
-    using c = Itree<memE<typename CraneP0::ptr>, CraneTcArg>;
+    using c = Itree<AllE<typename CraneP0::ptr, crane::obj>, CraneTcArg>;
   };
 
   template <Params _tcI0>
-  static stateT<Nat, crane_carrier_tch_cb95536bb9bb9fb3<_tcI0>::template c, Nat>
+  static stateT<Nat, crane_carrier_tch_39cd911840c5c5a4<_tcI0>::template c, Nat>
   get_st(Nat n) {
     return [=, n = std::move(n)](const Nat &s) {
-      return Itree<memE<typename _tcI0::ptr>, std::pair<Nat, Nat>>::go(
-          ItreeF<memE<typename _tcI0::ptr>, std::pair<Nat, Nat>,
-                 Itree<memE<typename _tcI0::ptr>, std::pair<Nat, Nat>>>::retf(
-              std::make_pair(s.add(n), s)));
+      return Itree<AllE<typename _tcI0::ptr, crane::obj>,
+                   std::pair<Nat, Nat>>::go(ItreeF<
+          AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>,
+          Itree<AllE<typename _tcI0::ptr, crane::obj>,
+                std::pair<Nat, Nat>>>::retf(std::make_pair(s.add(n), s)));
     };
   }
 
@@ -342,20 +418,22 @@ struct CarrierAliasPromoted {
   };
 
   static_assert(Params<natParams>);
-  static inline const Itree<memE<typename natParams::ptr>,
+  static inline const Itree<AllE<typename natParams::ptr, crane::obj>,
                             std::pair<Nat, Nat>> r = crane::any_cast<
-      Itree<memE<typename natParams::ptr>, std::pair<Nat, Nat>>>(
+      Itree<AllE<typename natParams::ptr, crane::obj>, std::pair<Nat, Nat>>>(
       get_st<natParams>(Nat::s(Nat::o()))(Nat::s(Nat::s(Nat::o()))));
   static inline const bool is_three = []() {
     auto &&_sv = r.observe();
-    if (std::holds_alternative<
-            typename ItreeF<memE<ptr>, std::pair<Nat, Nat>,
-                            Itree<memE<ptr>, std::pair<Nat, Nat>>>::RetF>(
-            _sv.v())) {
-      const auto &[r1] =
-          std::get<typename ItreeF<memE<ptr>, std::pair<Nat, Nat>,
-                                   Itree<memE<ptr>,
-                                         std::pair<Nat, Nat>>>::RetF>(_sv.v());
+    if (std::holds_alternative<typename ItreeF<
+            Sum1<memE<typename natParams::ptr>, FailE, crane::obj>,
+            std::pair<Nat, Nat>,
+            Itree<Sum1<memE<typename natParams::ptr>, FailE, crane::obj>,
+                  std::pair<Nat, Nat>>>::RetF>(_sv.v())) {
+      const auto &[r1] = std::get<typename ItreeF<
+          Sum1<memE<typename natParams::ptr>, FailE, crane::obj>,
+          std::pair<Nat, Nat>,
+          Itree<Sum1<memE<typename natParams::ptr>, FailE, crane::obj>,
+                std::pair<Nat, Nat>>>::RetF>(_sv.v());
       const auto &[a, _x] = r1;
       return a.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
     } else {

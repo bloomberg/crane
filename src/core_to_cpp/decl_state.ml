@@ -312,20 +312,24 @@ let rec class_arg_type ~own_instances sh : Cpp_ir.Lowered.Type.t option =
 
 (** The resolutions the class arguments [arg_shapes] of an instance supply:
     each argument whose class is a type class contributes its own class's
-    promoted variables, spelled through {!class_arg_type}. *)
-let resolutions_of_shapes ~own_instances arg_shapes =
+    promoted variables, spelled through {!class_arg_type}.  An argument that
+    is no instance, a type alias applied to one ([itree (@AllE natParams)]),
+    supplies what its own arguments do: their context is not this one, so an
+    unknown among them is not filled. *)
+let rec resolutions_of_shapes ~own_instances arg_shapes =
   List.concat_map
     (fun sh ->
       match sh with
       | Base.Table.Carg_unknown -> []
-      | Base.Table.Carg (arg_ref, _) -> (
+      | Base.Table.Carg (arg_ref, args) -> (
         match
           ( Base.Table.get_instance_class_shape arg_ref
           , class_arg_type ~own_instances sh )
         with
         | Some (arg_class, _), Some inst_ty when Base.Table.is_typeclass arg_class ->
           promoted_resolutions arg_class inst_ty
-        | _ -> [] ) )
+        | Some (arg_class, _), _ when Base.Table.is_typeclass arg_class -> []
+        | _ -> resolutions_of_shapes ~own_instances:[] args ) )
     arg_shapes
 
 (** {!resolutions_of_shapes} for the recorded class arguments of the instance

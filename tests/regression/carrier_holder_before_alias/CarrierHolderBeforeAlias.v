@@ -5,11 +5,13 @@
 
     That ordering defect no longer reproduces here: [get_st] compiles.
 
-    Open (diagnosed 2026-11-24): the same defect as carrier_alias_promoted.
-    [is_three] matches [observe r] at the struct's [using ptr =
+    Fixed (2026-11-26): the same defect as carrier_alias_promoted.
+    [is_three] matched [observe r] at the struct's [using ptr =
     crane::obj] ([ItreeF<Sum1<memE<crane::obj>, FailE, crane::obj>, ...>])
-    while [r] is an [Itree<Sum1<memE<Nat>, ...>>], resolved through
-    [natParams] in [r]'s own body; [std::get] fails its [static_assert]. *)
+    while [r] is an [Itree<Sum1<memE<Nat>, ...>>]; [std::get] failed its
+    [static_assert].  Here [r]'s recorded shape is [itree] applied to
+    [@AllE natParams], an alias, not an instance; a class argument that is
+    no instance now supplies what its own arguments do. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.

@@ -16409,3 +16409,25 @@
   (alias runtest)
   (deps st_dead_ref_loop_param.t.exe)
   (action (run ./st_dead_ref_loop_param.t.exe))))
+
+(subdir carrier_alias_promoted
+ (rule
+  (targets carrier_alias_promoted.t.exe)
+  (deps CarrierAliasPromoted.vo carrier_alias_promoted.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_alias_promoted.t.exe carrier_alias_promoted.t.cpp carrier_alias_promoted.cpp)))
+ (rule
+  (alias runtest)
+  (deps carrier_alias_promoted.t.exe)
+  (action (run ./carrier_alias_promoted.t.exe))))
+
+(subdir carrier_holder_before_alias
+ (rule
+  (targets carrier_holder_before_alias.t.exe)
+  (deps CarrierHolderBeforeAlias.vo carrier_holder_before_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_holder_before_alias.t.exe carrier_holder_before_alias.t.cpp carrier_holder_before_alias.cpp)))
+ (rule
+  (alias runtest)
+  (deps carrier_holder_before_alias.t.exe)
+  (action (run ./carrier_holder_before_alias.t.exe))))

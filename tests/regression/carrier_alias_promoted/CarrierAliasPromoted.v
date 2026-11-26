@@ -7,23 +7,16 @@
     gone: [get_st] is now written against the holder
     [crane_carrier_tch<_tcI0>::template c].
 
-    Open (diagnosed 2026-11-24): [is_three]'s match over [observe r].  [r]
-    is declared [Itree<memE<typename natParams::ptr>, pair<Nat, Nat>>]: its
-    body names [natParams] ([get_st<natParams>]), so
-    [Decl_state.with_body_resolutions] resolves the promoted [ptr].
-    [is_three]'s body names only [r], so nothing resolves [ptr] there and
-    the match spells the scrutinee's constructors at the struct's
-    [using ptr = crane::obj]: [std::get<ItreeF<memE<crane::obj>, ...>::RetF>]
-    on a variant of [ItreeF<memE<Nat>, ...>] fails [static_assert] in
-    [std::get].  [type_resolutions_of_referenced_globals] reads a
-    referenced global's resolutions only off a recorded class shape of its
-    type ([@dval natIPtr]), and [r]'s type ([itree (@memE natParams) _])
-    records none: the instance sits under the head.  The connection is in
-    the Rocq type at [extract_constant] ([Base.Table.instance_class_shapes]),
-    which records only the head's own class arguments; recording the
-    instances an argument's family is applied to, or resolving a reader's
-    types through the resolutions its referenced globals were declared
-    under, would close it. *)
+    Fixed (2026-11-26): [is_three]'s match over [observe r] spelled the
+    scrutinee's constructors at the struct's [using ptr = crane::obj]
+    ([ItreeF<memE<crane::obj>, ...>]) while [r] is an
+    [Itree<memE<Nat>, ...>], resolved through [natParams] in [r]'s own body;
+    [std::get] failed its [static_assert].  A reader resolves a referenced
+    global's promoted variables off the class shape recorded from its Rocq
+    type, and [r : itree (@memE natParams) _] recorded [itree]'s, whose
+    arguments name no class; the search through the type now keeps such a
+    shape only where no applied type names a class, so [r] records
+    [@memE natParams]. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.

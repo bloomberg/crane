@@ -3384,17 +3384,20 @@ let extract_constant access env kn cb =
        is a declaration whose reader can spell it, so the whole type is
        searched -- outermost first, so the conclusion's own head still wins,
        and the first applied type that says something about a class is
-       kept. *)
-    let rec search t =
+       kept.  One whose arguments are all [Carg_unknown] says nothing:
+       [r : itree (@memE natParams) _] names [natParams] only under [itree],
+       so such a shape is kept only where no applied type names a class. *)
+    let rec search ok t =
       match shape_of t with
-      | Some ((_, _ :: _) as sh) -> Some sh
+      | Some ((_, _ :: _) as sh) when ok sh -> Some sh
       | _ ->
         EConstr.fold sg
-          (fun acc sub -> match acc with Some _ -> acc | None -> search sub)
+          (fun acc sub -> match acc with Some _ -> acc | None -> search ok sub)
           None t
     in
+    let names_class (_, args) = List.exists (function Base.Table.Carg _ -> true | Base.Table.Carg_unknown -> false) args in
     let _, concl = EConstr.decompose_prod sg typ in
-    match search typ with
+    match (match search names_class typ with Some sh -> Some sh | None -> search (fun _ -> true) typ) with
     | Some sh -> Base.Table.add_instance_class_shape r sh
     | None -> (
       (* Nothing in the type applies a class.  The conclusion's head is still
