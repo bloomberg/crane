@@ -280,7 +280,9 @@ val deduces_callable : decided -> Names.GlobRef.t -> Param_pos.orig Param_pos.po
 (** The plan of a callable Crane does not generate here -- a custom mapping,
     a declaration of another file or library -- as the conventions its call
     sites assume state it: [instances] dictionaries first, then one parameter per variable [kept] keeps, in
-    order and no more than [reachable] of them, a template-template one
+    order and no more than [reachable] of them, of those the ones its
+    declaration [declared] -- a variable its type spells nowhere is no
+    parameter -- a template-template one
     where [higher_kinded] says so, a [relaxed] one a [Derived] parameter
     defaulted to [void], the first [phantom_prefix] of them phantoms, each
     variable omitted as [omitted] says. *)
@@ -290,6 +292,7 @@ val foreign :
   ?higher_kinded:(Core.Scheme.Var.t -> bool) ->
   ?kept:(Core.Scheme.Var.t -> bool) ->
   ?reachable:int ->
+  ?declared:(Core.Scheme.Var.t -> bool) ->
   ?relaxed:(int -> bool) ->
   ?phantom_prefix:int ->
   callee:Names.GlobRef.t ->
@@ -320,6 +323,7 @@ val plan :
   ?higher_kinded:(Core.Scheme.Var.t -> bool) ->
   ?kept:(Core.Scheme.Var.t -> bool) ->
   ?reachable:int ->
+  ?declared:(Core.Scheme.Var.t -> bool) ->
   ?relaxed:(int -> bool) ->
   ?phantom_prefix:int ->
   Names.GlobRef.t ->

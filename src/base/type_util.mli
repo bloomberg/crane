@@ -734,6 +734,13 @@ val refine_param_from_slot :
 (** [(index, name)] of every type variable in a C++ type, sorted by index. *)
 val get_tvars_indexed : Cpp_ir.Lowered.Type.t -> (int * Names.Id.t) list
 
+(** The type variables a C++ type spells, with their indices:
+    {!get_tvars_indexed} of the type with the arguments a custom template
+    does not name pruned.  A variable the Core type has and C++ spells
+    nowhere -- the event family of an erased [itree E A], written [%t1] --
+    is not among them. *)
+val spelled_tvars_indexed : Cpp_ir.Lowered.Type.t -> (int * Names.Id.t) list
+
 (** The names of the type variables in a C++ type, sorted by index. *)
 val get_tvars : Cpp_ir.Lowered.Type.t -> Names.Id.t list
 

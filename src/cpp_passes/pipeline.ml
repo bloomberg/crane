@@ -94,6 +94,11 @@ let foreign = Base.Pipeline_trace.pass "foreign" Erasure.instantiate_foreign
 (** A local's address dereferenced, written once the mappings' texts are,
     is the local itself ({!Erasure.drop_local_derefs}). *)
 let local_derefs = Base.Pipeline_trace.pass "local_derefs" Erasure.drop_local_derefs
+
+(** A variable only ever assigned, which scalar replacement leaves, is not
+    kept ({!Erasure.drop_dead_stores}). *)
+let dead_stores = Base.Pipeline_trace.pass "dead_stores" Erasure.drop_dead_stores
+
 let qualifiers = Base.Pipeline_trace.pass "qualifiers" Erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
 let pointer_slots u = Base.Pipeline_trace.pass "pointer_slots" (Erasure.lower_pointer_slots u)
@@ -165,6 +170,8 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
     (* A returned value is moved by the language; writing the move there
        only suppresses copy elision. *)
     on_decl "return_moves" Return_moves.drop_return_moves;
+    (* So is a move of a local copied as its bits: it is a copy. *)
+    on_decl "plain_moves" Plain_moves.transform_decl;
     (* Which callable parameters keep a constraint is decided here, with the
        body that decides it in hand; the printer writes what it is given. *)
     constraints ]
@@ -216,7 +223,7 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     initialiser holding a lambda that captures is invoked in place.  [u] is
     the unit the declaration is of. *)
 let instantiation_passes u =
-  [foreign; local_derefs; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
+  [foreign; local_derefs; dead_stores; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
 
 let pass_names =
   Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_plan.Context.detached)

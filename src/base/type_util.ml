@@ -1414,6 +1414,28 @@ let get_tvars_indexed (t : Cpp_ir.Lowered.Type.t) =
     referenced by the template are visited.  Unreferenced positions hold
     phantom tvars (e.g. E in [itree E R] where the template only uses
     [%t1] = R) that the C++ compiler cannot deduce. *)
+
+(** The type variables the C++ type [t] spells, each with its index: those
+    {!get_tvars_indexed} finds once the arguments a custom template does not
+    name are pruned.  A variable the Core type has and C++ spells nowhere --
+    the event family of an erased [itree E A], written [%t1] -- is not among
+    them.  A phantom position of a generated alias is: the alias declares
+    it, and its uses write it. *)
+let spelled_tvars_indexed t =
+  let pruned =
+    Cpp_ir.Types.map
+      (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
+        match t with
+        | Entity_application (g, tys, es) -> (
+          match custom_referenced_positions_opt g with
+          | Some referenced ->
+            Entity_application (g, List.mapi (fun i t -> if IntSet.mem i referenced then t else (Void : Cpp_ir.Lowered.Type.t)) tys, es)
+          | None -> t )
+        | t -> t )
+      t
+  in
+  get_tvars_indexed pruned
+
 let get_rendered_tvar_indices (t : Cpp_ir.Lowered.Type.t) =
   let rec aux l : Cpp_ir.Lowered.Type.t -> _ = function
     | Promoted_member _ -> l

@@ -1454,6 +1454,9 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
     ++ fnl ()
     ++ ( match else_stmts with
        | [] -> str "}"
+       | [(If _ as inner)] ->
+         (* an else branch that is one conditional continues the chain *)
+         str "} else " ++ pp_cpp_stmt ctx env args inner
        | _ ->
          str "} else {"
          ++ fnl ()

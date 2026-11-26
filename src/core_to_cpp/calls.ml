@@ -726,6 +726,7 @@ let callee_abi cx ~instances id =
     ~higher_kinded:(fun v -> IntSet.mem (Core.Scheme.Var.ordinal v) hk)
     ~kept:(fun v -> omitted v = None && relaxed_tt <> Some (Core.Scheme.Var.ordinal v))
     ?reachable:(writable_tvar_count id)
+    ~declared:(fun v -> Types.declares_tvar cx id (Core.Scheme.Var.ordinal v))
     ~relaxed:(fun i ->
       IntSet.mem i (Option.cata Base.Type_util.relaxed_higher_kinded_tvars IntSet.empty core_ty) )
     ~phantom_prefix:(Types.leading_phantom_count cx id)

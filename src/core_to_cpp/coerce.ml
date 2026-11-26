@@ -70,6 +70,15 @@ let normal al t =
     | Variable (Index (i, None)) -> Variable (Named (Cpp_ir.Type.positional_id i))
     | Const t | Reference (_, t) -> spelled t
     | In_namespace (g, (Entity_application (g', _, _) as t')) when GlobRef.CanOrd.equal g g' -> spelled t'
+    (* A custom type whose template is one of its arguments is that
+       argument: an erased [itree E R], written [%t1], is [R]. *)
+    | Entity_application (g, xs, _) -> (
+      match Option.map String.trim (Base.Table.find_custom_opt g) with
+      | Some text when String.length text >= 3 && String.sub text 0 2 = "%t" -> (
+        match int_of_string_opt (String.sub text 2 (String.length text - 2)) with
+        | Some k when k < List.length xs -> spelled (List.nth xs k)
+        | _ -> t )
+      | _ -> t )
     | t -> t
   in
   let rec bare (t : Cpp_ir.Lowered.Type.t) = match t with Const t | Reference (_, t) -> bare t | t -> t in
@@ -142,8 +151,12 @@ let crossing_index_plan ~deduced ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir
     (* An event family applied to the erased index is the family. *)
     | Apply (h, xs), _ when List.for_all Cpp_ir.Types.prints_as_any xs -> fits ~under h i
     | _, Apply (h, ys) when List.for_all Cpp_ir.Types.prints_as_any ys -> fits ~under f h
+    (* Only the arguments the spelling of [r] writes: what stands in a
+       position it does not write is not in the C++ type. *)
     | Entity_application (r, xs, _), Entity_application (r', ys, _) ->
-      GlobRef.CanOrd.equal r r' && all ~under:(under || opaque_head r) xs ys
+      let written = Base.Type_util.type_arg_is_written r in
+      let keep l = List.filteri (fun k _ -> written k) l in
+      GlobRef.CanOrd.equal r r' && all ~under:(under || opaque_head r) (keep xs) (keep ys)
     | Foreign a, Foreign b -> GlobRef.CanOrd.equal a.custom b.custom && all ~under:(under || opaque_head a.custom) a.types b.types
     | Named (n, xs), Named (n', ys) -> Id.equal n n' && all ~under xs ys
     | External (n, xs), External (n', ys) -> String.equal n n' && all ~under:true xs ys
@@ -292,7 +305,12 @@ let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slo
     undecided a || undecided b || cpp_ty_eq a b || a = b
     ||
     match (a, b) with
-    | Entity_application (g, xs, _), Entity_application (g', ys, _) when GlobRef.CanOrd.equal g g' -> all xs ys
+    (* Only the arguments the spelling of [g] writes: what stands in a
+       position it does not write is not in the C++ type. *)
+    | Entity_application (g, xs, _), Entity_application (g', ys, _) when GlobRef.CanOrd.equal g g' ->
+      let written = Base.Type_util.type_arg_is_written g in
+      let keep l = List.filteri (fun i _ -> written i) l in
+      all (keep xs) (keep ys)
     (* A typed-mapped type is the C++ type its mapping spells: [sig A P] is
        [A]. *)
     | Entity_application (g, xs, _), _ when Base.Mapping_plan.is_type_head g ->

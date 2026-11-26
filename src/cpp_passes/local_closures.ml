@@ -550,10 +550,20 @@ let in_place_lambdas (stmts : stmt list) =
         let remaining = List.filteri (fun i _ -> List.nth keep i) params in
         let captured = V.without (List.map fst remaining) (V.free_in_body body) in
         let invalidated = IdSet.union assigned_rest (moved_from rest) in
-        match sub with
-        | [] -> s :: rest
+        (* The variable's declared type loses the dropped parameters with
+           the lambda: one C++ deduces, or the lambda's own closure type.  A
+           declared callable type, [crane::fn<R(A)>], would no longer fit. *)
+        let target : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Binding.t option =
+          match tgt with
+          | Declare (Auto, b) -> Some (Declare (Auto, b))
+          | Declare_deduced (Closure {groups = [g]; result}, b) when List.length g = List.length keep ->
+            Some (Declare_deduced (Closure {groups = [List.filteri (fun i _ -> List.nth keep i) g]; result}, b))
+          | _ -> None
+        in
+        match (sub, target) with
+        | [], _ | _, None -> s :: rest
         | _ when List.exists (fun x -> IdSet.mem x invalidated) captured -> s :: rest
-        | _ ->
+        | _, Some tgt ->
           let named xs = List.filter (fun (x, _) -> not (List.mem_assoc x sub)) xs in
           let l' =
             { l with

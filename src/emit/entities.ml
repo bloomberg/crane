@@ -987,7 +987,7 @@ let generate cx scope ~module_ d =
       let (gf_entity, gf_env), gf_lifted =
         Core_to_cpp.Lowering_state.collecting_lifted cx @@ fun () ->
         match gen_decl_for_pp cx r a t with
-        | Some ds, env, tvars -> (Core_to_cpp.Lower_decl.defined ds tvars, env)
+        | Some ds, env, _ -> (Core_to_cpp.Lower_decl.defined ds, env)
         | None, _, _ when in_template cx ~module_ ->
           let ds, env, _ = gen_decl cx r a t in
           (Defined (ds, Header), env)

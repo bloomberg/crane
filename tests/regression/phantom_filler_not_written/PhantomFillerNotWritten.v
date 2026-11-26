@@ -2,11 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** A recursive function generic over an event family [E'], taking a mapped
-    value whose phantom type [S] the C++ type does not mention.  Its
-    self-call writes no value for [S]: the template head writes [S]'s filler
-    ([void]) only so that it can write [E'] after it.  The filler was read as
-    the call's instantiation of [S], so the argument was checked against
-    [Cell void nat] and the typed-fit check failed. *)
+    value whose phantom type [S] the C++ type does not mention.  Neither
+    variable is spelled by the C++ type, so neither is a template parameter:
+    the self-call writes no type argument, and its value is read at the type
+    the declaration spells, the tree's result.  Once [S]'s filler ([void]),
+    written so that [E'] could be written after it, was read as the call's
+    instantiation of [S], and the typed-fit check failed. *)
 
 From Stdlib Require Import Arith.PeanoNat List PrimString.
 From ITree Require Import ITree Events.Exception.

@@ -462,6 +462,20 @@ let declared_signature : Cpp_ir.Lowered.Decl.t -> _ = function
 let plan_function_head cx ?deduced_callables ?modes ~minted n ty (temps : head_params)
     (declared : Core_plan.Callable_abi.signature) =
   let temps, signature, relaxations = relax_function_head temps declared in
+  (* A variable the declared type spells nowhere is no parameter
+     ({!Types.declares_tvar}): declared until the relaxations have erased
+     what still named it ({!Core_plan.Head_relaxation.Unmentioned}), then
+     left out.  A callee generated elsewhere is planned the same way
+     ({!Calls.callee_abi}). *)
+  let declares = Types.declares_tvar cx n in
+  let temps =
+    List.filter
+      (fun (_, name) ->
+        match List.assoc_opt name minted with
+        | Some (Core_plan.Callable_abi.Scheme_param i) -> declares i
+        | _ -> true )
+      temps
+  in
   Core_plan.Callable_abi.of_head ?deduced_callables ?modes ~signature ~relaxations ~minted
     ~omitted:(Tvars.type_arg_omission n)
     ~phantom_prefix:(Types.leading_phantom_count cx n)
@@ -2108,12 +2122,17 @@ type generated_fun = {
 }
 
 (** A template's definition goes in the header, anything else's in the
-    implementation file. *)
-let definition_file_of tvars = if tvars = [] then Implementation else Header
+    implementation file: whether [d] declares template parameters, not
+    whether its Core type has variables -- one C++ spells nowhere is no
+    parameter ({!Core_plan.Plan_templates.phantom_aware_temps}). *)
+let rec definition_file_of (d : Cpp_ir.Lowered.Decl.t) =
+  match d with
+  | Template (_ :: _, _, _) -> Header
+  | Template ([], _, d) -> definition_file_of d
+  | _ -> Implementation
 
-(** [d] as a definition, in the file its template variables [tvars] put it
-    in. *)
-let defined d tvars = Defined (d, definition_file_of tvars)
+(** [d] as a definition, in the file it is written in. *)
+let defined d = Defined (d, definition_file_of d)
 
 (** Generate each function of a mutually recursive group, translating each
     body once, then lower the group's control from its ControlIR where that
@@ -2130,7 +2149,7 @@ let gen_dfuns_dual cx fds =
       (List.map (fun ((ds, _, _), _) -> ds) generated)
   in
   List.map2
-    (fun ds ((_, env, tvars), lifted) -> {entity = defined ds tvars; env = env; lifted = lifted})
+    (fun ds ((_, env, _), lifted) -> {entity = defined ds; env = env; lifted = lifted})
     lowered generated
 
 (** Generate a single Core.Decl.Value function, translating its body once. *)
@@ -2138,7 +2157,7 @@ let gen_decl_for_pp_dual__inner cx n b ty =
   let (gf_entity, gf_env), gf_lifted =
     collecting_lifted cx @@ fun () ->
     match gen_decl_for_pp cx n b ty with
-    | Some ds, env, tvars -> (defined ds tvars, env)
+    | Some ds, env, _ -> (defined ds, env)
     | None, _, _ ->
       (* Not a function: a declaration, and no definition anywhere. *)
       let spec, env = gen_spec cx n b ty in

@@ -562,3 +562,71 @@ let standard_names_written tokens =
            List.filter_map (fun name -> Option.map (fun h -> ("std::" ^ name, h)) (standard_header_of name)) (names lit)
          | _ -> [])
        tokens)
+
+(* A match template's tokens as characters of its literal text and holes. *)
+type chain_item = Char of char | Hole of custom_case
+
+let conditional_chain s =
+  let items =
+    List.concat_map
+      (function Text t -> List.init (String.length t) (fun i -> Char t.[i]) | h -> [Hole h])
+      (match_template s)
+  in
+  let rec ws = function Char (' ' | '\t' | '\n' | '\r') :: rest -> ws rest | l -> l in
+  let rec word w i l =
+    if i = String.length w then Some l
+    else match l with Char c :: rest when c = w.[i] -> word w (i + 1) rest | _ -> None
+  in
+  let ( let* ) = Option.bind in
+  (* the test up to the parenthesis closing the one already opened *)
+  let rec test depth acc = function
+    | Char ')' :: rest when depth = 0 -> Some (List.rev acc, rest)
+    | (Char c as x) :: rest ->
+      let depth = if c = '(' then depth + 1 else if c = ')' then depth - 1 else depth in
+      test depth (x :: acc) rest
+    | (Hole Scrut as x) :: rest -> test depth (x :: acc) rest
+    | _ -> None
+  in
+  let braced l =
+    let* l = word "{" 0 (ws l) in
+    match ws l with
+    | Hole (Body i) :: rest ->
+      let* rest = word "}" 0 (ws rest) in
+      Some (i, ws rest)
+    | _ -> None
+  in
+  let tokens items =
+    let flush buf acc = if Buffer.length buf = 0 then acc else Text (Buffer.contents buf) :: acc in
+    let buf = Buffer.create 16 in
+    let acc =
+      List.fold_left
+        (fun acc -> function
+          | Char c ->
+            Buffer.add_char buf c;
+            acc
+          | Hole h ->
+            let acc = flush buf acc in
+            Buffer.clear buf;
+            h :: acc )
+        [] items
+    in
+    List.rev (flush buf acc)
+  in
+  let rec conditional l =
+    let* l = word "if" 0 (ws l) in
+    let* l = word "(" 0 (ws l) in
+    let* cond, l = test 0 [] l in
+    let* i, l = braced l in
+    match l with
+    | [] -> Some ([(tokens cond, i)], None)
+    | l -> (
+      let* l = word "else" 0 l in
+      match ws l with
+      | Char '{' :: _ as l ->
+        let* j, l = braced l in
+        if l = [] then Some ([(tokens cond, i)], Some j) else None
+      | l ->
+        let* tests, final = conditional l in
+        Some ((tokens cond, i) :: tests, final) )
+  in
+  conditional items

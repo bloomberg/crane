@@ -16398,3 +16398,14 @@
   (alias runtest)
   (deps local_lambda_refs.t.exe)
   (action (run ./local_lambda_refs.t.exe))))
+
+(subdir st_dead_stores
+ (rule
+  (targets st_dead_stores.t.exe)
+  (deps StDeadStores.vo st_dead_stores.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_dead_stores.t.exe st_dead_stores.t.cpp st_dead_stores.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_dead_stores.t.exe)
+  (action (run ./st_dead_stores.t.exe))))
