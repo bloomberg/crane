@@ -1,14 +1,15 @@
 (** Found by Ephyra round 28. [nth_or l 0], partially applied (so a function
     [nat -> nat] at [A := nat]), mapped over a list, where [l] is a local
     fixpoint call whose [nil] branch is a [flat_map]. The typed-fit check
-    finds the local fixpoint's [list nat] result put in a slot of type
-    [list<fn(nat)->nat>] (destination, unrelated): the list argument is
-    planned at the partial application's type [A -> A] instead of [A]. The
-    same with the fixpoint's branch a literal [[]], or with the [flat_map]
-    passed directly, passes. The C++ compiles and is right. Expected:
-    extracts under CRANE_CHECK_IR, [result = 3]. Actual: "Crane IR check
-    (typed fit): a value of type ns (list)<(nat)> put in a slot of type ns
-    (list)<fn((nat))->(nat)> (destination, unrelated)". *)
+    found the local fixpoint's [list nat] result put in a slot of type
+    [list<fn(nat)->nat>] (destination, unrelated): the call's variables were
+    read off its position's type, which states the closure over the missing
+    argument, not the call's result, so the list argument was expected at
+    [list (A -> A)]. The C++ compiled and was right.
+
+    Fixed: a call given fewer arguments than it declares reads none of its
+    variables off its position's type, as an over-applied call does not
+    ([Calls.plan_call]'s [result_tvar_map]). *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Stdlib Require Import List.

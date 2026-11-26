@@ -2040,10 +2040,18 @@ let plan_call cx ~ret ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (in
      application taken off, matched against that type.  Read by the argument
      loop below for a parameter the substitution left erased.  Nothing for
      an over-applied call: its position states the type of its result
-     applied to the excess arguments, not of its result. *)
+     applied to the excess arguments, not of its result; nor for one given
+     fewer arguments than it declares, whose position states the closure
+     over the rest. *)
+  let under_applied =
+    let call = inst.Core_plan.Elaborated_call.call in
+    List.compare_length_with call.regular
+      (Core_plan.Param_pos.length inst.params_orig - Core_plan.Elaborated_call.leading_params call)
+    < 0
+  in
   let result_tvar_map =
     lazy
-      ( if excess_args <> [] then ([], [])
+      ( if excess_args <> [] || under_applied then ([], [])
         else
           binding_results_of id (fun () ->
               callee_result_bindings cx env id

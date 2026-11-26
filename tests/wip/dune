@@ -233,17 +233,6 @@
   (deps local_fix_inlined_fn_join.t.exe)
   (action (run ./local_fix_inlined_fn_join.t.exe))))
 
-(subdir local_fix_partial_nth_slot
- (rule
-  (targets local_fix_partial_nth_slot.t.exe)
-  (deps LocalFixPartialNthSlot.vo local_fix_partial_nth_slot.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_partial_nth_slot.t.exe local_fix_partial_nth_slot.t.cpp local_fix_partial_nth_slot.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_partial_nth_slot.t.exe)
-  (action (run ./local_fix_partial_nth_slot.t.exe))))
-
 (subdir mapped_component_alias_flat
  (rule
   (targets mapped_component_alias_flat.t.exe)
