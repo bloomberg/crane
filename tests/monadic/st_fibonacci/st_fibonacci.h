@@ -17,6 +17,7 @@
 template <typename T1> struct code_const;
 template <typename Err> struct ExceptE;
 struct Err;
+enum class STRefs;
 template <typename I, typename V, typename A>
 concept Code = requires {
   { I::code() } -> std::convertible_to<uint64_t>;
@@ -62,6 +63,10 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
+enum class STRefs { BUILD_STREFS };
+
 template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
+
+uint64_t fib_loop(STRefs r, uint64_t k, uint64_t *x, uint64_t *y);

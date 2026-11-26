@@ -1,32 +1,30 @@
 #include "st_fibonacci.h"
 
+uint64_t fib_loop(STRefs, uint64_t k, uint64_t *x, uint64_t *y) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  uint64_t _loop_k = k;
+  while (true) {
+    if (_loop_k <= 0) {
+      return *x;
+    } else {
+      uint64_t k_ = _loop_k - 1;
+      uint64_t x_ = *x;
+      uint64_t y_ = *y;
+      *x = y_;
+      *y = (x_ + y_);
+      _loop_k = k_;
+    }
+  }
+}
+
 uint64_t StFibonacci::fib_ST(uint64_t n) {
   if (n < UINT64_C(2)) {
     return n;
   } else {
-    std::shared_ptr<uint64_t> x = std::make_shared<uint64_t>(UINT64_C(0));
-    std::shared_ptr<uint64_t> y = std::make_shared<uint64_t>(UINT64_C(1));
-    auto fib_loop =
-        [](uint64_t k, const std::shared_ptr<uint64_t> &x0,
-           const std::shared_ptr<uint64_t> &y0)
-             -> uint64_t {
-          // Loop replaces the tail recursion: each recursive call updates the
-          // loop variables.
-          uint64_t _loop_k = k;
-          while (true) {
-            if (_loop_k <= 0) {
-              return *x0.get();
-            } else {
-              uint64_t k_ = _loop_k - 1;
-              uint64_t x_ = *x0.get();
-              uint64_t y_ = *y0.get();
-              *x0.get() = y_;
-              *y0.get() = (x_ + y_);
-              _loop_k = k_;
-            }
-          }
-        };
-    return fib_loop(n, std::move(x), std::move(y));
+    uint64_t x = UINT64_C(0);
+    uint64_t y = UINT64_C(1);
+    return fib_loop(STRefs::BUILD_STREFS, n, &x, &y);
   }
 }
 
