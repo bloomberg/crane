@@ -353,6 +353,16 @@ parameter (`Types.regrouped_through_aliases`); a `let` in argument
 position is written against the slot as its body would be; an argument of
 a local function or an applied local fixpoint is generated with its
 parameter, not the enclosing result, as the return type in force.
+Ephyra round 28: a typed mapping whose C++ type is one of its components
+(`sig A P` is `A`) is read as that component by `Coerce` and by the join
+(`Coerce.aliases_in`, `Match_types.declared_at`); an over-application
+counts the arguments of every call between the declared call and the
+outermost, and an application's arrows are dropped through a function
+alias (`Type_util.strip_arrows_through_aliases`); a returned value a
+substitution rebuilds keeps the type it was recorded at
+(`Lowering_state.carry_returns`); a typed-mapped type carries no term
+arguments, and a custom constructor is built at its slot where the slot
+regroups its annotation through an alias.
 
 ### 6.2 The single coercion
 
