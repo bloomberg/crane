@@ -440,6 +440,20 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
             else temps
         else temps
       in
+      (* An annotation that spells the slot's type through a function alias
+         unfolded ([maybe (nat -> nat -> nat * nat)] for [maybe (nat -> st
+         nat)]) is the same type grouped otherwise: the slot's grouping is
+         the one the consumer reads ({!Types.regrouped_through_aliases}, as
+         {!Calls.argument_position} reads it for a generated inductive). *)
+      let temps =
+        match Option.map strip_cpp_ref_const expected_ty with
+        | Some (Entity_application (n', exp, _) | In_namespace (_, Entity_application (n', exp, _)))
+          when GlobRef.CanOrd.equal n n' && List.compare_lengths exp temps = 0
+               && Types.regrouped_through_aliases cx env (Entity_application (n, exp, []))
+                    (Entity_application (n, temps, [])) ->
+          exp
+        | _ -> temps
+      in
       (* For custom list constructors (e.g., deque nil/cons), a container
          element type built entirely from [Core.Type.Erased] placeholders (extraction's
          "no information available" marker, e.g. because the production's

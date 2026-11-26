@@ -16442,3 +16442,14 @@
   (alias runtest)
   (deps local_fix_inlined_fn_join.t.exe)
   (action (run ./local_fix_inlined_fn_join.t.exe))))
+
+(subdir mapped_component_alias_flat
+ (rule
+  (targets mapped_component_alias_flat.t.exe)
+  (deps MappedComponentAliasFlat.vo mapped_component_alias_flat.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mapped_component_alias_flat.t.exe mapped_component_alias_flat.t.cpp mapped_component_alias_flat.cpp)))
+ (rule
+  (alias runtest)
+  (deps mapped_component_alias_flat.t.exe)
+  (action (run ./mapped_component_alias_flat.t.exe))))

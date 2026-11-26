@@ -193,7 +193,14 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
     | (Entity _ | Scope _ | Type_member _), Typed (Function _), Global {callee; _} ->
       Typed.v ~ty:(global_value_type cx env callee (core_type_of cx e)) x
     | Lambda l, Typed t, _ -> (
-      match Cpp_ir.Arrows.of_type t with
+      (* A lambda is a closure whatever names its type: an alias, or a
+         typed mapping that is its component ([sig A P] at a function [A]). *)
+      let arrows =
+        match Cpp_ir.Arrows.of_type t with
+        | Some _ as a -> a
+        | None -> Cpp_ir.Arrows.of_type (Coerce.normal (Coerce.aliases_in cx) t)
+      in
+      match arrows with
       | Some a ->
         let doms, result = Cpp_ir.Arrows.curried a in
         let n = List.length l.params in

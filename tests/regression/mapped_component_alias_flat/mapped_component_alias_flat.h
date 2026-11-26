@@ -14,8 +14,7 @@ struct MappedComponentAliasFlat {
 
   static inline const uint64_t result =
       [](const auto &_m, auto _d) { return _m.has_value() ? *_m : _d; }(
-          std::optional<
-              crane::fn<std::pair<uint64_t, uint64_t>(uint64_t, uint64_t)>>{},
+          std::optional<crane::fn<st<uint64_t>(uint64_t)>>{},
           crane::fn<st<uint64_t>(uint64_t)>(sret<uint64_t>))(UINT64_C(4))(
           UINT64_C(5))
                                                                            .first;

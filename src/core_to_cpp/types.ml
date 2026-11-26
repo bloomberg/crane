@@ -214,7 +214,12 @@ let rec cpp_ir_of_core_type cx
     Entity_application
       ( g,
         List.map (cpp_ir_of_core_type cx env ~ns tvars) ts,
-        List.map (fun a -> !type_term_arg cx env a) args )
+        (* A typed mapping spells its type from the type arguments alone
+           ({!Base.Mapping_plan.cpp_type}): the term arguments, among them
+           the erased one holding each type argument's place, are none of
+           its type, and two spellings of one type differ in them only
+           where one was annotated without them. *)
+        if Base.Mapping_plan.is_type_head g then [] else List.map (fun a -> !type_term_arg cx env a) args )
   | Core.Type.Global_app {head = g; type_arguments = ts; _} ->
     (* For inductives, only keep type args that correspond to parameters (not
        indices). Parameters become template params in C++; indices are
