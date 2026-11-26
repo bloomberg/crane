@@ -312,11 +312,11 @@ MemSafetyProbe23::collect_children(const MemSafetyProbe23::tree &t) {
                 uint64_t> pr = std::move(_result);
       uint64_t s = (([&]() -> uint64_t {
         auto [p, n] = std::move(pl);
-        auto [_x, _x0] = std::move(p);
+        auto [_, _] = std::move(p);
         return n;
       }() + a1) + [&]() -> uint64_t {
         auto [p, n] = std::move(pr);
-        auto [_x, _x0] = std::move(p);
+        auto [_, _] = std::move(p);
         return n;
       }());
       _result = std::make_pair(std::make_pair(*a0, a2), s);

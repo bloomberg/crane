@@ -349,8 +349,7 @@ struct MemSafetyProbe11 {
           auto _f = std::move(std::get<_after_tree_depth_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t dl = _f.dl;
-          uint64_t dr = _result;
-          _result = (UINT64_C(1) + (dl <= dr ? dr : dl));
+          _result = (UINT64_C(1) + (dl <= _result ? _result : dl));
         }
       }
       return _result;

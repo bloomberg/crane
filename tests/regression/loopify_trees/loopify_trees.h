@@ -722,8 +722,7 @@ struct LoopifyTrees {
           auto _f = std::move(std::get<_after_tree_height_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t lh = _f.lh;
-          uint64_t rh = _result;
-          _result = ((lh <= rh ? rh : lh) + 1);
+          _result = ((lh <= _result ? _result : lh) + 1);
         }
       }
       return _result;
@@ -961,10 +960,9 @@ struct LoopifyTrees {
           _stack.pop_back();
           uint64_t d1 = _f.d1;
           uint64_t d2 = _f.d2;
-          uint64_t d3 = _result;
           _result = ([&]() -> uint64_t {
-            if ((d1 <= d2 ? d2 : d1) <= d3) {
-              return d3;
+            if ((d1 <= d2 ? d2 : d1) <= _result) {
+              return _result;
             } else if (d1 <= d2) {
               return d2;
             } else {

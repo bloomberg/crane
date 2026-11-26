@@ -281,9 +281,8 @@ template <SYM Ty> struct DefsFn {
                        std::pair<crane::obj, crane::obj>> &e,
             symbols_semty x0_) {
     const auto &[x0, a1] = e;
-    production x1 = x0;
-    auto [_x, _x0] = std::move(x1);
-    const auto &[_x1, a] = a1;
+    auto [_, _] = x0;
+    const auto &[_, a] = a1;
     action_semty act = a;
     return crane::any_cast<crane::fn<crane::obj(crane::obj)>>(std::move(act))(
         std::move(x0_));
@@ -370,13 +369,13 @@ const MyDefs::grammar entries =
             std::make_pair(
                 crane::obj(crane_erase_fn([](const auto &) { return true; })),
                 crane::obj(crane_erase_fn([](const auto &tup) {
-                  const auto &[_x, y0] =
+                  const auto &[_, y0] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
                   const auto &[pr, y1] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
                   const auto &[prs, y2] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
-                  const auto &[_x0, _x1] =
+                  const auto &[_, _] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
                   return List<crane::obj>::cons(
                       pr, crane::any_cast<List<crane::obj>>(prs));

@@ -47,8 +47,7 @@ uint64_t InlinedAliasResumeFrame::h(uint64_t n) {
       _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t r1 = _f.r1;
-      uint64_t r2 = _result;
-      _result = ((((r1 + r2) + n) + List<uint64_t>::nil().length()) +
+      _result = ((((r1 + _result) + n) + List<uint64_t>::nil().length()) +
                  List<bool>::nil().length());
     }
   }

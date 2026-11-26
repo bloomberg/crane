@@ -52,8 +52,8 @@ domty garg(uint64_t n) {
 bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
                     std::pair<crane::obj, crane::obj>> &e) {
   const auto &[x0, a1] = e;
-  const auto &[n, _x] = x0;
-  const auto &[f, _x0] = a1;
+  const auto &[n, _] = x0;
+  const auto &[f, _] = a1;
   if (crane::any_cast<bool>(
           crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(garg(n)))) {
     return true;

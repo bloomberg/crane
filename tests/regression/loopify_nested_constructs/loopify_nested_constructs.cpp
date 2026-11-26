@@ -101,8 +101,7 @@ uint64_t LoopifyNestedConstructs::deep_nest(uint64_t n) {
     } else {
       auto _f = std::move(std::get<_after_deep_nest_in_S>(_popped));
       _stack.pop_back();
-      uint64_t inner = _result;
-      uint64_t mid = (inner + UINT64_C(1));
+      uint64_t mid = (_result + UINT64_C(1));
       _result = (mid * UINT64_C(2));
     }
   }
@@ -232,9 +231,7 @@ LoopifyNestedConstructs::tuple_constr(uint64_t n) {
       auto _f = std::move(std::get<_after_tuple_constr_in_S>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
-          std::move(_result);
-      const auto &[p, c] = _tmp1;
+      auto [p, c] = std::move(_result);
       const auto &[a, b] = p;
       _result = std::make_pair(std::make_pair((a + UINT64_C(1)), (b + n)),
                                (c + (n * n)));
@@ -413,8 +410,7 @@ uint64_t LoopifyNestedConstructs::compute_with_lets(uint64_t n) {
       auto _f = std::move(std::get<_after_compute_with_lets_in_S_2>(_popped));
       _stack.pop_back();
       uint64_t x = _f.x;
-      uint64_t y = _result;
-      uint64_t z = (x + y);
+      uint64_t z = (x + _result);
       _result = (z * UINT64_C(2));
     }
   }

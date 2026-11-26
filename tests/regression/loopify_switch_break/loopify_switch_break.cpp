@@ -153,7 +153,7 @@ uint64_t LoopifySwitchBreak::count_tag(
         const auto &[a0, a1] = std::get<
             typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Cons>(
             ops.v());
-        const auto &[t_, _x] = a0;
+        const auto &[t_, _] = a0;
         switch (t) {
         case Tag::ADD: {
           switch (t_) {

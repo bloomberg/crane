@@ -345,40 +345,22 @@ bool skiplist_test::stm_test_bde_api() {
   SkipList<uint64_t, uint64_t> sl =
       SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
                                                               UINT64_C(0));
-  std::pair<std::shared_ptr<SkipNode<uint64_t, uint64_t>>, bool> result1 =
+  auto [_, front1] =
       sl.bde_add(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
-  auto [_x, front1] = std::move(result1);
-  std::pair<std::shared_ptr<SkipNode<uint64_t, uint64_t>>, bool> result2 =
+  auto [_, front2] =
       sl.bde_add(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
-  auto [_x0, front2] = std::move(result2);
-  std::pair<std::shared_ptr<SkipNode<uint64_t, uint64_t>>, bool> result3 =
+  auto [_, front3] =
       sl.bde_add(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
-  auto [_x1, front3] = std::move(result3);
   bool c3 = !(front3);
-  std::pair<uint64_t,
-            std::optional<std::shared_ptr<SkipNode<uint64_t,
-                                                   uint64_t>>>> findResult =
-      sl.bde_find(nat_lt, nat_eq, UINT64_C(5));
-  auto [status1, _x2] = std::move(findResult);
+  auto [status1, _] = sl.bde_find(nat_lt, nat_eq, UINT64_C(5));
   bool c4 = status1 == SkipList<int, int>::e_SUCCESS;
-  std::pair<uint64_t,
-            std::optional<std::shared_ptr<SkipNode<uint64_t,
-                                                   uint64_t>>>> findResult2 =
-      sl.bde_find(nat_lt, nat_eq, UINT64_C(9));
-  auto [status2, _x3] = std::move(findResult2);
+  auto [status2, _] = sl.bde_find(nat_lt, nat_eq, UINT64_C(9));
   bool c5 = status2 == SkipList<int, int>::e_NOT_FOUND;
-  std::pair<std::pair<
-      uint64_t, std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>>>,
-            bool> uniqueResult =
+  auto [p, _] =
       sl.bde_addUnique(nat_lt, nat_eq, UINT64_C(5), 500u, UINT64_C(0));
-  auto [p, _x4] = std::move(uniqueResult);
-  auto [status3, _x5] = std::move(p);
+  auto [status3, _] = std::move(p);
   bool c6 = status3 == SkipList<int, int>::e_DUPLICATE;
-  std::pair<uint64_t,
-            std::optional<std::shared_ptr<SkipNode<uint64_t,
-                                                   uint64_t>>>> frontResult =
-      sl.bde_front();
-  auto [status4, frontItem] = std::move(frontResult);
+  auto [status4, frontItem] = sl.bde_front();
   bool c7 = status4 == SkipList<int, int>::e_SUCCESS;
   bool c8;
   if (frontItem.has_value()) {
@@ -388,11 +370,7 @@ bool skiplist_test::stm_test_bde_api() {
   } else {
     c8 = false;
   }
-  std::pair<uint64_t,
-            std::optional<std::shared_ptr<SkipNode<uint64_t,
-                                                   uint64_t>>>> backResult =
-      sl.bde_back();
-  auto [status5, backItem] = std::move(backResult);
+  auto [status5, backItem] = sl.bde_back();
   bool c9 = status5 == SkipList<int, int>::e_SUCCESS;
   bool c10;
   if (backItem.has_value()) {

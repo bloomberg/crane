@@ -45,8 +45,7 @@ uint64_t written_in_unused_branch(STRefs, bool b) {
   uint64_t s = UINT64_C(3);
   [&]() -> uint64_t {
     if (b) {
-      uint64_t v = s;
-      s = (v + UINT64_C(1));
+      s = (s + UINT64_C(1));
       return UINT64_C(1);
     } else {
       return UINT64_C(2);

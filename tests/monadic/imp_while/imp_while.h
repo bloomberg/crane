@@ -468,9 +468,7 @@ public:
 /// The value of e, the variables read from vars.
 uint64_t eval(STRefs r, std::span<const uint64_t> vars, const Expr &e);
 /// One statement: its substatements are run by call.
-uint64_t exec_body(STRefs r,
-                   const std::shared_ptr<crane::array_storage<uint64_t>> &vars,
-                   const Stmt &s);
+uint64_t exec_body(STRefs r, std::span<uint64_t> vars, const Stmt &s);
 uint64_t exec(STRefs r,
               const std::shared_ptr<crane::array_storage<uint64_t>> &vars,
               const Stmt &s);

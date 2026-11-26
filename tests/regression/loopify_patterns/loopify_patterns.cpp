@@ -276,9 +276,7 @@ LoopifyPatterns::tuple_constr(uint64_t n) {
       auto _f = std::move(std::get<_after_tuple_constr_in_S>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
-          std::move(_result);
-      const auto &[p, c] = _tmp1;
+      auto [p, c] = std::move(_result);
       const auto &[a, b] = p;
       _result = std::make_pair(std::make_pair((a + 1), (b + n)), (c + (n * n)));
     }

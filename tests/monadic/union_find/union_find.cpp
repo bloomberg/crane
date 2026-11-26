@@ -1003,9 +1003,7 @@ uint64_t find_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a,
         _result = x;
       } else {
         uint64_t fuel_ = fuel - 1;
-        std::pair<uint64_t, uint64_t> x_ =
-            std::span<const std::pair<uint64_t, uint64_t>>{a}[x];
-        const auto &[p, k] = x_;
+        auto [p, k] = a[x];
         if (p == x) {
           _result = x;
         } else {
@@ -1018,9 +1016,7 @@ uint64_t find_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a,
       _stack.pop_back();
       uint64_t x = _f.x;
       uint64_t k = _f.k;
-      uint64_t r0 = std::move(_result);
-      a[x] = std::make_pair(r0, k);
-      _result = r0;
+      a[x] = std::make_pair(_result, k);
     }
   }
   return _result;
@@ -1033,12 +1029,8 @@ void union_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
   if (rx == ry) {
     return;
   } else {
-    std::pair<uint64_t, uint64_t> x_ =
-        std::span<const std::pair<uint64_t, uint64_t>>{a}[rx];
-    const auto &[_x, kx] = x_;
-    std::pair<uint64_t, uint64_t> x_0 =
-        std::span<const std::pair<uint64_t, uint64_t>>{a}[ry];
-    const auto &[_x0, ky] = x_0;
+    auto [_, kx] = a[rx];
+    auto [_, ky] = a[ry];
     if (kx < ky) {
       a[rx] = std::make_pair(ry, kx);
       return;
@@ -1187,8 +1179,8 @@ uf union_fun(uint64_t n,
   if (rx == ry) {
     return std::move(s1);
   } else {
-    auto [_x, kx] = get(s1, rx);
-    auto [_x0, ky] = get(s1, ry);
+    auto [_, kx] = get(s1, rx);
+    auto [_, ky] = get(s1, ry);
     if (kx < ky) {
       return NatMap::template add<std::pair<uint64_t, uint64_t>>(
           rx, std::make_pair(ry, kx), std::move(s1));

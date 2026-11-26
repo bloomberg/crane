@@ -69,7 +69,7 @@ uint64_t get_first(const Specif::SigT<Tag, sem_ty> &v) {
       const auto &p = _cs.front();
       std::deque<crane::obj> _x =
           std::deque<crane::obj>(_cs.begin() + 1, _cs.end());
-      const auto &[x1, _x0] =
+      const auto &[x1, _] =
           crane::any_cast<std::pair<crane::obj, crane::obj>>(p);
       return crane::any_cast<uint64_t>(x1);
     }

@@ -429,7 +429,7 @@ struct CarrierHolderBeforeAlias {
           Sum1<memE<ptr>, FailE, crane::obj>, std::pair<Nat, Nat>,
           Itree<Sum1<memE<ptr>, FailE, crane::obj>,
                 std::pair<Nat, Nat>>>::RetF>(_sv.v());
-      const auto &[a, _x] = r1;
+      const auto &[a, _] = r1;
       return a.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
     } else {
       return false;

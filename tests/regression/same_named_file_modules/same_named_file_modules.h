@@ -1852,7 +1852,7 @@ template <OrderedType X> struct Raw {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(s.v());
-      const auto &[k_, _x] = a0;
+      const auto &[k_, _] = a0;
       auto &&_sv = X::compare(k, k_);
       if (std::holds_alternative<typename Compare<typename X::t>::LT>(_sv.v())) {
         return false;

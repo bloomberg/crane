@@ -290,8 +290,8 @@ struct NestedStatetRetType {
       const auto &[r0] = std::get<typename ItreeF<
           noE, std::pair<bool, std::pair<Nat, Nat>>,
           Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>>::RetF>(_sv.v());
-      const auto &[_x, p] = r0;
-      const auto &[a, _x0] = p;
+      const auto &[_, p] = r0;
+      const auto &[a, _] = p;
       return a;
     } else {
       return Nat::o();

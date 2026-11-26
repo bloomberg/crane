@@ -5,7 +5,7 @@ uint64_t StructuralSpans::total(std::span<const uint64_t> x0_) {
 }
 
 void StructuralSpans::bump(std::span<uint64_t> b, uint64_t i) {
-  uint64_t x = std::span<const uint64_t>{b}[i];
+  uint64_t x = b[i];
   b[i] = (x + 1);
   return;
 }

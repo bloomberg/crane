@@ -137,9 +137,8 @@ uint64_t LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m, uint64_t n) {
       _stack.pop_back();
       uint64_t m = _f.m;
       uint64_t fuel_ = _f.fuel_;
-      uint64_t inner = _result;
       _stack.emplace_back(_call{
-          inner, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))), fuel_});
+          _result, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))), fuel_});
     }
   }
   return _result;

@@ -7,7 +7,7 @@ uint64_t StArrayHelpers::peek(std::span<const uint64_t> arr, uint64_t i) {
 
 /// Reads one cell and writes it back.
 void StArrayHelpers::bump(std::span<uint64_t> arr, uint64_t i) {
-  uint64_t v = std::span<const uint64_t>{arr}[i];
+  uint64_t v = arr[i];
   arr[i] = (v + 1);
   return;
 }
@@ -104,7 +104,7 @@ void StArrayHelpers::regrow_then_write(
 
 /// A bool array: reads one cell and writes its negation back.
 void StArrayHelpers::flip(std::span<bool> arr, uint64_t i) {
-  bool b = std::span<const bool>{arr}[i];
+  bool b = arr[i];
   arr[i] = !(b);
   return;
 }

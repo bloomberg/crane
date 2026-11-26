@@ -158,8 +158,7 @@ LoopifyPairs::min_max(const LoopifyPairs::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_min_max_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[mn, mx] = _tmp1;
+      auto [mn, mx] = std::move(_result);
       _result = std::make_pair((a0 <= mn ? a0 : mn), (mx <= a0 ? a0 : mx));
     }
   }
@@ -202,8 +201,7 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_and_count_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[s, c] = _tmp1;
+      auto [s, c] = std::move(_result);
       _result = std::make_pair((a0 + s), (c + 1));
     }
   }
@@ -247,9 +245,7 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_prod_count_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, std::pair<uint64_t, uint64_t>> _tmp1 =
-          std::move(_result);
-      const auto &[s, p0] = _tmp1;
+      auto [s, p0] = std::move(_result);
       const auto &[p, c] = p0;
       _result = std::make_pair((a0 + s), std::make_pair((a0 * p), (c + 1)));
     }

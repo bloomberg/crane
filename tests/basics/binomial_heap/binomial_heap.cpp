@@ -275,7 +275,7 @@ BinomialHeap::key BinomialHeap::help(const List<BinomialHeap::tree> &c) {
   auto _cs = delete_max(c);
   if (_cs.has_value()) {
     const std::pair<uint64_t, List<BinomialHeap::tree>> &p = *_cs;
-    const auto &[k, _x] = p;
+    const auto &[k, _] = p;
     return k;
   } else {
     return UINT64_C(0);

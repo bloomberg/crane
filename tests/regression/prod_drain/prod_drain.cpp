@@ -39,7 +39,7 @@ uint64_t ProdDrain::depth(const ProdDrain::t &x) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0] = std::get<typename ProdDrain::t::N>(x.v());
-        const auto &[u, _x] = (*a0);
+        const auto &[u, _] = (*a0);
         _stack.emplace_back(_after_depth_in_pair{});
         _stack.emplace_back(_call{u});
       }

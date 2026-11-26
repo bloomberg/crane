@@ -254,7 +254,7 @@ using grammar_entry = SigT<production, production_semty>;
             std::make_pair(
                 crane::obj(crane_erase_fn([](const auto &) { return true; })),
                 crane::obj(crane_erase_fn([](const auto &tup) {
-                  const auto &[s, _x] =
+                  const auto &[s, _] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
                   return Val::vstr(crane::any_cast<std::string>(s));
                 })))),
@@ -267,7 +267,7 @@ using grammar_entry = SigT<production, production_semty>;
                     crane::obj(
                         crane_erase_fn([](const auto &) { return true; })),
                     crane::obj(crane_erase_fn([](const auto &tup) {
-                      const auto &[i, _x] =
+                      const auto &[i, _] =
                           crane::any_cast<std::pair<crane::obj, crane::obj>>(
                               tup);
                       return Val::vint(crane::any_cast<uint64_t>(i));

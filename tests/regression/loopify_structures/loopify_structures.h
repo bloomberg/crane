@@ -535,11 +535,10 @@ struct LoopifyStructures {
           uint64_t d1 = _f.d1;
           uint64_t d2 = _f.d2;
           uint64_t d3 = _f.d3;
-          uint64_t d4 = _result;
           _result = ([&]() -> uint64_t {
-            if ((d1 <= d2 ? d2 : d1) <= (d3 <= d4 ? d4 : d3)) {
-              if (d3 <= d4) {
-                return d4;
+            if ((d1 <= d2 ? d2 : d1) <= (d3 <= _result ? _result : d3)) {
+              if (d3 <= _result) {
+                return _result;
               } else {
                 return d3;
               }

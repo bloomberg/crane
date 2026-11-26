@@ -469,17 +469,17 @@ struct Equations {
         f,
         f0,
         [=](uint64_t, uint64_t, gcd_clause_3_graph, const T1 &x) {
-          const auto &[_x2, _x3] = p;
+          const auto &[_, _] = p;
           return x;
         },
         [=, f2 = std::move(f2)](uint64_t n1, uint64_t n2, gcd_graph,
                                 const T1 &eta0_) {
-          const auto &[_x0, _x1] = p;
+          const auto &[_, _] = p;
           return f2(n1, n2, eta0_);
         },
         [=, f3 = std::move(f3)](uint64_t n1, uint64_t n2, gcd_graph,
                                 const T1 &eta0_) {
-          const auto &[_x0, _x1] = p;
+          const auto &[_, _] = p;
           return f3(n1, n2, eta0_);
         },
         p,

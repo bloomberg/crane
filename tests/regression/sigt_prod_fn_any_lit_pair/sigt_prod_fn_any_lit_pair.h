@@ -163,7 +163,7 @@ template <SEM S> struct Make {
     // touching its counts.
     static const auto erased_fn =
         crane::immortal(crane_erase_fn([](const auto &tup) {
-          const auto &[_x, _x0] =
+          const auto &[_, _] =
               crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
           return true;
         }));
@@ -177,8 +177,8 @@ template <SEM S> struct Make {
                              std::pair<crane::obj, crane::obj>> &e,
                   F1 &&arg) {
     const auto &[x0, a1] = e;
-    const auto &[a, _x] = x0;
-    const auto &[f, _x0] = a1;
+    const auto &[a, _] = x0;
+    const auto &[f, _] = a1;
     if (crane::any_cast<bool>(
             crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(
                 std::make_pair(crane::obj(arg(a)),

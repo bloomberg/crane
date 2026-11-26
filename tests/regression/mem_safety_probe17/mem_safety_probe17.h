@@ -635,7 +635,6 @@ struct MemSafetyProbe17 {
           uint64_t da = _f.da;
           uint64_t db = _f.db;
           uint64_t dc = _f.dc;
-          uint64_t dd = _result;
           uint64_t m1;
           if (da <= db) {
             m1 = db;
@@ -643,8 +642,8 @@ struct MemSafetyProbe17 {
             m1 = da;
           }
           uint64_t m2;
-          if (dc <= dd) {
-            m2 = dd;
+          if (dc <= _result) {
+            m2 = _result;
           } else {
             m2 = dc;
           }

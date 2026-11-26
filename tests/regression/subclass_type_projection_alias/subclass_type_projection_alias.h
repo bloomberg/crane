@@ -602,7 +602,7 @@ struct SubclassTypeProjectionAlias {
                       Err, std::pair<
                                std::pair<State<typename _tcI0::ptr>, List<Nat>>,
                                dv<typename _tcI0::ptr>>>::Inr>(r.v());
-                  const auto &[_x, d] = a0;
+                  const auto &[_, d] = a0;
                   return Sum<Err, dv<typename _tcI0::ptr>>::inr(d);
                 }
               }()));

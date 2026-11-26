@@ -48,9 +48,9 @@ struct AnyCastNested {
   static T1 extract_a(const SigT<uint64_t, payload_ty<T1>> &s) {
     const auto &[x0, a1] = s;
     if (x0 <= 0) {
-      const auto &[_x, rest] =
+      const auto &[_, rest] =
           crane::any_cast<std::pair<crane::obj, crane::obj>>(a1);
-      const auto &[_x0, v] =
+      const auto &[_, v] =
           crane::any_cast<std::pair<crane::obj, crane::obj>>(rest);
       return crane_any_cast<T1>(v);
     } else {

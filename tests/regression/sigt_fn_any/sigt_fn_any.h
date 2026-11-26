@@ -160,7 +160,7 @@ template <SEM S> struct Make {
                              crane::obj> &e,
                   F1 &&arg) {
     const auto &[x0, a1] = e;
-    const auto &[a, _x] = x0;
+    const auto &[a, _] = x0;
     if (crane::any_cast<bool>(
             crane::any_cast<crane::fn<crane::obj(crane::obj)>>(a1)(
                 crane_call_erased(arg, a)))) {

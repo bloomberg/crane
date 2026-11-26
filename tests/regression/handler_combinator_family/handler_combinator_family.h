@@ -551,7 +551,7 @@ struct HandlerCombinatorFamily {
           Sum1<FailE, noE, crane::obj>, std::pair<Nat, Nat>,
           Itree<Sum1<FailE, noE, crane::obj>, std::pair<Nat, Nat>>>::RetF>(
           _sv.v());
-      const auto &[_x, n] = r0;
+      const auto &[_, n] = r0;
       return n.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
     } else {
       return false;

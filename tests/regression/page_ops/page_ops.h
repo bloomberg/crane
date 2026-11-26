@@ -221,7 +221,7 @@ struct PageOps {
             UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
-      const auto &[_x, next] = p;
+      const auto &[_, next] = p;
       return next;
     } else {
       return UINT64_C(0);

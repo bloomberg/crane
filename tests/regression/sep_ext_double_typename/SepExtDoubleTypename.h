@@ -37,7 +37,7 @@ template <OrderedType X> struct FMapList {
       const auto &[a0, _] =
           std::get<typename Datatypes::template List<
               std::pair<typename X::t, T1>>::Cons>(l.v());
-      const auto &[k, _x0] = a0;
+      const auto &[k, _] = a0;
       return std::make_optional<typename X::t>(k);
     }
   }

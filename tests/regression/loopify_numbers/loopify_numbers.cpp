@@ -527,8 +527,7 @@ uint64_t LoopifyNumbers::dec_to_bin_fuel(uint64_t fuel, uint64_t n) {
       auto _f = std::move(std::get<_after_dec_to_bin_fuel_in_S>(_popped));
       _stack.pop_back();
       uint64_t digit = _f.digit;
-      uint64_t rest = _result;
-      _result = (digit + (UINT64_C(10) * rest));
+      _result = (digit + (UINT64_C(10) * _result));
     }
   }
   return _result;

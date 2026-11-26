@@ -215,7 +215,7 @@ struct FunctionTypeArgumentCurried {
       UINT64_C(0));
 
   template <typename T1, typename T2> static T1 myfst(std::pair<T1, T2> p) {
-    auto [a, _x] = std::move(p);
+    auto [a, _] = std::move(p);
     return std::move(a);
   }
 

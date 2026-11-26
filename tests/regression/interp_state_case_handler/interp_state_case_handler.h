@@ -1045,7 +1045,7 @@ struct InterpStateCaseHandler {
     }();
     if (_cs.has_value()) {
       const std::pair<Nat, Nat> &p = *_cs;
-      const auto &[_x, n] = p;
+      const auto &[_, n] = p;
       return n.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
     } else {
       return false;

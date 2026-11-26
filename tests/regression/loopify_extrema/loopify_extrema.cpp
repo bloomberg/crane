@@ -133,8 +133,7 @@ std::pair<uint64_t, uint64_t> LoopifyExtrema::minmax(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_minmax_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[lo, hi] = _tmp1;
+      auto [lo, hi] = std::move(_result);
       _result = std::make_pair(std::min(a0, lo), std::max(a0, hi));
     }
   }

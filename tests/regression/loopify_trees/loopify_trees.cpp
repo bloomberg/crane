@@ -348,8 +348,7 @@ LoopifyTrees::sum_of_max_branches(const LoopifyTrees::tree<uint64_t> &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       uint64_t lsum = _f.lsum;
-      uint64_t rsum = _result;
-      _result = (a1 + (lsum <= rsum ? rsum : lsum));
+      _result = (a1 + (lsum <= _result ? _result : lsum));
     }
   }
   return _result;
@@ -844,8 +843,7 @@ LoopifyTrees::count_nodes(const LoopifyTrees::tree<uint64_t> &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      std::pair<uint64_t, uint64_t> _tmp2 = std::move(_result);
-      const auto &[lc, ls] = _tmp2;
+      auto [lc, ls] = std::move(_result);
       _stack.emplace_back(_after_count_nodes_in_pair{a1, lc, ls});
       _stack.emplace_back(_call{&a2});
     } else {
@@ -854,8 +852,7 @@ LoopifyTrees::count_nodes(const LoopifyTrees::tree<uint64_t> &t) {
       uint64_t a1 = _f.a1;
       uint64_t lc = _f.lc;
       uint64_t ls = _f.ls;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[rc, rs] = _tmp1;
+      auto [rc, rs] = std::move(_result);
       _result = std::make_pair(((lc + rc) + 1), (a1 + (ls + rs)));
     }
   }
@@ -1216,8 +1213,7 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t> &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      std::pair<uint64_t, uint64_t> _tmp2 = std::move(_result);
-      const auto &[lmin, lmax] = _tmp2;
+      auto [lmin, lmax] = std::move(_result);
       _stack.emplace_back(_after_tree_min_max_in_pair{a1, lmin, lmax});
       _stack.emplace_back(_call{&a2});
     } else {
@@ -1226,8 +1222,7 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t> &t) {
       uint64_t a1 = _f.a1;
       uint64_t lmin = _f.lmin;
       uint64_t lmax = _f.lmax;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[rmin, rmax] = _tmp1;
+      auto [rmin, rmax] = std::move(_result);
       _result = std::make_pair(min3((lmin == UINT64_C(0) ? a1 : lmin),
                                     (rmin == UINT64_C(0) ? a1 : rmin), a1),
                                max3(lmax, rmax, a1));

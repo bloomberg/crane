@@ -83,11 +83,11 @@ using grammar_entry = SigT<production, production_semty>;
                 crane::obj(crane_erase_fn([](const auto &tup) {
                   const auto &[x, y0] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                  const auto &[_x, y1] =
+                  const auto &[_, y1] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
-                  const auto &[_x0, y2] =
+                  const auto &[_, y2] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
-                  const auto &[tpls, _x1] =
+                  const auto &[tpls, _] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
                   return triples_le_max(crane_container_cast<std::deque<rgb>>(
                       crane::any_cast<std::deque<crane::obj>>(tpls)),
@@ -100,7 +100,7 @@ using grammar_entry = SigT<production, production_semty>;
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
                   const auto &[z, y2] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
-                  const auto &[tpls, _x] =
+                  const auto &[tpls, _] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
                   return [](auto _a0, auto _a1) {
                     _a1.push_front(_a0);

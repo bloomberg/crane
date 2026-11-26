@@ -531,7 +531,7 @@ struct TopologicalSort {
     });
     if (_cs.has_value()) {
       const std::pair<T1, List<T1>> &p = *_cs;
-      const auto &[_x, es] = p;
+      const auto &[_, es] = p;
       return es;
     } else {
       return List<T1>::nil();
@@ -586,7 +586,7 @@ struct TopologicalSort {
     } else {
       const auto &[a0, _] =
           std::get<typename List<std::pair<T1, List<T1>>>::Cons>(graph0.v());
-      const auto &[e, _x0] = a0;
+      const auto &[e, _] = a0;
       return std::make_optional<T1>(cycle_entry_aux<T1>(
           eqb_node, graph0, List<T1>::nil(), e, graph0.length()));
     }

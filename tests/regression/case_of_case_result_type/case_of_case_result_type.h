@@ -170,7 +170,7 @@ struct CaseOfCaseResultType {
   };
 
   static inline const uint64_t v = []() -> uint64_t {
-    auto [_x, _x0] = List<List<bool>>::nil().template fold_left<
+    auto [_, _] = List<List<bool>>::nil().template fold_left<
         std::pair<std::optional<uint64_t>, pt>>(
         [](std::pair<std::optional<uint64_t>, pt>,
            List<bool>) {

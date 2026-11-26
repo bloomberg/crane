@@ -211,8 +211,7 @@ uint64_t MemSafetyProbe8::tree_collect(uint64_t _x,
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       uint64_t left = _f.left;
-      uint64_t right = _result;
-      _result = ((left + a1) + right);
+      _result = ((left + a1) + _result);
     }
   }
   return _result;

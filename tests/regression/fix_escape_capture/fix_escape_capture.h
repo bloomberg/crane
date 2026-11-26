@@ -12,7 +12,7 @@ struct FixEscapeCapture {
   make_pair_fn(uint64_t base);
   /// Invokes the escaped fixpoint — use-after-free if & capture.
   static inline const uint64_t test_pair = []() -> uint64_t {
-    auto [_x, f] = make_pair_fn(UINT64_C(5));
+    auto [_, f] = make_pair_fn(UINT64_C(5));
     return f(UINT64_C(3));
   }();
   /// Same pattern with a non-recursive local fixpoint to isolate the

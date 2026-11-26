@@ -30,7 +30,7 @@ struct Monadic {
                 return state_return<bool, std::monostate>(std::monostate{});
               });
         };
-    auto [_x, a] = crane::apply2(foo_state_, std::monostate{}, true);
+    auto [_, a] = crane::apply2(foo_state_, std::monostate{}, true);
     return a;
   }();
 };

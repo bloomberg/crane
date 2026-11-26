@@ -6,7 +6,7 @@ uint64_t lomuto_scan(STRefs, std::span<uint64_t> arr, uint64_t pv, uint64_t,
   // variables.
   while (true) {
     if (i < hi) {
-      uint64_t v = std::span<const uint64_t>{arr}[i];
+      uint64_t v = arr[i];
       if (v <= pv) {
         std::swap(arr[i], arr[s]);
         s = (s + 1);
@@ -22,7 +22,7 @@ uint64_t lomuto_scan(STRefs, std::span<uint64_t> arr, uint64_t pv, uint64_t,
 
 uint64_t partition(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
                    uint64_t pividx) {
-  uint64_t pv = std::span<const uint64_t>{arr}[pividx];
+  uint64_t pv = arr[pividx];
   std::swap(arr[pividx], arr[hi]);
   uint64_t p = lomuto_scan(r, arr, pv, lo, hi, lo, lo);
   std::swap(arr[p], arr[hi]);

@@ -76,7 +76,7 @@ Nat Void1LambdaResultErased::first(const std::pair<Nat, Nat> &p) {
             r0.v())) {
       const auto &[a00] =
           std::get<typename Sum<std::pair<Nat, Nat>, Nat>::Inl>(r0.v());
-      const auto &[k, _x] = a00;
+      const auto &[k, _] = a00;
       return k;
     } else {
       const auto &[a00] =

@@ -4,30 +4,22 @@ std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext() {
   int64_t _lc1_ref = INT64_C(1);
   int64_t a = _lc1_ref;
   int64_t _lc2_move_amt = INT64_C(2);
-  int64_t _lc2_i = _lc1_ref;
-  _lc1_ref = static_cast<int64_t>(static_cast<uint64_t>(_lc2_i) +
+  _lc1_ref = static_cast<int64_t>(static_cast<uint64_t>(_lc1_ref) +
                                   static_cast<uint64_t>(_lc2_move_amt));
-  int64_t b = _lc1_ref;
-  int64_t _lc3_i = _lc1_ref;
-  int64_t c = static_cast<int64_t>(static_cast<uint64_t>(_lc3_i) -
+  int64_t c = static_cast<int64_t>(static_cast<uint64_t>(_lc1_ref) -
                                    static_cast<uint64_t>(INT64_C(1)));
-  return std::make_pair(std::make_pair(a, b), c);
+  return std::make_pair(std::make_pair(a, _lc1_ref), c);
 }
 
 std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>, int64_t>
 testtoST2_ext() {
   int64_t _lc1_ref = INT64_C(1);
   int64_t _lc2_ref = INT64_C(10);
-  int64_t a = _lc1_ref;
   int64_t b = _lc2_ref;
-  int64_t v1 = _lc1_ref;
-  int64_t _lc3_move_amt = v1;
-  int64_t _lc3_i = _lc2_ref;
-  _lc2_ref = static_cast<int64_t>(static_cast<uint64_t>(_lc3_i) +
-                                  static_cast<uint64_t>(_lc3_move_amt));
-  int64_t c = _lc1_ref;
-  int64_t d = _lc2_ref;
-  return std::make_pair(std::make_pair(std::make_pair(a, b), c), d);
+  _lc2_ref = static_cast<int64_t>(static_cast<uint64_t>(_lc2_ref) +
+                                  static_cast<uint64_t>(_lc1_ref));
+  return std::make_pair(std::make_pair(std::make_pair(_lc1_ref, b), _lc1_ref),
+                        _lc2_ref);
 }
 
 std::pair<std::pair<std::pair<int64_t, int64_t>, bool>, int64_t>

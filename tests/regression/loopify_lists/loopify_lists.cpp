@@ -1828,8 +1828,7 @@ LoopifyLists::minmax(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_minmax_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[lo, hi] = _tmp1;
+      auto [lo, hi] = std::move(_result);
       _result = std::make_pair((a0 <= lo ? a0 : lo), (hi <= a0 ? a0 : hi));
     }
   }
@@ -1970,8 +1969,7 @@ LoopifyLists::majority(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_majority_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[cand, cnt] = _tmp1;
+      auto [cand, cnt] = std::move(_result);
       if (a0 == cand) {
         _result = std::make_pair(cand, (cnt + 1));
       } else if (cnt == UINT64_C(0)) {
@@ -2101,8 +2099,7 @@ LoopifyLists::sum_and_count(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_and_count_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[s, c] = _tmp1;
+      auto [s, c] = std::move(_result);
       _result = std::make_pair((a0 + s), (c + 1));
     }
   }

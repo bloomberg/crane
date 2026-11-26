@@ -52,8 +52,7 @@ uint64_t StArrayLoops::sum_from(std::span<const uint64_t> arr, uint64_t i,
       auto _f = std::move(std::get<_after_sum_from_in_S>(_popped));
       _stack.pop_back();
       uint64_t x = _f.x;
-      uint64_t r = std::move(_result);
-      _result = (x + r);
+      _result = (x + _result);
     }
   }
   return _result;

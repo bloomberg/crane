@@ -23,7 +23,7 @@ template <SymTypes Ty> struct Destruct {
             symbols_semty vs) {
     auto [a, t] =
         crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs));
-    auto [b, _x2] =
+    auto [b, _] =
         crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(t));
     return std::make_pair(crane::obj(std::move(b)), crane::obj(std::move(a)));
   }

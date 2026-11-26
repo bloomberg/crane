@@ -14,9 +14,8 @@ uint64_t StFibonacci::fib_ST(uint64_t n) {
       } else {
         uint64_t k_ = n - 1;
         uint64_t x_ = x;
-        uint64_t y_ = y;
-        x = y_;
-        y = (x_ + y_);
+        x = y;
+        y = (x_ + y);
         n = k_;
       }
     }

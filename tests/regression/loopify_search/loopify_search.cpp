@@ -150,8 +150,7 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_majority_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[cand, count] = _tmp1;
+      auto [cand, count] = std::move(_result);
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + 1));
       } else if (UINT64_C(0) < count) {

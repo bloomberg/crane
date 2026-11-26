@@ -32,15 +32,13 @@ uint64_t eval(STRefs r, std::span<const uint64_t> vars, const Expr &e) {
 }
 
 /// One statement: its substatements are run by call.
-uint64_t exec_body(STRefs r,
-                   const std::shared_ptr<crane::array_storage<uint64_t>> &vars,
-                   const Stmt &s) {
+uint64_t exec_body(STRefs r, std::span<uint64_t> vars, const Stmt &s) {
   if (std::holds_alternative<typename Stmt::Skip>(s.v())) {
     return UINT64_C(1);
   } else if (std::holds_alternative<typename Stmt::Assign>(s.v())) {
     const auto &[x0, e0] = std::get<typename Stmt::Assign>(s.v());
-    uint64_t v = eval(r, std::span<const uint64_t>{*vars}, e0);
-    std::span<uint64_t>{*vars}[x0] = v;
+    uint64_t v = eval(r, std::span<const uint64_t>{vars}, e0);
+    vars[x0] = v;
     return UINT64_C(1);
   } else if (std::holds_alternative<typename Stmt::Seq>(s.v())) {
     const auto &[s3, s4] = std::get<typename Stmt::Seq>(s.v());
@@ -49,13 +47,13 @@ uint64_t exec_body(STRefs r,
     return (n1 + n2);
   } else if (std::holds_alternative<typename Stmt::If>(s.v())) {
     const auto &[c0, s3, s4] = std::get<typename Stmt::If>(s.v());
-    uint64_t v = eval(r, std::span<const uint64_t>{*vars}, c0);
+    uint64_t v = eval(r, std::span<const uint64_t>{vars}, c0);
     uint64_t n = (v == UINT64_C(0) ? crane::rec_call<Stmt, uint64_t>(*s4)
                                    : crane::rec_call<Stmt, uint64_t>(*s3));
     return (n + 1);
   } else {
     const auto &[c0, body0] = std::get<typename Stmt::While>(s.v());
-    uint64_t v = eval(r, std::span<const uint64_t>{*vars}, c0);
+    uint64_t v = eval(r, std::span<const uint64_t>{vars}, c0);
     if (v == UINT64_C(0)) {
       return UINT64_C(1);
     } else {
@@ -70,8 +68,10 @@ uint64_t exec_body(STRefs r,
 uint64_t exec(STRefs r,
               const std::shared_ptr<crane::array_storage<uint64_t>> &vars,
               const Stmt &s) {
-  return crane::rec<Stmt, uint64_t>(
-      [=](Stmt _x0) -> uint64_t { return exec_body(r, vars, _x0); }, s);
+  return crane::rec<Stmt, uint64_t>([=](Stmt _x0) -> uint64_t {
+    return exec_body(r, std::span<uint64_t>{*vars}, _x0);
+  },
+                                    s);
 }
 
 /// Runs s on n variables, all 0: the steps it took and the final

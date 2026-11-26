@@ -10,8 +10,7 @@ uint64_t bump_twice(STRefs) {
         return;
       } else {
         uint64_t k_ = k - 1;
-        uint64_t v = r;
-        r = (v + UINT64_C(1));
+        r = (r + UINT64_C(1));
         k = k_;
       }
     }
@@ -42,9 +41,7 @@ std::pair<uint64_t, uint64_t> bump_each(STRefs) {
   };
   bump(UINT64_C(3), &r);
   bump(UINT64_C(4), &s);
-  uint64_t a = r;
-  uint64_t b = s;
-  return std::make_pair(a, b);
+  return std::make_pair(r, s);
 }
 
 std::pair<List<uint64_t>, List<uint64_t>> fill_each(STRefs) {

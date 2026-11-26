@@ -12,7 +12,7 @@
 struct FixAccEmptyErased {
   static inline const uint64_t t_opt =
       static_cast<uint64_t>([]() -> std::deque<bool> {
-        auto [_x, _x0] = []() {
+        auto [_, _] = []() {
           crane::fn<std::pair<std::optional<uint64_t>, uint64_t>(
               std::deque<std::string>,
               std::pair<std::optional<uint64_t>, uint64_t>)> go =
@@ -38,7 +38,7 @@ struct FixAccEmptyErased {
       }().size());
   static inline const uint64_t t_deque =
       static_cast<uint64_t>([]() -> std::deque<bool> {
-        auto [_x, _x0] = []() {
+        auto [_, _] = []() {
           crane::fn<std::pair<uint64_t, std::deque<uint64_t>>(
               std::deque<std::string>,
               std::pair<uint64_t, std::deque<uint64_t>>)> go =
