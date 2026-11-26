@@ -263,8 +263,12 @@ let rec same_type (a : ty) (b : ty) =
 
 (** R1.  A statement list ending [auto f = [..](params) { body }; return
     f(args);] -- the lambda bound once and called once, as what the
-    enclosing function returns -- ends with [{ params = args; body }]
-    instead.  A [return] in [body] returns from the function, which is what
+    enclosing function returns -- ends with [params = args; body] instead,
+    spliced into the list rather than put in a block of its own: the call
+    was the list's last statement, so nothing follows that the body's
+    locals could outlive into, and each name the body declares at its own
+    level is fresh ({!expand}), so none redeclares or hides a name of the
+    list.  A [return] in [body] returns from the function, which is what
     returning the call's result did; a local the lambda returned through a
     by-reference capture is now the function's own, and leaves by an
     implicit move rather than a copy.  The lambda must return what the
@@ -282,7 +286,7 @@ let inline_tail_call fresh ret_ty (stmts : stmt list) =
          (* Called once: not again inside its own arguments. *)
          && not (List.exists (fun a -> mentions f [Expression a]) args) -> (
     match expand ~alias:true fresh l args with
-    | Some ex -> List.rev rev_before @ [Block (ex.bindings @ ex.body)]
+    | Some ex -> List.rev rev_before @ ex.bindings @ ex.body
     | None -> stmts )
   | _ -> stmts
 
