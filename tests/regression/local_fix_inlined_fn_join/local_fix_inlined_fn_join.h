@@ -99,7 +99,7 @@ struct LocalFixInlinedFnJoin {
       crane::fn<uint64_t(uint64_t)> w;
       List<bool> l = List<bool>::nil();
       crane::fn<uint64_t(uint64_t)> acc = [](uint64_t) { return UINT64_C(1); };
-      w = [&]() {
+      w = [&]() -> crane::fn<uint64_t(uint64_t)> {
         if (std::holds_alternative<typename List<bool>::Nil>(l.v_mut())) {
           return std::move(acc);
         } else {

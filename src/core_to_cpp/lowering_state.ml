@@ -525,6 +525,37 @@ let with_returns cx (f : unit -> 'a) : 'a * (Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowe
 let record_return cx (e : Cpp_ir.Lowered.Expr.t) (ty : Cpp_ir.Lowered.Value_type.t) =
   match cx.ctx.lexical.returned with Some seen -> seen := (e, ty) :: !seen | None -> ()
 
+(** [after], a rewrite of the statements [before] that returns the same
+    values in the same places, rebuilt where it changed them -- a local read
+    under another name: each value rebuilt is recorded at the type its
+    original was returned at ({!record_return}), which renaming does not
+    change. *)
+let carry_returns cx ~(before : Cpp_ir.Lowered.Stmt.t list) ~(after : Cpp_ir.Lowered.Stmt.t list) =
+  match cx.ctx.lexical.returned with
+  | None -> ()
+  | Some seen ->
+    (* The values returned at the statements' own level, in order. *)
+    let returns stmts =
+      let rec stmt acc (s : Cpp_ir.Lowered.Stmt.t) =
+        match s with
+        | Return (Some e) -> e :: acc
+        | _ ->
+          let acc = ref acc in
+          Cpp_ir.Subterms.stmt ~expr:(fun _ -> ()) ~stmts:(List.iter (fun s -> acc := stmt !acc s)) s;
+          !acc
+      in
+      List.rev (List.fold_left stmt [] stmts)
+    in
+    let b = returns before and a = returns after in
+    if List.compare_lengths b a = 0 then
+      List.iter2
+        (fun e e' ->
+          if e != e' then
+            match List.find_map (fun (x, ty) -> if x == e then Some ty else None) !seen with
+            | Some ty -> seen := (e', ty) :: !seen
+            | None -> ())
+        b a
+
 (** The type [e] was recorded at where it was returned ({!record_return}),
     the node itself, not an equal one. *)
 let returned_type cx (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Value_type.t option =

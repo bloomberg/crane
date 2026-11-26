@@ -244,17 +244,6 @@
   (deps id_any_cast_flat_fn.t.exe)
   (action (run ./id_any_cast_flat_fn.t.exe))))
 
-(subdir local_fix_inlined_fn_join
- (rule
-  (targets local_fix_inlined_fn_join.t.exe)
-  (deps LocalFixInlinedFnJoin.vo local_fix_inlined_fn_join.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_inlined_fn_join.t.exe local_fix_inlined_fn_join.t.cpp local_fix_inlined_fn_join.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_inlined_fn_join.t.exe)
-  (action (run ./local_fix_inlined_fn_join.t.exe))))
-
 (subdir local_fix_partial_nth_slot
  (rule
   (targets local_fix_partial_nth_slot.t.exe)

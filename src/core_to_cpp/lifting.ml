@@ -144,6 +144,15 @@ and local_var_subst_stmt ?(keep_cast = false) ?(concrete_result = false) ?(extra
   let s' = Cpp_ir.Map.stmt m s in
   if !changed then s' else s
 
+(** {!local_var_subst_stmt} over the statements [stmts] of a body whose
+    returns a join reads: a value it rebuilds is returned at the type its
+    original was ({!Lowering_state.carry_returns}). *)
+and local_var_subst_stmts cx ?keep_cast (target : Id.t) (repl : Cpp_ir.Lowered.Expr.t)
+    (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Stmt.t list =
+  let after = List.map (local_var_subst_stmt ?keep_cast target repl) stmts in
+  carry_returns cx ~before:stmts ~after;
+  after
+
 (** A one-level rewrite by [expr] and [stmt] that records whether either
     changed a child: a substitution that finds nothing to substitute hands
     back the very node it was given, so a value recorded by identity where
