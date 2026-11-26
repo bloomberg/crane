@@ -59,9 +59,7 @@ Definition fib_fun (n : nat) : nat :=
   fib' n.
 
 Module StFibonacci.
-  (** [fib_loop] stays a function of its own: it takes the references by
-      their views, so they are locals of [fib_ST]. *)
-  Definition fib_ST := Eval unfold fib_ST in (@fib_ST cpp_refs).
+  Definition fib_ST := Eval unfold fib_ST, fib_loop in (@fib_ST cpp_refs).
   Definition fib_fun := Eval unfold fib_fun in fib_fun.
 End StFibonacci.
 
