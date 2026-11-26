@@ -125,25 +125,60 @@ type expansion = {
   body : stmt list;  (** the lambda's statements *)
 }
 
+(** The variable an argument names: [y] itself, or [y] moved from. *)
+let named_variable (a : expr) = match a with Local y | Move (Local y) -> Some y | _ -> None
+
+(** The parameters of [l] that may stand for the variable their argument in
+    [args] names, rather than be bound to it: a parameter [p] whose argument
+    is [y] or [std::move(y)], when [l] never assigns [p], does not name [y]
+    itself -- free, or declared at any depth, where a reference to [y] would
+    mean another variable -- and no other argument names [y].  Reading [p]
+    is then reading [y].  Used only where the call is the last thing its
+    body does, so that nothing reads [y] after the lambda's statements could
+    have changed what it holds. *)
+let aliased_params (l : lambda) params args =
+  let free = V.free_in_body l.body
+  and assigned = V.assigned l.body
+  and declared = V.declared l.body in
+  let vars = List.filter_map named_variable args in
+  let once y = List.length (List.filter (Id.equal y) vars) = 1 in
+  List.concat
+    (List.map2
+       (fun ((p, _), named) a ->
+         match named_variable a with
+         | Some y
+           when named && (not (Id.Set.mem p assigned)) && (not (V.mem y free)) && (not (V.mem y declared))
+                && once y ->
+           [(p, y)]
+         | _ -> [] )
+       (List.combine params (List.map (fun (_, x) -> x <> None) l.params))
+       args )
+
 (* [l] applied to [args], opened up; [None] if its parameters are templated
-   or do not match [args] in number. *)
-let expand fresh (l : lambda) args =
+   or do not match [args] in number.  With [alias], a parameter
+   {!aliased_params} admits is renamed to the variable its argument names
+   instead of being bound to it. *)
+let expand ?(alias = false) fresh (l : lambda) args =
   match named_params l with
   | Some params when List.length params = List.length args ->
     incr fresh;
     let prefix = Printf.sprintf "_lc%d" !fresh in
+    let aliased = if alias then aliased_params l params args else [] in
     let renamed =
-      List.map (fun x -> (x, Base.Generated_name.prefixed prefix x)) (List.map fst params @ declared_here l.body)
+      aliased
+      @ List.map (fun x -> (x, Base.Generated_name.prefixed prefix x))
+          (List.filter (fun x -> not (List.mem_assoc x aliased)) (List.map fst params) @ declared_here l.body)
     in
     let f x = match List.assoc_opt x renamed with Some y -> y | None -> x in
     (* An unnamed parameter's argument is evaluated for what it does, and a
-       pure one does nothing. *)
+       pure one does nothing; an aliased parameter is its argument. *)
     let unnamed = List.map (fun (_, x) -> x = None) l.params in
     let bindings =
       List.concat
         (List.map2
            (fun ((p, ty), unnamed) a : stmt list ->
-             if unnamed && V.pure a then [] else [Cpp_ir.Typed.bind (f p) (ty) (a)] )
+             if (unnamed && V.pure a) || List.mem_assoc p aliased then []
+             else [Cpp_ir.Typed.bind (f p) (ty) (a)] )
            (List.combine params unnamed) args )
     in
     Some {bindings; body = rename_ids f l.body}
@@ -226,13 +261,18 @@ let rec same_type (a : ty) (b : ty) =
   | Variant (k, ts), Variant (k', ts') -> k = k' && all ts ts'
   | _ -> a = b
 
-(** R1.  A body ending [auto f = [..](params) { body }; return f(args);] --
-    the lambda bound once and called once, as what the enclosing function
-    returns -- ends with [{ params = args; body }] instead.  A [return] in
-    [body] returns from the function, which is what returning the call's
-    result did; a local the lambda returned through a by-reference capture is
-    now the function's own, and leaves by an implicit move rather than a copy.
-    The lambda must return what the function does. *)
+(** R1.  A statement list ending [auto f = [..](params) { body }; return
+    f(args);] -- the lambda bound once and called once, as what the
+    enclosing function returns -- ends with [{ params = args; body }]
+    instead.  A [return] in [body] returns from the function, which is what
+    returning the call's result did; a local the lambda returned through a
+    by-reference capture is now the function's own, and leaves by an
+    implicit move rather than a copy.  The lambda must return what the
+    function does, and call itself through nothing: a local fixpoint whose
+    control was lowered to a loop qualifies.  A parameter whose argument is
+    a variable stands for it ({!aliased_params}): nothing runs after the
+    call, so the variable is read by the body alone, and a mapped identity
+    passed so is used where it was created ({!Local_storage}). *)
 let inline_tail_call fresh ret_ty (stmts : stmt list) =
   match List.rev stmts with
   | Return (Some (Call (_, Local f', args))) :: Bind_variable (f, Declare_deduced _, Lambda l) :: rev_before
@@ -241,10 +281,20 @@ let inline_tail_call fresh ret_ty (stmts : stmt list) =
          && (not (mentions f l.body))
          (* Called once: not again inside its own arguments. *)
          && not (List.exists (fun a -> mentions f [Expression a]) args) -> (
-    match expand fresh l args with
+    match expand ~alias:true fresh l args with
     | Some ex -> List.rev rev_before @ [Block (ex.bindings @ ex.body)]
     | None -> stmts )
   | _ -> stmts
+
+(** [rule] applied to every statement list of [stmts] -- each branch,
+    block and loop body, innermost first, then [stmts] itself -- but not to
+    the body of a lambda, whose [return]s are its own. *)
+let rec everywhere (rule : stmt list -> stmt list) (stmts : stmt list) : stmt list =
+  let m = Cpp_ir.Map.make ~stmts:(everywhere rule) ~expr:Fun.id ~stmt:(nested rule) ~type_:Fun.id () in
+  rule (List.map (Cpp_ir.Map.stmt m) stmts)
+
+and nested rule (s : stmt) : stmt =
+  Cpp_ir.Map.stmt (Cpp_ir.Map.make ~stmts:(everywhere rule) ~expr:Fun.id ~stmt:(nested rule) ~type_:Fun.id ()) s
 
 (** R2.  [T x = [..]() { stmts; return e; }();] -- a lambda invoked where it
     is written, for its initialiser -- becomes [stmts; T x = e;] when
@@ -381,13 +431,137 @@ let specialize_local_records fresh stmts =
   in
   go stmts
 
+(** R4.  [auto f = [..](params) { body };] -- a lambda every later use of
+    which is a direct call of it, outside every lambda -- runs only at its
+    calls, inside the scope that made it.  A parameter of a mapped type
+    that every call passes the same variable [y], declared before the
+    lambda and never assigned after it, and that [body] only reads, becomes
+    [y] itself: the lambda drops it, its calls drop the argument, and it
+    borrows its scope ([Runs_in_place], a by-reference capture).  Such a
+    parameter is the reference or array a loop helper threads through its
+    recursion unchanged; captured, it is used where it was created, so
+    {!Local_storage} may keep it in a local.
+
+    A by-reference capture reads what the variable holds at the call, not
+    when the lambda was made: it declines when [body] would capture a
+    variable the statements after it assign or move from.  The lambda never
+    outlives its scope, since nothing but a direct call names it. *)
+
+(* The mapped head a declared type names, under [const] and references. *)
+let rec mapped_head (t : ty) =
+  match t with
+  | Reference (_, t) | Const t | In_namespace (_, t) -> mapped_head t
+  | Entity_application (r, _, _) when Base.Mapping_plan.is_type_head r -> Some r
+  | _ -> None
+
+(* The argument lists of the calls [stmts] make of [f], when every
+   occurrence of [f] in them is the callee of a call, outside every lambda,
+   whose arguments do not name [f]; [None] otherwise. *)
+let direct_calls f (stmts : stmt list) =
+  let calls = ref [] and ok = ref true in
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> fe e); stmt = (fun s -> fs s); type_ = ignore}
+  and fe (e : expr) =
+    match e with
+    | Call (_, Local f', args) when Id.equal f f' ->
+      if List.exists (fun a -> mentions f [Expression a]) args then ok := false;
+      calls := args :: !calls
+    | Local f' when Id.equal f f' -> ok := false
+    | Lambda _ -> if mentions f [Expression e] then ok := false
+    | _ -> Cpp_ir.Children.expr v e
+  and fs s = Cpp_ir.Children.stmt v s in
+  List.iter fs stmts;
+  if !ok then Some (List.rev !calls) else None
+
+(* The variables [stmts] move from, anywhere. *)
+let moved_from (stmts : stmt list) =
+  let acc = ref IdSet.empty in
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> fe e); stmt = (fun s -> Cpp_ir.Children.stmt v s); type_ = ignore}
+  and fe (e : expr) =
+    (match e with Move (Local x) -> acc := IdSet.add x !acc | _ -> ());
+    Cpp_ir.Children.expr v e
+  in
+  List.iter (Cpp_ir.Children.stmt v) stmts;
+  !acc
+
+(* [rest] with each direct call of [f] keeping the arguments [keep] says. *)
+let drop_arguments f keep (rest : stmt list) =
+  let filter xs = List.filteri (fun i _ -> List.nth keep i) xs in
+  let rec fe (e : expr) : expr =
+    match e with
+    | Call (sg, (Local f' as callee), args) when Id.equal f f' ->
+      let params : _ Cpp_ir.Expr.Call.params =
+        match sg.params with Types ts when List.length ts = List.length keep -> Types (filter ts) | p -> p
+      in
+      Call ({sg with params}, callee, filter args)
+    | _ -> Cpp_ir.Map.expr (children ~expr:fe ~stmt:fs) e
+  and fs s = Cpp_ir.Map.stmt (children ~expr:fe ~stmt:fs) s in
+  List.map fs rest
+
+let in_place_lambdas (stmts : stmt list) =
+  let rec go : stmt list -> stmt list = function
+    | [] -> []
+    | (Bind_variable (f, tgt, Lambda l) as s) :: rest when l.type_params = [] && not (mentions f l.body) -> (
+      let rest = go rest in
+      match (direct_calls f rest, named_params l) with
+      | Some (_ :: _ as calls), Some params
+        when List.for_all (fun args -> List.length args = List.length params) calls -> (
+        let outer = V.free_in_body (s :: rest) in
+        let assigned_rest = V.assigned rest in
+        let assigned_body = V.assigned l.body and declared_body = V.declared l.body in
+        let invariant i (p, ty) =
+          match (mapped_head ty, List.map (fun args -> named_variable (List.nth args i)) calls) with
+          | Some _, Some y :: ys
+            when List.for_all (function Some y' -> Id.equal y y' | None -> false) ys
+                 && V.mem y outer
+                 && (not (IdSet.mem y assigned_rest))
+                 && (not (IdSet.mem p assigned_body))
+                 && not (V.mem y declared_body) ->
+            Some y
+          | _ -> None
+        in
+        let dropped = List.mapi invariant params in
+        let sub =
+          List.concat (List.map2 (fun (p, _) d -> match d with Some y -> [(p, y)] | None -> []) params dropped)
+        in
+        let keep = List.map (fun d -> d = None) dropped in
+        let body = rename_ids (fun x -> match List.assoc_opt x sub with Some y -> y | None -> x) l.body in
+        let remaining = List.filteri (fun i _ -> List.nth keep i) params in
+        let captured = V.without (List.map fst remaining) (V.free_in_body body) in
+        let invalidated = IdSet.union assigned_rest (moved_from rest) in
+        match sub with
+        | [] -> s :: rest
+        | _ when List.exists (fun x -> IdSet.mem x invalidated) captured -> s :: rest
+        | _ ->
+          let named xs = List.filter (fun (x, _) -> not (List.mem_assoc x sub)) xs in
+          let l' =
+            { l with
+              params = List.filteri (fun i _ -> List.nth keep i) l.params;
+              body;
+              binders = named l.binders;
+              modes = named l.modes;
+              capture = Runs_in_place }
+          in
+          Bind_variable (f, tgt, Lambda l') :: drop_arguments f keep rest )
+      | _ -> s :: rest )
+    | s :: rest -> s :: go rest
+  in
+  go stmts
+
 (** {1 Entry point} *)
 
-(* One function body, returning [ret_ty], through R2, R3 then R1; one
-   counter numbers every expansion in it. *)
+(* One function body, returning [ret_ty], through R2, R3, R1 then R4; one
+   counter numbers every expansion in it.  R1 and R4 apply in every
+   statement list of the body ({!everywhere}): a lambda bound in a branch
+   is as local as one bound at the top. *)
 let body ret_ty stmts =
   let fresh = ref 0 in
-  stmts |> inline_iife_initializers fresh |> specialize_local_records fresh |> inline_tail_call fresh ret_ty
+  stmts
+  |> inline_iife_initializers fresh
+  |> specialize_local_records fresh
+  |> everywhere (inline_tail_call fresh ret_ty)
+  |> everywhere in_place_lambdas
 
 let rec field ((f, vis, tag) : Cpp_ir.Lowered.phase Cpp_ir.Field.member) : _ Cpp_ir.Field.member =
   let f : _ Cpp_ir.Field.t =

@@ -830,6 +830,43 @@ let instantiate_foreign (d : settled) : settled =
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
   Map.decl (rw ()) (Map.decl (instantiating ~boxing) d)
 
+(** Scalar replacement: a local's address dereferenced, [*&x], is [x].  A
+    mapped identity {!Local_storage} keeps in a local is reached through its
+    view, the local's address [&x]; an operation reading or writing through
+    the view -- [*%arg(ref)], [*%arg(ref) = %arg(a)] -- dereferences it.
+    Written together they are the local itself, read or assigned.  Only a
+    dereference that opens the mapping's text, or stands alone, is dropped:
+    a [*] after other text could be a product. *)
+let drop_local_derefs (d : settled) : settled =
+  let address_of (e : expr) =
+    match e with
+    | Foreign (Call, {pieces = [Text "&"; Value 0]; values = [Local x]; _}) -> Some x
+    | _ -> None
+  in
+  let simplify (f : _ Cpp_ir.Foreign.t) : _ Cpp_ir.Foreign.t =
+    let values = Array.of_list f.values in
+    let rec go first (ps : Cpp_ir.Foreign.piece list) : Cpp_ir.Foreign.piece list =
+      match ps with
+      | Text "*" :: (Value i as v) :: rest when first && i < Array.length values -> (
+        match address_of values.(i) with
+        | Some x ->
+          values.(i) <- Local x;
+          v :: go false rest
+        | None -> Text "*" :: v :: go false rest )
+      | p :: rest -> p :: go false rest
+      | [] -> []
+    in
+    let pieces = go true f.pieces in
+    {f with pieces; values = Array.to_list values}
+  in
+  let rec fe (e : expr) : expr =
+    match Map.expr (rw ()) e with
+    | Foreign (use, f) -> Foreign (use, simplify f)
+    | e -> e
+  and fs s = Map.stmt (rw ()) s
+  and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
+  Map.decl (rw ()) d
+
 (* A type that qualifies a member in value position, [T::f(..)], spelled as
    the value it names: a named global written as an expression -- no
    [typename], since what follows is not a type, and with the namespace

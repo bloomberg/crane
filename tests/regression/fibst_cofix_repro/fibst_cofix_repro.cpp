@@ -18,30 +18,27 @@
 /// took go to escape, as a cofixpoint's body is suspended -- but a
 /// cofixpoint into a monad generated as sequencing is not.
 uint64_t fibst_repro(STRefs, uint64_t n) {
-  auto go =
-      [&](const std::shared_ptr<uint64_t> &x,
-          const std::shared_ptr<uint64_t> &y)
-           -> uint64_t {
-        // Loop replaces the tail recursion: each recursive call updates the
-        // loop variables.
-        while (true) {
-          if (n <= 0) {
-            return *x.get();
-          } else {
-            uint64_t _x0 = n - 1;
-            uint64_t x_ = *x.get();
-            uint64_t y_ = *y.get();
-            *x.get() = y_;
-            *y.get() = (x_ + y_);
-          }
-        }
-      };
+  auto go = [&](uint64_t *x_view, uint64_t *y_view) -> uint64_t {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    while (true) {
+      if (n <= 0) {
+        return *x_view;
+      } else {
+        uint64_t _x0 = n - 1;
+        uint64_t x_ = *x_view;
+        uint64_t y_ = *y_view;
+        *x_view = y_;
+        *y_view = (x_ + y_);
+      }
+    }
+  };
   if (n <= UINT64_C(2)) {
     return n;
   } else {
-    std::shared_ptr<uint64_t> x = std::make_shared<uint64_t>(UINT64_C(0));
-    std::shared_ptr<uint64_t> y = std::make_shared<uint64_t>(UINT64_C(1));
-    return go(std::move(x), std::move(y));
+    uint64_t x = UINT64_C(0);
+    uint64_t y = UINT64_C(1);
+    return go(&x, &y);
   }
 }
 

@@ -136,12 +136,11 @@ UnitAccumLocalFix::walk_twice(const List<uint64_t> &l) {
 /// A unit accumulator threaded beside a nat one.
 uint64_t UnitAccumLocalFix::sum_with_unit(const List<uint64_t> &l) {
   {
-    const List<uint64_t> &_lc1_xs = l;
     uint64_t _lc1_acc = UINT64_C(0);
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     uint64_t _lc1_loop_acc = _lc1_acc;
-    const List<uint64_t> *_lc1_loop_xs = &_lc1_xs;
+    const List<uint64_t> *_lc1_loop_xs = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _lc1_loop_xs->v())) {

@@ -52,8 +52,17 @@ let converts_view_of g custom =
             match a.view with Some c -> GlobRef.CanOrd.equal c.mapped g | None -> false)
           (Op.find custom).arguments
 
+(** Whether a lambda runs only where it is written, inside the scope that
+    made it, borrowing that scope: what it uses of the scope is used there,
+    so a local it names outlives it. *)
+let borrows_scope (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) =
+  match l.capture with
+  | Runs_in_place | Written (By_reference | Nothing) -> true
+  | Stored | Written (By_copy _) -> false
+
 (* Whether every occurrence of [x] in [ss] is the operand of a view
-   conversion of [g], outside every lambda. *)
+   conversion of [g], outside every lambda that may outlive its scope
+   ({!borrows_scope}). *)
 let only_viewed g x (ss : stmt list) =
   let ok = ref true in
   let in_lambda = ref false in
@@ -65,9 +74,9 @@ let only_viewed g x (ss : stmt list) =
     | Foreign (Call, {custom; values = [Local y]; _}) when Id.equal x y ->
       if !in_lambda || not (converts_view_of g custom) then ok := false;
       e
-    | Lambda _ ->
+    | Lambda l ->
       let saved = !in_lambda in
-      in_lambda := true;
+      in_lambda := saved || not (borrows_scope l);
       let e = Cpp_ir.Map.expr (rw ()) e in
       in_lambda := saved;
       e

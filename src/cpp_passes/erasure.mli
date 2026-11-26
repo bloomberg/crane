@@ -146,6 +146,12 @@ val supply_template_args : settled -> settled
     its instantiated scrutinee. *)
 val instantiate_foreign : settled -> settled
 
+(** [drop_local_derefs decl] is scalar replacement: a dereference opening a
+    mapping's text, [*%arg(ref)], applied to a local's address, [&x] -- the
+    view of a mapped identity {!Local_storage} keeps in a local -- is the
+    local [x] itself, read or assigned. *)
+val drop_local_derefs : settled -> settled
+
 (** [lower_qualifiers decl] spells each type qualifying a member in value
     position as what the printer writes there: a named global becomes the
     value it names.  After {!instantiate_foreign}, which turns a mapped

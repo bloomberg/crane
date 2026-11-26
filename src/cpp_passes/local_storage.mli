@@ -8,9 +8,11 @@
     argument -- of a mapped type declaring [LocalStorage], every later use
     of which is the operand of one of its view conversions outside any
     lambda, holds the component by value: [A x = v;] in place of the
-    canonical owner, each view of it spelled by [local_view].  It is never
-    passed as the canonical value, returned, stored or captured, so nothing
-    outlives the scope that declares it.
+    canonical owner, each view of it spelled by [local_view].  A use inside
+    a lambda that runs where it is written, borrowing its scope, counts:
+    the lambda does not outlive the scope.  The local is never passed as
+    the canonical value, returned, stored or captured by a lambda that may
+    outlive its scope, so nothing outlives the scope that declares it.
 
     A pass of {!Pipeline}, after {!View_args}. *)
 

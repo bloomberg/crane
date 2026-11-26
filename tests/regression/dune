@@ -16387,3 +16387,14 @@
   (alias runtest)
   (deps sig_is_its_witness.t.exe)
   (action (run ./sig_is_its_witness.t.exe))))
+
+(subdir local_lambda_refs
+ (rule
+  (targets local_lambda_refs.t.exe)
+  (deps LocalLambdaRefs.vo local_lambda_refs.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_lambda_refs.t.exe local_lambda_refs.t.cpp local_lambda_refs.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_lambda_refs.t.exe)
+  (action (run ./local_lambda_refs.t.exe))))
