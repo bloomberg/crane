@@ -200,44 +200,41 @@ struct SharedVariantParamField {
                                          "field at this instantiation");
                 }
               }()};
+            } else if (
+                crane::holds_alternative<typename step<CraneU0, CraneU1>::More>(
+                    _other.v())) {
+              const auto &[a0] =
+                  crane::get<typename step<CraneU0, CraneU1>::More>(_other.v());
+              return More{[&]() -> B {
+                if constexpr (crane_convertible<B, const CraneU1 &>) {
+                  return crane_convert<B>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
             } else {
-              if (crane::holds_alternative<
-                      typename step<CraneU0, CraneU1>::More>(_other.v())) {
-                const auto &[a0] =
-                    crane::get<typename step<CraneU0, CraneU1>::More>(
-                        _other.v());
-                return More{[&]() -> B {
-                  if constexpr (crane_convertible<B, const CraneU1 &>) {
-                    return crane_convert<B>(a0);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }()};
-              } else {
-                const auto &[a0, a1] =
-                    crane::get<typename step<CraneU0, CraneU1>::Both>(
-                        _other.v());
-                return Both{
-                    [&]() -> A {
-                      if constexpr (crane_convertible<A, const CraneU0 &>) {
-                        return crane_convert<A>(a0);
-                      } else {
-                        throw std::logic_error("unreachable: inactive "
-                                               "constructor field at this "
-                                               "instantiation");
-                      }
-                    }(),
-                    [&]() -> B {
-                      if constexpr (crane_convertible<B, const CraneU1 &>) {
-                        return crane_convert<B>(a1);
-                      } else {
-                        throw std::logic_error("unreachable: inactive "
-                                               "constructor field at this "
-                                               "instantiation");
-                      }
-                    }()};
-              }
+              const auto &[a0, a1] =
+                  crane::get<typename step<CraneU0, CraneU1>::Both>(_other.v());
+              return Both{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU0 &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  [&]() -> B {
+                    if constexpr (crane_convertible<B, const CraneU1 &>) {
+                      return crane_convert<B>(a1);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }()};
             }
           }()) {}
 

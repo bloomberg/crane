@@ -197,23 +197,7 @@ struct BinomialHeap {
   static List<tree> carry(const List<tree> &q, const tree &t);
   static priqueue insert(uint64_t x, const List<tree> &q);
   static priqueue join(const List<tree> &p, const List<tree> &q, const tree &c);
-
-  static priqueue unzip(const tree &t, crane::fn<List<tree>(List<tree>)> cont) {
-    if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      const tree &a1_value = *a1;
-      const tree &a2_value = *a2;
-      crane::fn<List<tree>(priqueue)> f =
-          [=, a1_value = a1_value, cont = std::move(cont)](const priqueue &q) {
-            return List<tree>::cons(tree::node(a0, a1_value, tree::leaf()),
-                                    cont(q));
-          };
-      return unzip(a2_value, std::move(f));
-    } else {
-      return cont(List<tree>::nil());
-    }
-  }
-
+  static priqueue unzip(const tree &t, crane::fn<List<tree>(List<tree>)> cont);
   static priqueue heap_delete_max(const tree &t);
   static key find_max_helper(uint64_t current, const List<tree> &q);
   static std::optional<key> find_max(const List<tree> &q);

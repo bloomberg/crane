@@ -134,22 +134,19 @@ FrameSaveCopiedBinder::scan(std::optional<uint64_t> m,
                         uint64_t>>(std::make_pair(std::make_pair(
                         crane::cons(a, crane::list<uint64_t>{}), std::move(s_)),
                                                   (i ? i - 1 : i))));
+              } else if (accepting(std::move(st))) {
+                _result = std::make_pair(
+                    c,
+                    std::make_optional<std::pair<
+                        std::pair<crane::list<uint64_t>, crane::list<uint64_t>>,
+                        uint64_t>>(std::make_pair(
+                        std::make_pair(crane::list<uint64_t>{}, std::move(s)),
+                        i)));
               } else {
-                if (accepting(std::move(st))) {
-                  _result = std::make_pair(
-                      c,
-                      std::make_optional<std::pair<std::pair<
-                          crane::list<uint64_t>, crane::list<uint64_t>>,
-                                                   uint64_t>>(std::make_pair(
-                          std::make_pair(crane::list<uint64_t>{}, std::move(s)),
-                          i)));
-                } else {
-                  _result = std::make_pair((c + 1),
-                                           std::optional<std::pair<
-                                               std::pair<crane::list<uint64_t>,
-                                                         crane::list<uint64_t>>,
-                                               uint64_t>>());
-                }
+                _result = std::make_pair(
+                    (c + 1), std::optional<std::pair<std::pair<
+                                 crane::list<uint64_t>, crane::list<uint64_t>>,
+                                                     uint64_t>>());
               }
             }
           }
@@ -189,20 +186,18 @@ FrameSaveCopiedBinder::scan(std::optional<uint64_t> m,
                      uint64_t>>(std::make_pair(std::make_pair(
                      crane::cons(a, crane::list<uint64_t>{}), std::move(s_)),
                                                (i ? i - 1 : i))));
+        } else if (accepting(std::move(st))) {
+          _result = std::make_pair(
+              c, std::make_optional<std::pair<
+                     std::pair<crane::list<uint64_t>, crane::list<uint64_t>>,
+                     uint64_t>>(std::make_pair(
+                     std::make_pair(crane::list<uint64_t>{}, std::move(s)),
+                     i)));
         } else {
-          if (accepting(std::move(st))) {
-            _result = std::make_pair(
-                c,
-                std::make_optional<std::pair<
-                    std::pair<crane::list<uint64_t>, crane::list<uint64_t>>,
-                    uint64_t>>(std::make_pair(
-                    std::make_pair(crane::list<uint64_t>{}, std::move(s)), i)));
-          } else {
-            _result = std::make_pair(
-                (c + 1), std::optional<std::pair<std::pair<
-                             crane::list<uint64_t>, crane::list<uint64_t>>,
-                                                 uint64_t>>());
-          }
+          _result = std::make_pair(
+              (c + 1), std::optional<std::pair<std::pair<crane::list<uint64_t>,
+                                                         crane::list<uint64_t>>,
+                                               uint64_t>>());
         }
       }
     }
@@ -213,17 +208,16 @@ FrameSaveCopiedBinder::scan(std::optional<uint64_t> m,
 bool Nat::even(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return true;
     } else {
-      uint64_t n0 = _loop_n - 1;
+      uint64_t n0 = n - 1;
       if (n0 <= 0) {
         return false;
       } else {
         uint64_t n_ = n0 - 1;
-        _loop_n = n_;
+        n = n_;
       }
     }
   }

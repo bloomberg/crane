@@ -138,7 +138,7 @@ struct MemSafetyProbe11 {
         } else {
           auto _f = std::move(std::get<_after_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + std::move(_result));
+          _result = (UINT64_C(1) + _result);
         }
       }
       return _result;
@@ -342,14 +342,14 @@ struct MemSafetyProbe11 {
           auto _f = std::move(std::get<_after_tree_depth_in_Node>(_popped));
           _stack.pop_back();
           const tree &a2 = *_f.a2;
-          uint64_t dl = std::move(_result);
+          uint64_t dl = _result;
           _stack.emplace_back(_after_tree_depth_in_Node_2{dl});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_depth_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t dl = _f.dl;
-          uint64_t dr = std::move(_result);
+          uint64_t dr = _result;
           _result = (UINT64_C(1) + (dl <= dr ? dr : dl));
         }
       }
@@ -399,14 +399,13 @@ struct MemSafetyProbe11 {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_tree_sum_in_Node_2{a1,
-                                                        std::move(_result)});
+          _stack.emplace_back(_after_tree_sum_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + a1) + _result);
         }
       }
       return _result;

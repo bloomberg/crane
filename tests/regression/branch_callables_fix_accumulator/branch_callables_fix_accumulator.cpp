@@ -35,7 +35,6 @@ uint64_t BranchCallablesFixAccumulator::pick(bool b) {
                   },
                   r3{UINT64_C(0), List<uint64_t>::nil(), b});
           crane::obj _x = std::move(_cs).ra;
-          crane::obj _x0 = std::move(_cs).rb;
           bool c0 = std::move(_cs).rc;
           if (c0) {
             crane::fn<List<uint64_t>(bool)> cf = [](bool) {

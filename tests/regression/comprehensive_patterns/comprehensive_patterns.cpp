@@ -96,9 +96,8 @@ ComprehensivePatterns::make_list(uint64_t n,
   std::optional<List<std::pair<ComprehensivePatterns::S, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> *_write =
       nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = List<std::pair<ComprehensivePatterns::S, uint64_t>>::nil();
       (_write ? *(*_write = std::make_shared<
                       List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
@@ -106,7 +105,7 @@ ComprehensivePatterns::make_list(uint64_t n,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell =
           typename List<std::pair<ComprehensivePatterns::S, uint64_t>>::Cons(
               std::make_pair(s, s.s_a), nullptr);
@@ -118,7 +117,7 @@ ComprehensivePatterns::make_list(uint64_t n,
       _write =
           &std::get<typename List<std::pair<ComprehensivePatterns::S,
                                             uint64_t>>::Cons>(_node.v_mut()).l;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }
@@ -307,9 +306,8 @@ ComprehensivePatterns::repeat_r2(uint64_t n,
   std::shared_ptr<
       List<std::pair<ComprehensivePatterns::R2,
                      ComprehensivePatterns::R1>>> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value =
           List<std::pair<ComprehensivePatterns::R2,
                          ComprehensivePatterns::R1>>::nil();
@@ -319,7 +317,7 @@ ComprehensivePatterns::repeat_r2(uint64_t n,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell = typename List<
           std::pair<ComprehensivePatterns::R2,
                     ComprehensivePatterns::R1>>::Cons(
@@ -336,7 +334,7 @@ ComprehensivePatterns::repeat_r2(uint64_t n,
                                       ComprehensivePatterns::R1>>::Cons>(
               _node.v_mut())
               .l;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }
@@ -481,9 +479,8 @@ ComprehensivePatterns::repeat_pair(uint64_t n,
   std::optional<List<std::pair<ComprehensivePatterns::R, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> *_write =
       nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = List<std::pair<ComprehensivePatterns::R, uint64_t>>::nil();
       (_write ? *(*_write = std::make_shared<
                       List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
@@ -491,7 +488,7 @@ ComprehensivePatterns::repeat_pair(uint64_t n,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell =
           typename List<std::pair<ComprehensivePatterns::R, uint64_t>>::Cons(
               std::make_pair(r, r.val), nullptr);
@@ -503,7 +500,7 @@ ComprehensivePatterns::repeat_pair(uint64_t n,
       _write =
           &std::get<typename List<std::pair<ComprehensivePatterns::R,
                                             uint64_t>>::Cons>(_node.v_mut()).l;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }
@@ -648,7 +645,7 @@ uint64_t ComprehensivePatterns::count_down(uint64_t n,
     } else {
       auto _f = std::move(std::get<_after_count_down_in_S>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + r.nc_b);
+      _result = (_result + r.nc_b);
     }
   }
   return _result;
@@ -735,7 +732,7 @@ uint64_t ComprehensivePatterns::sum_proj(uint64_t n,
     } else {
       auto _f = std::move(std::get<_after_sum_proj_in_S>(_popped));
       _stack.pop_back();
-      _result = (r.nc_a + std::move(_result));
+      _result = (r.nc_a + _result);
     }
   }
   return _result;
@@ -972,7 +969,7 @@ ComprehensivePatterns::sum_values(uint64_t n,
     } else {
       auto _f = std::move(std::get<_after_sum_values_in_S>(_popped));
       _stack.pop_back();
-      _result = (s.stmt_value + std::move(_result));
+      _result = (s.stmt_value + _result);
     }
   }
   return _result;
@@ -1038,7 +1035,7 @@ ComprehensivePatterns::sum_with_state(uint64_t n,
     } else {
       auto _f = std::move(std::get<_after_sum_with_state_in_S>(_popped));
       _stack.pop_back();
-      _result = (r.cf_val + std::move(_result));
+      _result = (r.cf_val + _result);
     }
   }
   return _result;
@@ -1098,11 +1095,11 @@ ComprehensivePatterns::even_count(uint64_t n,
     } else if (std::holds_alternative<_after_even_count_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_even_count_in_S>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     } else {
       auto _f = std::move(std::get<_after_odd_count_entry_in_S>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     }
   }
   return _result;
@@ -1161,11 +1158,11 @@ uint64_t ComprehensivePatterns::odd_count(uint64_t n,
     } else if (std::holds_alternative<_after_even_count_entry_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_even_count_entry_in_S>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     } else {
       auto _f = std::move(std::get<_after_odd_count_in_S>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     }
   }
   return _result;
@@ -1201,7 +1198,7 @@ uint64_t ComprehensivePatterns::accum_with_state(
     } else {
       auto _f = std::move(std::get<_after_accum_with_state_in_S>(_popped));
       _stack.pop_back();
-      _result = (s.lb_value + std::move(_result));
+      _result = (s.lb_value + _result);
     }
   }
   return _result;

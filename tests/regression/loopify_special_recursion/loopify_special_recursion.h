@@ -126,7 +126,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -312,7 +312,7 @@ struct LoopifySpecialRecursion {
   static List<uint64_t> reverse_insert(uint64_t x, const List<uint64_t> &l);
 
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &&>
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t nest_apply(uint64_t n, F1 &&f, uint64_t x) {
     // Explicit stack replaces the non-tail recursion of nest_apply: _call
     // frames are pending calls, _after frames resume a caller.
@@ -333,7 +333,7 @@ struct LoopifySpecialRecursion {
         _stack.pop_back();
         uint64_t n = _f.n;
         if (n <= 0) {
-          _result = std::move(x);
+          _result = x;
         } else {
           uint64_t n_ = n - 1;
           _stack.emplace_back(_after_nest_apply_in_S{});
@@ -342,7 +342,7 @@ struct LoopifySpecialRecursion {
       } else {
         auto _f = std::move(std::get<_after_nest_apply_in_S>(_popped));
         _stack.pop_back();
-        _result = f(std::move(_result));
+        _result = f(_result);
       }
     }
     return _result;

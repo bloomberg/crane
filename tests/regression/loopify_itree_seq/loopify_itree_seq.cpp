@@ -4,43 +4,35 @@
 /// erased so this becomes a plain tail-recursive C++ function. Loopify should
 /// convert it to a while loop.
 uint64_t LoopifyItreeSeq::count_down(uint64_t n) {
-  {
-    uint64_t _lc1_k = n;
-    uint64_t _lc1_acc = UINT64_C(0);
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    uint64_t _lc1_loop_k = _lc1_k;
-    while (true) {
-      if (_lc1_loop_k <= 0) {
-        return _lc1_loop_acc;
-      } else {
-        uint64_t k_ = _lc1_loop_k - 1;
-        _lc1_loop_acc = (_lc1_loop_acc + UINT64_C(1));
-        _lc1_loop_k = k_;
-      }
+  uint64_t _lc1_acc = UINT64_C(0);
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  uint64_t _lc1_loop_acc = _lc1_acc;
+  while (true) {
+    if (n <= 0) {
+      return _lc1_loop_acc;
+    } else {
+      uint64_t k_ = n - 1;
+      _lc1_loop_acc = (_lc1_loop_acc + UINT64_C(1));
+      n = k_;
     }
   }
 }
 
 /// Sum 1..n via tail recursion with accumulator.
 uint64_t LoopifyItreeSeq::sum_to(uint64_t n) {
-  {
-    uint64_t _lc1_k = n;
-    uint64_t _lc1_acc = UINT64_C(0);
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    uint64_t _lc1_loop_k = _lc1_k;
-    while (true) {
-      if (_lc1_loop_k <= 0) {
-        return _lc1_loop_acc;
-      } else {
-        uint64_t k_ = _lc1_loop_k - 1;
-        uint64_t _next_k = k_;
-        _lc1_loop_acc = (_lc1_loop_acc + _lc1_loop_k);
-        _lc1_loop_k = _next_k;
-      }
+  uint64_t _lc1_acc = UINT64_C(0);
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  uint64_t _lc1_loop_acc = _lc1_acc;
+  while (true) {
+    if (n <= 0) {
+      return _lc1_loop_acc;
+    } else {
+      uint64_t k_ = n - 1;
+      uint64_t _next_k = k_;
+      _lc1_loop_acc = (_lc1_loop_acc + n);
+      n = _next_k;
     }
   }
 }
@@ -88,13 +80,12 @@ List<uint64_t> LoopifyItreeSeq::countdown_list(uint64_t n) {
 uint64_t LoopifyItreeSeq::delay_ret(uint64_t n, uint64_t v) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return v;
     } else {
-      uint64_t n_ = _loop_n - 1;
-      _loop_n = n_;
+      uint64_t n_ = n - 1;
+      n = n_;
     }
   }
 }
@@ -107,12 +98,10 @@ void LoopifyItreeSeq::spin() {
   return;
 }
 
-void LoopifyItreeSeq::forever(uint64_t n) {
+void LoopifyItreeSeq::forever(uint64_t) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    _loop_n = (_loop_n + 1);
   }
   return;
 }

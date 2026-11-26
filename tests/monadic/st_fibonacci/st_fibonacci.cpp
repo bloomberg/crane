@@ -65,12 +65,12 @@ uint64_t StFibonacci::fib_fun(uint64_t n) {
       auto _f = std::move(std::get<_after_fib_fun_in_S>(_popped));
       _stack.pop_back();
       uint64_t m = _f.m;
-      _stack.emplace_back(_after_fib_fun_in_S_2{std::move(_result)});
+      _stack.emplace_back(_after_fib_fun_in_S_2{_result});
       _stack.emplace_back(_call{m});
     } else {
       auto _f = std::move(std::get<_after_fib_fun_in_S_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     }
   }
   return _result;

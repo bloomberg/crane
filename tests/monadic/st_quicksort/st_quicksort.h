@@ -177,7 +177,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -250,40 +250,10 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-template <typename T1 = void>
-uint64_t lomuto_scan(STRefs, std::span<uint64_t> arr, uint64_t pv, uint64_t,
-                     uint64_t hi, uint64_t i, uint64_t s) {
-  // Loop replaces the tail recursion: each recursive call updates the loop
-  // variables.
-  uint64_t _loop_s = s;
-  uint64_t _loop_i = i;
-  while (true) {
-    if (_loop_i < hi) {
-      uint64_t v = std::span<const uint64_t>{arr}[_loop_i];
-      if (v <= pv) {
-        std::swap(arr[_loop_i], arr[_loop_s]);
-        _loop_s = (_loop_s + 1);
-        _loop_i = (_loop_i + 1);
-      } else {
-        _loop_i = (_loop_i + 1);
-      }
-    } else {
-      return _loop_s;
-    }
-  }
-}
-
-template <typename T1 = void>
+uint64_t lomuto_scan(STRefs r, std::span<uint64_t> arr, uint64_t pv,
+                     uint64_t lo, uint64_t hi, uint64_t i, uint64_t s);
 uint64_t partition(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
-                   uint64_t pividx) {
-  uint64_t pv = std::span<const uint64_t>{arr}[pividx];
-  std::swap(arr[pividx], arr[hi]);
-  uint64_t p = lomuto_scan<crane::obj>(r, arr, pv, lo, hi, lo, lo);
-  std::swap(arr[p], arr[hi]);
-  return p;
-}
-
-template <typename T1 = void>
+                   uint64_t pividx);
 void quicksort_ST(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi);
 
 template <typename F1>

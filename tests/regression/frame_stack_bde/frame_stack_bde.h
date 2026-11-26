@@ -144,7 +144,7 @@ public:
         auto _f = std::move(bsl::get<_after_forallb_in_Cons>(_popped));
         _stack.pop_back();
         auto d_a0 = bsl::move(_f.d_a0);
-        _result = (f(d_a0) && bsl::move(_result));
+        _result = (f(d_a0) && _result);
       }
     }
     return _result;

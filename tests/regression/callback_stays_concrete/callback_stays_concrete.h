@@ -112,23 +112,20 @@ struct CallbackStaysConcrete {
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
   static uint64_t better_sum(F0 &&f, const List<uint64_t> &l) {
-    {
-      const List<uint64_t> &_lc1_l0 = l;
-      uint64_t _lc1_acc = UINT64_C(0);
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      uint64_t _lc1_loop_acc = _lc1_acc;
-      const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
-      while (true) {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _lc1_loop_l0->v())) {
-          return _lc1_loop_acc;
-        } else {
-          const auto &[a0, a1] =
-              std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
-          _lc1_loop_acc = (_lc1_loop_acc + f(a0));
-          _lc1_loop_l0 = crane_raw(a1);
-        }
+    uint64_t _lc1_acc = UINT64_C(0);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    uint64_t _lc1_loop_acc = _lc1_acc;
+    const List<uint64_t> *_lc1_loop_l0 = &l;
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(
+              _lc1_loop_l0->v())) {
+        return _lc1_loop_acc;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
+        _lc1_loop_acc = (_lc1_loop_acc + f(a0));
+        _lc1_loop_l0 = crane_raw(a1);
       }
     }
   }
@@ -136,7 +133,6 @@ struct CallbackStaysConcrete {
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t apply_io(F0 &&f, uint64_t n) {
-    uint64_t x = n;
-    return f(x);
+    return f(n);
   }
 };

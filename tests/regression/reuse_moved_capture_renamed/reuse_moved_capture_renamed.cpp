@@ -81,7 +81,7 @@ uint64_t ReuseMovedCaptureRenamed::apply_all(
       auto _f = std::move(std::get<_after_apply_all_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(x) + std::move(_result));
+      _result = (a0(x) + _result);
     }
   }
   return _result;

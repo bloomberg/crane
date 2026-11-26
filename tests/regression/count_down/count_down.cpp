@@ -4,14 +4,13 @@
 void CountDown::count_down(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       std::cout << std::string("tick") << '\n';
-      _loop_n = n_;
+      n = n_;
     }
   }
   return;
@@ -21,17 +20,15 @@ void CountDown::count_down(uint64_t n) {
 void CountDown::two_prints(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       std::cout <<
-      crane::string_capped(std::string("step ") + std::to_string(_loop_n)) <<
-      '\n';
+      crane::string_capped(std::string("step ") + std::to_string(n)) << '\n';
       std::cout << std::string("---") << '\n';
-      _loop_n = n_;
+      n = n_;
     }
   }
   return;
@@ -41,16 +38,15 @@ void CountDown::two_prints(uint64_t n) {
 void CountDown::echo_loop(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       std::string line;
       std::getline(std::cin, line);
       std::cout << crane::string_capped(std::string("echo: ") + line) << '\n';
-      _loop_n = n_;
+      n = n_;
     }
   }
   return;
@@ -60,17 +56,16 @@ void CountDown::echo_loop(uint64_t n) {
 void CountDown::announce(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       std::cout << std::string("done") << '\n';
       return;
     } else {
-      uint64_t n_ = _loop_n - 1;
-      std::cout << crane::string_capped(std::string("counting ") +
-                                        std::to_string(_loop_n)) <<
+      uint64_t n_ = n - 1;
+      std::cout <<
+      crane::string_capped(std::string("counting ") + std::to_string(n)) <<
       '\n';
-      _loop_n = n_;
+      n = n_;
     }
   }
   return;
@@ -80,14 +75,13 @@ void CountDown::announce(uint64_t n) {
 void CountDown::repeat_msg(uint64_t n, const std::string &msg) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       std::cout << msg << '\n';
-      _loop_n = n_;
+      n = n_;
     }
   }
   return;
@@ -163,7 +157,6 @@ void CountDown::co_echo_loop() {
 void CountDown::co_announce(uint64_t round) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_round = round;
   while (true) {
     std::string line;
     std::getline(std::cin, line);
@@ -171,10 +164,10 @@ void CountDown::co_announce(uint64_t round) {
       std::cout << std::string("done") << '\n';
       return;
     } else {
-      std::cout << crane::string_capped(std::string("round ") +
-                                        std::to_string(_loop_round)) <<
+      std::cout <<
+      crane::string_capped(std::string("round ") + std::to_string(round)) <<
       '\n';
-      _loop_round = (_loop_round + 1);
+      round = (round + 1);
     }
   }
   return;

@@ -38,7 +38,7 @@ uint64_t LoopifyNameHygiene::depth(const LoopifyNameHygiene::Frame_ &f) {
     } else {
       auto _f = std::move(std::get<_after_depth_in_Resume_Cons_>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;
@@ -49,16 +49,15 @@ LoopifyNameHygiene::Frame_ LoopifyNameHygiene::mk(uint64_t n) {
   // cell fills.
   std::optional<LoopifyNameHygiene::Frame_> _root{};
   std::shared_ptr<LoopifyNameHygiene::Frame_> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = Frame_::enter_(UINT64_C(1));
       (_write ? *(*_write = std::make_shared<LoopifyNameHygiene::Frame_>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t k = _loop_n - 1;
+      uint64_t k = n - 1;
       auto _cell = typename LoopifyNameHygiene::Frame_::Resume_Cons_(nullptr);
       LoopifyNameHygiene::Frame_ &_node =
           (_write ? *(*_write = std::make_shared<LoopifyNameHygiene::Frame_>(
@@ -68,7 +67,7 @@ LoopifyNameHygiene::Frame_ LoopifyNameHygiene::mk(uint64_t n) {
           &std::get<typename LoopifyNameHygiene::Frame_::Resume_Cons_>(
               _node.v_mut())
               .a0;
-      _loop_n = k;
+      n = k;
       continue;
     }
   }
@@ -104,7 +103,7 @@ uint64_t LoopifyNameHygiene::locals(uint64_t n) {
     } else {
       auto _f = std::move(std::get<_after_locals_in_S>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;

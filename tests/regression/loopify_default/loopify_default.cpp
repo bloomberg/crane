@@ -8,9 +8,8 @@ List<uint64_t> LoopifyDefault::merge_steps(uint64_t n, const List<uint64_t> &xs,
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_ys = &ys;
   const List<uint64_t> *_loop_xs = &xs;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
         auto _value = *_loop_ys;
         (_write ? *(*_write =
@@ -25,7 +24,7 @@ List<uint64_t> LoopifyDefault::merge_steps(uint64_t n, const List<uint64_t> &xs,
         break;
       }
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
         auto _value = *_loop_ys;
         (_write ? *(*_write =
@@ -55,7 +54,7 @@ List<uint64_t> LoopifyDefault::merge_steps(uint64_t n, const List<uint64_t> &xs,
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_ys = crane_raw(a11);
             _loop_xs = &*_loop_xs;
-            _loop_n = n_;
+            n = n_;
             continue;
             break;
           }
@@ -68,7 +67,7 @@ List<uint64_t> LoopifyDefault::merge_steps(uint64_t n, const List<uint64_t> &xs,
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_ys = &*_loop_ys;
             _loop_xs = crane_raw(a10);
-            _loop_n = n_;
+            n = n_;
             continue;
           }
           }
@@ -111,7 +110,7 @@ uint64_t LoopifyDefault::sum(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -146,7 +145,7 @@ uint64_t LoopifyDefault::len(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_len_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;

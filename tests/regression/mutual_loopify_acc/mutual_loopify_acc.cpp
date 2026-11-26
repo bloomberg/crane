@@ -43,7 +43,7 @@ uint64_t MutualLoopifyAcc::tsum(uint64_t acc, const MutualLoopifyAcc::tree &t) {
       auto _f = std::move(std::get<_after_tsum_in_Fcons>(_popped));
       _stack.pop_back();
       std::shared_ptr<MutualLoopifyAcc::forest> a10 = std::move(_f.a10);
-      _result = fsum(std::move(_result), *a10);
+      _result = fsum(_result, *a10);
     }
   }
   return _result;
@@ -80,7 +80,7 @@ uint64_t MutualLoopifyAcc::fsum(uint64_t acc,
       const MutualLoopifyAcc::forest &f = *_f.f;
       uint64_t acc = _f.acc;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(f.v())) {
-        _result = std::move(acc);
+        _result = acc;
       } else {
         const auto &[a00, a10] =
             std::get<typename MutualLoopifyAcc::forest::Fcons>(f.v());
@@ -105,7 +105,7 @@ uint64_t MutualLoopifyAcc::fsum(uint64_t acc,
       auto _f = std::move(std::get<_after_tsum_entry_in_Fcons>(_popped));
       _stack.pop_back();
       const MutualLoopifyAcc::forest &a10 = *_f.a10;
-      _stack.emplace_back(_call{&a10, std::move(_result)});
+      _stack.emplace_back(_call{&a10, _result});
     }
   }
   return _result;
@@ -116,17 +116,16 @@ MutualLoopifyAcc::tree MutualLoopifyAcc::chain(uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   MutualLoopifyAcc::tree _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       _loop_acc =
           tree::node(forest::fcons(
               std::move(_loop_acc),
               forest::fcons(tree::leaf(UINT64_C(1)), forest::fnil())));
-      _loop_n = m;
+      n = m;
     }
   }
 }

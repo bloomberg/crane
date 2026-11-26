@@ -100,18 +100,16 @@ LoopifyPairs::partition3(uint64_t pivot,
       if (a0 < pivot) {
         _result = std::make_pair(list<uint64_t>::cons(a0, std::move(lt)),
                                  std::make_pair(std::move(eq), std::move(gt)));
+      } else if (a0 == pivot) {
+        _result = std::make_pair(
+            std::move(lt),
+            std::make_pair(list<uint64_t>::cons(a0, std::move(eq)),
+                           std::move(gt)));
       } else {
-        if (a0 == pivot) {
-          _result = std::make_pair(
-              std::move(lt),
-              std::make_pair(list<uint64_t>::cons(a0, std::move(eq)),
-                             std::move(gt)));
-        } else {
-          _result = std::make_pair(
-              std::move(lt),
-              std::make_pair(std::move(eq),
-                             list<uint64_t>::cons(a0, std::move(gt))));
-        }
+        _result = std::make_pair(
+            std::move(lt),
+            std::make_pair(std::move(eq),
+                           list<uint64_t>::cons(a0, std::move(gt))));
       }
     }
   }

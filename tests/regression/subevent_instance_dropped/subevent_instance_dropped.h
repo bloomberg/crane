@@ -1,7 +1,6 @@
 #pragma once
 
 #include "crane_fn.h"
-#include "obj.h"
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -88,14 +87,13 @@ struct FailE {
   static FailE fail(Nat a0) { return {std::move(a0)}; }
 };
 
-template <typename T1 = void, typename T2 = void, typename T3, typename CraneP0>
+template <typename T1 = void, typename T3, typename CraneP0>
 std::shared_ptr<ITree<T3>> cast(CraneP0 e) {
   return itree_trigger(std::move(e));
 }
 
-template <typename T1 = void, typename T2>
-std::shared_ptr<ITree<T2>> boom(const Nat &n) {
-  return itree_bind(cast<void, crane::obj, Empty_set>(FailE::fail(n)),
+template <typename T2> std::shared_ptr<ITree<T2>> boom(const Nat &n) {
+  return itree_bind(cast<void, Empty_set>(FailE::fail(n)),
                     [](Empty_set) -> std::shared_ptr<ITree<T2>> {
                       throw std::logic_error("absurd case");
                     });

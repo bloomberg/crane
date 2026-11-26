@@ -68,9 +68,8 @@ LiftedHelperFramePointer::spine(uint64_t n) {
   // cell fills.
   std::optional<LiftedHelperFramePointer::tree<uint64_t>> _root{};
   std::shared_ptr<LiftedHelperFramePointer::tree<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = tree<uint64_t>::leaf();
       (_write ? *(*_write = std::make_shared<
                       LiftedHelperFramePointer::tree<uint64_t>>(
@@ -78,7 +77,7 @@ LiftedHelperFramePointer::spine(uint64_t n) {
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t k = _loop_n - 1;
+      uint64_t k = n - 1;
       auto _cell = typename LiftedHelperFramePointer::tree<uint64_t>::Node(
           std::make_shared<LiftedHelperFramePointer::tree<uint64_t>>(
               tree<uint64_t>::leaf()),
@@ -92,7 +91,7 @@ LiftedHelperFramePointer::spine(uint64_t n) {
           &std::get<typename LiftedHelperFramePointer::tree<uint64_t>::Node>(
               _node.v_mut())
               .a2;
-      _loop_n = k;
+      n = k;
       continue;
     }
   }
@@ -153,17 +152,16 @@ LiftedHelperFramePointer::full(uint64_t n) {
 bool Nat::even(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return true;
     } else {
-      uint64_t n0 = _loop_n - 1;
+      uint64_t n0 = n - 1;
       if (n0 <= 0) {
         return false;
       } else {
         uint64_t n_ = n0 - 1;
-        _loop_n = n_;
+        n = n_;
       }
     }
   }

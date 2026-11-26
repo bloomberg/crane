@@ -206,7 +206,7 @@ struct LoopifyAdvancedLists {
         auto _f = std::move(std::get<_after_all_satisfy_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        _result = (p(a0) && std::move(_result));
+        _result = (p(a0) && _result);
       }
     }
     return _result;
@@ -246,7 +246,7 @@ struct LoopifyAdvancedLists {
         auto _f = std::move(std::get<_after_any_satisfy_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        _result = (p(a0) || std::move(_result));
+        _result = (p(a0) || _result);
       }
     }
     return _result;

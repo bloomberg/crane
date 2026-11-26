@@ -35,10 +35,36 @@ uint64_t MemSafetyProbe10::sum_fns(
       auto _f = std::move(std::get<_after_sum_fns_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(UINT64_C(0)) + std::move(_result));
+      _result = (a0(UINT64_C(0)) + _result);
     }
   }
   return _result;
+}
+
+/// TEST 2: Build closures during list traversal,
+/// where each closure captures the HEAD of the list
+/// and the closure from the previous step.
+uint64_t
+MemSafetyProbe10::chain_adders(const MemSafetyProbe10::mylist<uint64_t> &l,
+                               const crane::fn<uint64_t(uint64_t)> &acc,
+                               uint64_t x0_) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
+  const MemSafetyProbe10::mylist<uint64_t> *_loop_l = &l;
+  while (true) {
+    if (std::holds_alternative<
+            typename MemSafetyProbe10::mylist<uint64_t>::Mynil>(_loop_l->v())) {
+      return _loop_acc(x0_);
+    } else {
+      const auto &[a0, a1] =
+          std::get<typename MemSafetyProbe10::mylist<uint64_t>::Mycons>(
+              _loop_l->v());
+      const MemSafetyProbe10::mylist<uint64_t> &a1_value = *a1;
+      _loop_acc = [=](uint64_t n) { return _loop_acc((a0 + n)); };
+      _loop_l = &a1_value;
+    }
+  }
 }
 
 /// TEST 3: Recursive function returning a list of closures.
@@ -141,10 +167,9 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
   std::optional<MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>> _root{};
   std::shared_ptr<MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>> *_write =
       nullptr;
-  uint64_t _loop_depth = depth;
   const MemSafetyProbe10::tree *_loop_t = &t;
   while (true) {
-    if (_loop_depth <= 0) {
+    if (depth <= 0) {
       auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
       (_write ? *(*_write = std::make_shared<
                       MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
@@ -152,7 +177,7 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t d = _loop_depth - 1;
+      uint64_t d = depth - 1;
       if (std::holds_alternative<typename MemSafetyProbe10::tree::Leaf>(
               _loop_t->v())) {
         auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
@@ -188,7 +213,7 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
                 std::get<typename MemSafetyProbe10::mylist<
                     crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1->v_mut())
                 .a1;
-        _loop_depth = d;
+        depth = d;
         _loop_t = &a0_value;
         continue;
       }

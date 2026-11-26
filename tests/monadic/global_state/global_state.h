@@ -247,21 +247,18 @@ struct GlobalStateTests {
     } else {
       std::shared_ptr<uint64_t> x = std::make_shared<uint64_t>(UINT64_C(0));
       std::shared_ptr<uint64_t> y = std::make_shared<uint64_t>(UINT64_C(1));
-      {
-        // Loop replaces the tail recursion: each recursive call updates the
-        // loop variables.
-        uint64_t _lc1_loop_k = n;
-        while (true) {
-          if (_lc1_loop_k <= 0) {
-            return *x;
-          } else {
-            uint64_t k_ = _lc1_loop_k - 1;
-            uint64_t x_ = *x;
-            uint64_t y_ = *y;
-            *x = y_;
-            *y = (x_ + y_);
-            _lc1_loop_k = k_;
-          }
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
+      while (true) {
+        if (n <= 0) {
+          return *x;
+        } else {
+          uint64_t k_ = n - 1;
+          uint64_t x_ = *x;
+          uint64_t y_ = *y;
+          *x = y_;
+          *y = (x_ + y_);
+          n = k_;
         }
       }
     }

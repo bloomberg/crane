@@ -545,38 +545,38 @@ struct LoopifyRecursorInstantiated {
       } else if (std::holds_alternative<_after_size_in_FstE>(_popped)) {
         auto _f = std::move(std::get<_after_size_in_FstE>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_size_in_Ite>(_popped)) {
         auto _f = std::move(std::get<_after_size_in_Ite>(_popped));
         _stack.pop_back();
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(_after_size_in_Ite_2{&a2, std::move(_result)});
+        _stack.emplace_back(_after_size_in_Ite_2{&a2, _result});
         _stack.emplace_back(_call{&a1});
       } else if (std::holds_alternative<_after_size_in_Ite_2>(_popped)) {
         auto _f = std::move(std::get<_after_size_in_Ite_2>(_popped));
         _stack.pop_back();
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(_after_size_in_Ite_3{_f._tmp4, std::move(_result)});
+        _stack.emplace_back(_after_size_in_Ite_3{_f._tmp4, _result});
         _stack.emplace_back(_call{&a2});
       } else if (std::holds_alternative<_after_size_in_Ite_3>(_popped)) {
         auto _f = std::move(std::get<_after_size_in_Ite_3>(_popped));
         _stack.pop_back();
-        _result = (((_f._tmp4 + _f._tmp3) + std::move(_result)) + 1);
+        _result = (((_f._tmp4 + _f._tmp3) + _result) + 1);
       } else if (std::holds_alternative<_after_size_in_PairE>(_popped)) {
         auto _f = std::move(std::get<_after_size_in_PairE>(_popped));
         _stack.pop_back();
         const expr &b = *_f.b;
-        _stack.emplace_back(_after_size_in_PairE_2{std::move(_result)});
+        _stack.emplace_back(_after_size_in_PairE_2{_result});
         _stack.emplace_back(_call{&b});
       } else if (std::holds_alternative<_after_size_in_PairE_2>(_popped)) {
         auto _f = std::move(std::get<_after_size_in_PairE_2>(_popped));
         _stack.pop_back();
-        _result = ((_f._tmp6 + std::move(_result)) + 1);
+        _result = ((_f._tmp6 + _result) + 1);
       } else {
         auto _f = std::move(std::get<_after_size_in_SuccE>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;

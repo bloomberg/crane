@@ -275,23 +275,21 @@ template <typename K, typename V> struct CHT {
   static bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>>
   mk_buckets(int64_t num) {
     bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> buckets = {};
-    {
-      unsigned int _lc1_n = static_cast<unsigned int>(num);
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      unsigned int _lc1_loop_n = _lc1_n;
-      while (true) {
-        if (_lc1_loop_n <= 0) {
-          return buckets;
-        } else {
-          unsigned int n_ = _lc1_loop_n - 1;
-          stm::TVar<List<bsl::pair<T1, T2>>> b = stm::atomically([&] {
-            return stm::newTVar<List<bsl::pair<T1, T2>>>(
-                List<bsl::pair<T1, T2>>::nil());
-          });
-          buckets.push_back(bsl::move(b));
-          _lc1_loop_n = n_;
-        }
+    unsigned int _lc1_n = static_cast<unsigned int>(num);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    unsigned int _lc1_loop_n = _lc1_n;
+    while (true) {
+      if (_lc1_loop_n <= 0) {
+        return buckets;
+      } else {
+        unsigned int n_ = _lc1_loop_n - 1;
+        stm::TVar<List<bsl::pair<T1, T2>>> b = stm::atomically([&] {
+          return stm::newTVar<List<bsl::pair<T1, T2>>>(
+              List<bsl::pair<T1, T2>>::nil());
+        });
+        buckets.push_back(bsl::move(b));
+        _lc1_loop_n = n_;
       }
     }
   }

@@ -266,21 +266,20 @@ struct LoopifyTmc {
     // cell fills.
     std::optional<list<T1>> _root{};
     std::shared_ptr<list<T1>> *_write = nullptr;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = list<T1>::nil();
         (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t m = _loop_n - 1;
+        uint64_t m = n - 1;
         auto _cell = typename list<T1>::Cons(x, nullptr);
         list<T1> &_node =
             (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename list<T1>::Cons>(_node.v_mut()).l;
-        _loop_n = m;
+        n = m;
         continue;
       }
     }

@@ -30,15 +30,14 @@ LoopifyMutualInlineTemp::build(uint64_t n, LoopifyMutualInlineTemp::lst acc) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   LoopifyMutualInlineTemp::lst _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       uint64_t _next_n = m;
-      _loop_acc = lst::cons(_loop_n, std::move(_loop_acc));
-      _loop_n = _next_n;
+      _loop_acc = lst::cons(n, std::move(_loop_acc));
+      n = _next_n;
     }
   }
 }
@@ -58,24 +57,22 @@ uint64_t LoopifyMutualInlineTemp::even_step(
     const LoopifyMutualInlineTemp::lst &keep, uint64_t s) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_s = s;
   LoopifyMutualInlineTemp::lst _loop_keep = keep;
   LoopifyMutualInlineTemp::lst _loop_l = l;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
-      return (_loop_s + hd(_loop_keep));
+    if (n <= 0) {
+      return (s + hd(_loop_keep));
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (std::holds_alternative<typename LoopifyMutualInlineTemp::lst::Nil>(
               _loop_l.v())) {
-        return _loop_s;
+        return s;
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyMutualInlineTemp::lst::Cons>(_loop_l.v());
         LoopifyMutualInlineTemp::lst l0 =
             lst::cons(a0, lst::cons(a0, lst::nil()));
-        uint64_t s0 = (_loop_s + a0);
+        uint64_t s0 = (s + a0);
         if (m <= 0) {
           return (s0 + hd(*a1));
         } else {
@@ -87,10 +84,10 @@ uint64_t LoopifyMutualInlineTemp::even_step(
             auto &[a00, a10] =
                 std::get<typename LoopifyMutualInlineTemp::lst::Cons>(
                     l0.v_mut());
-            _loop_s = (s0 + hd(*a1));
+            s = (s0 + hd(*a1));
             _loop_keep = LoopifyMutualInlineTemp::lst(*a10);
             _loop_l = lst::cons((a00 + UINT64_C(1)), lst::nil());
-            _loop_n = m0;
+            n = m0;
           }
         }
       }
@@ -103,24 +100,22 @@ uint64_t LoopifyMutualInlineTemp::odd_step(
     const LoopifyMutualInlineTemp::lst &keep, uint64_t s) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_s = s;
   LoopifyMutualInlineTemp::lst _loop_keep = keep;
   LoopifyMutualInlineTemp::lst _loop_l = l;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
-      return (_loop_s + hd(_loop_keep));
+    if (n <= 0) {
+      return (s + hd(_loop_keep));
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (std::holds_alternative<typename LoopifyMutualInlineTemp::lst::Nil>(
               _loop_l.v())) {
-        return _loop_s;
+        return s;
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyMutualInlineTemp::lst::Cons>(_loop_l.v());
         LoopifyMutualInlineTemp::lst l0 =
             lst::cons((a0 + UINT64_C(1)), lst::nil());
-        uint64_t s0 = (_loop_s + hd(_loop_keep));
+        uint64_t s0 = (s + hd(_loop_keep));
         if (m <= 0) {
           return (s0 + hd(*a1));
         } else {
@@ -132,10 +127,10 @@ uint64_t LoopifyMutualInlineTemp::odd_step(
             auto &[a00, a10] =
                 std::get<typename LoopifyMutualInlineTemp::lst::Cons>(
                     l0.v_mut());
-            _loop_s = (s0 + a00);
+            s = (s0 + a00);
             _loop_keep = LoopifyMutualInlineTemp::lst(*a10);
             _loop_l = lst::cons(a00, lst::cons(a00, lst::nil()));
-            _loop_n = m0;
+            n = m0;
           }
         }
       }

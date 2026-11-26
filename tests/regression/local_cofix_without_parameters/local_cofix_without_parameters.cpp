@@ -31,11 +31,8 @@ LocalCofixWithoutParameters::zeros_or(bool b) {
                 return {UINT64_C(0), _self_z(_self_z, std::monostate{})};
               });
         };
-    auto z =
-        [=, z_impl = std::move(z_impl)](std::monostate u) -> LocalCofixWithoutParameters::stream {
-          return z_impl(z_impl, u);
-        };
-    return z(std::monostate{});
+    std::monostate _lc1_u = std::monostate{};
+    return z_impl(z_impl, _lc1_u);
   } else {
     auto o_impl =
         [](auto &_self_o,
@@ -46,11 +43,8 @@ LocalCofixWithoutParameters::zeros_or(bool b) {
                 return {UINT64_C(1), _self_o(_self_o, std::monostate{})};
               });
         };
-    auto o =
-        [=, o_impl = std::move(o_impl)](std::monostate u) -> LocalCofixWithoutParameters::stream {
-          return o_impl(o_impl, u);
-        };
-    return o(std::monostate{});
+    std::monostate _lc2_u = std::monostate{};
+    return o_impl(o_impl, _lc2_u);
   }
 }
 

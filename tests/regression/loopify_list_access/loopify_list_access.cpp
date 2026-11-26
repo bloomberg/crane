@@ -4,19 +4,17 @@ uint64_t LoopifyListAccess::nth(uint64_t n, const List<uint64_t> &l) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_n == UINT64_C(0)) {
+      if (n == UINT64_C(0)) {
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
       }
     }
   }
@@ -46,7 +44,6 @@ uint64_t LoopifyListAccess::index_of_aux(uint64_t x, const List<uint64_t> &l,
                                          uint64_t idx) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_idx = idx;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -55,9 +52,9 @@ uint64_t LoopifyListAccess::index_of_aux(uint64_t x, const List<uint64_t> &l,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        return _loop_idx;
+        return idx;
       } else {
-        _loop_idx = (_loop_idx + UINT64_C(1));
+        idx = (idx + UINT64_C(1));
         _loop_l = crane_raw(a1);
       }
     }
@@ -182,7 +179,7 @@ uint64_t LoopifyListAccess::count(uint64_t x, const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_count_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     }
   }
   return _result;
@@ -193,21 +190,17 @@ bool LoopifyListAccess::elem_at_eq(uint64_t idx, uint64_t val,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_idx = idx;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return false;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_idx == UINT64_C(0)) {
+      if (idx == UINT64_C(0)) {
         return a0 == val;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_idx =
-            (((_loop_idx - UINT64_C(1)) > _loop_idx ? 0
-                                                    : (_loop_idx -
-                                                       UINT64_C(1))));
+        idx = (((idx - UINT64_C(1)) > idx ? 0 : (idx - UINT64_C(1))));
       }
     }
   }
@@ -218,19 +211,17 @@ uint64_t LoopifyListAccess::nth_default(uint64_t n, uint64_t default0,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return default0;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_n == UINT64_C(0)) {
+      if (n == UINT64_C(0)) {
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
       }
     }
   }

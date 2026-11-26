@@ -160,7 +160,6 @@ std::optional<uint64_t>
 LoopifyOptionMaybe::find_index_even_aux(const List<uint64_t> &l, uint64_t idx) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_idx = idx;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -169,9 +168,9 @@ LoopifyOptionMaybe::find_index_even_aux(const List<uint64_t> &l, uint64_t idx) {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
-        return std::make_optional<uint64_t>(_loop_idx);
+        return std::make_optional<uint64_t>(idx);
       } else {
-        _loop_idx = (_loop_idx + UINT64_C(1));
+        idx = (idx + UINT64_C(1));
         _loop_l = crane_raw(a1);
       }
     }

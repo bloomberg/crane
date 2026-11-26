@@ -118,6 +118,26 @@ BinomialHeap::priqueue BinomialHeap::join(const List<BinomialHeap::tree> &p,
   }
 }
 
+BinomialHeap::priqueue BinomialHeap::unzip(
+    const BinomialHeap::tree &t,
+    crane::fn<List<BinomialHeap::tree>(List<BinomialHeap::tree>)> cont) {
+  if (std::holds_alternative<typename BinomialHeap::tree::Node>(t.v())) {
+    const auto &[a0, a1, a2] =
+        std::get<typename BinomialHeap::tree::Node>(t.v());
+    const BinomialHeap::tree &a1_value = *a1;
+    const BinomialHeap::tree &a2_value = *a2;
+    crane::fn<List<BinomialHeap::tree>(BinomialHeap::priqueue)> f =
+        [=, a1_value = a1_value, cont = std::move(cont)](
+            const BinomialHeap::priqueue &q) {
+          return List<BinomialHeap::tree>::cons(
+              tree::node(a0, a1_value, tree::leaf()), cont(q));
+        };
+    return unzip(a2_value, std::move(f));
+  } else {
+    return cont(List<BinomialHeap::tree>::nil());
+  }
+}
+
 BinomialHeap::priqueue
 BinomialHeap::heap_delete_max(const BinomialHeap::tree &t) {
   if (std::holds_alternative<typename BinomialHeap::tree::Node>(t.v())) {

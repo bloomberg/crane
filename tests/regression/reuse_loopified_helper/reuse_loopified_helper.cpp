@@ -13,8 +13,8 @@ ReuseLoopifiedHelper::bump_root(ReuseLoopifiedHelper::tree t) {
           crane::get<typename ReuseLoopifiedHelper::tree::Node>(t.v_mut()).a1);
       ReuseLoopifiedHelper::tree r = std::move(
           *crane::get<typename ReuseLoopifiedHelper::tree::Node>(t.v_mut()).a2);
-      return tree::node_crane_reuse(std::move(t), std::move(l),
-                                    (std::move(k) + 1), std::move(r));
+      return tree::node_crane_reuse(std::move(t), std::move(l), (k + 1),
+                                    std::move(r));
     } else {
       if (crane::holds_alternative<typename ReuseLoopifiedHelper::tree::Leaf>(
               t.v())) {
@@ -75,13 +75,11 @@ ReuseLoopifiedHelper::insert(uint64_t x, const ReuseLoopifiedHelper::tree &t) {
         if (x < a1) {
           _stack.emplace_back(_after_insert_in_true{a1, a2});
           _stack.emplace_back(_call{crane_raw(a0)});
+        } else if (a1 < x) {
+          _stack.emplace_back(_after_insert_in_true_2{a0, a1});
+          _stack.emplace_back(_call{crane_raw(a2)});
         } else {
-          if (a1 < x) {
-            _stack.emplace_back(_after_insert_in_true_2{a0, a1});
-            _stack.emplace_back(_call{crane_raw(a2)});
-          } else {
-            _result = std::move(t);
-          }
+          _result = std::move(t);
         }
       }
     } else if (crane::holds_alternative<_after_insert_in_true>(_popped)) {
@@ -142,13 +140,13 @@ uint64_t ReuseLoopifiedHelper::sum(const ReuseLoopifiedHelper::tree &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const ReuseLoopifiedHelper::tree &a2 = *_f.a2;
-      _stack.emplace_back(_after_sum_in_Node_2{a1, std::move(_result)});
+      _stack.emplace_back(_after_sum_in_Node_2{a1, _result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + a1) + std::move(_result));
+      _result = ((_f._tmp2 + a1) + _result);
     }
   }
   return _result;

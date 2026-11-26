@@ -116,15 +116,14 @@ struct LoopifyWrapperReceiver {
       // Loop replaces the tail recursion: each recursive call updates the loop
       // variables.
       const t *_loop_self = this;
-      uint64_t _loop_n = n;
       while (true) {
-        if (_loop_n <= 0) {
+        if (n <= 0) {
           return *_loop_self;
         } else {
-          uint64_t m = _loop_n - 1;
+          uint64_t m = n - 1;
           _self_store = t::n(box<t>::b(*_loop_self));
           _loop_self = &_self_store;
-          _loop_n = m;
+          n = m;
         }
       }
     }

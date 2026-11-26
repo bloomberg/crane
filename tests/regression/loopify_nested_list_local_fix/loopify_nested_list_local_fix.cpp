@@ -5,16 +5,15 @@ LoopifyNestedListLocalFix::mterm LoopifyNestedListLocalFix::h(uint64_t n) {
   // cell fills.
   std::optional<LoopifyNestedListLocalFix::mterm> _root{};
   std::shared_ptr<LoopifyNestedListLocalFix::mterm> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = mterm::mlit(UINT64_C(0));
       (_write ? *(*_write = std::make_shared<LoopifyNestedListLocalFix::mterm>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell = typename LoopifyNestedListLocalFix::mterm::MAdd(
           nullptr,
           std::make_shared<List<LoopifyNestedListLocalFix::mterm>>(List<
@@ -49,7 +48,7 @@ LoopifyNestedListLocalFix::mterm LoopifyNestedListLocalFix::h(uint64_t n) {
           &std::get<typename LoopifyNestedListLocalFix::mterm::MAdd>(
               _node.v_mut())
               .a0;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }
@@ -61,16 +60,15 @@ LoopifyNestedListLocalFix::mterm LoopifyNestedListLocalFix::h2(uint64_t n) {
   // cell fills.
   std::optional<LoopifyNestedListLocalFix::mterm> _root{};
   std::shared_ptr<LoopifyNestedListLocalFix::mterm> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = mterm::mlit(UINT64_C(0));
       (_write ? *(*_write = std::make_shared<LoopifyNestedListLocalFix::mterm>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell = typename LoopifyNestedListLocalFix::mterm::MAdd(
           nullptr,
           std::make_shared<List<LoopifyNestedListLocalFix::mterm>>(
@@ -93,7 +91,7 @@ LoopifyNestedListLocalFix::mterm LoopifyNestedListLocalFix::h2(uint64_t n) {
           &std::get<typename LoopifyNestedListLocalFix::mterm::MAdd>(
               _node.v_mut())
               .a0;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }
@@ -139,13 +137,11 @@ LoopifyNestedListLocalFix::size(const LoopifyNestedListLocalFix::mterm &t) {
       std::shared_ptr<List<LoopifyNestedListLocalFix::mterm>> a1 =
           std::move(_f.a1);
       const List<LoopifyNestedListLocalFix::mterm> &a1_value = *a1;
-      _result =
-          ((std::move(_result) +
-            a1_value.template fold_right<uint64_t>(
-                [](const LoopifyNestedListLocalFix::mterm &x,
-                   uint64_t acc) { return (size(x) + acc); },
-                UINT64_C(0))) +
-           1);
+      _result = ((_result + a1_value.template fold_right<uint64_t>(
+                                [](const LoopifyNestedListLocalFix::mterm &x,
+                                   uint64_t acc) { return (size(x) + acc); },
+                                UINT64_C(0))) +
+                 1);
     }
   }
   return _result;

@@ -288,22 +288,22 @@ int64_t Uint63Axioms::of_pos_rec(uint64_t n, const Positive &p) {
     } else if (std::holds_alternative<_after_of_pos_rec_in_XI>(_popped)) {
       auto _f = std::move(std::get<_after_of_pos_rec_in_XI>(_popped));
       _stack.pop_back();
-      _result = ((INT64_C(1) >= 63
-                      ? 0
-                      : static_cast<int64_t>(
-                            (static_cast<uint64_t>(std::move(_result)) <<
-                             (INT64_C(1) & 63)) &
-                            0x7FFFFFFFFFFFFFFFULL)) |
-                 INT64_C(1));
+      _result =
+          ((INT64_C(1) >= 63
+                ? 0
+                : static_cast<int64_t>(
+                      (static_cast<uint64_t>(_result) << (INT64_C(1) & 63)) &
+                      0x7FFFFFFFFFFFFFFFULL)) |
+           INT64_C(1));
     } else {
       auto _f = std::move(std::get<_after_of_pos_rec_in_XO>(_popped));
       _stack.pop_back();
-      _result = (INT64_C(1) >= 63
-                     ? 0
-                     : static_cast<int64_t>(
-                           (static_cast<uint64_t>(std::move(_result)) <<
-                            (INT64_C(1) & 63)) &
-                           0x7FFFFFFFFFFFFFFFULL));
+      _result =
+          (INT64_C(1) >= 63
+               ? 0
+               : static_cast<int64_t>(
+                     (static_cast<uint64_t>(_result) << (INT64_C(1) & 63)) &
+                     0x7FFFFFFFFFFFFFFFULL));
     }
   }
   return _result;

@@ -99,17 +99,17 @@ LoopifyMutualPartialApp::sum_e(const LoopifyMutualPartialApp::e<uint64_t> &x) {
       auto _f = std::move(std::get<_after_sum_e_in_Add>(_popped));
       _stack.pop_back();
       const LoopifyMutualPartialApp::e<uint64_t> &b0 = *_f.b0;
-      _stack.emplace_back(_after_sum_e_in_Add_2{std::move(_result)});
+      _stack.emplace_back(_after_sum_e_in_Add_2{_result});
       _stack.emplace_back(_call{&b0});
     } else if (std::holds_alternative<_after_sum_e_in_Add_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_in_Add_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     } else {
       auto _f = std::move(std::get<_after_sum_e_in_MConst>(_popped));
       _stack.pop_back();
       uint64_t u0 = _f.u0;
-      _result = (u0 + std::move(_result));
+      _result = (u0 + _result);
     }
   }
   return _result;
@@ -220,27 +220,27 @@ uint64_t LoopifyMutualPartialApp::sum_md(
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add>(_popped));
       _stack.pop_back();
       const LoopifyMutualPartialApp::e<uint64_t> &b0 = *_f.b0;
-      _stack.emplace_back(_after_sum_e_entry_in_Add_2{std::move(_result)});
+      _stack.emplace_back(_after_sum_e_entry_in_Add_2{_result});
       _stack.emplace_back(_call_sum_e_entry{&b0});
     } else if (std::holds_alternative<_after_sum_e_entry_in_Add_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     } else if (std::holds_alternative<_after_sum_e_entry_in_MConst>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_MConst>(_popped));
       _stack.pop_back();
       uint64_t u0 = _f.u0;
-      _result = (u0 + std::move(_result));
+      _result = (u0 + _result);
     } else if (std::holds_alternative<_after_sum_md_in_MPair>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_in_MPair>(_popped));
       _stack.pop_back();
       const LoopifyMutualPartialApp::md<uint64_t> &b0 = *_f.b0;
-      _stack.emplace_back(_after_sum_md_in_MPair_2{std::move(_result)});
+      _stack.emplace_back(_after_sum_md_in_MPair_2{_result});
       _stack.emplace_back(_call{&b0});
     } else {
       auto _f = std::move(std::get<_after_sum_md_in_MPair_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp6 + std::move(_result));
+      _result = (_f._tmp6 + _result);
     }
   }
   return _result;

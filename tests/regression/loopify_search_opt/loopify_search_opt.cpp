@@ -53,12 +53,11 @@ LoopifySearchOpt::longest_run_fuel(uint64_t fuel, const List<uint64_t> &current,
   const List<uint64_t> *_loop_l = &l;
   List<uint64_t> _loop_best = std::move(best);
   List<uint64_t> _loop_current = current;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       return _loop_best;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         uint64_t len_curr = _loop_current.length();
         uint64_t len_best = _loop_best.length();
@@ -74,14 +73,14 @@ LoopifySearchOpt::longest_run_fuel(uint64_t fuel, const List<uint64_t> &current,
                 _loop_current.v())) {
           _loop_l = crane_raw(a1);
           _loop_current = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-          _loop_fuel = fuel_;
+          fuel = fuel_;
         } else {
           const auto &[a00, _] =
               std::get<typename List<uint64_t>::Cons>(_loop_current.v());
           if (a0 == a00) {
             _loop_l = crane_raw(a1);
             _loop_current = List<uint64_t>::cons(a0, std::move(_loop_current));
-            _loop_fuel = fuel_;
+            fuel = fuel_;
           } else {
             uint64_t len_curr = _loop_current.length();
             uint64_t len_best = _loop_best.length();
@@ -94,7 +93,7 @@ LoopifySearchOpt::longest_run_fuel(uint64_t fuel, const List<uint64_t> &current,
             _loop_l = crane_raw(a1);
             _loop_best = std::move(new_best);
             _loop_current = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-            _loop_fuel = fuel_;
+            fuel = fuel_;
           }
         }
       }
@@ -173,8 +172,7 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
       const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t weight = _f.weight;
       uint64_t value = _f.value;
-      _stack.emplace_back(
-          _after_knapsack_fuel_in_false_2{value, std::move(_result)});
+      _stack.emplace_back(_after_knapsack_fuel_in_false_2{value, _result});
       _stack.emplace_back(_call{
           &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
           fuel_});
@@ -182,7 +180,7 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
       auto _f = std::move(std::get<_after_knapsack_fuel_in_false_2>(_popped));
       _stack.pop_back();
       uint64_t value = _f.value;
-      _result = std::max(_f._tmp2, (value + std::move(_result)));
+      _result = std::max(_f._tmp2, (value + _result));
     }
   }
   return _result;
@@ -252,13 +250,13 @@ bool LoopifySearchOpt::subset_sum_fuel(uint64_t fuel, uint64_t target,
       uint64_t fuel_ = _f.fuel_;
       uint64_t a0 = _f.a0;
       const List<uint64_t> &a1 = *_f.a1;
-      _stack.emplace_back(_after_subset_sum_fuel_in_false_2{std::move(_result)});
+      _stack.emplace_back(_after_subset_sum_fuel_in_false_2{_result});
       _stack.emplace_back(
           _call{&a1, (((target - a0) > target ? 0 : (target - a0))), fuel_});
     } else {
       auto _f = std::move(std::get<_after_subset_sum_fuel_in_false_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 || std::move(_result));
+      _result = (_f._tmp2 || _result);
     }
   }
   return _result;
@@ -305,14 +303,12 @@ LoopifySearchOpt::majority(const List<uint64_t> &l) {
       const auto &[cand, count] = _tmp1;
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + UINT64_C(1)));
+      } else if (UINT64_C(0) < count) {
+        _result = std::make_pair(
+            cand,
+            (((count - UINT64_C(1)) > count ? 0 : (count - UINT64_C(1)))));
       } else {
-        if (UINT64_C(0) < count) {
-          _result = std::make_pair(
-              cand,
-              (((count - UINT64_C(1)) > count ? 0 : (count - UINT64_C(1)))));
-        } else {
-          _result = std::make_pair(a0, UINT64_C(1));
-        }
+        _result = std::make_pair(a0, UINT64_C(1));
       }
     }
   }
@@ -324,12 +320,11 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       return false;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
         return false;
       } else {
@@ -350,11 +345,11 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
         } else {
           uint64_t mid = (UINT64_C(2) ? len / UINT64_C(2) : 0);
           uint64_t mid_val;
-          auto nth = [](uint64_t n, const List<uint64_t> &xs) -> uint64_t {
+          auto nth = [&](const List<uint64_t> &xs) -> uint64_t {
             // Loop replaces the tail recursion: each recursive call updates the
             // loop variables.
             const List<uint64_t> *_loop_xs = &xs;
-            uint64_t _loop_n = n;
+            uint64_t _loop_n = mid;
             while (true) {
               if (_loop_n <= 0) {
                 if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -379,68 +374,66 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
               }
             }
           };
-          mid_val = nth(mid, _loop_l);
+          mid_val = nth(_loop_l);
           List<uint64_t> left;
-          auto take =
-              [&](uint64_t n, const List<uint64_t> &xs) -> List<uint64_t> {
-                // Explicit stack replaces the non-tail recursion of take: _call
-                // frames are pending calls, _after frames resume a caller.
-                struct _call {
-                  const List<uint64_t> *xs;
-                  uint64_t n;
-                };
+          auto take = [&](const List<uint64_t> &xs) -> List<uint64_t> {
+            // Explicit stack replaces the non-tail recursion of take: _call
+            // frames are pending calls, _after frames resume a caller.
+            struct _call {
+              const List<uint64_t> *xs;
+              uint64_t n;
+            };
 
-                struct _after_take_in_Cons {
-                  uint64_t a03;
-                };
+            struct _after_take_in_Cons {
+              uint64_t a03;
+            };
 
-                using _frame = std::variant<_call, _after_take_in_Cons>;
-                List<uint64_t> _result{};
-                crane::small_vector<_frame> _stack;
-                _stack.emplace_back(_call{&xs, n});
-                while (!_stack.empty()) {
-                  _frame &_popped = _stack.back();
-                  if (std::holds_alternative<_call>(_popped)) {
-                    auto _f = std::move(std::get<_call>(_popped));
-                    _stack.pop_back();
-                    const List<uint64_t> &xs = *_f.xs;
-                    uint64_t n = _f.n;
-                    if (n <= 0) {
-                      _result = List<uint64_t>::nil();
-                    } else {
-                      uint64_t n_ = n - 1;
-                      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                              xs.v())) {
-                        _result = List<uint64_t>::nil();
-                      } else {
-                        const auto &[a03, a13] =
-                            std::get<typename List<uint64_t>::Cons>(xs.v());
-                        _stack.emplace_back(_after_take_in_Cons{a03});
-                        _stack.emplace_back(_call{crane_raw(a13), n_});
-                      }
-                    }
+            using _frame = std::variant<_call, _after_take_in_Cons>;
+            List<uint64_t> _result{};
+            crane::small_vector<_frame> _stack;
+            _stack.emplace_back(_call{&xs, mid});
+            while (!_stack.empty()) {
+              _frame &_popped = _stack.back();
+              if (std::holds_alternative<_call>(_popped)) {
+                auto _f = std::move(std::get<_call>(_popped));
+                _stack.pop_back();
+                const List<uint64_t> &xs = *_f.xs;
+                uint64_t mid = _f.n;
+                if (mid <= 0) {
+                  _result = List<uint64_t>::nil();
+                } else {
+                  uint64_t n_ = mid - 1;
+                  if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                          xs.v())) {
+                    _result = List<uint64_t>::nil();
                   } else {
-                    auto _f = std::move(std::get<_after_take_in_Cons>(_popped));
-                    _stack.pop_back();
-                    uint64_t a03 = _f.a03;
-                    _result = List<uint64_t>::cons(a03, std::move(_result));
+                    const auto &[a03, a13] =
+                        std::get<typename List<uint64_t>::Cons>(xs.v());
+                    _stack.emplace_back(_after_take_in_Cons{a03});
+                    _stack.emplace_back(_call{crane_raw(a13), n_});
                   }
                 }
-                return _result;
-              };
-          left = take(mid, _loop_l);
+              } else {
+                auto _f = std::move(std::get<_after_take_in_Cons>(_popped));
+                _stack.pop_back();
+                uint64_t a03 = _f.a03;
+                _result = List<uint64_t>::cons(a03, std::move(_result));
+              }
+            }
+            return _result;
+          };
+          left = take(_loop_l);
           List<uint64_t> right;
           auto drop =
               [](uint64_t n, const List<uint64_t> &xs) -> List<uint64_t> {
                 // Loop replaces the tail recursion: each recursive call updates
                 // the loop variables.
                 const List<uint64_t> *_loop_xs = &xs;
-                uint64_t _loop_n = n;
                 while (true) {
-                  if (_loop_n <= 0) {
+                  if (n <= 0) {
                     return *_loop_xs;
                   } else {
-                    uint64_t n_ = _loop_n - 1;
+                    uint64_t n_ = n - 1;
                     if (std::holds_alternative<typename List<uint64_t>::Nil>(
                             _loop_xs->v())) {
                       return List<uint64_t>::nil();
@@ -448,7 +441,7 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                       const auto &[_, a14] = std::get<
                           typename List<uint64_t>::Cons>(_loop_xs->v());
                       _loop_xs = crane_raw(a14);
-                      _loop_n = n_;
+                      n = n_;
                     }
                   }
                 }
@@ -456,14 +449,12 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
           right = drop((mid + UINT64_C(1)), _loop_l);
           if (target < mid_val) {
             _loop_l = std::move(left);
-            _loop_fuel = fuel_;
+            fuel = fuel_;
+          } else if (mid_val < target) {
+            _loop_l = std::move(right);
+            fuel = fuel_;
           } else {
-            if (mid_val < target) {
-              _loop_l = std::move(right);
-              _loop_fuel = fuel_;
-            } else {
-              return true;
-            }
+            return true;
           }
         }
       }

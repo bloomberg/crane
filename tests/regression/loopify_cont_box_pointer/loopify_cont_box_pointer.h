@@ -180,13 +180,13 @@ struct LoopifyContBoxPointer {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_sum_in_Node_2{a1, std::move(_result)});
+          _stack.emplace_back(_after_sum_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + a1) + _result);
         }
       }
       return _result;
@@ -230,13 +230,11 @@ struct LoopifyContBoxPointer {
             if (k < a1) {
               _stack.emplace_back(_after_insert_in_true{a1, a2});
               _stack.emplace_back(_call{crane_raw(a0)});
+            } else if (a1 < k) {
+              _stack.emplace_back(_after_insert_in_true_2{a0, a1});
+              _stack.emplace_back(_call{crane_raw(a2)});
             } else {
-              if (a1 < k) {
-                _stack.emplace_back(_after_insert_in_true_2{a0, a1});
-                _stack.emplace_back(_call{crane_raw(a2)});
-              } else {
-                _result = *_self;
-              }
+              _result = *_self;
             }
           }
         } else if (crane::holds_alternative<_after_insert_in_true>(_popped)) {

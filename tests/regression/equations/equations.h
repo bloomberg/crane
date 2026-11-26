@@ -354,14 +354,14 @@ struct Equations {
           }
         };
     auto f4 =
-        [&](std::pair<uint64_t, uint64_t> _x, uint64_t _x0,
-            const gcd_graph &g)
-             -> T1 { return f4_impl(f4_impl, f5_impl, _x, _x0, g); };
+        [&](const gcd_graph &g) -> T1 {
+          return f4_impl(f4_impl, f5_impl, x0_, x1_, g);
+        };
     auto f5 =
         [&](uint64_t _x, uint64_t _x0, bool _x1, uint64_t _x2,
             const gcd_clause_3_graph &g)
              -> T2 { return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, _x2, g); };
-    return f4(x0_, x1_, x2_);
+    return f4(x2_);
   }
 
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
@@ -446,15 +446,7 @@ struct Equations {
         [&](std::pair<uint64_t, uint64_t> _x, uint64_t _x0,
             const gcd_graph &g)
              -> T1 { return f4_impl(f4_impl, f5_impl, _x, _x0, g); };
-    {
-      uint64_t _lc1_x = x0_;
-      uint64_t _lc1_x0 = x1_;
-      bool _lc1_x1 = x2_;
-      uint64_t _lc1_x2 = x3_;
-      const gcd_clause_3_graph &_lc1_g = x4_;
-      return f5_impl(f4_impl, f5_impl, _lc1_x, _lc1_x0, _lc1_x1, _lc1_x2,
-                     _lc1_g);
-    }
+    return f5_impl(f4_impl, f5_impl, x0_, x1_, x2_, x3_, x4_);
   }
 
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
@@ -812,14 +804,14 @@ struct Equations {
           }
         };
     auto f4 =
-        [&](uint64_t _x, uint64_t _x0,
-            const collatz_steps_graph &c)
-             -> T1 { return f4_impl(f4_impl, f5_impl, _x, _x0, c); };
+        [&](const collatz_steps_graph &c) -> T1 {
+          return f4_impl(f4_impl, f5_impl, x0_, x1_, c);
+        };
     auto f5 =
         [&](uint64_t _x, bool _x0, uint64_t _x1,
             const collatz_steps_clause_3_graph &c)
              -> T2 { return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, c); };
-    return f4(x0_, x1_, x2_);
+    return f4(x2_);
   }
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>
@@ -880,13 +872,7 @@ struct Equations {
         [&](uint64_t _x, uint64_t _x0,
             const collatz_steps_graph &c)
              -> T1 { return f4_impl(f4_impl, f5_impl, _x, _x0, c); };
-    {
-      uint64_t _lc1_x = x0_;
-      bool _lc1_x0 = x1_;
-      uint64_t _lc1_x1 = x2_;
-      const collatz_steps_clause_3_graph &_lc1_c = x3_;
-      return f5_impl(f4_impl, f5_impl, _lc1_x, _lc1_x0, _lc1_x1, _lc1_c);
-    }
+    return f5_impl(f4_impl, f5_impl, x0_, x1_, x2_, x3_);
   }
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>

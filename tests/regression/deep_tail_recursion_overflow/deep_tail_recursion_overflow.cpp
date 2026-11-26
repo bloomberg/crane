@@ -6,15 +6,14 @@ DeepTailRecursionOverflow::build(uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   DeepTailRecursionOverflow::chain _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t k = _loop_n - 1;
+      uint64_t k = n - 1;
       uint64_t _next_n = k;
-      _loop_acc = chain::link(std::move(_loop_acc), _loop_n);
-      _loop_n = _next_n;
+      _loop_acc = chain::link(std::move(_loop_acc), n);
+      n = _next_n;
     }
   }
 }
@@ -56,7 +55,7 @@ DeepTailRecursionOverflow::total_of(const DeepTailRecursionOverflow::chain &c) {
       auto _f = std::move(std::get<_after_total_of_in_Link>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = (a1 + std::move(_result));
+      _result = (a1 + _result);
     }
   }
   return _result;

@@ -94,12 +94,12 @@ uint64_t LoopifySharedVariantMovedRead::size(
       auto _f = std::move(crane::get<_after_size_in_Node>(_popped));
       _stack.pop_back();
       const LoopifySharedVariantMovedRead::tree &r = *_f.r;
-      _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_after_size_in_Node_2{_result});
       _stack.emplace_back(_call{&r});
     } else {
       auto _f = std::move(crane::get<_after_size_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = ((_f._tmp2 + std::move(_result)) + 1);
+      _result = ((_f._tmp2 + _result) + 1);
     }
   }
   return _result;

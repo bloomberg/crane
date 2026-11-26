@@ -48,16 +48,14 @@ uint64_t LoopifyLocalFixInnerCallback::ack(std::pair<uint64_t, uint64_t> p) {
           auto _f = std::move(std::get<_after_ack_m_in_S>(_popped));
           _stack.pop_back();
           uint64_t pm = _f.pm;
-          _result = _self_f(_self_f, pm, std::move(_result));
+          _result = _self_f(_self_f, pm, _result);
         }
       }
       return _result;
     };
     return ack_m(n);
   };
-  {
-    uint64_t _lc1_m = p.first;
-    uint64_t _lc1_n = p.second;
-    return f_impl(f_impl, _lc1_m, _lc1_n);
-  }
+  uint64_t _lc1_m = p.first;
+  uint64_t _lc1_n = p.second;
+  return f_impl(f_impl, _lc1_m, _lc1_n);
 }

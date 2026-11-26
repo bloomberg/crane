@@ -191,8 +191,7 @@ return crane_convert<ptr>(p);
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
 }
 }()};
-} else {
-if (std::holds_alternative<typename Dval<CraneU0, CraneU1, CraneU2>::DIptr>(_other.v())) {
+} else if (std::holds_alternative<typename Dval<CraneU0, CraneU1, CraneU2>::DIptr>(_other.v())) {
 const auto& [i] = std::get<typename Dval<CraneU0, CraneU1, CraneU2>::DIptr>(_other.v());
 return DIptr{[&]() -> iptr {
 if constexpr (crane_convertible<iptr, const CraneU1&>) {
@@ -210,7 +209,6 @@ return crane_convert<ADDR>(a);
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
 }
 }()};
-}
 }
 }()) {}
 static Dval<ptr, iptr, ADDR> dptr(ptr p) {

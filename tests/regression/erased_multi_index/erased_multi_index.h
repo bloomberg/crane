@@ -152,7 +152,7 @@ struct ErasedMultiIndex {
         } else {
           auto _f = std::move(std::get<_after_hlist_length_in_HCons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + std::move(_result));
+          _result = (UINT64_C(1) + _result);
         }
       }
       return _result;

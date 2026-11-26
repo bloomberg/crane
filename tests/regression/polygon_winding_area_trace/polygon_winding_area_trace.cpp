@@ -25,12 +25,10 @@ Real PolygonWindingAreaTraceCase::lon_diff(Real lon1, Real lon2) {
   Real raw = (lon2 - lon1);
   if ((Real::pi() < raw)) {
     return (raw - (Real::from_z(INT64_C(2)) * Real::pi()));
+  } else if ((raw < (-Real::pi()))) {
+    return (raw + (Real::from_z(INT64_C(2)) * Real::pi()));
   } else {
-    if ((raw < (-Real::pi()))) {
-      return (raw + (Real::from_z(INT64_C(2)) * Real::pi()));
-    } else {
-      return raw;
-    }
+    return raw;
   }
 }
 

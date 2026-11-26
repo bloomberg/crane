@@ -41,7 +41,7 @@ bool LoopifyClassMethodFrameSave::g(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_g_in_Cons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(bool)> sz0 = std::move(_f.sz0);
-      _result = UINT64_C(1) <= sz0(std::move(_result));
+      _result = UINT64_C(1) <= sz0(_result);
     }
   }
   return _result;
@@ -83,7 +83,7 @@ uint64_t LoopifyClassMethodFrameSave::h(uint64_t n) {
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> sz0 = std::move(_f.sz0);
       crane::fn<uint64_t(uint64_t)> sz1 = std::move(_f.sz1);
-      _result = sz0(sz1(std::move(_result)));
+      _result = sz0(sz1(_result));
     }
   }
   return _result;

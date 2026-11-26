@@ -380,14 +380,14 @@ struct LoopifyEquationsWithClause {
           }
         };
     auto f3 =
-        [&](const List<uint64_t> &_x, uint64_t _x0,
+        [&](const List<uint64_t> &_x,
             const zeros_graph &z)
-             -> T1 { return f3_impl(f3_impl, f4_impl, _x, _x0, z); };
+             -> T1 { return f3_impl(f3_impl, f4_impl, _x, x1_, z); };
     auto f4 =
         [&](uint64_t _x, bool _x0, const List<uint64_t> &_x1, uint64_t _x2,
             const zeros_clause_2_graph &z)
              -> T2 { return f4_impl(f3_impl, f4_impl, _x, _x0, _x1, _x2, z); };
-    return f3(x0_, x1_, x2_);
+    return f3(x0_, x2_);
   }
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>
@@ -437,15 +437,7 @@ struct LoopifyEquationsWithClause {
         [&](const List<uint64_t> &_x, uint64_t _x0,
             const zeros_graph &z)
              -> T1 { return f3_impl(f3_impl, f4_impl, _x, _x0, z); };
-    {
-      uint64_t _lc1_x = x0_;
-      bool _lc1_x0 = x1_;
-      const List<uint64_t> &_lc1_x1 = x2_;
-      uint64_t _lc1_x2 = x3_;
-      const zeros_clause_2_graph &_lc1_z = x4_;
-      return f4_impl(f3_impl, f4_impl, _lc1_x, _lc1_x0, _lc1_x1, _lc1_x2,
-                     _lc1_z);
-    }
+    return f4_impl(f3_impl, f4_impl, x0_, x1_, x2_, x3_, x4_);
   }
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>
@@ -634,58 +626,53 @@ struct LoopifyEquationsWithClause {
     requires std::is_invocable_r_v<T1, F1 &, uint64_t &, List<uint64_t> &,
                                    T1 &&>
   static T1 plain_elim(T1 f, F1 &&f0, const List<uint64_t> &l) {
-    {
-      const List<uint64_t> &_lc1_x = l;
-      uint64_t _lc1_x0 = plain(l);
-      const plain_graph &_lc1_p = plain_graph_correct(l);
+    uint64_t _lc1_x0 = plain(l);
+    const plain_graph &_lc1_p = plain_graph_correct(l);
 
-      // Explicit stack replaces the non-tail recursion of f1: _call frames are
-      // pending calls, _after frames resume a caller.
-      struct _call {
-        const plain_graph *p;
-        uint64_t _x0;
-        const List<uint64_t> *_x;
-      };
+    // Explicit stack replaces the non-tail recursion of f1: _call frames are
+    // pending calls, _after frames resume a caller.
+    struct _call {
+      const plain_graph *p;
+      uint64_t _x0;
+      const List<uint64_t> *_x;
+    };
 
-      struct _after_f1_in_Plain_graph_equation_2 {
-        uint64_t x0;
-        List<uint64_t> xs0;
-      };
+    struct _after_f1_in_Plain_graph_equation_2 {
+      uint64_t x0;
+      List<uint64_t> xs0;
+    };
 
-      using _frame = std::variant<_call, _after_f1_in_Plain_graph_equation_2>;
-      T1 _lc1_result{};
-      crane::small_vector<_frame> _lc1_stack;
-      _lc1_stack.emplace_back(_call{&_lc1_p, _lc1_x0, &_lc1_x});
-      while (!_lc1_stack.empty()) {
-        _frame &_popped = _lc1_stack.back();
-        if (std::holds_alternative<_call>(_popped)) {
-          auto _f = std::move(std::get<_call>(_popped));
-          _lc1_stack.pop_back();
-          const plain_graph &_lc1_p = *_f.p;
-          uint64_t _lc1_x0 = _f._x0;
-          const List<uint64_t> &_lc1_x = *_f._x;
-          if (std::holds_alternative<
-                  typename plain_graph::Plain_graph_equation_1>(_lc1_p.v())) {
-            _lc1_result = f;
-          } else {
-            const auto &[x0, xs0, hind0] =
-                std::get<typename plain_graph::Plain_graph_equation_2>(
-                    _lc1_p.v());
-            _lc1_stack.emplace_back(
-                _after_f1_in_Plain_graph_equation_2{x0, xs0});
-            _lc1_stack.emplace_back(_call{crane_raw(hind0), plain(xs0), &xs0});
-          }
+    using _frame = std::variant<_call, _after_f1_in_Plain_graph_equation_2>;
+    T1 _lc1_result{};
+    crane::small_vector<_frame> _lc1_stack;
+    _lc1_stack.emplace_back(_call{&_lc1_p, _lc1_x0, &l});
+    while (!_lc1_stack.empty()) {
+      _frame &_popped = _lc1_stack.back();
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
+        _lc1_stack.pop_back();
+        const plain_graph &_lc1_p = *_f.p;
+        uint64_t _lc1_x0 = _f._x0;
+        const List<uint64_t> &l = *_f._x;
+        if (std::holds_alternative<typename plain_graph::Plain_graph_equation_1>(
+                _lc1_p.v())) {
+          _lc1_result = f;
         } else {
-          auto _f =
-              std::move(std::get<_after_f1_in_Plain_graph_equation_2>(_popped));
-          _lc1_stack.pop_back();
-          uint64_t x0 = _f.x0;
-          List<uint64_t> xs0 = std::move(_f.xs0);
-          _lc1_result = f0(x0, xs0, std::move(_lc1_result));
+          const auto &[x0, xs0, hind0] = std::get<
+              typename plain_graph::Plain_graph_equation_2>(_lc1_p.v());
+          _lc1_stack.emplace_back(_after_f1_in_Plain_graph_equation_2{x0, xs0});
+          _lc1_stack.emplace_back(_call{crane_raw(hind0), plain(xs0), &xs0});
         }
+      } else {
+        auto _f =
+            std::move(std::get<_after_f1_in_Plain_graph_equation_2>(_popped));
+        _lc1_stack.pop_back();
+        uint64_t x0 = _f.x0;
+        List<uint64_t> xs0 = std::move(_f.xs0);
+        _lc1_result = f0(x0, xs0, std::move(_lc1_result));
       }
-      return _lc1_result;
     }
+    return _lc1_result;
   }
 
   template <typename F1>

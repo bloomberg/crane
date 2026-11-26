@@ -140,12 +140,12 @@ struct LoopifyExtrema {
         auto _f = std::move(std::get<_after_max_by_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        uint64_t rest_max = std::move(_result);
+        uint64_t rest_max = _result;
         uint64_t fx = f(a0);
         if (rest_max < fx) {
-          _result = std::move(fx);
+          _result = fx;
         } else {
-          _result = std::move(rest_max);
+          _result = rest_max;
         }
       }
     }
@@ -192,12 +192,12 @@ struct LoopifyExtrema {
         auto _f = std::move(std::get<_after_min_by_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        uint64_t rest_min = std::move(_result);
+        uint64_t rest_min = _result;
         uint64_t fx = f(a0);
         if (fx < rest_min) {
-          _result = std::move(fx);
+          _result = fx;
         } else {
-          _result = std::move(rest_min);
+          _result = rest_min;
         }
       }
     }
@@ -243,13 +243,13 @@ struct LoopifyExtrema {
         auto _f = std::move(std::get<_after_argmax_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        uint64_t rest_best = std::move(_result);
+        uint64_t rest_best = _result;
         uint64_t fx = f(a0);
         uint64_t f_rest = f(rest_best);
         if (f_rest < fx) {
-          _result = std::move(a0);
+          _result = a0;
         } else {
-          _result = std::move(rest_best);
+          _result = rest_best;
         }
       }
     }
@@ -295,13 +295,13 @@ struct LoopifyExtrema {
         auto _f = std::move(std::get<_after_argmin_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        uint64_t rest_best = std::move(_result);
+        uint64_t rest_best = _result;
         uint64_t fx = f(a0);
         uint64_t f_rest = f(rest_best);
         if (fx < f_rest) {
-          _result = std::move(a0);
+          _result = a0;
         } else {
-          _result = std::move(rest_best);
+          _result = rest_best;
         }
       }
     }

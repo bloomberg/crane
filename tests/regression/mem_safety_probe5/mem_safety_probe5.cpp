@@ -39,7 +39,7 @@ uint64_t MemSafetyProbe5::sum_left_vals(
       auto _f = std::move(std::get<_after_sum_left_vals_in_Mycons>(_popped));
       _stack.pop_back();
       MemSafetyProbe5::tree a0 = std::move(_f.a0);
-      _result = a0.get_left_val(std::move(_result));
+      _result = a0.get_left_val(_result);
     }
   }
   return _result;
@@ -127,7 +127,7 @@ uint64_t MemSafetyProbe5::apply_all(
       auto _f = std::move(std::get<_after_apply_all_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = a0(std::move(_result));
+      _result = a0(_result);
     }
   }
   return _result;
@@ -193,9 +193,8 @@ MemSafetyProbe5::make_tree_list(uint64_t n) {
   std::optional<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> _root{};
   std::shared_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> *_write =
       nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = mylist<MemSafetyProbe5::tree>::mynil();
       (_write ? *(*_write = std::make_shared<
                       MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
@@ -203,11 +202,11 @@ MemSafetyProbe5::make_tree_list(uint64_t n) {
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       auto _cell =
           typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons(
-              tree::node(tree::node(tree::leaf(), _loop_n, tree::leaf()),
-                         (_loop_n * UINT64_C(2)), tree::leaf()),
+              tree::node(tree::node(tree::leaf(), n, tree::leaf()),
+                         (n * UINT64_C(2)), tree::leaf()),
               nullptr);
       MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &_node =
           (_write ? *(*_write = std::make_shared<
@@ -219,7 +218,7 @@ MemSafetyProbe5::make_tree_list(uint64_t n) {
               typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
               _node.v_mut())
               .a1;
-      _loop_n = n_;
+      n = n_;
       continue;
     }
   }
@@ -262,7 +261,7 @@ uint64_t MemSafetyProbe5::sum_getters(
       auto _f = std::move(std::get<_after_sum_getters_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(x) + std::move(_result));
+      _result = (a0(x) + _result);
     }
   }
   return _result;

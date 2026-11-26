@@ -208,7 +208,7 @@ struct MethodifiedTmcNoLoopify {
         } else {
           auto _f = std::move(std::get<_after_wdepth_in_WW>(_popped));
           _stack.pop_back();
-          _result = (std::move(_result) + 1);
+          _result = (_result + 1);
         }
       }
       return _result;
@@ -220,21 +220,20 @@ struct MethodifiedTmcNoLoopify {
       // next cell fills.
       std::optional<wrap> _root{};
       std::shared_ptr<wrap> *_write = nullptr;
-      uint64_t _loop_n = n;
       while (true) {
-        if (_loop_n <= 0) {
+        if (n <= 0) {
           auto _value = *_self;
           (_write ? *(*_write = std::make_shared<wrap>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          uint64_t k = _loop_n - 1;
+          uint64_t k = n - 1;
           auto _cell = typename wrap::WW(nullptr);
           wrap &_node =
               (_write ? *(*_write = std::make_shared<wrap>(std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename wrap::WW>(_node.v_mut()).a0;
-          _loop_n = k;
+          n = k;
           continue;
         }
       }

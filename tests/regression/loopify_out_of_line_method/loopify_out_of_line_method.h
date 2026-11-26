@@ -179,7 +179,7 @@ inline uint64_t Tree::depth() const {
     } else {
       auto _f = std::move(std::get<_after_depth_in_Node>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + UINT64_C(1));
+      _result = (_result + UINT64_C(1));
     }
   }
   return _result;

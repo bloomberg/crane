@@ -44,12 +44,12 @@ uint64_t LoopifyAccumulatorReadElsewhere::size(
       auto _f = std::move(std::get<_after_size_in_Node>(_popped));
       _stack.pop_back();
       const LoopifyAccumulatorReadElsewhere::tree &a2 = *_f.a2;
-      _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_after_size_in_Node_2{_result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = ((_f._tmp2 + UINT64_C(1)) + std::move(_result));
+      _result = ((_f._tmp2 + UINT64_C(1)) + _result);
     }
   }
   return _result;
@@ -99,13 +99,13 @@ uint64_t LoopifyAccumulatorReadElsewhere::keys(
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const LoopifyAccumulatorReadElsewhere::tree &a2 = *_f.a2;
-      _stack.emplace_back(_after_keys_in_Node_2{a1, std::move(_result)});
+      _stack.emplace_back(_after_keys_in_Node_2{a1, _result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_keys_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + a1) + std::move(_result));
+      _result = ((_f._tmp2 + a1) + _result);
     }
   }
   return _result;
@@ -118,14 +118,13 @@ LoopifyAccumulatorReadElsewhere::tree LoopifyAccumulatorReadElsewhere::grow(
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   LoopifyAccumulatorReadElsewhere::tree _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       _loop_acc = tree::node(std::move(_loop_acc), m, tree::leaf());
-      _loop_n = m;
+      n = m;
     }
   }
 }
@@ -138,18 +137,16 @@ LoopifyAccumulatorReadElsewhere::grow_counted(
     uint64_t count) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_count = count;
   LoopifyAccumulatorReadElsewhere::tree _loop_acc = acc;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
-      return std::make_pair(_loop_count, _loop_acc);
+    if (n <= 0) {
+      return std::make_pair(count, _loop_acc);
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       LoopifyAccumulatorReadElsewhere::tree _next_acc =
           tree::node(_loop_acc, m, _loop_acc);
-      _loop_count = (_loop_count + size(_loop_acc));
-      _loop_n = m;
+      count = (count + size(_loop_acc));
+      n = m;
       _loop_acc = std::move(_next_acc);
     }
   }

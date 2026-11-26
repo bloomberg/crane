@@ -9,12 +9,10 @@ SharedChildCells::insert(uint64_t x, const SharedChildCells::tree &t) {
         std::get<typename SharedChildCells::tree::Node>(t.v());
     if (x < k0) {
       return tree::node(insert(x, *l0), k0, crane::shared_child(r0));
+    } else if (k0 < x) {
+      return tree::node(crane::shared_child(l0), k0, insert(x, *r0));
     } else {
-      if (k0 < x) {
-        return tree::node(crane::shared_child(l0), k0, insert(x, *r0));
-      } else {
-        return t;
-      }
+      return t;
     }
   }
 }

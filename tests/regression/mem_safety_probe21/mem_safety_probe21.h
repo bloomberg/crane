@@ -187,31 +187,9 @@ struct MemSafetyProbe21 {
   static tree accum_tree(tree acc, uint64_t n);
   static inline const uint64_t test_accum_tree =
       tree_sum(accum_tree(tree::leaf(), UINT64_C(4)));
-
   /// TEST 6: CPS-like pattern where the continuation builds a tree.
   static uint64_t cps_sum(const tree &t,
-                          const crane::fn<uint64_t(uint64_t)> &k) {
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    crane::fn<uint64_t(uint64_t)> _loop_k = k;
-    const tree *_loop_t = &t;
-    while (true) {
-      if (std::holds_alternative<typename tree::Leaf>(_loop_t->v())) {
-        return _loop_k(UINT64_C(0));
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(_loop_t->v());
-        const tree &a0_value = *a0;
-        const tree &a2_value = *a2;
-        _loop_k = [=, a2_value = a2_value](uint64_t lsum) {
-          return cps_sum(a2_value, [=, _loop_k = _loop_k](uint64_t rsum) {
-            return _loop_k(((lsum + a1) + rsum));
-          });
-        };
-        _loop_t = &a0_value;
-      }
-    }
-  }
-
+                          const crane::fn<uint64_t(uint64_t)> &k);
   static inline const uint64_t test_cps_sum =
       cps_sum(tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                          UINT64_C(2),

@@ -127,7 +127,7 @@ struct CtorArgMoveAliasRec {
           auto _f = std::move(std::get<_after_isum_in_ICons>(_popped));
           _stack.pop_back();
           uint64_t a0 = _f.a0;
-          _result = (a0 + std::move(_result));
+          _result = (a0 + _result);
         }
       }
       return _result;

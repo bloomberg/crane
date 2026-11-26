@@ -290,54 +290,11 @@ struct FunctionAliasSpelling {
 
   static tree
   g2(const tree &t,
-     const crane::fn<st<int64_t>(std::pair<uint64_t, uint64_t>)> &a) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return tree::leaf();
-    } else {
-      const auto &[l0, v_1, _] = std::get<typename tree::Node>(t.v());
-      const tree &l0_value = *l0;
-      return g2(l0_value,
-                [&]() -> crane::fn<st<int64_t>(std::pair<uint64_t, uint64_t>)> {
-                  if (v_1 <= 0) {
-                    return a;
-                  } else {
-                    uint64_t _x0 = v_1 - 1;
-                    return [](std::pair<uint64_t,
-                                        uint64_t>) {
-                      return sret<int64_t>(INT64_C(0));
-                    };
-                  }
-                }());
-    }
-  }
-
+     const crane::fn<st<int64_t>(std::pair<uint64_t, uint64_t>)> &a);
   /// g2 with its parameter observed at the leaf.
   static int64_t
   g2z(const tree &t,
-      const crane::fn<st<int64_t>(std::pair<uint64_t, uint64_t>)> &a) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return crane::apply2(a, std::make_pair(UINT64_C(0), UINT64_C(0)),
-                           UINT64_C(0))
-                 .first;
-    } else {
-      const auto &[l0, v_1, _] = std::get<typename tree::Node>(t.v());
-      const tree &l0_value = *l0;
-      return g2z(
-          l0_value,
-          [&]() -> crane::fn<st<int64_t>(std::pair<uint64_t, uint64_t>)> {
-            if (v_1 <= 0) {
-              return a;
-            } else {
-              uint64_t _x0 = v_1 - 1;
-              return [](std::pair<uint64_t,
-                                  uint64_t>) {
-                return sret<int64_t>(INT64_C(0));
-              };
-            }
-          }());
-    }
-  }
-
+      const crane::fn<st<int64_t>(std::pair<uint64_t, uint64_t>)> &a);
   static inline const tree t1 = g2(
       tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                  UINT64_C(0), tree::leaf()),

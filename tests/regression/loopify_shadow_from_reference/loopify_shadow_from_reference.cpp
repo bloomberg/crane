@@ -35,7 +35,7 @@ LoopifyShadowFromReference::suml(const LoopifyShadowFromReference::lst &l) {
       auto _f = std::move(std::get<_after_suml_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -66,8 +66,8 @@ LoopifyShadowFromReference::g(LoopifyShadowFromReference::lst l) {
                          a0);
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       auto _cell = crane::make_rc_reusing_unchecked(
-          std::move(_rs.token), typename LoopifyShadowFromReference::lst::Cons(
-                                    std::move(_read), nullptr));
+          std::move(_rs.token),
+          typename LoopifyShadowFromReference::lst::Cons(_read, nullptr));
       *_write = std::move(_cell);
       _write =
           &std::get<typename LoopifyShadowFromReference::lst::Cons>(
@@ -86,18 +86,16 @@ LoopifyShadowFromReference::lst LoopifyShadowFromReference::upto(uint64_t n) {
   // cell fills.
   std::optional<LoopifyShadowFromReference::lst> _root{};
   crane::rc<LoopifyShadowFromReference::lst> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = lst::nil();
       (_write ? *(*_write = crane::make_rc<LoopifyShadowFromReference::lst>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t k = _loop_n - 1;
-      auto _cell =
-          typename LoopifyShadowFromReference::lst::Cons(_loop_n, nullptr);
+      uint64_t k = n - 1;
+      auto _cell = typename LoopifyShadowFromReference::lst::Cons(n, nullptr);
       LoopifyShadowFromReference::lst &_node =
           (_write ? *(*_write = crane::make_rc<LoopifyShadowFromReference::lst>(
                           std::move(_cell)))
@@ -106,7 +104,7 @@ LoopifyShadowFromReference::lst LoopifyShadowFromReference::upto(uint64_t n) {
           &std::get<typename LoopifyShadowFromReference::lst::Cons>(
               _node.v_mut())
               .a1;
-      _loop_n = k;
+      n = k;
       continue;
     }
   }

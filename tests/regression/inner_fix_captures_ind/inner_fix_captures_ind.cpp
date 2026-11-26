@@ -30,7 +30,7 @@ uint64_t InnerFixCapturesInd::len(const InnerFixCapturesInd::lst &l) {
     } else {
       auto _f = std::move(std::get<_after_len_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;
@@ -74,23 +74,22 @@ uint64_t InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) {
             [&](const InnerFixCapturesInd::lst &m, uint64_t a) -> uint64_t {
               // Loop replaces the tail recursion: each recursive call updates
               // the loop variables.
-              uint64_t _loop_a = a;
               const InnerFixCapturesInd::lst *_loop_m = &m;
               while (true) {
                 if (std::holds_alternative<
                         typename InnerFixCapturesInd::lst::Nil>(_loop_m->v())) {
-                  return _loop_a;
+                  return a;
                 } else {
                   const auto &[_, a3] =
                       std::get<typename InnerFixCapturesInd::lst::Cons>(
                           _loop_m->v());
-                  _loop_a = (_loop_a + len(*a1));
+                  a = (a + len(*a1));
                   _loop_m = crane_raw(a3);
                 }
               }
             };
         return inner(*a1, UINT64_C(0));
-      }() + std::move(_result));
+      }() + _result);
     }
   }
   return _result;
@@ -101,16 +100,15 @@ InnerFixCapturesInd::lst InnerFixCapturesInd::mk(uint64_t n) {
   // cell fills.
   std::optional<InnerFixCapturesInd::lst> _root{};
   std::shared_ptr<InnerFixCapturesInd::lst> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = lst::nil();
       (_write ? *(*_write = std::make_shared<InnerFixCapturesInd::lst>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell =
           typename InnerFixCapturesInd::lst::Cons(UINT64_C(1), nullptr);
       InnerFixCapturesInd::lst &_node =
@@ -119,7 +117,7 @@ InnerFixCapturesInd::lst InnerFixCapturesInd::mk(uint64_t n) {
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename InnerFixCapturesInd::lst::Cons>(_node.v_mut()).a1;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }

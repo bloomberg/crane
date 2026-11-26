@@ -33,7 +33,7 @@ uint64_t LoopifyEquationsWithClause::zeros(const List<uint64_t> &x) {
     } else {
       auto _f = std::move(std::get<_after_zeros_in_true>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;
@@ -109,7 +109,7 @@ uint64_t LoopifyEquationsWithClause::plain(const List<uint64_t> &x) {
       auto _f = std::move(std::get<_after_plain_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;

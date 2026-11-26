@@ -32,7 +32,7 @@ uint64_t LoopifyAdvancedLists::product(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_product_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 * std::move(_result));
+      _result = (a0 * _result);
     }
   }
   return _result;

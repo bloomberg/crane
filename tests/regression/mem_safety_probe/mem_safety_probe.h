@@ -473,31 +473,12 @@ struct MemSafetyProbe {
         t.pair_of_closures();
     return (p.first(UINT64_C(10)) + p.second(UINT64_C(100)));
   }();
-
   /// ---- TEST 4: Fold composing closures ----
   /// Each iteration wraps the accumulator in a new closure that captures
   /// a tree value. Tests deep closure chaining with value type captures.
   static uint64_t fold_compose(const mylist<tree> &trees,
                                const crane::fn<uint64_t(uint64_t)> &acc,
-                               uint64_t x0_) {
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
-    const mylist<tree> *_loop_trees = &trees;
-    while (true) {
-      if (std::holds_alternative<typename mylist<tree>::Mynil>(_loop_trees->v())) {
-        return _loop_acc(x0_);
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<tree>::Mycons>(_loop_trees->v());
-        const mylist<tree> &a1_value = *a1;
-        _loop_acc =
-            [=, a0 = a0](uint64_t n) { return _loop_acc(a0.sum_values(n)); };
-        _loop_trees = &a1_value;
-      }
-    }
-  }
-
+                               uint64_t x0_);
   static inline const uint64_t test_fold_compose = []() {
     tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());

@@ -508,7 +508,7 @@ struct LoopifyStructures {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          uint64_t d1 = std::move(_result);
+          uint64_t d1 = _result;
           _stack.emplace_back(_after_quad_depth_in_Quad_2{&a2, &a3, d1});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_quad_depth_in_Quad_2>(_popped)) {
@@ -517,7 +517,7 @@ struct LoopifyStructures {
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
           uint64_t d1 = _f.d1;
-          uint64_t d2 = std::move(_result);
+          uint64_t d2 = _result;
           _stack.emplace_back(_after_quad_depth_in_Quad_3{&a3, d1, d2});
           _stack.emplace_back(_call{_f.a2});
         } else if (std::holds_alternative<_after_quad_depth_in_Quad_3>(_popped)) {
@@ -526,7 +526,7 @@ struct LoopifyStructures {
           const quadtree &a3 = *_f.a3;
           uint64_t d1 = _f.d1;
           uint64_t d2 = _f.d2;
-          uint64_t d3 = std::move(_result);
+          uint64_t d3 = _result;
           _stack.emplace_back(_after_quad_depth_in_Quad_4{d1, d2, d3});
           _stack.emplace_back(_call{_f.a3});
         } else {
@@ -535,7 +535,7 @@ struct LoopifyStructures {
           uint64_t d1 = _f.d1;
           uint64_t d2 = _f.d2;
           uint64_t d3 = _f.d3;
-          uint64_t d4 = std::move(_result);
+          uint64_t d4 = _result;
           _result = ([&]() -> uint64_t {
             if ((d1 <= d2 ? d2 : d1) <= (d3 <= d4 ? d4 : d3)) {
               if (d3 <= d4) {
@@ -543,12 +543,10 @@ struct LoopifyStructures {
               } else {
                 return d3;
               }
+            } else if (d1 <= d2) {
+              return d2;
             } else {
-              if (d1 <= d2) {
-                return d2;
-              } else {
-                return d1;
-              }
+              return d1;
             }
           }() + 1);
         }
@@ -619,29 +617,27 @@ struct LoopifyStructures {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(
-              _after_quad_sum_in_Quad_2{&a2, &a3, std::move(_result)});
+          _stack.emplace_back(_after_quad_sum_in_Quad_2{&a2, &a3, _result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_quad_sum_in_Quad_2>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_2>(_popped));
           _stack.pop_back();
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(
-              _after_quad_sum_in_Quad_3{&a3, _f._tmp4, std::move(_result)});
+          _stack.emplace_back(_after_quad_sum_in_Quad_3{&a3, _f._tmp4,
+                                                        _result});
           _stack.emplace_back(_call{_f.a2});
         } else if (std::holds_alternative<_after_quad_sum_in_Quad_3>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_3>(_popped));
           _stack.pop_back();
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(
-              _after_quad_sum_in_Quad_4{_f._tmp4, _f._tmp3,
-                                        std::move(_result)});
+              _after_quad_sum_in_Quad_4{_f._tmp4, _f._tmp3, _result});
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_4>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 + (_f._tmp3 + (_f._tmp2 + std::move(_result))));
+          _result = (_f._tmp4 + (_f._tmp3 + (_f._tmp2 + _result)));
         }
       }
       return _result;

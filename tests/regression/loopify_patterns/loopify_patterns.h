@@ -218,12 +218,12 @@ struct LoopifyPatterns {
         auto _f = std::move(std::get<_after_max_by_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        uint64_t rest_max = std::move(_result);
+        uint64_t rest_max = _result;
         uint64_t fx = f(a0);
         if (fx < rest_max) {
-          _result = std::move(rest_max);
+          _result = rest_max;
         } else {
-          _result = std::move(fx);
+          _result = fx;
         }
       }
     }
@@ -349,16 +349,15 @@ struct LoopifyPatterns {
     std::shared_ptr<list<uint64_t>> *_write = nullptr;
     const list<uint64_t> *_loop_l2 = &l2;
     const list<uint64_t> *_loop_l1 = &l1;
-    uint64_t _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         auto _value = *_loop_l1;
         (_write ? *(*_write =
                         std::make_shared<list<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t f = _loop_fuel - 1;
+        uint64_t f = fuel - 1;
         if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l1->v())) {
           auto _value = *_loop_l2;
           (_write ? *(*_write =
@@ -388,7 +387,7 @@ struct LoopifyPatterns {
                   &std::get<typename list<uint64_t>::Cons>(_node.v_mut()).l;
               _loop_l2 = &*_loop_l2;
               _loop_l1 = crane_raw(a1);
-              _loop_fuel = f;
+              fuel = f;
               continue;
             } else {
               auto _cell = typename list<uint64_t>::Cons(a00, nullptr);
@@ -400,7 +399,7 @@ struct LoopifyPatterns {
                   &std::get<typename list<uint64_t>::Cons>(_node.v_mut()).l;
               _loop_l2 = crane_raw(a10);
               _loop_l1 = &*_loop_l1;
-              _loop_fuel = f;
+              fuel = f;
               continue;
             }
           }
@@ -523,16 +522,14 @@ struct LoopifyPatterns {
           _result = std::make_pair(std::make_pair(
               list<uint64_t>::cons(a0, std::move(as_)), std::move(bs)),
                                    std::move(cs));
+        } else if (q(a0)) {
+          _result = std::make_pair(std::make_pair(
+              std::move(as_), list<uint64_t>::cons(a0, std::move(bs))),
+                                   std::move(cs));
         } else {
-          if (q(a0)) {
-            _result = std::make_pair(std::make_pair(
-                std::move(as_), list<uint64_t>::cons(a0, std::move(bs))),
-                                     std::move(cs));
-          } else {
-            _result =
-                std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
-                               list<uint64_t>::cons(a0, std::move(cs)));
-          }
+          _result =
+              std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
+                             list<uint64_t>::cons(a0, std::move(cs)));
         }
       }
     }
@@ -552,7 +549,6 @@ struct LoopifyPatterns {
     // cell fills.
     std::optional<list<uint64_t>> _root{};
     std::shared_ptr<list<uint64_t>> *_write = nullptr;
-    uint64_t _loop_idx = idx;
     const list<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
@@ -564,18 +560,18 @@ struct LoopifyPatterns {
       } else {
         const auto &[a0, a1] =
             std::get<typename list<uint64_t>::Cons>(_loop_l->v());
-        if (p(_loop_idx, a0)) {
+        if (p(idx, a0)) {
           auto _cell = typename list<uint64_t>::Cons(f(a0), nullptr);
           list<uint64_t> &_node =
               (_write ? *(*_write = std::make_shared<list<uint64_t>>(
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename list<uint64_t>::Cons>(_node.v_mut()).l;
-          _loop_idx = (_loop_idx + 1);
+          idx = (idx + 1);
           _loop_l = crane_raw(a1);
           continue;
         } else {
-          _loop_idx = (_loop_idx + 1);
+          idx = (idx + 1);
           _loop_l = crane_raw(a1);
           continue;
         }

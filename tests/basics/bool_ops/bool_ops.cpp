@@ -31,12 +31,10 @@ bool BoolOps::my_xorb(bool a, bool b) {
     } else {
       return true;
     }
+  } else if (b) {
+    return true;
   } else {
-    if (b) {
-      return true;
-    } else {
-      return false;
-    }
+    return false;
   }
 }
 

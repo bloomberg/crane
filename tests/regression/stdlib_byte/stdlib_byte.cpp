@@ -3275,12 +3275,10 @@ bool Bool::eqb(bool b1, bool b2) {
     } else {
       return false;
     }
+  } else if (b2) {
+    return false;
   } else {
-    if (b2) {
-      return false;
-    } else {
-      return true;
-    }
+    return true;
   }
 }
 

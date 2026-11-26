@@ -61,7 +61,7 @@ Comparison GuardCompareShared::tcompare(const GuardCompareShared::tree &a,
       const GuardCompareShared::tree &a2 = *_f.a2;
       uint64_t a10 = _f.a10;
       const GuardCompareShared::tree &a20 = *_f.a20;
-      Comparison _tmp1 = std::move(_result);
+      Comparison _tmp1 = _result;
       switch (_tmp1) {
       case Comparison::EQ: {
         switch ((a1 < a10 ? Comparison::LT
@@ -104,18 +104,17 @@ GuardCompareShared::tree GuardCompareShared::build(uint64_t n) {
   // cell fills.
   std::optional<GuardCompareShared::tree> _root{};
   crane::shared_box<GuardCompareShared::tree> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = tree::leaf();
       (_write ? *(*_write = crane::shared_box<GuardCompareShared::tree>::make(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell = typename GuardCompareShared::tree::Node(
-          nullptr, _loop_n,
+          nullptr, n,
           crane::shared_box<GuardCompareShared::tree>::make(tree::leaf()));
       GuardCompareShared::tree &_node =
           (_write ? *(*_write =
@@ -124,7 +123,7 @@ GuardCompareShared::tree GuardCompareShared::build(uint64_t n) {
                   : _root.emplace(std::move(_cell)));
       _write =
           &crane::get<typename GuardCompareShared::tree::Node>(_node.v_mut()).a0;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }

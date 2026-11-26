@@ -693,12 +693,11 @@ template <typename K, typename V> struct SkipList {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
-    unsigned int _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         return _loop_curr;
       } else {
-        unsigned int fuel_ = _loop_fuel - 1;
+        unsigned int fuel_ = fuel - 1;
         bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt =
             ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
                 _loop_curr->forward[level]));
@@ -706,7 +705,7 @@ template <typename K, typename V> struct SkipList {
           const bsl::shared_ptr<SkipNode<T1, T2>> &next0 = *nextOpt;
           if (ltK(next0->key, target)) {
             _loop_curr = next0;
-            _loop_fuel = fuel_;
+            fuel = fuel_;
           } else {
             return _loop_curr;
           }
@@ -731,18 +730,17 @@ template <typename K, typename V> struct SkipList {
                const T1 &target, unsigned int level, SkipPath<T1, T2> path) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    unsigned int _loop_level = level;
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
     while (true) {
       bsl::shared_ptr<SkipNode<T1, T2>> pred =
           SkipList<int, int>::template findPred<T1, T2>(
-              ltK, bsl::move(_loop_curr), target, _loop_level);
-      path.set(_loop_level, pred);
-      if (_loop_level <= 0) {
+              ltK, bsl::move(_loop_curr), target, level);
+      path.set(level, pred);
+      if (level <= 0) {
         return path;
       } else {
-        unsigned int level_ = _loop_level - 1;
-        _loop_level = level_;
+        unsigned int level_ = level - 1;
+        level = level_;
         _loop_curr = bsl::move(pred);
       }
     }
@@ -769,16 +767,15 @@ template <typename K, typename V> struct SkipList {
                bsl::shared_ptr<SkipNode<T1, T2>> newNode, unsigned int level) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    unsigned int _loop_level = level;
     while (true) {
-      bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(_loop_level);
+      bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(level);
       SkipList<int, int>::template linkAtLevel<T1, T2>(bsl::move(pred), newNode,
-                                                       _loop_level);
-      if (_loop_level <= 0) {
+                                                       level);
+      if (level <= 0) {
         return;
       } else {
-        unsigned int level_ = _loop_level - 1;
-        _loop_level = level_;
+        unsigned int level_ = level - 1;
+        level = level_;
       }
     }
     return;
@@ -790,16 +787,15 @@ template <typename K, typename V> struct SkipList {
                              unsigned int level, unsigned int maxLevel) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    unsigned int _loop_level = level;
     while (true) {
-      if (_loop_level <= 0) {
+      if (level <= 0) {
         bsl::move(path).set(0u, bsl::move(head));
         return;
       } else {
-        unsigned int level_ = _loop_level - 1;
-        path.set(_loop_level, head);
+        unsigned int level_ = level - 1;
+        path.set(level, head);
         if (maxLevel <= level_) {
-          _loop_level = level_;
+          level = level_;
         } else {
           return;
         }
@@ -850,16 +846,15 @@ template <typename K, typename V> struct SkipList {
                              unsigned int level) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    unsigned int _loop_level = level;
     while (true) {
-      bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(_loop_level);
+      bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(level);
       SkipList<int, int>::template unlinkAtLevel<T1, T2>(bsl::move(pred),
-                                                         target, _loop_level);
-      if (_loop_level <= 0) {
+                                                         target, level);
+      if (level <= 0) {
         return;
       } else {
-        unsigned int level_ = _loop_level - 1;
-        _loop_level = level_;
+        unsigned int level_ = level - 1;
+        level = level_;
       }
     }
     return;
@@ -880,13 +875,12 @@ template <typename K, typename V> struct SkipList {
                           const T1 &target, unsigned int level) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    unsigned int _loop_level = level;
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
     while (true) {
       bsl::shared_ptr<SkipNode<T1, T2>> pred =
           SkipList<int, int>::template findPred<T1, T2>(
-              ltK, bsl::move(_loop_curr), target, _loop_level);
-      if (_loop_level <= 0) {
+              ltK, bsl::move(_loop_curr), target, level);
+      if (level <= 0) {
         bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt =
             ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
                 bsl::move(pred)->forward[0u]));
@@ -897,8 +891,8 @@ template <typename K, typename V> struct SkipList {
           return false;
         }
       } else {
-        unsigned int level_ = _loop_level - 1;
-        _loop_level = level_;
+        unsigned int level_ = level - 1;
+        level = level_;
         _loop_curr = bsl::move(pred);
       }
     }
@@ -911,23 +905,21 @@ template <typename K, typename V> struct SkipList {
              unsigned int acc) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    unsigned int _loop_acc = acc;
     bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> _loop_node = node;
-    unsigned int _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
-        return _loop_acc;
+      if (fuel <= 0) {
+        return acc;
       } else {
-        unsigned int fuel_ = _loop_fuel - 1;
+        unsigned int fuel_ = fuel - 1;
         if (_loop_node.has_value()) {
           const bsl::shared_ptr<SkipNode<T1, T2>> &n = *_loop_node;
           bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt = ptr_to_opt(
               stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(n->forward[0u]));
-          _loop_acc = (_loop_acc + 1);
+          acc = (acc + 1);
           _loop_node = bsl::move(nextOpt);
-          _loop_fuel = fuel_;
+          fuel = fuel_;
         } else {
-          return _loop_acc;
+          return acc;
         }
       }
     }
@@ -939,20 +931,19 @@ template <typename K, typename V> struct SkipList {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
-    unsigned int _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         return bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(
             bsl::move(_loop_curr));
       } else {
-        unsigned int fuel_ = _loop_fuel - 1;
+        unsigned int fuel_ = fuel - 1;
         bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt =
             ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
                 _loop_curr->forward[0u]));
         if (nextOpt.has_value()) {
           const bsl::shared_ptr<SkipNode<T1, T2>> &next0 = *nextOpt;
           _loop_curr = next0;
-          _loop_fuel = fuel_;
+          fuel = fuel_;
         } else {
           return bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(
               bsl::move(_loop_curr));
@@ -967,18 +958,16 @@ template <typename K, typename V> struct SkipList {
                                   unsigned int lvl) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    unsigned int _loop_lvl = lvl;
     while (true) {
-      bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nodeNext =
-          ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
-              node->forward[_loop_lvl]));
+      bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nodeNext = ptr_to_opt(
+          stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(node->forward[lvl]));
       stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
-          head->forward[_loop_lvl], opt_to_ptr(bsl::move(nodeNext)));
-      if (_loop_lvl <= 0) {
+          head->forward[lvl], opt_to_ptr(bsl::move(nodeNext)));
+      if (lvl <= 0) {
         return;
       } else {
-        unsigned int lvl_ = _loop_lvl - 1;
-        _loop_lvl = lvl_;
+        unsigned int lvl_ = lvl - 1;
+        lvl = lvl_;
       }
     }
     return;
@@ -999,13 +988,11 @@ template <typename K, typename V> struct SkipList {
                                     unsigned int acc) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    unsigned int _loop_acc = acc;
-    unsigned int _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
-        return _loop_acc;
+      if (fuel <= 0) {
+        return acc;
       } else {
-        unsigned int fuel_ = _loop_fuel - 1;
+        unsigned int fuel_ = fuel - 1;
         bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> firstOpt =
             ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
                 head->forward[0u]));
@@ -1013,10 +1000,10 @@ template <typename K, typename V> struct SkipList {
           const bsl::shared_ptr<SkipNode<T1, T2>> &node = *firstOpt;
           SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
               head, node, node->level);
-          _loop_acc = (_loop_acc + 1);
-          _loop_fuel = fuel_;
+          acc = (acc + 1);
+          fuel = fuel_;
         } else {
-          return _loop_acc;
+          return acc;
         }
       }
     }
@@ -1037,12 +1024,11 @@ template <typename K, typename V> struct SkipList {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
-    unsigned int _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         return bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>();
       } else {
-        unsigned int fuel_ = _loop_fuel - 1;
+        unsigned int fuel_ = fuel - 1;
         bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt =
             ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
                 _loop_curr->forward[0u]));
@@ -1053,7 +1039,7 @@ template <typename K, typename V> struct SkipList {
                 bsl::move(_loop_curr));
           } else {
             bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
-            _loop_fuel = fuel_;
+            fuel = fuel_;
             _loop_curr = bsl::move(_next_curr);
           }
         } else {

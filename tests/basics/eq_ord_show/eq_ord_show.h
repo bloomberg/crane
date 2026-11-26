@@ -87,12 +87,10 @@ template <typename _tcI0, typename _tcI1, typename T1>
 Ordering compare(const T1 &x, const T1 &y) {
   if (_tcI0::lt(x, y)) {
     return Ordering::LT;
+  } else if (_tcI1::eqb(x, y)) {
+    return Ordering::EQ;
   } else {
-    if (_tcI1::eqb(x, y)) {
-      return Ordering::EQ;
-    } else {
-      return Ordering::GT;
-    }
+    return Ordering::GT;
   }
 }
 
@@ -119,16 +117,14 @@ std::string show_comparison(const T1 &x, const T1 &y) {
     return crane::string_capped(
         crane::string_capped(_tcI0::show(x) + std::string(" < ")) +
         _tcI0::show(y));
+  } else if (_tcI2::eqb(x, y)) {
+    return crane::string_capped(
+        crane::string_capped(_tcI0::show(x) + std::string(" = ")) +
+        _tcI0::show(y));
   } else {
-    if (_tcI2::eqb(x, y)) {
-      return crane::string_capped(
-          crane::string_capped(_tcI0::show(x) + std::string(" = ")) +
-          _tcI0::show(y));
-    } else {
-      return crane::string_capped(
-          crane::string_capped(_tcI0::show(x) + std::string(" > ")) +
-          _tcI0::show(y));
-    }
+    return crane::string_capped(
+        crane::string_capped(_tcI0::show(x) + std::string(" > ")) +
+        _tcI0::show(y));
   }
 }
 

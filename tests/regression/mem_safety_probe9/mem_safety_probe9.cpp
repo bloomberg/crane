@@ -35,7 +35,7 @@ uint64_t MemSafetyProbe9::sum_fns(
       auto _f = std::move(std::get<_after_sum_fns_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(UINT64_C(0)) + std::move(_result));
+      _result = (a0(UINT64_C(0)) + _result);
     }
   }
   return _result;

@@ -32,7 +32,7 @@ uint64_t LoopifyClassics::factorial(uint64_t n) {
       auto _f = std::move(std::get<_after_factorial_in_S>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = (n * std::move(_result));
+      _result = (n * _result);
     }
   }
   return _result;
@@ -79,12 +79,12 @@ uint64_t LoopifyClassics::fib(uint64_t n) {
       auto _f = std::move(std::get<_after_fib_in_S>(_popped));
       _stack.pop_back();
       uint64_t n_p = _f.n_p;
-      _stack.emplace_back(_after_fib_in_S_2{std::move(_result)});
+      _stack.emplace_back(_after_fib_in_S_2{_result});
       _stack.emplace_back(_call{n_p});
     } else {
       auto _f = std::move(std::get<_after_fib_in_S_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     }
   }
   return _result;
@@ -122,17 +122,14 @@ uint64_t LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m, uint64_t n) {
         uint64_t fuel_ = fuel - 1;
         if (m == UINT64_C(0)) {
           _result = (n + UINT64_C(1));
+        } else if (n == UINT64_C(0)) {
+          _stack.emplace_back(
+              _call{UINT64_C(1),
+                    (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))), fuel_});
         } else {
-          if (n == UINT64_C(0)) {
-            _stack.emplace_back(
-                _call{UINT64_C(1),
-                      (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
-                      fuel_});
-          } else {
-            _stack.emplace_back(_after_ack_fuel_in_false{m, fuel_});
-            _stack.emplace_back(_call{
-                (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), m, fuel_});
-          }
+          _stack.emplace_back(_after_ack_fuel_in_false{m, fuel_});
+          _stack.emplace_back(_call{
+              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), m, fuel_});
         }
       }
     } else {
@@ -140,7 +137,7 @@ uint64_t LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m, uint64_t n) {
       _stack.pop_back();
       uint64_t m = _f.m;
       uint64_t fuel_ = _f.fuel_;
-      uint64_t inner = std::move(_result);
+      uint64_t inner = _result;
       _stack.emplace_back(_call{
           inner, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))), fuel_});
     }
@@ -204,13 +201,13 @@ uint64_t LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n, uint64_t k) {
       uint64_t n = _f.n;
       uint64_t k = _f.k;
       uint64_t fuel_ = _f.fuel_;
-      _stack.emplace_back(_after_binomial_fuel_in_false_2{std::move(_result)});
+      _stack.emplace_back(_after_binomial_fuel_in_false_2{_result});
       _stack.emplace_back(
           _call{k, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
     } else {
       auto _f = std::move(std::get<_after_binomial_fuel_in_false_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     }
   }
   return _result;
@@ -232,22 +229,19 @@ uint64_t LoopifyClassics::pascal(uint64_t row, uint64_t col) {
 uint64_t LoopifyClassics::gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_b = b;
-  uint64_t _loop_a = a;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
-      return _loop_a;
+    if (fuel <= 0) {
+      return a;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
-      if (_loop_b == UINT64_C(0)) {
-        return _loop_a;
+      uint64_t fuel_ = fuel - 1;
+      if (b == UINT64_C(0)) {
+        return a;
       } else {
-        uint64_t _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);
-        uint64_t _next_a = _loop_b;
-        _loop_fuel = fuel_;
-        _loop_b = _next_b;
-        _loop_a = _next_a;
+        uint64_t _next_b = (b ? a % b : a);
+        uint64_t _next_a = b;
+        fuel = fuel_;
+        b = _next_b;
+        a = _next_a;
       }
     }
   }
@@ -286,7 +280,7 @@ uint64_t LoopifyClassics::power(uint64_t base, uint64_t exp) {
     } else {
       auto _f = std::move(std::get<_after_power_in_S>(_popped));
       _stack.pop_back();
-      _result = (base * std::move(_result));
+      _result = (base * _result);
     }
   }
   return _result;
@@ -324,7 +318,7 @@ uint64_t LoopifyClassics::sum_to(uint64_t n) {
       auto _f = std::move(std::get<_after_sum_to_in_S>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = (n + std::move(_result));
+      _result = (n + _result);
     }
   }
   return _result;
@@ -362,7 +356,7 @@ uint64_t LoopifyClassics::sum_squares(uint64_t n) {
       auto _f = std::move(std::get<_after_sum_squares_in_S>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = ((n * n) + std::move(_result));
+      _result = ((n * n) + _result);
     }
   }
   return _result;

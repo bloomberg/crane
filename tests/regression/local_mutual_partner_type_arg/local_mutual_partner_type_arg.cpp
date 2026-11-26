@@ -28,10 +28,10 @@ uint64_t LocalMutualPartnerTypeArg::run(uint64_t, uint64_t n) {
           return (_self_f(_self_f, _self_g, m) + UINT64_C(1));
         }
       };
-  auto f = [&](uint64_t n0) -> uint64_t { return f_impl(f_impl, g_impl, n0); };
+  auto f = [&]() -> uint64_t { return f_impl(f_impl, g_impl, n); };
   auto g =
       [&](const crane::fn<uint64_t(uint64_t)> &h, uint64_t x,
           uint64_t n0)
            -> uint64_t { return g_impl(f_impl, g_impl, h, x, n0); };
-  return f(n);
+  return f();
 }

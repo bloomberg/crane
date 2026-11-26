@@ -16,6 +16,15 @@ std::shared_ptr<ITree<uint64_t>> TranslateAppliesHandler::injected() {
 }
 
 uint64_t
+TranslateAppliesHandler::which_side(const Sum1<AE, AE, crane::obj> &e) {
+  if (std::holds_alternative<typename Sum1<AE, AE, crane::obj>::Inl1>(e.v())) {
+    return UINT64_C(1);
+  } else {
+    return UINT64_C(2);
+  }
+}
+
+uint64_t
 TranslateAppliesHandler::b_of(const std::shared_ptr<ITree<uint64_t>> &t) {
   auto _cs = t->observe();
   if (std::holds_alternative<typename ITree<uint64_t>::Ret>(_cs)) {
@@ -49,6 +58,6 @@ TranslateAppliesHandler::side_of(const std::shared_ptr<ITree<uint64_t>> &t) {
     const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
     auto e = crane_event_as<Sum1<AE, AE, crane::obj>>(_itf.effect);
     auto _x = _itf.cont;
-    return which_side<void>(std::move(e));
+    return which_side(std::move(e));
   }
 }

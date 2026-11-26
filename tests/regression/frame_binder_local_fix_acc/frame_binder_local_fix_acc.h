@@ -297,23 +297,23 @@ struct FrameBinderLocalFixAcc {
           auto _f = std::move(std::get<_after_g1_in_Nil>(_popped));
           _stack.pop_back();
           int64_t acc29 = _f.acc29;
-          _result = std::min(std::move(_result), acc29);
+          _result = std::min(_result, acc29);
         } else if (std::holds_alternative<_after_g1_in_Nil_2>(_popped)) {
           auto _f = std::move(std::get<_after_g1_in_Nil_2>(_popped));
           _stack.pop_back();
           int64_t acc29 = _f.acc29;
-          _result = std::min(std::move(_result), acc29);
+          _result = std::min(_result, acc29);
         } else if (std::holds_alternative<_after_g1_in_Nil_3>(_popped)) {
           auto _f = std::move(std::get<_after_g1_in_Nil_3>(_popped));
           _stack.pop_back();
           int64_t acc29 = _f.acc29;
-          _result = std::min(std::move(_result), acc29);
+          _result = std::min(_result, acc29);
         } else {
           auto _f = std::move(std::get<_after_g1_in_Zneg>(_popped));
           _stack.pop_back();
           const tree &a0 = *_f.a0;
           List<uint64_t> l28 = std::move(_f.l28);
-          auto acc29 = std::move(_result);
+          auto acc29 = _result;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(l28.v_mut())) {
             _stack.emplace_back(_after_g1_in_Nil_3{acc29});
             _stack.emplace_back(_call{_f.a0, true, INT64_C(0)});
@@ -428,15 +428,14 @@ struct FrameBinderLocalFixAcc {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_tree_obs_in_Node_2{a1,
-                                                        std::move(_result)});
+          _stack.emplace_back(_after_tree_obs_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_obs_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          auto _once1 = (((_f._tmp2 * UINT64_C(7)) + a1) +
-                         (std::move(_result) * UINT64_C(3)));
+          auto _once1 =
+              (((_f._tmp2 * UINT64_C(7)) + a1) + (_result * UINT64_C(3)));
           _result = (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
         }
       }
@@ -706,12 +705,12 @@ struct FrameBinderLocalFixAcc {
           auto _f = std::move(std::get<_after_psize_in_PNode>(_popped));
           _stack.pop_back();
           const ptree<A> &a2 = *_f.a2;
-          _stack.emplace_back(_after_psize_in_PNode_2{std::move(_result)});
+          _stack.emplace_back(_after_psize_in_PNode_2{_result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_psize_in_PNode_2>(_popped));
           _stack.pop_back();
-          _result = ((_f._tmp2 + std::move(_result)) + 1);
+          _result = ((_f._tmp2 + _result) + 1);
         }
       }
       return _result;
@@ -937,15 +936,7 @@ struct FrameBinderLocalFixAcc {
 
   static stream sconst(uint64_t n);
   static stream sfrom(uint64_t n);
-
-  static stream smap(const crane::fn<uint64_t(uint64_t)> &f, const stream &s) {
-    const auto &[a0, a1] = std::get<typename stream::SCons>(s.v());
-    return stream::lazy_([=,
-                          f = f]() mutable -> typename stream::SCons {
-      return {f(a0), smap(f, a1)};
-    });
-  }
-
+  static stream smap(const crane::fn<uint64_t(uint64_t)> &f, const stream &s);
   static List<uint64_t> stake(uint64_t k, const stream &s);
   static uint64_t shd(const stream &s);
   static stream stl(const stream &s);

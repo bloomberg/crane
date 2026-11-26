@@ -230,16 +230,15 @@ struct NestedInductiveNoDrain {
       // Loop replaces the tail recursion: each recursive call updates the loop
       // variables.
       const tree *_loop_self = this;
-      uint64_t _loop_n = n;
       while (true) {
-        if (_loop_n <= 0) {
+        if (n <= 0) {
           return *_loop_self;
         } else {
-          uint64_t m = _loop_n - 1;
-          _self_store = tree::node(
-              _loop_n, lst<tree>::cons(*_loop_self, lst<tree>::nil()));
+          uint64_t m = n - 1;
+          _self_store =
+              tree::node(n, lst<tree>::cons(*_loop_self, lst<tree>::nil()));
           _loop_self = &_self_store;
-          _loop_n = m;
+          n = m;
         }
       }
     }

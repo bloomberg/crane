@@ -287,7 +287,7 @@ bool LoopifyStrings::list_eq(const List<uint64_t> &l1,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      _result = (a0 == a00 && std::move(_result));
+      _result = (a0 == a00 && _result);
     }
   }
   return _result;
@@ -352,22 +352,21 @@ List<uint64_t> LoopifyStrings::replicate(uint64_t n, uint64_t x) {
   // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       auto _cell = typename List<uint64_t>::Cons(x, nullptr);
       List<uint64_t> &_node =
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-      _loop_n = n_;
+      n = n_;
       continue;
     }
   }
@@ -382,11 +381,9 @@ LoopifyStrings::run_length_aux(uint64_t current, uint64_t count,
   std::optional<List<std::pair<uint64_t, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_count = count;
-  uint64_t _loop_current = current;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      if (_loop_count == UINT64_C(0)) {
+      if (count == UINT64_C(0)) {
         auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
@@ -395,7 +392,7 @@ LoopifyStrings::run_length_aux(uint64_t current, uint64_t count,
         break;
       } else {
         auto _value = List<std::pair<uint64_t, uint64_t>>::cons(
-            std::make_pair(_loop_current, _loop_count),
+            std::make_pair(current, count),
             List<std::pair<uint64_t, uint64_t>>::nil());
         (_write ? *(*_write =
                         std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
@@ -406,33 +403,31 @@ LoopifyStrings::run_length_aux(uint64_t current, uint64_t count,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (a0 == _loop_current) {
+      if (a0 == current) {
         _loop_l = crane_raw(a1);
-        _loop_count = (_loop_count + UINT64_C(1));
+        count = (count + UINT64_C(1));
+        continue;
+      } else if (count == UINT64_C(0)) {
+        _loop_l = crane_raw(a1);
+        count = UINT64_C(1);
+        current = a0;
         continue;
       } else {
-        if (_loop_count == UINT64_C(0)) {
-          _loop_l = crane_raw(a1);
-          _loop_count = UINT64_C(1);
-          _loop_current = a0;
-          continue;
-        } else {
-          auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
-              std::make_pair(_loop_current, _loop_count), nullptr);
-          List<std::pair<uint64_t, uint64_t>> &_node =
-              (_write ? *(*_write = std::make_shared<
-                              List<std::pair<uint64_t, uint64_t>>>(
-                              std::move(_cell)))
-                      : _root.emplace(std::move(_cell)));
-          _write =
-              &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                  _node.v_mut())
-                  .l;
-          _loop_l = crane_raw(a1);
-          _loop_count = UINT64_C(1);
-          _loop_current = a0;
-          continue;
-        }
+        auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
+            std::make_pair(current, count), nullptr);
+        List<std::pair<uint64_t, uint64_t>> &_node =
+            (_write ? *(*_write = std::make_shared<
+                            List<std::pair<uint64_t, uint64_t>>>(
+                            std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write =
+            &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+                _node.v_mut())
+                .l;
+        _loop_l = crane_raw(a1);
+        count = UINT64_C(1);
+        current = a0;
+        continue;
       }
     }
   }

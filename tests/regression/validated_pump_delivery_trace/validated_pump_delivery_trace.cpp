@@ -148,31 +148,23 @@ uint64_t ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
   ValidatedPumpDeliveryTraceCase::Minutes pt = peak_time(itype, dia);
   if (dia == UINT64_C(0)) {
     return UINT64_C(0);
+  } else if (dia <= elapsed) {
+    return UINT64_C(0);
+  } else if (pt == UINT64_C(0)) {
+    return UINT64_C(0);
+  } else if (elapsed <= pt) {
+    auto _once1 = (pt ? (elapsed * UINT64_C(25)) / pt : 0);
+    return (
+        ((UINT64_C(100) - _once1) > UINT64_C(100) ? 0
+                                                  : (UINT64_C(100) - _once1)));
+  } else if (dia <= pt) {
+    return UINT64_C(0);
   } else {
-    if (dia <= elapsed) {
-      return UINT64_C(0);
-    } else {
-      if (pt == UINT64_C(0)) {
-        return UINT64_C(0);
-      } else {
-        if (elapsed <= pt) {
-          auto _once1 = (pt ? (elapsed * UINT64_C(25)) / pt : 0);
-          return (((UINT64_C(100) - _once1) > UINT64_C(100)
-                       ? 0
-                       : (UINT64_C(100) - _once1)));
-        } else {
-          if (dia <= pt) {
-            return UINT64_C(0);
-          } else {
-            auto _once2 = (((dia - pt) > dia ? 0 : (dia - pt)));
-            return (_once2 ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) *
-                              UINT64_C(75)) /
-                             _once2
-                           : 0);
-          }
-        }
-      }
-    }
+    auto _once2 = (((dia - pt) > dia ? 0 : (dia - pt)));
+    return (_once2 ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) *
+                      UINT64_C(75)) /
+                     _once2
+                   : 0);
   }
 }
 
@@ -230,14 +222,12 @@ uint64_t ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
     const ValidatedPumpDeliveryTraceCase::Mg_dL &bg, uint64_t base_isf_tenths) {
   if (bg.mg_dL_val < UINT64_C(250)) {
     return base_isf_tenths;
+  } else if (bg.mg_dL_val < UINT64_C(350)) {
+    return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(80)) / UINT64_C(100)
+                          : 0);
   } else {
-    if (bg.mg_dL_val < UINT64_C(350)) {
-      return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(80)) / UINT64_C(100)
-                            : 0);
-    } else {
-      return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(60)) / UINT64_C(100)
-                            : 0);
-    }
+    return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(60)) / UINT64_C(100)
+                          : 0);
   }
 }
 
@@ -249,19 +239,16 @@ ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
   uint64_t eff_isf = adjusted_isf_tenths(current_bg, base_isf_tenths);
   if (eff_isf == UINT64_C(0)) {
     return UINT64_C(0);
+  } else if (current_bg.mg_dL_val <= target_bg.mg_dL_val) {
+    return UINT64_C(0);
   } else {
-    if (current_bg.mg_dL_val <= target_bg.mg_dL_val) {
-      return UINT64_C(0);
-    } else {
-      return (
-          eff_isf ? ((((current_bg.mg_dL_val - target_bg.mg_dL_val) >
-                       current_bg.mg_dL_val
-                           ? 0
-                           : (current_bg.mg_dL_val - target_bg.mg_dL_val))) *
-                     UINT64_C(200)) /
-                    eff_isf
-                  : 0);
-    }
+    return (eff_isf ? ((((current_bg.mg_dL_val - target_bg.mg_dL_val) >
+                         current_bg.mg_dL_val
+                             ? 0
+                             : (current_bg.mg_dL_val - target_bg.mg_dL_val))) *
+                       UINT64_C(200)) /
+                      eff_isf
+                    : 0);
   }
 }
 
@@ -342,41 +329,39 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
                                                  cob_grams, isf_tenths);
     if (pred < BG_LEVEL2_HYPO) {
       return SuspendDecision::suspend_withhold();
-    } else {
-      if (pred < cfg.cfg_suspend_threshold_mg_dl) {
-        uint64_t rise_from_cob = conservative_cob_rise(cfg, cob_grams);
-        uint64_t effective_target;
-        if (cfg.cfg_suspend_threshold_mg_dl <= rise_from_cob) {
-          effective_target = UINT64_C(0);
-        } else {
-          effective_target =
-              (((cfg.cfg_suspend_threshold_mg_dl - rise_from_cob) >
-                cfg.cfg_suspend_threshold_mg_dl
-                    ? 0
-                    : (cfg.cfg_suspend_threshold_mg_dl - rise_from_cob)));
-        }
-        uint64_t safe_drop;
-        if (current_bg.mg_dL_val <= effective_target) {
-          safe_drop = UINT64_C(0);
-        } else {
-          safe_drop = (((current_bg.mg_dL_val - effective_target) >
-                        current_bg.mg_dL_val
-                            ? 0
-                            : (current_bg.mg_dL_val - effective_target)));
-        }
-        uint64_t safe_insulin =
-            (isf_tenths ? (safe_drop * UINT64_C(200)) / isf_tenths : 0);
-        if (safe_insulin <= iob_twentieths) {
-          return SuspendDecision::suspend_withhold();
-        } else {
-          return SuspendDecision::suspend_reduce(
-              (((safe_insulin - iob_twentieths) > safe_insulin
-                    ? 0
-                    : (safe_insulin - iob_twentieths))));
-        }
+    } else if (pred < cfg.cfg_suspend_threshold_mg_dl) {
+      uint64_t rise_from_cob = conservative_cob_rise(cfg, cob_grams);
+      uint64_t effective_target;
+      if (cfg.cfg_suspend_threshold_mg_dl <= rise_from_cob) {
+        effective_target = UINT64_C(0);
       } else {
-        return SuspendDecision::suspend_none();
+        effective_target =
+            (((cfg.cfg_suspend_threshold_mg_dl - rise_from_cob) >
+              cfg.cfg_suspend_threshold_mg_dl
+                  ? 0
+                  : (cfg.cfg_suspend_threshold_mg_dl - rise_from_cob)));
       }
+      uint64_t safe_drop;
+      if (current_bg.mg_dL_val <= effective_target) {
+        safe_drop = UINT64_C(0);
+      } else {
+        safe_drop = (
+            ((current_bg.mg_dL_val - effective_target) >
+             current_bg.mg_dL_val ? 0
+                                  : (current_bg.mg_dL_val - effective_target)));
+      }
+      uint64_t safe_insulin =
+          (isf_tenths ? (safe_drop * UINT64_C(200)) / isf_tenths : 0);
+      if (safe_insulin <= iob_twentieths) {
+        return SuspendDecision::suspend_withhold();
+      } else {
+        return SuspendDecision::suspend_reduce(
+            (((safe_insulin - iob_twentieths) > safe_insulin
+                  ? 0
+                  : (safe_insulin - iob_twentieths))));
+      }
+    } else {
+      return SuspendDecision::suspend_none();
     }
   }
 }
@@ -540,115 +525,95 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
     const ValidatedPumpDeliveryTraceCase::PrecisionParams &params) {
   if (!(prec_params_valid(params))) {
     return PrecisionResult::precerror(prec_error_invalid_params);
+  } else if (!((bg_in_meter_range(input.pi_current_bg) &&
+                carbs_reasonable(input.pi_carbs_g)))) {
+    return PrecisionResult::precerror(prec_error_invalid_input);
+  } else if (!(time_reasonable(input.pi_now))) {
+    return PrecisionResult::precerror(prec_error_invalid_time);
+  } else if (!(history_valid(input.pi_now, input.pi_bolus_history))) {
+    return PrecisionResult::precerror(prec_error_invalid_history);
+  } else if (!(history_extraction_safe(input.pi_bolus_history))) {
+    return PrecisionResult::precerror(prec_error_extraction_unsafe);
+  } else if (bolus_too_soon(input.pi_now, input.pi_bolus_history)) {
+    return PrecisionResult::precerror(prec_error_stacking);
+  } else if (input.pi_fault.fault_blocks_bolus()) {
+    return PrecisionResult::precerror(prec_error_fault);
+  } else if (input.pi_current_bg.mg_dL_val < BG_HYPO) {
+    return PrecisionResult::precerror(prec_error_hypo);
   } else {
-    if (!((bg_in_meter_range(input.pi_current_bg) &&
-           carbs_reasonable(input.pi_carbs_g)))) {
-      return PrecisionResult::precerror(prec_error_invalid_input);
+    ValidatedPumpDeliveryTraceCase::Insulin_twentieth iob =
+        total_bilinear_iob(input.pi_now, input.pi_bolus_history,
+                           params.prec_dia, params.prec_insulin_type);
+    if ((iob_dangerously_high(iob) &&
+         input.pi_carbs_g.grams_val == UINT64_C(0))) {
+      return PrecisionResult::precerror(prec_error_iob_high);
     } else {
-      if (!(time_reasonable(input.pi_now))) {
-        return PrecisionResult::precerror(prec_error_invalid_time);
-      } else {
-        if (!(history_valid(input.pi_now, input.pi_bolus_history))) {
-          return PrecisionResult::precerror(prec_error_invalid_history);
-        } else {
-          if (!(history_extraction_safe(input.pi_bolus_history))) {
-            return PrecisionResult::precerror(prec_error_extraction_unsafe);
-          } else {
-            if (bolus_too_soon(input.pi_now, input.pi_bolus_history)) {
-              return PrecisionResult::precerror(prec_error_stacking);
-            } else {
-              if (input.pi_fault.fault_blocks_bolus()) {
-                return PrecisionResult::precerror(prec_error_fault);
-              } else {
-                if (input.pi_current_bg.mg_dL_val < BG_HYPO) {
-                  return PrecisionResult::precerror(prec_error_hypo);
+      const auto &input_pi_now = input.pi_now;
+      uint64_t tdd_current =
+          input.pi_bolus_history.template fold_left<uint64_t>(
+              [=](uint64_t acc,
+                  const ValidatedPumpDeliveryTraceCase::BolusEvent &e)
+                   -> uint64_t {
+                if (((((input_pi_now - UINT64_C(1440)) > input_pi_now
+                           ? 0
+                           : (input_pi_now - UINT64_C(1440)))) <=
+                     e.be_time_minutes &&
+                     e.be_time_minutes <= input_pi_now)) {
+                  return (acc + e.be_dose_twentieths);
                 } else {
-                  ValidatedPumpDeliveryTraceCase::Insulin_twentieth iob =
-                      total_bilinear_iob(input.pi_now, input.pi_bolus_history,
-                                         params.prec_dia,
-                                         params.prec_insulin_type);
-                  if ((iob_dangerously_high(iob) &&
-                       input.pi_carbs_g.grams_val == UINT64_C(0))) {
-                    return PrecisionResult::precerror(prec_error_iob_high);
-                  } else {
-                    const auto &input_pi_now = input.pi_now;
-                    uint64_t tdd_current =
-                        input.pi_bolus_history.template fold_left<uint64_t>(
-                            [=](uint64_t acc,
-                                const ValidatedPumpDeliveryTraceCase::BolusEvent &e)
-                                 -> uint64_t {
-                              if (((((input_pi_now - UINT64_C(1440)) >
-                                     input_pi_now
-                                         ? 0
-                                         : (input_pi_now - UINT64_C(1440)))) <=
-                                   e.be_time_minutes &&
-                                   e.be_time_minutes <= input_pi_now)) {
-                                return (acc + e.be_dose_twentieths);
-                              } else {
-                                return acc;
-                              }
-                            },
-                            UINT64_C(0));
-                    uint64_t tdd_limit;
-                    if (input.pi_weight_kg.has_value()) {
-                      const uint64_t &w = *input.pi_weight_kg;
-                      tdd_limit = (w * ONE_UNIT);
-                    } else {
-                      tdd_limit = UINT64_C(5000);
-                    }
-                    if (tdd_limit <= tdd_current) {
-                      return PrecisionResult::precerror(prec_error_tdd_exceeded);
-                    } else {
-                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth raw =
-                          calculate_precision_bolus(input, params);
-                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth tdd_capped;
-                      if ((raw + tdd_current) <= tdd_limit) {
-                        tdd_capped = raw;
-                      } else {
-                        tdd_capped = (((tdd_limit - tdd_current) >
-                                       tdd_limit ? 0
-                                                 : (tdd_limit - tdd_current)));
-                      }
-                      uint64_t activity_isf =
-                          (UINT64_C(100) ? (params.prec_isf_tenths *
-                                            isf_activity_modifier(
-                                                input.pi_activity)) /
-                                           UINT64_C(100)
-                                         : 0);
-                      ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
-                      if (input.pi_use_sensor_margin) {
-                        eff_bg = apply_sensor_margin(input.pi_current_bg,
-                                                     params.prec_target_bg);
-                      } else {
-                        eff_bg = input.pi_current_bg;
-                      }
-                      ValidatedPumpDeliveryTraceCase::SuspendDecision suspend_decision =
-                          suspend_check_tenths_with_cob(
-                              default_config, std::move(eff_bg), std::move(iob),
-                              input.pi_carbs_g.grams_val, activity_isf,
-                              tdd_capped);
-                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth suspended =
-                          apply_suspend(std::move(tdd_capped),
-                                        std::move(suspend_decision));
-                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth adult_capped =
-                          cap_twentieths(std::move(suspended));
-                      ValidatedPumpDeliveryTraceCase::Insulin_twentieth capped;
-                      if (input.pi_weight_kg.has_value()) {
-                        const uint64_t &w = *input.pi_weight_kg;
-                        capped = cap_pediatric(std::move(adult_capped), w);
-                      } else {
-                        capped = std::move(adult_capped);
-                      }
-                      bool was_modified = !(raw == capped);
-                      return PrecisionResult::precok(std::move(capped),
-                                                     was_modified);
-                    }
-                  }
+                  return acc;
                 }
-              }
-            }
-          }
+              },
+              UINT64_C(0));
+      uint64_t tdd_limit;
+      if (input.pi_weight_kg.has_value()) {
+        const uint64_t &w = *input.pi_weight_kg;
+        tdd_limit = (w * ONE_UNIT);
+      } else {
+        tdd_limit = UINT64_C(5000);
+      }
+      if (tdd_limit <= tdd_current) {
+        return PrecisionResult::precerror(prec_error_tdd_exceeded);
+      } else {
+        ValidatedPumpDeliveryTraceCase::Insulin_twentieth raw =
+            calculate_precision_bolus(input, params);
+        ValidatedPumpDeliveryTraceCase::Insulin_twentieth tdd_capped;
+        if ((raw + tdd_current) <= tdd_limit) {
+          tdd_capped = raw;
+        } else {
+          tdd_capped = (((tdd_limit - tdd_current) > tdd_limit
+                             ? 0
+                             : (tdd_limit - tdd_current)));
         }
+        uint64_t activity_isf =
+            (UINT64_C(100) ? (params.prec_isf_tenths *
+                              isf_activity_modifier(input.pi_activity)) /
+                             UINT64_C(100)
+                           : 0);
+        ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
+        if (input.pi_use_sensor_margin) {
+          eff_bg =
+              apply_sensor_margin(input.pi_current_bg, params.prec_target_bg);
+        } else {
+          eff_bg = input.pi_current_bg;
+        }
+        ValidatedPumpDeliveryTraceCase::SuspendDecision suspend_decision =
+            suspend_check_tenths_with_cob(
+                default_config, std::move(eff_bg), std::move(iob),
+                input.pi_carbs_g.grams_val, activity_isf, tdd_capped);
+        ValidatedPumpDeliveryTraceCase::Insulin_twentieth suspended =
+            apply_suspend(std::move(tdd_capped), std::move(suspend_decision));
+        ValidatedPumpDeliveryTraceCase::Insulin_twentieth adult_capped =
+            cap_twentieths(std::move(suspended));
+        ValidatedPumpDeliveryTraceCase::Insulin_twentieth capped;
+        if (input.pi_weight_kg.has_value()) {
+          const uint64_t &w = *input.pi_weight_kg;
+          capped = cap_pediatric(std::move(adult_capped), w);
+        } else {
+          capped = std::move(adult_capped);
+        }
+        bool was_modified = !(raw == capped);
+        return PrecisionResult::precok(std::move(capped), was_modified);
       }
     }
   }

@@ -1,23 +1,19 @@
 #include "let_fix.h"
 
 uint64_t LetFix::local_sum(const List<uint64_t> &l) {
-  {
-    uint64_t _lc1_acc = UINT64_C(0);
-    const List<uint64_t> &_lc1_xs = l;
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    const List<uint64_t> *_lc1_loop_xs = &_lc1_xs;
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _lc1_loop_xs->v())) {
-        return _lc1_loop_acc;
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
-        _lc1_loop_xs = crane_raw(a1);
-        _lc1_loop_acc = (_lc1_loop_acc + a0);
-      }
+  uint64_t _lc1_acc = UINT64_C(0);
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  const List<uint64_t> *_lc1_loop_xs = &l;
+  uint64_t _lc1_loop_acc = _lc1_acc;
+  while (true) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_lc1_loop_xs->v())) {
+      return _lc1_loop_acc;
+    } else {
+      const auto &[a0, a1] =
+          std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
+      _lc1_loop_xs = crane_raw(a1);
+      _lc1_loop_acc = (_lc1_loop_acc + a0);
     }
   }
 }
@@ -38,11 +34,7 @@ List<uint64_t> LetFix::local_flatten(const List<List<uint64_t>> &xss) {
             return List<uint64_t>::cons(a00, _self_inner(_self_inner, *a10));
           }
         };
-    auto inner =
-        [&](const List<uint64_t> &ys) -> List<uint64_t> {
-          return inner_impl(inner_impl, ys);
-        };
-    return inner(a0);
+    return inner_impl(inner_impl, a0);
   }
 }
 

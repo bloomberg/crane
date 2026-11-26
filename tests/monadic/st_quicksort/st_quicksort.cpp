@@ -1,15 +1,42 @@
 #include "st_quicksort.h"
 
-template <typename T1>
+uint64_t lomuto_scan(STRefs, std::span<uint64_t> arr, uint64_t pv, uint64_t,
+                     uint64_t hi, uint64_t i, uint64_t s) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  while (true) {
+    if (i < hi) {
+      uint64_t v = std::span<const uint64_t>{arr}[i];
+      if (v <= pv) {
+        std::swap(arr[i], arr[s]);
+        s = (s + 1);
+        i = (i + 1);
+      } else {
+        i = (i + 1);
+      }
+    } else {
+      return s;
+    }
+  }
+}
+
+uint64_t partition(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
+                   uint64_t pividx) {
+  uint64_t pv = std::span<const uint64_t>{arr}[pividx];
+  std::swap(arr[pividx], arr[hi]);
+  uint64_t p = lomuto_scan(r, arr, pv, lo, hi, lo, lo);
+  std::swap(arr[p], arr[hi]);
+  return p;
+}
+
 void quicksort_ST(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi) {
   if (lo < hi) {
-    uint64_t p = partition<T1>(
+    uint64_t p = partition(
         r, arr, lo, hi,
         (lo +
          (UINT64_C(2) ? (((hi - lo) > hi ? 0 : (hi - lo))) / UINT64_C(2) : 0)));
-    quicksort_ST<T1>(r, arr, lo,
-                     (((p - UINT64_C(1)) > p ? 0 : (p - UINT64_C(1)))));
-    quicksort_ST<T1>(r, arr, (p + UINT64_C(1)), hi);
+    quicksort_ST(r, arr, lo, (((p - UINT64_C(1)) > p ? 0 : (p - UINT64_C(1)))));
+    quicksort_ST(r, arr, (p + UINT64_C(1)), hi);
     return;
   } else {
     return;
@@ -67,9 +94,9 @@ List<uint64_t> StQuicksort::quicksort_fun(const List<uint64_t> &x) {
       auto _f = std::move(std::get<_after_quicksort_fun_in_Cons_2>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = _f._tmp2.app(List<uint64_t>::cons(std::move(a0),
-                                                  List<uint64_t>::nil())
-                                 .app(std::move(_result)));
+      _result =
+          _f._tmp2.app(List<uint64_t>::cons(a0, List<uint64_t>::nil()).app(
+              std::move(_result)));
     }
   }
   return _result;
@@ -94,9 +121,8 @@ uint64_t StQuicksort::nth(uint64_t n, const List<uint64_t> &l,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return default0;
       } else {
@@ -105,14 +131,14 @@ uint64_t StQuicksort::nth(uint64_t n, const List<uint64_t> &l,
         return a0;
       }
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return default0;
       } else {
         const auto &[_, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a10);
-        _loop_n = m;
+        n = m;
       }
     }
   }

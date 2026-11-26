@@ -49,17 +49,17 @@ LoopifyOperandMatchCall::depthish(const LoopifyOperandMatchCall::tree &t) {
     } else if (std::holds_alternative<_after_depthish_in_Leaf>(_popped)) {
       auto _f = std::move(std::get<_after_depthish_in_Leaf>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     } else if (std::holds_alternative<_after_depthish_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_depthish_in_Node>(_popped));
       _stack.pop_back();
       const LoopifyOperandMatchCall::tree &r0 = *_f.r0;
-      _stack.emplace_back(_after_depthish_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_after_depthish_in_Node_2{_result});
       _stack.emplace_back(_call{&r0});
     } else {
       auto _f = std::move(std::get<_after_depthish_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = ((_f._tmp2 + std::move(_result)) + 1);
+      _result = ((_f._tmp2 + _result) + 1);
     }
   }
   return _result;
@@ -181,12 +181,12 @@ uint64_t LoopifyOperandMatchCall::size(const LoopifyOperandMatchCall::tree &t) {
       auto _f = std::move(std::get<_after_size_in_Node>(_popped));
       _stack.pop_back();
       const LoopifyOperandMatchCall::tree &r0 = *_f.r0;
-      _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_after_size_in_Node_2{_result});
       _stack.emplace_back(_call{&r0});
     } else {
       auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     }
   }
   return _result;

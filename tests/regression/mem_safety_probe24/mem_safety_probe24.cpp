@@ -35,7 +35,7 @@ MemSafetyProbe24::sum_list(const MemSafetyProbe24::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;

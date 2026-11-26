@@ -37,11 +37,11 @@ uint64_t LoopifyComparators::maximum_by(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_maximum_by_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      uint64_t m = std::move(_result);
+      uint64_t m = _result;
       if (m < a0) {
-        _result = std::move(a0);
+        _result = a0;
       } else {
-        _result = std::move(m);
+        _result = m;
       }
     }
   }
@@ -85,11 +85,11 @@ uint64_t LoopifyComparators::minimum_by(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_minimum_by_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      uint64_t m = std::move(_result);
+      uint64_t m = _result;
       if (a0 < m) {
-        _result = std::move(a0);
+        _result = a0;
       } else {
-        _result = std::move(m);
+        _result = m;
       }
     }
   }
@@ -105,15 +105,14 @@ LoopifyComparators::merge_by_fuel(uint64_t fuel, const List<uint64_t> &l1,
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
         auto _value = *_loop_l2;
         (_write ? *(*_write =
@@ -141,7 +140,7 @@ LoopifyComparators::merge_by_fuel(uint64_t fuel, const List<uint64_t> &l1,
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_l2 = &*_loop_l2;
             _loop_l1 = crane_raw(a1);
-            _loop_fuel = fuel_;
+            fuel = fuel_;
             continue;
           } else {
             auto _cell = typename List<uint64_t>::Cons(a00, nullptr);
@@ -152,7 +151,7 @@ LoopifyComparators::merge_by_fuel(uint64_t fuel, const List<uint64_t> &l1,
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_l2 = crane_raw(a10);
             _loop_l1 = &*_loop_l1;
-            _loop_fuel = fuel_;
+            fuel = fuel_;
             continue;
           }
         }
@@ -249,12 +248,11 @@ bool LoopifyComparators::is_sorted_fuel(uint64_t fuel,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       return true;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
         return true;
       } else {
@@ -268,7 +266,7 @@ bool LoopifyComparators::is_sorted_fuel(uint64_t fuel,
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           if (a0 <= a00) {
             _loop_l = List<uint64_t>::cons(a00, crane::shared_child(a10));
-            _loop_fuel = fuel_;
+            fuel = fuel_;
           } else {
             return false;
           }

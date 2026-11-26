@@ -43,7 +43,7 @@ bool LoopifyListRelations::is_prefix_of(const List<uint64_t> &l1,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      _result = (a0 == a00 && std::move(_result));
+      _result = (a0 == a00 && _result);
     }
   }
   return _result;
@@ -58,11 +58,11 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
   } else {
     uint64_t diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
     List<uint64_t> suffix;
-    auto drop = [](uint64_t n, const List<uint64_t> &xs) -> List<uint64_t> {
+    auto drop = [&](const List<uint64_t> &xs) -> List<uint64_t> {
       // Loop replaces the tail recursion: each recursive call updates the loop
       // variables.
       const List<uint64_t> *_loop_xs = &xs;
-      uint64_t _loop_n = n;
+      uint64_t _loop_n = diff;
       while (true) {
         if (_loop_n <= 0) {
           return *_loop_xs;
@@ -80,38 +80,37 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
         }
       }
     };
-    suffix = drop(diff, l2);
-    auto eq = [](const List<uint64_t> &a, const List<uint64_t> &b) -> bool {
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      const List<uint64_t> *_loop_b = &b;
-      const List<uint64_t> *_loop_a = &a;
-      while (true) {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_a->v())) {
-          if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_b->v())) {
-            return true;
-          } else {
-            return false;
-          }
+    suffix = drop(l2);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    const List<uint64_t> *_lc1_loop_b = &suffix;
+    const List<uint64_t> *_lc1_loop_a = &l1;
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_lc1_loop_a->v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                _lc1_loop_b->v())) {
+          return true;
         } else {
-          const auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(_loop_a->v());
-          if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_b->v())) {
-            return false;
+          return false;
+        }
+      } else {
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(_lc1_loop_a->v());
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                _lc1_loop_b->v())) {
+          return false;
+        } else {
+          const auto &[a01, a11] =
+              std::get<typename List<uint64_t>::Cons>(_lc1_loop_b->v());
+          if (a00 == a01) {
+            _lc1_loop_b = crane_raw(a11);
+            _lc1_loop_a = crane_raw(a10);
           } else {
-            const auto &[a01, a11] =
-                std::get<typename List<uint64_t>::Cons>(_loop_b->v());
-            if (a00 == a01) {
-              _loop_b = crane_raw(a11);
-              _loop_a = crane_raw(a10);
-            } else {
-              return false;
-            }
+            return false;
           }
         }
       }
-    };
-    return eq(l1, std::move(suffix));
+    }
   }
 }
 
@@ -152,7 +151,6 @@ List<uint64_t> LoopifyListRelations::find_sublists_aux(
   // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_idx = idx;
   const List<uint64_t> *_loop_haystack = &haystack;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -165,17 +163,17 @@ List<uint64_t> LoopifyListRelations::find_sublists_aux(
       const auto &[_, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_haystack->v());
       if (is_prefix_of(needle, *_loop_haystack)) {
-        auto _cell = typename List<uint64_t>::Cons(_loop_idx, nullptr);
+        auto _cell = typename List<uint64_t>::Cons(idx, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_idx = (_loop_idx + UINT64_C(1));
+        idx = (idx + UINT64_C(1));
         _loop_haystack = crane_raw(a1);
         continue;
       } else {
-        _loop_idx = (_loop_idx + UINT64_C(1));
+        idx = (idx + UINT64_C(1));
         _loop_haystack = crane_raw(a1);
         continue;
       }
@@ -237,7 +235,7 @@ bool LoopifyListRelations::list_eq(const List<uint64_t> &l1,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      _result = (a0 == a00 && std::move(_result));
+      _result = (a0 == a00 && _result);
     }
   }
   return _result;
@@ -266,13 +264,11 @@ uint64_t LoopifyListRelations::list_compare(const List<uint64_t> &l1,
             std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
         if (a0 < a00) {
           return UINT64_C(1);
+        } else if (a00 < a0) {
+          return UINT64_C(2);
         } else {
-          if (a00 < a0) {
-            return UINT64_C(2);
-          } else {
-            _loop_l2 = crane_raw(a10);
-            _loop_l1 = crane_raw(a1);
-          }
+          _loop_l2 = crane_raw(a10);
+          _loop_l1 = crane_raw(a1);
         }
       }
     }
@@ -453,15 +449,14 @@ LoopifyListRelations::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
         auto _value = *_loop_l2;
         (_write ? *(*_write =
@@ -489,7 +484,7 @@ LoopifyListRelations::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_l2 = &*_loop_l2;
             _loop_l1 = crane_raw(a1);
-            _loop_fuel = fuel_;
+            fuel = fuel_;
             continue;
           } else {
             auto _cell = typename List<uint64_t>::Cons(a00, nullptr);
@@ -500,7 +495,7 @@ LoopifyListRelations::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_l2 = crane_raw(a10);
             _loop_l1 = &*_loop_l1;
-            _loop_fuel = fuel_;
+            fuel = fuel_;
             continue;
           }
         }
@@ -568,7 +563,7 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
               auto _f = std::move(std::get<_after_member_in_Cons>(_popped));
               _stack.pop_back();
               uint64_t a2 = _f.a2;
-              _result = (y == a2 || std::move(_result));
+              _result = (y == a2 || _result);
             }
           }
           return _result;
@@ -643,7 +638,7 @@ List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
               auto _f = std::move(std::get<_after_member_in_Cons>(_popped));
               _stack.pop_back();
               uint64_t a2 = _f.a2;
-              _result = (y == a2 || std::move(_result));
+              _result = (y == a2 || _result);
             }
           }
           return _result;

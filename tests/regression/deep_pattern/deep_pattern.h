@@ -184,12 +184,12 @@ struct DeepPattern {
           auto _f = std::move(std::get<_after_has_value_in_Node>(_popped));
           _stack.pop_back();
           const tree &a1 = *_f.a1;
-          _stack.emplace_back(_after_has_value_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_after_has_value_in_Node_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_has_value_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 || std::move(_result));
+          _result = (_f._tmp2 || _result);
         }
       }
       return _result;

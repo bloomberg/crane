@@ -43,12 +43,10 @@ uint64_t LetMatchType::let_nested_bool(bool a, bool b) {
     } else {
       return UINT64_C(2);
     }
+  } else if (b) {
+    return UINT64_C(1);
   } else {
-    if (b) {
-      return UINT64_C(1);
-    } else {
-      return UINT64_C(0);
-    }
+    return UINT64_C(0);
   }
 }
 

@@ -46,10 +46,8 @@ LoopifyAdoptedFixAliasResult::keys(uint64_t n, uint64_t i, uint64_t step) {
   // cell fills.
   std::optional<LoopifyAdoptedFixAliasResult::t<uint64_t>> _root{};
   std::shared_ptr<LoopifyAdoptedFixAliasResult::t<uint64_t>> *_write = nullptr;
-  uint64_t _loop_i = i;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
       (_write ? *(*_write = std::make_shared<
                       LoopifyAdoptedFixAliasResult::t<uint64_t>>(
@@ -57,9 +55,9 @@ LoopifyAdoptedFixAliasResult::keys(uint64_t n, uint64_t i, uint64_t step) {
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
-          std::make_pair((_loop_i * step), _loop_i), nullptr);
+          std::make_pair((i * step), i), nullptr);
       LoopifyAdoptedFixAliasResult::t<uint64_t> &_node =
           (_write ? *(*_write = std::make_shared<
                           LoopifyAdoptedFixAliasResult::t<uint64_t>>(
@@ -69,8 +67,8 @@ LoopifyAdoptedFixAliasResult::keys(uint64_t n, uint64_t i, uint64_t step) {
           &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
               _node.v_mut())
               .l;
-      _loop_i = (_loop_i + 1);
-      _loop_n = n_;
+      i = (i + 1);
+      n = n_;
       continue;
     }
   }

@@ -10,23 +10,18 @@
 /// stops first: "closure escape: the local fixpoint go escapes in its
 /// generated code but nowhere in Core".
 uint64_t LocalFixReturnsFunction::t(const List<uint64_t> &l) {
-  {
-    const List<uint64_t> &_lc1_l0 = l;
-    const crane::fn<uint64_t(uint64_t)> &_lc1_acc =
-        [](uint64_t x) { return x; };
-    uint64_t _lc1_x0_ = UINT64_C(1);
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
-    while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _lc1_loop_l0->v())) {
-        return (_lc1_x0_ + UINT64_C(1));
-      } else {
-        const auto &[_, a1] =
-            std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
-        _lc1_loop_l0 = crane_raw(a1);
-      }
+  const crane::fn<uint64_t(uint64_t)> &_lc1_acc = [](uint64_t x) { return x; };
+  uint64_t _lc1_x0_ = UINT64_C(1);
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  const List<uint64_t> *_lc1_loop_l0 = &l;
+  while (true) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_lc1_loop_l0->v())) {
+      return (_lc1_x0_ + UINT64_C(1));
+    } else {
+      const auto &[_, a1] =
+          std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
+      _lc1_loop_l0 = crane_raw(a1);
     }
   }
 }
@@ -76,21 +71,20 @@ LocalFixReturnsFunction::h(uint64_t n, std::optional<uint64_t> x0_) {
              -> std::optional<uint64_t> {
           // Loop replaces the tail recursion: each recursive call updates the
           // loop variables.
-          uint64_t _loop_acc = acc;
           List<bool> _loop_l = std::move(l);
           while (true) {
             if (std::holds_alternative<typename List<bool>::Nil>(
                     _loop_l.v_mut())) {
               if (x0_0.has_value()) {
                 const uint64_t &y = *x0_0;
-                return std::make_optional<uint64_t>((y + _loop_acc));
+                return std::make_optional<uint64_t>((y + acc));
               } else {
-                return std::make_optional<uint64_t>(_loop_acc);
+                return std::make_optional<uint64_t>(acc);
               }
             } else {
               auto &[_, a1] =
                   std::get<typename List<bool>::Cons>(_loop_l.v_mut());
-              _loop_acc = (_loop_acc + 1);
+              acc = (acc + 1);
               _loop_l = List<bool>(*a1);
             }
           }

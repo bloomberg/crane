@@ -156,7 +156,11 @@ using prov = bool;
 static EOU<Nat> from_Z(Nat n) {
 return EOU_monad::template ret<Nat>(std::move(n));}
 static Nat prov_nat(bool b) {
-if (b) { return Nat::s(Nat::o()); } else { return Nat::o(); }}
+if (b) {
+return Nat::s(Nat::o());
+} else {
+return Nat::o();
+}}
 };
 static_assert(IPtr<natIPtr>);
 /// The match is the smallest consumer that still forces int_to_ptr to be

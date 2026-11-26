@@ -78,7 +78,7 @@ uint64_t MemSafetyProbe6::apply_chain(
       auto _f = std::move(std::get<_after_apply_chain_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = a0(std::move(_result));
+      _result = a0(_result);
     }
   }
   return _result;

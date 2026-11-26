@@ -71,12 +71,10 @@ std::string EffectDirPath::classify_path(const std::string &path) {
   }();
   if (isdir) {
     return "directory";
+  } else if (isfile) {
+    return "file";
   } else {
-    if (isfile) {
-      return "file";
-    } else {
-      return "other";
-    }
+    return "other";
   }
 }
 

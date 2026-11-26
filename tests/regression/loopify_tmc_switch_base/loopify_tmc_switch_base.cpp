@@ -16,7 +16,6 @@ LoopifyTmcSwitchBase::f(LoopifyTmcSwitchBase::Color c,
   std::optional<LoopifyTmcSwitchBase::num> _root{};
   std::shared_ptr<LoopifyTmcSwitchBase::num> *_write = nullptr;
   const LoopifyTmcSwitchBase::num *_loop_n = &n;
-  LoopifyTmcSwitchBase::Color _loop_c = c;
   while (true) {
     if (std::holds_alternative<typename LoopifyTmcSwitchBase::num::Z>(
             _loop_n->v())) {
@@ -28,10 +27,10 @@ LoopifyTmcSwitchBase::f(LoopifyTmcSwitchBase::Color c,
     } else {
       const auto &[n0] =
           std::get<typename LoopifyTmcSwitchBase::num::Su>(_loop_n->v());
-      switch (_loop_c) {
+      switch (c) {
       case Color::RED: {
         _loop_n = crane_raw(n0);
-        _loop_c = Color::GREEN;
+        c = Color::GREEN;
         continue;
         break;
       }
@@ -44,7 +43,7 @@ LoopifyTmcSwitchBase::f(LoopifyTmcSwitchBase::Color c,
         _write =
             &std::get<typename LoopifyTmcSwitchBase::num::Su>(_node.v_mut()).n;
         _loop_n = crane_raw(n0);
-        _loop_c = Color::BLUE;
+        c = Color::BLUE;
         continue;
         break;
       }
@@ -59,7 +58,7 @@ LoopifyTmcSwitchBase::f(LoopifyTmcSwitchBase::Color c,
           return std::move(*_root);
         } else {
           _loop_n = crane_raw(n0);
-          _loop_c = Color::RED;
+          c = Color::RED;
           continue;
         }
         break;
@@ -77,16 +76,15 @@ LoopifyTmcSwitchBase::num LoopifyTmcSwitchBase::of_nat(uint64_t n) {
   // cell fills.
   std::optional<LoopifyTmcSwitchBase::num> _root{};
   std::shared_ptr<LoopifyTmcSwitchBase::num> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = num::z();
       (_write ? *(*_write = std::make_shared<LoopifyTmcSwitchBase::num>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell = typename LoopifyTmcSwitchBase::num::Su(nullptr);
       LoopifyTmcSwitchBase::num &_node =
           (_write ? *(*_write = std::make_shared<LoopifyTmcSwitchBase::num>(
@@ -94,7 +92,7 @@ LoopifyTmcSwitchBase::num LoopifyTmcSwitchBase::of_nat(uint64_t n) {
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename LoopifyTmcSwitchBase::num::Su>(_node.v_mut()).n;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }
@@ -131,7 +129,7 @@ uint64_t LoopifyTmcSwitchBase::to_nat(const LoopifyTmcSwitchBase::num &n) {
     } else {
       auto _f = std::move(std::get<_after_to_nat_in_Su>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;

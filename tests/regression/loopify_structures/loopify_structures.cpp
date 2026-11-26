@@ -69,7 +69,7 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
           std::move(std::get<_after_sum_nested_list_fuel_in_Elem>(_popped));
       _stack.pop_back();
       uint64_t a00 = _f.a00;
-      _result = (a00 + std::move(_result));
+      _result = (a00 + _result);
     } else if (std::holds_alternative<_after_sum_nested_list_fuel_in_NList>(
                    _popped)) {
       auto _f =
@@ -77,14 +77,13 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
       _stack.pop_back();
       uint64_t f = _f.f;
       const List<LoopifyStructures::nested> &a1 = *_f.a1;
-      _stack.emplace_back(
-          _after_sum_nested_list_fuel_in_NList_2{std::move(_result)});
+      _stack.emplace_back(_after_sum_nested_list_fuel_in_NList_2{_result});
       _stack.emplace_back(_call{&a1, f});
     } else {
       auto _f =
           std::move(std::get<_after_sum_nested_list_fuel_in_NList_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp3 + std::move(_result));
+      _result = (_f._tmp3 + _result);
     }
   }
   return _result;
@@ -152,9 +151,9 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
       auto _f =
           std::move(std::get<_after_depth_nested_list_fuel_in_Elem>(_popped));
       _stack.pop_back();
-      uint64_t rest_max = std::move(_result);
+      uint64_t rest_max = _result;
       if (UINT64_C(0) <= rest_max) {
-        _result = std::move(rest_max);
+        _result = rest_max;
       } else {
         _result = UINT64_C(0);
       }
@@ -165,7 +164,7 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
       _stack.pop_back();
       uint64_t f = _f.f;
       const List<LoopifyStructures::nested> &a1 = *_f.a1;
-      uint64_t d = (std::move(_result) + 1);
+      uint64_t d = (_result + 1);
       _stack.emplace_back(_after_depth_nested_list_fuel_in_NList_2{d});
       _stack.emplace_back(_call{&a1, f});
     } else {
@@ -173,11 +172,11 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
           std::get<_after_depth_nested_list_fuel_in_NList_2>(_popped));
       _stack.pop_back();
       uint64_t d = _f.d;
-      uint64_t rest_max = std::move(_result);
+      uint64_t rest_max = _result;
       if (d <= rest_max) {
-        _result = std::move(rest_max);
+        _result = rest_max;
       } else {
-        _result = std::move(d);
+        _result = d;
       }
     }
   }

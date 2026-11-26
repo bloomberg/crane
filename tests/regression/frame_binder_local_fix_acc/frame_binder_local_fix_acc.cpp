@@ -25,6 +25,18 @@ FrameBinderLocalFixAcc::stream FrameBinderLocalFixAcc::sfrom(uint64_t n) {
       });
 }
 
+FrameBinderLocalFixAcc::stream
+FrameBinderLocalFixAcc::smap(const crane::fn<uint64_t(uint64_t)> &f,
+                             const FrameBinderLocalFixAcc::stream &s) {
+  const auto &[a0, a1] =
+      std::get<typename FrameBinderLocalFixAcc::stream::SCons>(s.v());
+  return stream::lazy_(
+      [=,
+       f = f]() mutable -> typename FrameBinderLocalFixAcc::stream::SCons {
+        return {f(a0), smap(f, a1)};
+      });
+}
+
 List<uint64_t>
 FrameBinderLocalFixAcc::stake(uint64_t k,
                               const FrameBinderLocalFixAcc::stream &s) {

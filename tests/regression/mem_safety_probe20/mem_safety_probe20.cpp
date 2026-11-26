@@ -125,7 +125,7 @@ uint64_t MemSafetyProbe20::sum_wrapped(
       auto _f = std::move(std::get<_after_sum_wrapped_in_Mycons>(_popped));
       _stack.pop_back();
       MemSafetyProbe20::wrapped a0 = std::move(_f.a0);
-      _result = (a0.unwrap(x) + std::move(_result));
+      _result = (a0.unwrap(x) + _result);
     }
   }
   return _result;

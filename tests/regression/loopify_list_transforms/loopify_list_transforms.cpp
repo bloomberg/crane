@@ -73,24 +73,23 @@ List<uint64_t> LoopifyListTransforms::prefix_sums(uint64_t acc,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
+      auto _value = List<uint64_t>::cons(acc, List<uint64_t>::nil());
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
+      auto _cell = typename List<uint64_t>::Cons(acc, nullptr);
       List<uint64_t> &_node =
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      _loop_acc = (_loop_acc + a0);
+      acc = (acc + a0);
       continue;
     }
   }
@@ -105,9 +104,8 @@ LoopifyListTransforms::sliding_pairs_fuel(uint64_t fuel,
   std::optional<List<std::pair<uint64_t, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
       (_write ? *(*_write =
                       std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
@@ -115,7 +113,7 @@ LoopifyListTransforms::sliding_pairs_fuel(uint64_t fuel,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
         (_write ? *(*_write =
@@ -149,7 +147,7 @@ LoopifyListTransforms::sliding_pairs_fuel(uint64_t fuel,
                   _node.v_mut())
                   .l;
           _loop_l = crane_raw(a1);
-          _loop_fuel = fuel_;
+          fuel = fuel_;
           continue;
         }
       }
@@ -180,15 +178,14 @@ LoopifyListTransforms::differences_fuel(uint64_t fuel,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
@@ -216,7 +213,7 @@ LoopifyListTransforms::differences_fuel(uint64_t fuel,
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
-          _loop_fuel = fuel_;
+          fuel = fuel_;
           continue;
         }
       }
@@ -237,15 +234,14 @@ List<uint64_t> LoopifyListTransforms::take(uint64_t n,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
@@ -262,7 +258,7 @@ List<uint64_t> LoopifyListTransforms::take(uint64_t n,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_n = n_;
+        n = n_;
         continue;
       }
     }
@@ -275,19 +271,18 @@ List<uint64_t> LoopifyListTransforms::drop(uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return *_loop_l;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return List<uint64_t>::nil();
       } else {
         const auto &[_, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a1);
-        _loop_n = n_;
+        n = n_;
       }
     }
   }
@@ -301,16 +296,15 @@ LoopifyListTransforms::chunks_of_fuel(uint64_t fuel, uint64_t n,
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();
       (_write ? *(*_write =
                       std::make_shared<List<List<uint64_t>>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (n <= UINT64_C(0)) {
         auto _value = List<List<uint64_t>>::nil();
         (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
@@ -334,7 +328,7 @@ LoopifyListTransforms::chunks_of_fuel(uint64_t fuel, uint64_t n,
           _write =
               &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
           _loop_l = drop(n, _loop_l);
-          _loop_fuel = fuel_;
+          fuel = fuel_;
           continue;
         }
       }
@@ -355,14 +349,12 @@ LoopifyListTransforms::rotate_left_fuel(uint64_t fuel, uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_n = n;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       return _loop_l;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
-      if (_loop_n <= UINT64_C(0)) {
+      uint64_t fuel_ = fuel - 1;
+      if (n <= UINT64_C(0)) {
         return _loop_l;
       } else {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
@@ -373,10 +365,8 @@ LoopifyListTransforms::rotate_left_fuel(uint64_t fuel, uint64_t n,
           List<uint64_t> rotated =
               a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
           _loop_l = std::move(rotated);
-          _loop_n =
-              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
-                                                  : (_loop_n - UINT64_C(1))));
-          _loop_fuel = fuel_;
+          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          fuel = fuel_;
         }
       }
     }
@@ -396,15 +386,14 @@ LoopifyListTransforms::uniq_sorted_fuel(uint64_t fuel,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
@@ -426,7 +415,7 @@ LoopifyListTransforms::uniq_sorted_fuel(uint64_t fuel,
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           if (a0 == a00) {
             _loop_l = crane_raw(a1);
-            _loop_fuel = fuel_;
+            fuel = fuel_;
             continue;
           } else {
             auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -436,7 +425,7 @@ LoopifyListTransforms::uniq_sorted_fuel(uint64_t fuel,
                         : _root.emplace(std::move(_cell)));
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_l = crane_raw(a1);
-            _loop_fuel = fuel_;
+            fuel = fuel_;
             continue;
           }
         }
@@ -489,7 +478,7 @@ uint64_t LoopifyListTransforms::step_sum(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_step_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t contribution = _f.contribution;
-      _result = (contribution + std::move(_result));
+      _result = (contribution + _result);
     }
   }
   return _result;

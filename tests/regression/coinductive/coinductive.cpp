@@ -22,6 +22,15 @@ Coinductive::stream Coinductive::tl(const Coinductive::stream &s) {
   return a1;
 }
 
+Coinductive::stream Coinductive::smap(const crane::fn<uint64_t(uint64_t)> &f,
+                                      const Coinductive::stream &s) {
+  const auto &[a0, a1] = std::get<typename Coinductive::stream::Cons>(s.v());
+  return stream::lazy_([=,
+                        f = f]() mutable -> typename Coinductive::stream::Cons {
+    return {f(a0), smap(f, a1)};
+  });
+}
+
 Coinductive::stream Coinductive::interleave(const Coinductive::stream &s1,
                                             const Coinductive::stream &s2) {
   const auto &[a0, a1] = std::get<typename Coinductive::stream::Cons>(s1.v());

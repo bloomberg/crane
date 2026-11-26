@@ -33,16 +33,14 @@ ReuseForcedViews::tree ReuseForcedViews::smash(ReuseForcedViews::tree t,
                     std::move(std::get<typename ReuseForcedViews::tree::Node>(
                         u.v_mut())
                                   .a1),
-                    std::move(x),
-                    tree::node(std::move(y), std::move(u1), std::move(t1)),
+                    x, tree::node(y, std::move(u1), std::move(t1)),
                     tree::leaf());
               } else {
                 return tree::node_crane_reuse(
                     std::move(std::get<typename ReuseForcedViews::tree::Node>(
                         u.v_mut())
                                   .a1),
-                    std::move(y),
-                    tree::node(std::move(x), std::move(t1), std::move(u1)),
+                    y, tree::node(x, std::move(t1), std::move(u1)),
                     tree::leaf());
               }
             } else {
@@ -63,17 +61,16 @@ ReuseForcedViews::tree ReuseForcedViews::smash(ReuseForcedViews::tree t,
                       std::move(std::get<typename ReuseForcedViews::tree::Node>(
                           t.v_mut())
                                     .a1),
-                      std::move(x),
-                      tree::node(std::move(a01), crane::child(a11),
-                                 std::move(t1)),
+                      x, tree::node(std::move(a01), crane::child(a11),
+                                    std::move(t1)),
                       tree::leaf());
                 } else {
                   return tree::node_crane_reuse(
                       std::move(std::get<typename ReuseForcedViews::tree::Node>(
                           t.v_mut())
                                     .a1),
-                      std::move(a01), tree::node(std::move(x), std::move(t1),
-                                                 crane::child(a11)),
+                      std::move(a01),
+                      tree::node(x, std::move(t1), crane::child(a11)),
                       tree::leaf());
                 }
               } else {
@@ -96,8 +93,8 @@ ReuseForcedViews::tree ReuseForcedViews::smash(ReuseForcedViews::tree t,
                     std::move(std::get<typename ReuseForcedViews::tree::Node>(
                         t.v_mut())
                                   .a1),
-                    std::move(x), tree::node(std::move(a01), crane::child(a11),
-                                             std::move(t1)),
+                    x, tree::node(std::move(a01), crane::child(a11),
+                                  std::move(t1)),
                     tree::leaf());
               } else {
                 return tree::node_crane_reuse(
@@ -105,7 +102,7 @@ ReuseForcedViews::tree ReuseForcedViews::smash(ReuseForcedViews::tree t,
                         t.v_mut())
                                   .a1),
                     std::move(a01),
-                    tree::node(std::move(x), std::move(t1), crane::child(a11)),
+                    tree::node(x, std::move(t1), crane::child(a11)),
                     tree::leaf());
               }
             } else {
@@ -149,15 +146,15 @@ ReuseForcedViews::tree ReuseForcedViews::smash(ReuseForcedViews::tree t,
                           u.v_mut())
                                     .a1),
                       std::move(a0),
-                      tree::node(std::move(y), std::move(u1), crane::child(a1)),
+                      tree::node(y, std::move(u1), crane::child(a1)),
                       tree::leaf());
                 } else {
                   return tree::node_crane_reuse(
                       std::move(std::get<typename ReuseForcedViews::tree::Node>(
                           u.v_mut())
                                     .a1),
-                      std::move(y), tree::node(std::move(a0), crane::child(a1),
-                                               std::move(u1)),
+                      y, tree::node(std::move(a0), crane::child(a1),
+                                    std::move(u1)),
                       tree::leaf());
                 }
               } else {
@@ -249,14 +246,14 @@ ReuseForcedViews::tree ReuseForcedViews::smash(ReuseForcedViews::tree t,
                         u.v_mut())
                                   .a1),
                     std::move(a0),
-                    tree::node(std::move(y), std::move(u1), crane::child(a1)),
+                    tree::node(y, std::move(u1), crane::child(a1)),
                     tree::leaf());
               } else {
                 return tree::node_crane_reuse(
                     std::move(std::get<typename ReuseForcedViews::tree::Node>(
                         u.v_mut())
                                   .a1),
-                    std::move(y),
+                    y,
                     tree::node(std::move(a0), crane::child(a1), std::move(u1)),
                     tree::leaf());
               }
@@ -478,15 +475,13 @@ ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
         if (k < k_) {
           _stack.emplace_back(_after_combine_in_true{k, e});
           _stack.emplace_back(_call{&m_, &a1_value});
+        } else if (k == k_) {
+          _stack.emplace_back(_after_combine_in_true_2{k, e, e_});
+          _stack.emplace_back(_call{crane_raw(a10), &a1_value});
         } else {
-          if (k == k_) {
-            _stack.emplace_back(_after_combine_in_true_2{k, e, e_});
-            _stack.emplace_back(_call{crane_raw(a10), &a1_value});
-          } else {
-            _stack.emplace_back(_after_combine_aux_in_false{k_, e_});
-            _stack.emplace_back(_call_combine_aux{crane_raw(a10), &a1_value, e,
-                                                  k, std::move(m)});
-          }
+          _stack.emplace_back(_after_combine_aux_in_false{k_, e_});
+          _stack.emplace_back(
+              _call_combine_aux{crane_raw(a10), &a1_value, e, k, std::move(m)});
         }
       }
     } else if (std::holds_alternative<_after_combine_aux_in_false>(_popped)) {

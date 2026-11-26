@@ -1220,11 +1220,8 @@ struct Nat {
         return _self_f0(_self_f0, y0, y_);
       });
     };
-    {
-      uint64_t _lc1_x0 = t0;
-      T1 _lc1_y = x;
-      return f0_impl(f0_impl, _lc1_x0, std::move(_lc1_y));
-    }
+    T1 _lc1_y = x;
+    return f0_impl(f0_impl, t0, std::move(_lc1_y));
   }
 
   template <typename T1, typename T2, typename F0, typename F2>

@@ -168,8 +168,7 @@ struct FailE {
   template <typename T1, typename T2> std::shared_ptr<ITree<T2>> cast_() const;
 };
 
-template <typename T1 = void, typename T2>
-std::shared_ptr<ITree<T2>> raise0(const Nat &) {
+template <typename T2> std::shared_ptr<ITree<T2>> raise0(const Nat &) {
   return FailE::Throw_(std::monostate{}).template cast_<crane::obj, T2>();
 }
 

@@ -34,12 +34,10 @@ struct ClassSuperclassField {
   static uint64_t cmp(const T1 &x, const T1 &y) {
     if (_tcI0::ord_eq::eqb(x, y)) {
       return UINT64_C(0);
+    } else if (_tcI0::le(x, y)) {
+      return UINT64_C(1);
     } else {
-      if (_tcI0::le(x, y)) {
-        return UINT64_C(1);
-      } else {
-        return UINT64_C(2);
-      }
+      return UINT64_C(2);
     }
   }
 

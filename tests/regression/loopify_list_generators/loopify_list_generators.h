@@ -126,7 +126,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -171,25 +171,23 @@ struct LoopifyListGenerators {
     // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_x = x;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t n_ = _loop_n - 1;
-        auto _cell = typename List<uint64_t>::Cons(_loop_x, nullptr);
+        uint64_t n_ = n - 1;
+        auto _cell = typename List<uint64_t>::Cons(x, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_x = f(_loop_x);
-        _loop_n = n_;
+        x = f(x);
+        n = n_;
         continue;
       }
     }
@@ -202,25 +200,23 @@ struct LoopifyListGenerators {
     // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_idx = idx;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t n_ = _loop_n - 1;
-        auto _cell = typename List<uint64_t>::Cons(f(_loop_idx), nullptr);
+        uint64_t n_ = n - 1;
+        auto _cell = typename List<uint64_t>::Cons(f(idx), nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_idx = (_loop_idx + UINT64_C(1));
-        _loop_n = n_;
+        idx = (idx + UINT64_C(1));
+        n = n_;
         continue;
       }
     }
@@ -288,47 +284,45 @@ struct LoopifyListGenerators {
     if (n <= 0) {
       return List<uint64_t>::nil();
     } else {
-      uint64_t n_ = n - 1;
-      auto aux = [&](uint64_t idx) -> List<uint64_t> {
-        // Explicit stack replaces the non-tail recursion of aux: _call frames
-        // are pending calls, _after frames resume a caller.
-        struct _call {
-          uint64_t idx;
-        };
+      uint64_t n_ =
+          n -
+          1; // Explicit stack replaces the non-tail recursion of aux: _call frames are pending calls, _after frames resume a caller.
 
-        struct _after_aux_in_S {
-          uint64_t idx;
-        };
-
-        using _frame = std::variant<_call, _after_aux_in_S>;
-        List<uint64_t> _result{};
-        crane::small_vector<_frame> _stack;
-        _stack.emplace_back(_call{idx});
-        while (!_stack.empty()) {
-          _frame &_popped = _stack.back();
-          if (std::holds_alternative<_call>(_popped)) {
-            auto _f = std::move(std::get<_call>(_popped));
-            _stack.pop_back();
-            uint64_t idx = _f.idx;
-            if (idx <= 0) {
-              _result =
-                  List<uint64_t>::cons(f(UINT64_C(0)), List<uint64_t>::nil());
-            } else {
-              uint64_t idx_ = idx - 1;
-              _stack.emplace_back(_after_aux_in_S{idx});
-              _stack.emplace_back(_call{idx_});
-            }
-          } else {
-            auto _f = std::move(std::get<_after_aux_in_S>(_popped));
-            _stack.pop_back();
-            uint64_t idx = _f.idx;
-            _result = _result.app(
-                List<uint64_t>::cons(f(idx), List<uint64_t>::nil()));
-          }
-        }
-        return _result;
+      struct _call {
+        uint64_t idx;
       };
-      return aux(n_);
+
+      struct _after_aux_in_S {
+        uint64_t idx;
+      };
+
+      using _frame = std::variant<_call, _after_aux_in_S>;
+      List<uint64_t> _lc1_result{};
+      crane::small_vector<_frame> _lc1_stack;
+      _lc1_stack.emplace_back(_call{n_});
+      while (!_lc1_stack.empty()) {
+        _frame &_popped = _lc1_stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _lc1_stack.pop_back();
+          uint64_t n_ = _f.idx;
+          if (n_ <= 0) {
+            _lc1_result =
+                List<uint64_t>::cons(f(UINT64_C(0)), List<uint64_t>::nil());
+          } else {
+            uint64_t idx_ = n_ - 1;
+            _lc1_stack.emplace_back(_after_aux_in_S{n_});
+            _lc1_stack.emplace_back(_call{idx_});
+          }
+        } else {
+          auto _f = std::move(std::get<_after_aux_in_S>(_popped));
+          _lc1_stack.pop_back();
+          uint64_t n_ = _f.idx;
+          _lc1_result = _lc1_result.app(
+              List<uint64_t>::cons(f(n_), List<uint64_t>::nil()));
+        }
+      }
+      return _lc1_result;
     }
   }
 

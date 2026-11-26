@@ -191,14 +191,13 @@ struct MemSafetyProbe29 {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const inner &a2 = *_f.a2;
-          _stack.emplace_back(
-              _after_inner_sum_in_INode_2{a1, std::move(_result)});
+          _stack.emplace_back(_after_inner_sum_in_INode_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_inner_sum_in_INode_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + a1) + _result);
         }
       }
       return _result;
@@ -459,13 +458,13 @@ struct MemSafetyProbe29 {
           inner a1 = std::move(_f.a1);
           const outer &a2 = *_f.a2;
           _stack.emplace_back(
-              _after_outer_sum_in_ONode_2{std::move(a1), std::move(_result)});
+              _after_outer_sum_in_ONode_2{std::move(a1), _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_outer_sum_in_ONode_2>(_popped));
           _stack.pop_back();
           inner a1 = std::move(_f.a1);
-          _result = ((_f._tmp2 + a1.inner_sum()) + std::move(_result));
+          _result = ((_f._tmp2 + a1.inner_sum()) + _result);
         }
       }
       return _result;
@@ -890,22 +889,22 @@ struct MemSafetyProbe29 {
           auto _f = std::move(std::get<_after_eval_expr_in_Add>(_popped));
           _stack.pop_back();
           const expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_eval_expr_in_Add_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_expr_in_Add_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_expr_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_expr_in_Add_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         } else if (std::holds_alternative<_after_eval_expr_in_Mul>(_popped)) {
           auto _f = std::move(std::get<_after_eval_expr_in_Mul>(_popped));
           _stack.pop_back();
           const expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_eval_expr_in_Mul_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_expr_in_Mul_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_eval_expr_in_Mul_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 * std::move(_result));
+          _result = (_f._tmp4 * _result);
         }
       }
       return _result;
@@ -1162,8 +1161,7 @@ struct MemSafetyProbe29 {
           const tree3 &a1 = *_f.a1;
           const tree3 &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
-          _stack.emplace_back(
-              _after_tree3_sum_in_T3Node_2{&a2, a3, std::move(_result)});
+          _stack.emplace_back(_after_tree3_sum_in_T3Node_2{&a2, a3, _result});
           _stack.emplace_back(_call{_f.a1});
         } else if (
                 std::holds_alternative<_after_tree3_sum_in_T3Node_2>(_popped)) {
@@ -1172,13 +1170,13 @@ struct MemSafetyProbe29 {
           const tree3 &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
           _stack.emplace_back(
-              _after_tree3_sum_in_T3Node_3{a3, _f._tmp3, std::move(_result)});
+              _after_tree3_sum_in_T3Node_3{a3, _f._tmp3, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree3_sum_in_T3Node_3>(_popped));
           _stack.pop_back();
           uint64_t a3 = _f.a3;
-          _result = (((_f._tmp3 + _f._tmp2) + std::move(_result)) + a3);
+          _result = (((_f._tmp3 + _f._tmp2) + _result) + a3);
         }
       }
       return _result;

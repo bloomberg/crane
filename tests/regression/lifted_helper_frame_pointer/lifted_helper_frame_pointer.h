@@ -237,14 +237,13 @@ struct LiftedHelperFramePointer {
         _stack.pop_back();
         const tree<T1> &a0 = *_f.a0;
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(
-            _after_zigzag_crane_go_in_Node_2{std::move(_result)});
+        _stack.emplace_back(_after_zigzag_crane_go_in_Node_2{_result});
         _stack.emplace_back(_call{&a0, &a2});
       } else {
         auto _f =
             std::move(std::get<_after_zigzag_crane_go_in_Node_2>(_popped));
         _stack.pop_back();
-        _result = (_f._tmp2 + std::move(_result));
+        _result = (_f._tmp2 + _result);
       }
     }
     return _result;
@@ -298,12 +297,12 @@ struct LiftedHelperFramePointer {
         _stack.pop_back();
         const tree<T1> &a0 = *_f.a0;
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(_after_go_ref_in_Node_2{std::move(_result)});
+        _stack.emplace_back(_after_go_ref_in_Node_2{_result});
         _stack.emplace_back(_call{&a0, &a2});
       } else {
         auto _f = std::move(std::get<_after_go_ref_in_Node_2>(_popped));
         _stack.pop_back();
-        _result = (_f._tmp2 + std::move(_result));
+        _result = (_f._tmp2 + _result);
       }
     }
     return _result;

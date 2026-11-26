@@ -118,22 +118,7 @@ struct CpsClosureChain {
   /// especially when the pattern match is on a shared_ptr type and the
   /// structured bindings are references.
   static uint64_t tree_sum_cps(const tree &t,
-                               const crane::fn<uint64_t(uint64_t)> &k) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return k(UINT64_C(0));
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      const tree &a0_value = *a0;
-      const tree &a2_value = *a2;
-      return tree_sum_cps(
-          a0_value, [=, a2_value = a2_value, k = k](uint64_t left_sum) {
-            return tree_sum_cps(a2_value, [=, k = k](uint64_t right_sum) {
-              return k(((left_sum + a1) + right_sum));
-            });
-          });
-    }
-  }
-
+                               const crane::fn<uint64_t(uint64_t)> &k);
   static uint64_t tree_sum(const tree &t);
   /// Build a deep tree to stress the closure chain.
   static tree build_left(uint64_t n);
@@ -150,33 +135,13 @@ struct CpsClosureChain {
   /// sum = 4*1 + 2*2 + 1*3 = 11
   static inline const uint64_t test_balanced =
       tree_sum(build_balanced(UINT64_C(3)));
-
   /// CPS fold: accumulates results through continuation chain.
   /// This creates closures that capture BOTH a pattern variable
   /// AND the accumulator function.
   static uint64_t tree_fold_cps(
       const tree &t, uint64_t base,
       const crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)> &combine,
-      const crane::fn<uint64_t(uint64_t)> &k) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return k(base);
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      const tree &a0_value = *a0;
-      const tree &a2_value = *a2;
-      return tree_fold_cps(
-          a0_value, base, combine,
-          [=, a2_value = a2_value, combine = combine, k = k](
-              uint64_t left_result) {
-            return tree_fold_cps(
-                a2_value, base, combine,
-                [=, combine = combine, k = k](uint64_t right_result) {
-                  return k(combine(left_result, a1, right_result));
-                });
-          });
-    }
-  }
-
+      const crane::fn<uint64_t(uint64_t)> &k);
   /// Test: fold with multiplication: each node multiplies (left + right + n)
   static inline const uint64_t test_fold =
       tree_fold_cps(tree::node(

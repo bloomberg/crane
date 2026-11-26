@@ -66,12 +66,10 @@ uint64_t PathologicalRecord::guarded_pattern(const PathologicalRecord::Rec &r) {
   uint64_t c = r.f3;
   if (a == UINT64_C(0)) {
     return (b + c);
+  } else if (b == UINT64_C(0)) {
+    return (a + c);
   } else {
-    if (b == UINT64_C(0)) {
-      return (a + c);
-    } else {
-      return (a + b);
-    }
+    return (a + b);
   }
 }
 

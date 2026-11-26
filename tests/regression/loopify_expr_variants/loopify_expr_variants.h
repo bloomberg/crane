@@ -299,32 +299,29 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<_after_size_cond_in_Add>(_popped));
           _stack.pop_back();
           const cond_expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_size_cond_in_Add_2{std::move(_result)});
+          _stack.emplace_back(_after_size_cond_in_Add_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_size_cond_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_size_cond_in_Add_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
+          _result = ((UINT64_C(1) + _f._tmp2) + _result);
         } else if (std::holds_alternative<_after_size_cond_in_Cond>(_popped)) {
           auto _f = std::move(std::get<_after_size_cond_in_Cond>(_popped));
           _stack.pop_back();
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
-          _stack.emplace_back(
-              _after_size_cond_in_Cond_2{&a2, std::move(_result)});
+          _stack.emplace_back(_after_size_cond_in_Cond_2{&a2, _result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_size_cond_in_Cond_2>(_popped)) {
           auto _f = std::move(std::get<_after_size_cond_in_Cond_2>(_popped));
           _stack.pop_back();
           const cond_expr &a2 = *_f.a2;
-          _stack.emplace_back(
-              _after_size_cond_in_Cond_3{_f._tmp5, std::move(_result)});
+          _stack.emplace_back(_after_size_cond_in_Cond_3{_f._tmp5, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_size_cond_in_Cond_3>(_popped));
           _stack.pop_back();
-          _result =
-              (((UINT64_C(1) + _f._tmp5) + _f._tmp4) + std::move(_result));
+          _result = (((UINT64_C(1) + _f._tmp5) + _f._tmp4) + _result);
         }
       }
       return _result;
@@ -383,18 +380,18 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<_after_eval_cond_in_Add>(_popped));
           _stack.pop_back();
           const cond_expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_eval_cond_in_Add_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_cond_in_Add_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_cond_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_cond_in_Add_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         } else {
           auto _f = std::move(std::get<_after_eval_cond_in_Cond>(_popped));
           _stack.pop_back();
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
-          if (UINT64_C(0) < std::move(_result)) {
+          if (UINT64_C(0) < _result) {
             _stack.emplace_back(_call{_f.a1});
           } else {
             _stack.emplace_back(_call{_f.a2});
@@ -732,32 +729,32 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<_after_count_ops_in_AAdd>(_popped));
           _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_count_ops_in_AAdd_2{std::move(_result)});
+          _stack.emplace_back(_after_count_ops_in_AAdd_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_count_ops_in_AAdd_2>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_AAdd_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
+          _result = ((UINT64_C(1) + _f._tmp2) + _result);
         } else if (std::holds_alternative<_after_count_ops_in_ADiv>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_ADiv>(_popped));
           _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_count_ops_in_ADiv_2{std::move(_result)});
+          _stack.emplace_back(_after_count_ops_in_ADiv_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_count_ops_in_ADiv_2>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_ADiv_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp6) + std::move(_result));
+          _result = ((UINT64_C(1) + _f._tmp6) + _result);
         } else if (std::holds_alternative<_after_count_ops_in_AMul>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_AMul>(_popped));
           _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_count_ops_in_AMul_2{std::move(_result)});
+          _stack.emplace_back(_after_count_ops_in_AMul_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_count_ops_in_AMul_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp4) + std::move(_result));
+          _result = ((UINT64_C(1) + _f._tmp4) + _result);
         }
       }
       return _result;
@@ -830,17 +827,17 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<_after_eval_arith_in_AAdd>(_popped));
           _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_eval_arith_in_AAdd_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_arith_in_AAdd_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_arith_in_AAdd_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_AAdd_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         } else if (std::holds_alternative<_after_eval_arith_in_ADiv>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_ADiv>(_popped));
           _stack.pop_back();
           const arith_expr &a0 = *_f.a0;
-          uint64_t _tmp6 = std::move(_result);
+          uint64_t _tmp6 = _result;
           if (_tmp6 <= 0) {
             _result = UINT64_C(0);
           } else {
@@ -852,18 +849,18 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<_after_eval_arith_in_AMul>(_popped));
           _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_eval_arith_in_AMul_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_arith_in_AMul_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_arith_in_AMul_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_AMul_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 * std::move(_result));
+          _result = (_f._tmp4 * _result);
         } else {
           auto _f = std::move(std::get<_after_eval_arith_in_S>(_popped));
           _stack.pop_back();
           uint64_t n = _f.n;
           auto _once1 = (n + 1);
-          _result = (_once1 ? std::move(_result) / _once1 : 0);
+          _result = (_once1 ? _result / _once1 : 0);
         }
       }
       return _result;
@@ -1616,26 +1613,26 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<_after_eval_bool_in_BAnd>(_popped));
           _stack.pop_back();
           const bool_expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_eval_bool_in_BAnd_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_bool_in_BAnd_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_bool_in_BAnd_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_bool_in_BAnd_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 && std::move(_result));
+          _result = (_f._tmp2 && _result);
         } else if (std::holds_alternative<_after_eval_bool_in_BNot>(_popped)) {
           auto _f = std::move(std::get<_after_eval_bool_in_BNot>(_popped));
           _stack.pop_back();
-          _result = !(std::move(_result));
+          _result = !(_result);
         } else if (std::holds_alternative<_after_eval_bool_in_BOr>(_popped)) {
           auto _f = std::move(std::get<_after_eval_bool_in_BOr>(_popped));
           _stack.pop_back();
           const bool_expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_eval_bool_in_BOr_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_bool_in_BOr_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_eval_bool_in_BOr_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 || std::move(_result));
+          _result = (_f._tmp4 || _result);
         }
       }
       return _result;
@@ -1925,20 +1922,19 @@ struct LoopifyExprVariants {
               std::move(std::get<_after_list_expr_size_in_LAppend>(_popped));
           _stack.pop_back();
           const list_expr &a1 = *_f.a1;
-          _stack.emplace_back(
-              _after_list_expr_size_in_LAppend_2{std::move(_result)});
+          _stack.emplace_back(_after_list_expr_size_in_LAppend_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_list_expr_size_in_LAppend_2>(
                        _popped)) {
           auto _f =
               std::move(std::get<_after_list_expr_size_in_LAppend_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp3) + std::move(_result));
+          _result = ((UINT64_C(1) + _f._tmp3) + _result);
         } else {
           auto _f =
               std::move(std::get<_after_list_expr_size_in_LCons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + std::move(_result));
+          _result = (UINT64_C(1) + _result);
         }
       }
       return _result;
@@ -2117,21 +2113,20 @@ template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {
   // cell fills.
   std::optional<List<T1>> _root{};
   std::shared_ptr<List<T1>> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = List<T1>::nil();
       (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t k = _loop_n - 1;
+      uint64_t k = n - 1;
       auto _cell = typename List<T1>::Cons(x, nullptr);
       List<T1> &_node =
           (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
-      _loop_n = k;
+      n = k;
       continue;
     }
   }

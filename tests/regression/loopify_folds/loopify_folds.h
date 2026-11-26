@@ -126,7 +126,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -140,21 +140,20 @@ struct LoopifyFolds {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     const List<uint64_t> *_loop_l = &l;
-    uint64_t _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        return _loop_acc;
+        return acc;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a1);
-        _loop_acc = f(_loop_acc, a0);
+        acc = f(acc, a0);
       }
     }
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &&>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static uint64_t fold_right(F0 &&f, const List<uint64_t> &l, uint64_t acc) {
     // Explicit stack replaces the non-tail recursion of fold_right: _call
     // frames are pending calls, _after frames resume a caller.
@@ -187,7 +186,7 @@ struct LoopifyFolds {
         auto _f = std::move(std::get<_after_fold_right_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        _result = f(a0, std::move(_result));
+        _result = f(a0, _result);
       }
     }
     return _result;
@@ -201,10 +200,9 @@ struct LoopifyFolds {
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     const List<uint64_t> *_loop_l = &l;
-    uint64_t _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
+        auto _value = List<uint64_t>::cons(acc, List<uint64_t>::nil());
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
@@ -212,14 +210,14 @@ struct LoopifyFolds {
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-        auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
+        auto _cell = typename List<uint64_t>::Cons(acc, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_acc = f(_loop_acc, a0);
+        acc = f(acc, a0);
         continue;
       }
     }
@@ -279,12 +277,11 @@ struct LoopifyFolds {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     List<uint64_t> _loop_l = l;
-    uint64_t _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         return UINT64_C(0);
       } else {
-        uint64_t fuel_ = _loop_fuel - 1;
+        uint64_t fuel_ = fuel - 1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
           return UINT64_C(0);
         } else {
@@ -298,7 +295,7 @@ struct LoopifyFolds {
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());
             _loop_l =
                 List<uint64_t>::cons(f(a0, a00), crane::shared_child(a10));
-            _loop_fuel = fuel_;
+            fuel = fuel_;
           }
         }
       }
@@ -311,7 +308,7 @@ struct LoopifyFolds {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &&>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static uint64_t foldr1(F0 &&f, const List<uint64_t> &l) {
     // Explicit stack replaces the non-tail recursion of foldr1: _call frames
     // are pending calls, _after frames resume a caller.
@@ -349,7 +346,7 @@ struct LoopifyFolds {
         auto _f = std::move(std::get<_after_foldr1_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        _result = f(a0, std::move(_result));
+        _result = f(a0, _result);
       }
     }
     return _result;
@@ -406,25 +403,23 @@ struct LoopifyFolds {
     // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_x = x;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t n_ = _loop_n - 1;
-        auto _cell = typename List<uint64_t>::Cons(_loop_x, nullptr);
+        uint64_t n_ = n - 1;
+        auto _cell = typename List<uint64_t>::Cons(x, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_x = f(_loop_x);
-        _loop_n = n_;
+        x = f(x);
+        n = n_;
         continue;
       }
     }
@@ -437,26 +432,24 @@ struct LoopifyFolds {
     // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_seed = seed;
-    uint64_t _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t fuel_ = _loop_fuel - 1;
-        auto [x, next_seed] = f(_loop_seed);
+        uint64_t fuel_ = fuel - 1;
+        auto [x, next_seed] = f(seed);
         auto _cell = typename List<uint64_t>::Cons(x, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_seed = next_seed;
-        _loop_fuel = fuel_;
+        seed = next_seed;
+        fuel = fuel_;
         continue;
       }
     }

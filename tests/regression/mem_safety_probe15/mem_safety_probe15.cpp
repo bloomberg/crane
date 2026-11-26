@@ -35,7 +35,7 @@ MemSafetyProbe15::sum_list(const MemSafetyProbe15::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -172,26 +172,24 @@ MemSafetyProbe15::tree MemSafetyProbe15::left_spine(uint64_t n) {
   // cell fills.
   std::optional<MemSafetyProbe15::tree> _root{};
   std::shared_ptr<MemSafetyProbe15::tree> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = tree::leaf();
       (_write ? *(*_write = std::make_shared<MemSafetyProbe15::tree>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       auto _cell = typename MemSafetyProbe15::tree::Node(
-          nullptr, _loop_n,
-          std::make_shared<MemSafetyProbe15::tree>(tree::leaf()));
+          nullptr, n, std::make_shared<MemSafetyProbe15::tree>(tree::leaf()));
       MemSafetyProbe15::tree &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe15::tree>(
                           std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe15::tree::Node>(_node.v_mut()).a0;
-      _loop_n = n_;
+      n = n_;
       continue;
     }
   }

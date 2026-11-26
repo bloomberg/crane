@@ -41,13 +41,13 @@ uint64_t ParUnitNotConcurrent::sum(const ParUnitNotConcurrent::tree &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const ParUnitNotConcurrent::tree &a2 = *_f.a2;
-      _stack.emplace_back(_after_sum_in_Node_2{a1, std::move(_result)});
+      _stack.emplace_back(_after_sum_in_Node_2{a1, _result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + a1) + std::move(_result));
+      _result = ((_f._tmp2 + a1) + _result);
     }
   }
   return _result;
@@ -58,18 +58,17 @@ ParUnitNotConcurrent::tree ParUnitNotConcurrent::mk(uint64_t n) {
   // cell fills.
   std::optional<ParUnitNotConcurrent::tree> _root{};
   crane::shared_box<ParUnitNotConcurrent::tree> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = tree::leaf();
       (_write ? *(*_write = crane::shared_box<ParUnitNotConcurrent::tree>::make(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell = typename ParUnitNotConcurrent::tree::Node(
-          nullptr, _loop_n,
+          nullptr, n,
           crane::shared_box<ParUnitNotConcurrent::tree>::make(tree::leaf()));
       ParUnitNotConcurrent::tree &_node =
           (_write ? *(*_write =
@@ -78,7 +77,7 @@ ParUnitNotConcurrent::tree ParUnitNotConcurrent::mk(uint64_t n) {
                   : _root.emplace(std::move(_cell)));
       _write =
           &crane::get<typename ParUnitNotConcurrent::tree::Node>(_node.v_mut()).a0;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }
@@ -145,14 +144,13 @@ uint64_t ParUnitNotConcurrent::churn(uint64_t k,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   ParUnitNotConcurrent::tree _loop_t = t;
-  uint64_t _loop_k = k;
   while (true) {
-    if (_loop_k <= 0) {
+    if (k <= 0) {
       return sum(_loop_t);
     } else {
-      uint64_t j = _loop_k - 1;
+      uint64_t j = k - 1;
       _loop_t = mirror(std::move(_loop_t));
-      _loop_k = j;
+      k = j;
     }
   }
 }

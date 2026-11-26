@@ -218,19 +218,9 @@ struct GenericMonadResultRewrapped {
     }
   }
 
-  template <typename T1 = void>
-  static std::shared_ptr<ITree<Nat>> twice(Nat n) {
-    return itree_ret(n.add(n));
-  }
-
+  static std::shared_ptr<ITree<Nat>> twice(Nat n);
   /// The first argument of ITree.bind is a generic-monad call result, so it
   /// is already a tree and must not be lifted again.
-  template <typename T1 = void>
-  static std::shared_ptr<ITree<List<Nat>>> run(const List<Nat> &l) {
-    return itree_bind(
-        map_monad<Monad_itree<crane::obj>, Nat, Nat>(twice<crane::obj>, l),
-        [](const List<Nat> &ys) { return itree_ret(ys); });
-  }
-
+  static std::shared_ptr<ITree<List<Nat>>> run(const List<Nat> &l);
   static std::shared_ptr<ITree<List<Nat>>> go(const List<Nat> &x0_);
 };

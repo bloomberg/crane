@@ -157,7 +157,11 @@ using iptr = bool;
 constexpr static bool zero_iptr() {
 return false;}
 static Nat to_Z(bool b) {
-if (b) { return Nat::s(Nat::o()); } else { return Nat::o(); }}
+if (b) {
+return Nat::s(Nat::o());
+} else {
+return Nat::o();
+}}
 };
 static_assert(IPtr<boolIPtr>);struct TwoInstancesDisagreeOnPromotedName {
 static inline const Dval<typename natIPtr::iptr> a0 = inner<natIPtr>();static inline const Dval<typename boolIPtr::iptr> b0 = inner<boolIPtr>();

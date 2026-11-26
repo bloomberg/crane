@@ -5,15 +5,14 @@ uint64_t bump_twice(STRefs) {
   auto bump = [&](uint64_t k) -> void {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    uint64_t _loop_k = k;
     while (true) {
-      if (_loop_k <= 0) {
+      if (k <= 0) {
         return;
       } else {
-        uint64_t k_ = _loop_k - 1;
+        uint64_t k_ = k - 1;
         uint64_t v = r;
         r = (v + UINT64_C(1));
-        _loop_k = k_;
+        k = k_;
       }
     }
     return;
@@ -29,15 +28,14 @@ std::pair<uint64_t, uint64_t> bump_each(STRefs) {
   auto bump = [](uint64_t k, uint64_t *x_view) -> void {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    uint64_t _loop_k = k;
     while (true) {
-      if (_loop_k <= 0) {
+      if (k <= 0) {
         return;
       } else {
-        uint64_t k_ = _loop_k - 1;
+        uint64_t k_ = k - 1;
         uint64_t v = *x_view;
         *x_view = (v + UINT64_C(1));
-        _loop_k = k_;
+        k = k_;
       }
     }
     return;
@@ -59,16 +57,14 @@ std::pair<List<uint64_t>, List<uint64_t>> fill_each(STRefs) {
   auto fill = [](uint64_t i, uint64_t n, std::span<uint64_t> arr_view) -> void {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    uint64_t _loop_n = n;
-    uint64_t _loop_i = i;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         return;
       } else {
-        uint64_t n_ = _loop_n - 1;
-        arr_view[_loop_i] = (_loop_i + UINT64_C(1));
-        _loop_n = n_;
-        _loop_i = (_loop_i + 1);
+        uint64_t n_ = n - 1;
+        arr_view[i] = (i + UINT64_C(1));
+        n = n_;
+        i = (i + 1);
       }
     }
     return;
@@ -87,9 +83,8 @@ uint64_t LocalLambdaRefs::nth(uint64_t n, const List<uint64_t> &l,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return default0;
       } else {
@@ -98,14 +93,14 @@ uint64_t LocalLambdaRefs::nth(uint64_t n, const List<uint64_t> &l,
         return a0;
       }
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return default0;
       } else {
         const auto &[_, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a10);
-        _loop_n = m;
+        n = m;
       }
     }
   }

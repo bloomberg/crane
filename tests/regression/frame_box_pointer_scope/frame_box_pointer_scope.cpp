@@ -46,7 +46,6 @@ uint64_t FrameBoxPointerScope::z4(const List<Sum<bool, uint64_t>> &l,
     } else {
       auto _f = std::move(crane::get<_call_go>(_popped));
       _stack.pop_back();
-      uint64_t _x1 = _f._x1;
       const List<uint64_t> &k = _f.k;
       crane::shared_box<List<Sum<bool, uint64_t>>> a1 = std::move(_f.a1);
       crane::shared_box<List<std::pair<uint64_t, bool>>> a10 =

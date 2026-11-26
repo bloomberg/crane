@@ -134,7 +134,7 @@ struct MatchRefAfterMove {
           auto _f =
               std::move(std::get<_after_mylist_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + std::move(_result));
+          _result = (UINT64_C(1) + _result);
         }
       }
       return _result;

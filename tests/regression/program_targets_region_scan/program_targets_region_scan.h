@@ -131,7 +131,7 @@ public:
         auto _f = std::move(std::get<_after_forallb_in_Cons>(_popped));
         _stack.pop_back();
         auto a0 = std::move(_f.a0);
-        _result = (f(a0) && std::move(_result));
+        _result = (f(a0) && _result);
       }
     }
     return _result;

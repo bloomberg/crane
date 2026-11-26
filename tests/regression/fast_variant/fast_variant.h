@@ -257,12 +257,12 @@ struct FastVariant {
           auto _f = std::move(crane::get<_after_size_in_Node>(_popped));
           _stack.pop_back();
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_after_size_in_Node_2{_result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(crane::get<_after_size_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = ((_f._tmp2 + std::move(_result)) + 1);
+          _result = ((_f._tmp2 + _result) + 1);
         }
       }
       return _result;
@@ -311,13 +311,13 @@ struct FastVariant {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_sum_in_Node_2{a1, std::move(_result)});
+          _stack.emplace_back(_after_sum_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + a1) + _result);
         }
       }
       return _result;

@@ -173,27 +173,24 @@ struct InstanceForwardsDicts {
                                          "field at this instantiation");
                 }
               }()};
+            } else if (std::holds_alternative<typename exp<CraneU>::Ops>(
+                           _other.v())) {
+              const auto &[a0, a1, a2] =
+                  std::get<typename exp<CraneU>::Ops>(_other.v());
+              return Ops{a0, a1, a2};
+            } else if (std::holds_alternative<typename exp<CraneU>::Neg>(
+                           _other.v())) {
+              const auto &[a0, a1] =
+                  std::get<typename exp<CraneU>::Neg>(_other.v());
+              return Neg{
+                  a0, (a1 ? std::make_shared<exp<T>>(crane_convert<exp<T>>(*a1))
+                          : nullptr)};
             } else {
-              if (std::holds_alternative<typename exp<CraneU>::Ops>(_other.v())) {
-                const auto &[a0, a1, a2] =
-                    std::get<typename exp<CraneU>::Ops>(_other.v());
-                return Ops{a0, a1, a2};
-              } else {
-                if (std::holds_alternative<typename exp<CraneU>::Neg>(
-                        _other.v())) {
-                  const auto &[a0, a1] =
-                      std::get<typename exp<CraneU>::Neg>(_other.v());
-                  return Neg{a0, (a1 ? std::make_shared<exp<T>>(
-                                           crane_convert<exp<T>>(*a1))
-                                     : nullptr)};
-                } else {
-                  const auto &[a0] =
-                      std::get<typename exp<CraneU>::EMeta>(_other.v());
-                  return EMeta{(a0 ? std::make_shared<meta<T>>(
-                                         crane_convert<meta<T>>(*a0))
-                                   : nullptr)};
-                }
-              }
+              const auto &[a0] =
+                  std::get<typename exp<CraneU>::EMeta>(_other.v());
+              return EMeta{
+                  (a0 ? std::make_shared<meta<T>>(crane_convert<meta<T>>(*a0))
+                      : nullptr)};
             }
           }()) {}
 

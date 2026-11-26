@@ -101,22 +101,20 @@ public:
 /// identifier 'n'".
 struct LiftedLocalFixDropsCapture {
   template <typename T1> static uint64_t f(const T1 &x, uint64_t n) {
-    {
-      const List<std::pair<bool, T1>> &_lc1_l = List<std::pair<bool, T1>>::cons(
-          std::make_pair(false, x), List<std::pair<bool, T1>>::nil());
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      const List<std::pair<bool, T1>> *_lc1_loop_l = &_lc1_l;
-      while (true) {
-        if (std::holds_alternative<typename List<std::pair<bool, T1>>::Nil>(
-                _lc1_loop_l->v())) {
-          return n;
-        } else {
-          const auto &[_, a1] =
-              std::get<typename List<std::pair<bool, T1>>::Cons>(
-                  _lc1_loop_l->v());
-          _lc1_loop_l = crane_raw(a1);
-        }
+    const List<std::pair<bool, T1>> &_lc1_l = List<std::pair<bool, T1>>::cons(
+        std::make_pair(false, x), List<std::pair<bool, T1>>::nil());
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    const List<std::pair<bool, T1>> *_lc1_loop_l = &_lc1_l;
+    while (true) {
+      if (std::holds_alternative<typename List<std::pair<bool, T1>>::Nil>(
+              _lc1_loop_l->v())) {
+        return n;
+      } else {
+        const auto &[_, a1] = std::get<typename List<std::pair<bool,
+                                                               T1>>::Cons>(
+            _lc1_loop_l->v());
+        _lc1_loop_l = crane_raw(a1);
       }
     }
   }

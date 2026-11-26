@@ -41,13 +41,13 @@ uint64_t MemSafetyProbe22::tree_sum(const MemSafetyProbe22::tree &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const MemSafetyProbe22::tree &a2 = *_f.a2;
-      _stack.emplace_back(_after_tree_sum_in_Node_2{a1, std::move(_result)});
+      _stack.emplace_back(_after_tree_sum_in_Node_2{a1, _result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + a1) + std::move(_result));
+      _result = ((_f._tmp2 + a1) + _result);
     }
   }
   return _result;
@@ -219,15 +219,14 @@ uint64_t MemSafetyProbe22::weighted_sum(const MemSafetyProbe22::tree &t,
       uint64_t w = _f.w;
       uint64_t a1 = _f.a1;
       const MemSafetyProbe22::tree &a2 = *_f.a2;
-      _stack.emplace_back(
-          _after_weighted_sum_in_Node_2{w, a1, std::move(_result)});
+      _stack.emplace_back(_after_weighted_sum_in_Node_2{w, a1, _result});
       _stack.emplace_back(_call{(w + UINT64_C(1)), &a2});
     } else {
       auto _f = std::move(std::get<_after_weighted_sum_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t w = _f.w;
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + (a1 * w)) + std::move(_result));
+      _result = ((_f._tmp2 + (a1 * w)) + _result);
     }
   }
   return _result;
@@ -287,13 +286,13 @@ uint64_t MemSafetyProbe22::split_sum(const MemSafetyProbe22::tree &t,
       uint64_t n_ = _f.n_;
       uint64_t a1 = _f.a1;
       std::shared_ptr<MemSafetyProbe22::tree> a2 = std::move(_f.a2);
-      _stack.emplace_back(_after_split_sum_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_after_split_sum_in_Node_2{_result});
       _stack.emplace_back(_call{n_, tree::node(tree::leaf(), (a1 + UINT64_C(1)),
                                                crane::shared_child(a2))});
     } else {
       auto _f = std::move(std::get<_after_split_sum_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     }
   }
   return _result;

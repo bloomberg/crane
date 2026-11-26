@@ -24,15 +24,14 @@ LoopifyReuseBoolQualified::build(uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   LoopifyReuseBoolQualified::lst _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       uint64_t _next_n = m;
-      _loop_acc = lst::cons(_loop_n, std::move(_loop_acc));
-      _loop_n = _next_n;
+      _loop_acc = lst::cons(n, std::move(_loop_acc));
+      n = _next_n;
     }
   }
 }
@@ -72,7 +71,7 @@ LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst &l) {
       auto _f = std::move(std::get<_after_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;

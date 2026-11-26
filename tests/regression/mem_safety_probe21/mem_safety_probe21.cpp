@@ -41,13 +41,13 @@ uint64_t MemSafetyProbe21::tree_sum(const MemSafetyProbe21::tree &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const MemSafetyProbe21::tree &a2 = *_f.a2;
-      _stack.emplace_back(_after_tree_sum_in_Node_2{a1, std::move(_result)});
+      _stack.emplace_back(_after_tree_sum_in_Node_2{a1, _result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + a1) + std::move(_result));
+      _result = ((_f._tmp2 + a1) + _result);
     }
   }
   return _result;
@@ -60,16 +60,15 @@ uint64_t MemSafetyProbe21::grow_and_sum(const MemSafetyProbe21::tree &t,
                                         uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   MemSafetyProbe21::tree _loop_t = t;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return tree_sum(_loop_t);
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       uint64_t _next_n = n_;
-      _loop_t = tree::node(std::move(_loop_t), _loop_n, tree::leaf());
-      _loop_n = _next_n;
+      _loop_t = tree::node(std::move(_loop_t), n, tree::leaf());
+      n = _next_n;
     }
   }
 }
@@ -112,7 +111,7 @@ uint64_t MemSafetyProbe21::double_grow(const MemSafetyProbe21::tree &t,
       auto _f = std::move(std::get<_after_double_grow_in_S>(_popped));
       _stack.pop_back();
       MemSafetyProbe21::tree t = std::move(_f.t);
-      _result = (tree_sum(std::move(t)) + std::move(_result));
+      _result = (tree_sum(std::move(t)) + _result);
     }
   }
   return _result;
@@ -162,12 +161,12 @@ uint64_t MemSafetyProbe21::branch_grow(const MemSafetyProbe21::tree &t,
       _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
-      _stack.emplace_back(_after_branch_grow_in_S_2{std::move(_result)});
+      _stack.emplace_back(_after_branch_grow_in_S_2{_result});
       _stack.emplace_back(_call{n_, tree::node(tree::leaf(), n, tree::leaf())});
     } else {
       auto _f = std::move(std::get<_after_branch_grow_in_S_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     }
   }
   return _result;
@@ -179,18 +178,16 @@ uint64_t MemSafetyProbe21::embed_grow(const MemSafetyProbe21::tree &t,
                                       uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   MemSafetyProbe21::tree _loop_t = t;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return tree_sum(_loop_t);
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       uint64_t _next_n = n_;
-      _loop_t =
-          tree::node(tree::node(_loop_t, _loop_n, tree::leaf()), UINT64_C(0),
-                     tree::node(tree::leaf(), _loop_n, _loop_t));
-      _loop_n = _next_n;
+      _loop_t = tree::node(tree::node(_loop_t, n, tree::leaf()), UINT64_C(0),
+                           tree::node(tree::leaf(), n, _loop_t));
+      n = _next_n;
     }
   }
 }
@@ -200,16 +197,41 @@ MemSafetyProbe21::tree MemSafetyProbe21::accum_tree(MemSafetyProbe21::tree acc,
                                                     uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   MemSafetyProbe21::tree _loop_acc = std::move(acc);
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       uint64_t _next_n = n_;
-      _loop_acc = tree::node(std::move(_loop_acc), _loop_n, tree::leaf());
-      _loop_n = _next_n;
+      _loop_acc = tree::node(std::move(_loop_acc), n, tree::leaf());
+      n = _next_n;
+    }
+  }
+}
+
+/// TEST 6: CPS-like pattern where the continuation builds a tree.
+uint64_t MemSafetyProbe21::cps_sum(const MemSafetyProbe21::tree &t,
+                                   const crane::fn<uint64_t(uint64_t)> &k) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  crane::fn<uint64_t(uint64_t)> _loop_k = k;
+  const MemSafetyProbe21::tree *_loop_t = &t;
+  while (true) {
+    if (std::holds_alternative<typename MemSafetyProbe21::tree::Leaf>(
+            _loop_t->v())) {
+      return _loop_k(UINT64_C(0));
+    } else {
+      const auto &[a0, a1, a2] =
+          std::get<typename MemSafetyProbe21::tree::Node>(_loop_t->v());
+      const MemSafetyProbe21::tree &a0_value = *a0;
+      const MemSafetyProbe21::tree &a2_value = *a2;
+      _loop_k = [=, a2_value = a2_value](uint64_t lsum) {
+        return cps_sum(a2_value, [=, _loop_k = _loop_k](uint64_t rsum) {
+          return _loop_k(((lsum + a1) + rsum));
+        });
+      };
+      _loop_t = &a0_value;
     }
   }
 }
@@ -220,20 +242,17 @@ uint64_t MemSafetyProbe21::weave(const MemSafetyProbe21::tree &t1,
                                  const MemSafetyProbe21::tree &t2, uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   MemSafetyProbe21::tree _loop_t2 = t2;
   MemSafetyProbe21::tree _loop_t1 = t1;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return (tree_sum(_loop_t1) + tree_sum(_loop_t2));
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       uint64_t _next_n = n_;
-      MemSafetyProbe21::tree _next_t2 =
-          tree::node(_loop_t1, _loop_n, tree::leaf());
-      MemSafetyProbe21::tree _next_t1 =
-          tree::node(_loop_t2, _loop_n, tree::leaf());
-      _loop_n = _next_n;
+      MemSafetyProbe21::tree _next_t2 = tree::node(_loop_t1, n, tree::leaf());
+      MemSafetyProbe21::tree _next_t1 = tree::node(_loop_t2, n, tree::leaf());
+      n = _next_n;
       _loop_t2 = std::move(_next_t2);
       _loop_t1 = std::move(_next_t1);
     }
@@ -278,7 +297,7 @@ uint64_t MemSafetyProbe21::sum_and_grow(const MemSafetyProbe21::tree &t,
       auto _f = std::move(std::get<_after_sum_and_grow_in_S>(_popped));
       _stack.pop_back();
       uint64_t s = _f.s;
-      _result = (s + std::move(_result));
+      _result = (s + _result);
     }
   }
   return _result;

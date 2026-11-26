@@ -37,11 +37,11 @@ uint64_t LoopifyExtrema::maximum(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_maximum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      uint64_t max_rest = std::move(_result);
+      uint64_t max_rest = _result;
       if (max_rest < a0) {
-        _result = std::move(a0);
+        _result = a0;
       } else {
-        _result = std::move(max_rest);
+        _result = max_rest;
       }
     }
   }
@@ -85,11 +85,11 @@ uint64_t LoopifyExtrema::minimum(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_minimum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      uint64_t min_rest = std::move(_result);
+      uint64_t min_rest = _result;
       if (a0 < min_rest) {
-        _result = std::move(a0);
+        _result = a0;
       } else {
-        _result = std::move(min_rest);
+        _result = min_rest;
       }
     }
   }
@@ -164,13 +164,11 @@ uint64_t LoopifyExtrema::lex_compare(const List<uint64_t> &l1,
             std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
         if (a0 < a00) {
           return UINT64_C(1);
+        } else if (a00 < a0) {
+          return UINT64_C(2);
         } else {
-          if (a00 < a0) {
-            return UINT64_C(2);
-          } else {
-            _loop_l2 = crane_raw(a10);
-            _loop_l1 = crane_raw(a1);
-          }
+          _loop_l2 = crane_raw(a10);
+          _loop_l1 = crane_raw(a1);
         }
       }
     }

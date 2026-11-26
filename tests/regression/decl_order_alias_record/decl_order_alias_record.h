@@ -127,7 +127,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -178,14 +178,13 @@ public:
                                        "field at this instantiation");
               }
             }()};
+          } else if (std::holds_alternative<typename Instr<CraneU>::ICmp>(
+                         _other.v())) {
+            const auto &[a0] =
+                std::get<typename Instr<CraneU>::ICmp>(_other.v());
+            return ICmp{a0};
           } else {
-            if (std::holds_alternative<typename Instr<CraneU>::ICmp>(_other.v())) {
-              const auto &[a0] =
-                  std::get<typename Instr<CraneU>::ICmp>(_other.v());
-              return ICmp{a0};
-            } else {
-              return IStop{};
-            }
+            return IStop{};
           }
         }()) {}
 

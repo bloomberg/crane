@@ -6,15 +6,14 @@ DeepApp::mylist<uint64_t> DeepApp::build(uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   DeepApp::mylist<uint64_t> _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       uint64_t _next_n = n_;
-      _loop_acc = mylist<uint64_t>::mycons(_loop_n, std::move(_loop_acc));
-      _loop_n = _next_n;
+      _loop_acc = mylist<uint64_t>::mycons(n, std::move(_loop_acc));
+      n = _next_n;
     }
   }
 }

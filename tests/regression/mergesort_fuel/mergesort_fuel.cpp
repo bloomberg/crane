@@ -45,10 +45,7 @@ List<uint64_t> MergesortFuel::merge(List<uint64_t> l1,
           }
         }
       };
-  {
-    const List<uint64_t> &_lc1_l3 = l2;
-    return merge_aux_impl(merge_aux_impl, _lc1_l3);
-  }
+  return merge_aux_impl(merge_aux_impl, l2);
 }
 
 /// * Fuel-based merge sort

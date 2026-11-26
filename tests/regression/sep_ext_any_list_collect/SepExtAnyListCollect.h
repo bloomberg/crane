@@ -22,26 +22,22 @@ template <SymTypes Ty> struct ListCollect {
   collect(typename Ty::sym,
           const typename Datatypes::template List<typename Ty::sym> &,
           const typename Datatypes::Nat &n, symbols_semty default0) {
-    {
-      const typename Datatypes::Nat &_lc1_n0 = n;
-      typename Datatypes::template List<symbols_semty> _lc1_acc =
-          Datatypes::template List<symbols_semty>::nil();
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      typename Datatypes::template List<symbols_semty> _lc1_loop_acc =
-          std::move(_lc1_acc);
-      const typename Datatypes::Nat *_lc1_loop_n0 = &_lc1_n0;
-      while (true) {
-        if (std::holds_alternative<typename Datatypes::Nat::O>(
-                _lc1_loop_n0->v())) {
-          return _lc1_loop_acc;
-        } else {
-          const auto &[a0] =
-              std::get<typename Datatypes::Nat::S>(_lc1_loop_n0->v());
-          _lc1_loop_acc = Datatypes::template List<symbols_semty>::cons(
-              default0, std::move(_lc1_loop_acc));
-          _lc1_loop_n0 = crane_raw(a0);
-        }
+    typename Datatypes::template List<symbols_semty> _lc1_acc =
+        Datatypes::template List<symbols_semty>::nil();
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    typename Datatypes::template List<symbols_semty> _lc1_loop_acc =
+        std::move(_lc1_acc);
+    const typename Datatypes::Nat *_lc1_loop_n0 = &n;
+    while (true) {
+      if (std::holds_alternative<typename Datatypes::Nat::O>(_lc1_loop_n0->v())) {
+        return _lc1_loop_acc;
+      } else {
+        const auto &[a0] =
+            std::get<typename Datatypes::Nat::S>(_lc1_loop_n0->v());
+        _lc1_loop_acc = Datatypes::template List<symbols_semty>::cons(
+            default0, std::move(_lc1_loop_acc));
+        _lc1_loop_n0 = crane_raw(a0);
       }
     }
   }

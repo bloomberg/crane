@@ -130,7 +130,7 @@ public:
         auto _f = std::move(std::get<_after_forallb_in_Cons>(_popped));
         _stack.pop_back();
         auto a0 = std::move(_f.a0);
-        _result = (f(a0) && std::move(_result));
+        _result = (f(a0) && _result);
       }
     }
     return _result;
@@ -506,15 +506,14 @@ struct InstructionCycles {
         const auto &[a0] = std::get<typename instruction5::JCN5>(this->v());
         if ((UINT64_C(8) ? a0 / UINT64_C(8) : 0) == UINT64_C(1)) {
           return UINT64_C(16);
+        } else if ((s.acc5 == UINT64_C(0) &&
+                    (UINT64_C(2) ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) %
+                                   UINT64_C(2)
+                                 : (UINT64_C(4) ? a0 / UINT64_C(4) : 0)) ==
+                    UINT64_C(1))) {
+          return UINT64_C(16);
         } else {
-          if ((s.acc5 == UINT64_C(0) &&
-               (UINT64_C(2) ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) % UINT64_C(2)
-                            : (UINT64_C(4) ? a0 / UINT64_C(4) : 0)) ==
-               UINT64_C(1))) {
-            return UINT64_C(16);
-          } else {
-            return UINT64_C(8);
-          }
+          return UINT64_C(8);
         }
       } else {
         return UINT64_C(8);

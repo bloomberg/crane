@@ -196,31 +196,27 @@ public:
 
 template <typename T1, typename T2>
 List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
-  {
-    const List<T1> &_lc1_la0 = la;
-    const List<T2> &_lc1_lb0 = lb;
-    const List<Prod<T1, T2>> &_lc1_acc = List<Prod<T1, T2>>::nil();
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    List<Prod<T1, T2>> _lc1_loop_acc = _lc1_acc;
-    const List<T2> *_lc1_loop_lb0 = &_lc1_lb0;
-    const List<T1> *_lc1_loop_la0 = &_lc1_la0;
-    while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_la0->v())) {
+  const List<Prod<T1, T2>> &_lc1_acc = List<Prod<T1, T2>>::nil();
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  List<Prod<T1, T2>> _lc1_loop_acc = _lc1_acc;
+  const List<T2> *_lc1_loop_lb0 = &lb;
+  const List<T1> *_lc1_loop_la0 = &la;
+  while (true) {
+    if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_la0->v())) {
+      return _lc1_loop_acc.rev();
+    } else {
+      const auto &[a0, a1] =
+          std::get<typename List<T1>::Cons>(_lc1_loop_la0->v());
+      if (std::holds_alternative<typename List<T2>::Nil>(_lc1_loop_lb0->v())) {
         return _lc1_loop_acc.rev();
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<T1>::Cons>(_lc1_loop_la0->v());
-        if (std::holds_alternative<typename List<T2>::Nil>(_lc1_loop_lb0->v())) {
-          return _lc1_loop_acc.rev();
-        } else {
-          const auto &[a00, a10] =
-              std::get<typename List<T2>::Cons>(_lc1_loop_lb0->v());
-          _lc1_loop_acc = List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(a0, a00),
-                                                   std::move(_lc1_loop_acc));
-          _lc1_loop_lb0 = crane_raw(a10);
-          _lc1_loop_la0 = crane_raw(a1);
-        }
+        const auto &[a00, a10] =
+            std::get<typename List<T2>::Cons>(_lc1_loop_lb0->v());
+        _lc1_loop_acc = List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(a0, a00),
+                                                 std::move(_lc1_loop_acc));
+        _lc1_loop_lb0 = crane_raw(a10);
+        _lc1_loop_la0 = crane_raw(a1);
       }
     }
   }

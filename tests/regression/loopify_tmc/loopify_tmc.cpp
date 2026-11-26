@@ -9,16 +9,15 @@ LoopifyTmc::list<uint64_t> LoopifyTmc::range(uint64_t lo, uint64_t hi) {
   // cell fills.
   std::optional<LoopifyTmc::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyTmc::list<uint64_t>> *_write = nullptr;
-  uint64_t _loop_hi = hi;
   while (true) {
-    if (_loop_hi <= 0) {
+    if (hi <= 0) {
       auto _value = list<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<LoopifyTmc::list<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t hi_ = _loop_hi - 1;
+      uint64_t hi_ = hi - 1;
       if (lo <= hi_) {
         auto _cell = typename LoopifyTmc::list<uint64_t>::Cons(hi_, nullptr);
         LoopifyTmc::list<uint64_t> &_node =
@@ -27,7 +26,7 @@ LoopifyTmc::list<uint64_t> LoopifyTmc::range(uint64_t lo, uint64_t hi) {
                     : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename LoopifyTmc::list<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_hi = hi_;
+        hi = hi_;
         continue;
       } else {
         auto _value = list<uint64_t>::nil();
@@ -49,7 +48,6 @@ LoopifyTmc::prefix_sums(uint64_t acc, const LoopifyTmc::list<uint64_t> &l) {
   std::optional<LoopifyTmc::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyTmc::list<uint64_t>> *_write = nullptr;
   const LoopifyTmc::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename LoopifyTmc::list<uint64_t>::Nil>(
             _loop_l->v())) {
@@ -61,7 +59,7 @@ LoopifyTmc::prefix_sums(uint64_t acc, const LoopifyTmc::list<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyTmc::list<uint64_t>::Cons>(_loop_l->v());
-      uint64_t s = (_loop_acc + a0);
+      uint64_t s = (acc + a0);
       auto _cell = typename LoopifyTmc::list<uint64_t>::Cons(s, nullptr);
       LoopifyTmc::list<uint64_t> &_node =
           (_write ? *(*_write = std::make_shared<LoopifyTmc::list<uint64_t>>(
@@ -70,7 +68,7 @@ LoopifyTmc::prefix_sums(uint64_t acc, const LoopifyTmc::list<uint64_t> &l) {
       _write =
           &std::get<typename LoopifyTmc::list<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      _loop_acc = s;
+      acc = s;
       continue;
     }
   }

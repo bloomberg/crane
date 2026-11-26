@@ -51,9 +51,9 @@ List<uint64_t> QuicksortFun::quicksort_fun(const List<uint64_t> &x) {
       auto _f = std::move(std::get<_after_quicksort_fun_in_Cons_2>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = _f._tmp2.app(List<uint64_t>::cons(std::move(a0),
-                                                  List<uint64_t>::nil())
-                                 .app(std::move(_result)));
+      _result =
+          _f._tmp2.app(List<uint64_t>::cons(a0, List<uint64_t>::nil()).app(
+              std::move(_result)));
     }
   }
   return _result;

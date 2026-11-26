@@ -271,32 +271,32 @@ uint64_t LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &x) {
       auto _f = std::move(std::get<_after_sum_e_in_Add>(_popped));
       _stack.pop_back();
       const LoopifyMutualResultTypes::e &b0 = *_f.b0;
-      _stack.emplace_back(_after_sum_e_in_Add_2{std::move(_result)});
+      _stack.emplace_back(_after_sum_e_in_Add_2{_result});
       _stack.emplace_back(_call{&b0});
     } else if (std::holds_alternative<_after_sum_e_in_Add_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_in_Add_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp4 + std::move(_result));
+      _result = (_f._tmp4 + _result);
     } else if (std::holds_alternative<_after_sum_md_entry_in_MPair>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_entry_in_MPair>(_popped));
       _stack.pop_back();
       const LoopifyMutualResultTypes::md &b1 = *_f.b1;
-      _stack.emplace_back(_after_sum_md_entry_in_MPair_2{std::move(_result)});
+      _stack.emplace_back(_after_sum_md_entry_in_MPair_2{_result});
       _stack.emplace_back(_call_sum_md_entry{&b1});
     } else if (std::holds_alternative<_after_sum_md_entry_in_MPair_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_entry_in_MPair_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp6 + std::move(_result));
+      _result = (_f._tmp6 + _result);
     } else if (std::holds_alternative<_after_sum_md_entry_in_MPair_3>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_entry_in_MPair_3>(_popped));
       _stack.pop_back();
       const LoopifyMutualResultTypes::md &b0 = *_f.b0;
-      _stack.emplace_back(_after_sum_md_entry_in_MPair_4{std::move(_result)});
+      _stack.emplace_back(_after_sum_md_entry_in_MPair_4{_result});
       _stack.emplace_back(_call_sum_md_entry{&b0});
     } else {
       auto _f = std::move(std::get<_after_sum_md_entry_in_MPair_4>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     }
   }
   return _result;
@@ -409,32 +409,32 @@ LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add>(_popped));
       _stack.pop_back();
       const LoopifyMutualResultTypes::e &b1 = *_f.b1;
-      _stack.emplace_back(_after_sum_e_entry_in_Add_2{std::move(_result)});
+      _stack.emplace_back(_after_sum_e_entry_in_Add_2{_result});
       _stack.emplace_back(_call_sum_e_entry{&b1});
     } else if (std::holds_alternative<_after_sum_e_entry_in_Add_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp4 + std::move(_result));
+      _result = (_f._tmp4 + _result);
     } else if (std::holds_alternative<_after_sum_e_entry_in_Add_3>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add_3>(_popped));
       _stack.pop_back();
       const LoopifyMutualResultTypes::e &b0 = *_f.b0;
-      _stack.emplace_back(_after_sum_e_entry_in_Add_4{std::move(_result)});
+      _stack.emplace_back(_after_sum_e_entry_in_Add_4{_result});
       _stack.emplace_back(_call_sum_e_entry{&b0});
     } else if (std::holds_alternative<_after_sum_e_entry_in_Add_4>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add_4>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     } else if (std::holds_alternative<_after_sum_md_in_MPair>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_in_MPair>(_popped));
       _stack.pop_back();
       const LoopifyMutualResultTypes::md &b0 = *_f.b0;
-      _stack.emplace_back(_after_sum_md_in_MPair_2{std::move(_result)});
+      _stack.emplace_back(_after_sum_md_in_MPair_2{_result});
       _stack.emplace_back(_call{&b0});
     } else {
       auto _f = std::move(std::get<_after_sum_md_in_MPair_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp6 + std::move(_result));
+      _result = (_f._tmp6 + _result);
     }
   }
   return _result;

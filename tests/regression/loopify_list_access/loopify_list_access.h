@@ -161,7 +161,7 @@ struct LoopifyListAccess {
       } else {
         auto _f = std::move(std::get<_after_count_matching_in_true>(_popped));
         _stack.pop_back();
-        _result = (UINT64_C(1) + std::move(_result));
+        _result = (UINT64_C(1) + _result);
       }
     }
     return _result;

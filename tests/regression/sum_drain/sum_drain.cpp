@@ -4,14 +4,13 @@ SumDrain::t SumDrain::build(uint64_t n, SumDrain::t acc) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   SumDrain::t _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       _loop_acc = t::n(Sum<uint64_t, SumDrain::t>::inr(std::move(_loop_acc)));
-      _loop_n = m;
+      n = m;
     }
   }
 }
@@ -49,7 +48,7 @@ uint64_t SumDrain::depth(const SumDrain::t &x) {
     } else {
       auto _f = std::move(std::get<_after_depth_in_Inr>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;

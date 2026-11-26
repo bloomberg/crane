@@ -7,14 +7,13 @@ List<uint64_t> ListFoldRightStackOverflow::bld(uint64_t n, List<uint64_t> acc) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<uint64_t> _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t j = _loop_n - 1;
+      uint64_t j = n - 1;
       _loop_acc = List<uint64_t>::cons(j, std::move(_loop_acc));
-      _loop_n = j;
+      n = j;
     }
   }
 }

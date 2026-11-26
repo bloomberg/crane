@@ -40,16 +40,11 @@ List<NontailFoldResumePlan::pt> NontailFoldResumePlan::g4(uint64_t n80,
                 std::move(rv97))(x0_0);
           }
         };
-    auto go92 =
-        [=, go92_impl = std::move(go92_impl)](
-            List<NontailFoldResumePlan::pt> l93,
-            crane::fn<List<NontailFoldResumePlan::pt>(int64_t)> acc94,
-            int64_t x0_0)
-             -> List<NontailFoldResumePlan::pt> {
-          return go92_impl(go92_impl, std::move(l93), std::move(acc94), x0_0);
-        };
-    return go92(List<NontailFoldResumePlan::pt>::nil(),
-                [](int64_t) { return List<NontailFoldResumePlan::pt>::nil(); },
-                x0_);
+    List<NontailFoldResumePlan::pt> _lc1_l93 =
+        List<NontailFoldResumePlan::pt>::nil();
+    crane::fn<List<NontailFoldResumePlan::pt>(int64_t)> _lc1_acc94 =
+        [](int64_t) { return List<NontailFoldResumePlan::pt>::nil(); };
+    return go92_impl(go92_impl, std::move(_lc1_l93), std::move(_lc1_acc94),
+                     x0_);
   }
 }

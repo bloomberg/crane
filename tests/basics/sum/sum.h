@@ -178,34 +178,32 @@ struct Sum {
                                          "field at this instantiation");
                 }
               }()};
+            } else if (std::holds_alternative<
+                           typename triple<CraneU0, CraneU1, CraneU2>::Second>(
+                           _other.v())) {
+              const auto &[a0] =
+                  std::get<typename triple<CraneU0, CraneU1, CraneU2>::Second>(
+                      _other.v());
+              return Second{[&]() -> B {
+                if constexpr (crane_convertible<B, const CraneU1 &>) {
+                  return crane_convert<B>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
             } else {
-              if (std::holds_alternative<
-                      typename triple<CraneU0, CraneU1, CraneU2>::Second>(
-                      _other.v())) {
-                const auto &[a0] = std::get<
-                    typename triple<CraneU0, CraneU1, CraneU2>::Second>(
-                    _other.v());
-                return Second{[&]() -> B {
-                  if constexpr (crane_convertible<B, const CraneU1 &>) {
-                    return crane_convert<B>(a0);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }()};
-              } else {
-                const auto &[a0] =
-                    std::get<typename triple<CraneU0, CraneU1, CraneU2>::Third>(
-                        _other.v());
-                return Third{[&]() -> C {
-                  if constexpr (crane_convertible<C, const CraneU2 &>) {
-                    return crane_convert<C>(a0);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }()};
-              }
+              const auto &[a0] =
+                  std::get<typename triple<CraneU0, CraneU1, CraneU2>::Third>(
+                      _other.v());
+              return Third{[&]() -> C {
+                if constexpr (crane_convertible<C, const CraneU2 &>) {
+                  return crane_convert<C>(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
             }
           }()) {}
 

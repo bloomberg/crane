@@ -336,12 +336,12 @@ struct PolyInductive {
           auto _f = std::move(std::get<_after_ptree_size_in_PNode>(_popped));
           _stack.pop_back();
           const ptree<A> &a1 = *_f.a1;
-          _stack.emplace_back(_after_ptree_size_in_PNode_2{std::move(_result)});
+          _stack.emplace_back(_after_ptree_size_in_PNode_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_ptree_size_in_PNode_2>(_popped));
           _stack.pop_back();
-          _result = ((_f._tmp2 + std::move(_result)) + 1);
+          _result = ((_f._tmp2 + _result) + 1);
         }
       }
       return _result;

@@ -472,7 +472,7 @@ struct BinInt {
 enum class STRefs { BUILD_STREFS };
 
 struct STMonad {
-  template <typename T1 = void, typename T2, typename T3, typename F2>
+  template <typename T2, typename T3, typename F2>
   static T3 for_each_with(const List<T2> &xs, const T3 &v, F2 &&f);
 };
 
@@ -749,7 +749,7 @@ template <OrderedType X> struct Coq_Raw {
         _stack.pop_back();
         auto e = std::move(_f.e);
         auto e_ = std::move(_f.e_);
-        _result = (cmp(e, e_) && std::move(_result));
+        _result = (cmp(e, e_) && _result);
       }
     }
     return _result;
@@ -1617,12 +1617,12 @@ template <Int I, OrderedType X> struct Raw {
         auto _f = std::move(std::get<_after_cardinal_in_Node>(_popped));
         _stack.pop_back();
         const tree<T1> &a3 = *_f.a3;
-        _stack.emplace_back(_after_cardinal_in_Node_2{std::move(_result)});
+        _stack.emplace_back(_after_cardinal_in_Node_2{_result});
         _stack.emplace_back(_call{&a3});
       } else {
         auto _f = std::move(std::get<_after_cardinal_in_Node_2>(_popped));
         _stack.pop_back();
-        _result = ((_f._tmp2 + std::move(_result)) + 1);
+        _result = ((_f._tmp2 + _result) + 1);
       }
     }
     return _result;
@@ -1726,31 +1726,29 @@ template <Int I, OrderedType X> struct Raw {
           }
         }
       }
-    } else {
-      if (I::gt_le_dec(std::move(hr), I::add(std::move(hl), I::_2))) {
-        if (std::holds_alternative<typename tree<T1>::Leaf>(r.v())) {
-          return assert_false<T1>(l, std::move(x), d, r);
+    } else if (I::gt_le_dec(std::move(hr), I::add(std::move(hl), I::_2))) {
+      if (std::holds_alternative<typename tree<T1>::Leaf>(r.v())) {
+        return assert_false<T1>(l, std::move(x), d, r);
+      } else {
+        const auto &[a00, a10, a20, a30, _] =
+            std::get<typename tree<T1>::Node>(r.v());
+        if (I::ge_lt_dec(height<T1>(*a30), height<T1>(*a00))) {
+          return create<T1>(create<T1>(l, std::move(x), d, *a00), a10, a20,
+                            *a30);
         } else {
-          const auto &[a00, a10, a20, a30, _] =
-              std::get<typename tree<T1>::Node>(r.v());
-          if (I::ge_lt_dec(height<T1>(*a30), height<T1>(*a00))) {
-            return create<T1>(create<T1>(l, std::move(x), d, *a00), a10, a20,
-                              *a30);
+          auto &&_sv1 = *a00;
+          if (std::holds_alternative<typename tree<T1>::Leaf>(_sv1.v())) {
+            return assert_false<T1>(l, std::move(x), d, r);
           } else {
-            auto &&_sv1 = *a00;
-            if (std::holds_alternative<typename tree<T1>::Leaf>(_sv1.v())) {
-              return assert_false<T1>(l, std::move(x), d, r);
-            } else {
-              const auto &[a01, a11, a21, a31, _] =
-                  std::get<typename tree<T1>::Node>(_sv1.v());
-              return create<T1>(create<T1>(l, std::move(x), d, *a01), a11, a21,
-                                create<T1>(*a31, a10, a20, *a30));
-            }
+            const auto &[a01, a11, a21, a31, _] =
+                std::get<typename tree<T1>::Node>(_sv1.v());
+            return create<T1>(create<T1>(l, std::move(x), d, *a01), a11, a21,
+                              create<T1>(*a31, a10, a20, *a30));
           }
         }
-      } else {
-        return create<T1>(l, std::move(x), d, r);
       }
+    } else {
+      return create<T1>(l, std::move(x), d, r);
     }
   }
 
@@ -2044,15 +2042,13 @@ template <Int I, OrderedType X> struct Raw {
             _stack.emplace_back(_after_join_in_left{
                 std::move(a0), std::move(a1), std::move(a2)});
             _stack.emplace_back(_call{&r, *a3});
+          } else if (I::gt_le_dec(a40, I::add(a4, I::_2))) {
+            _stack.emplace_back(_after_join_aux_in_left{a10, a20, a30});
+            _stack.emplace_back(_call_join_aux{
+                crane_raw(a00), std::move(a0), std::move(a1), std::move(a2),
+                std::move(a3), std::move(a4), std::move(l), x0_, x1_});
           } else {
-            if (I::gt_le_dec(a40, I::add(a4, I::_2))) {
-              _stack.emplace_back(_after_join_aux_in_left{a10, a20, a30});
-              _stack.emplace_back(_call_join_aux{
-                  crane_raw(a00), std::move(a0), std::move(a1), std::move(a2),
-                  std::move(a3), std::move(a4), std::move(l), x0_, x1_});
-            } else {
-              _result = create<T1>(l, x0_, x1_, r);
-            }
+            _result = create<T1>(l, x0_, x1_, r);
           }
         }
       } else if (std::holds_alternative<_after_join_aux_in_left>(_popped)) {
@@ -3085,7 +3081,7 @@ struct UnionFind {
   static List<bool> union_find_fun(uint64_t n, const List<Op> &ops);
 };
 
-template <typename T1, typename T2, typename T3, typename F2>
+template <typename T2, typename T3, typename F2>
 T3 STMonad::for_each_with(const List<T2> &xs, const T3 &v, F2 &&f) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.

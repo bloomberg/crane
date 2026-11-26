@@ -133,7 +133,7 @@ public:
         auto _f = std::move(std::get<_after_forallb_in_Cons>(_popped));
         _stack.pop_back();
         auto a0 = std::move(_f.a0);
-        _result = (f(a0) && std::move(_result));
+        _result = (f(a0) && _result);
       }
     }
     return _result;
@@ -190,7 +190,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;

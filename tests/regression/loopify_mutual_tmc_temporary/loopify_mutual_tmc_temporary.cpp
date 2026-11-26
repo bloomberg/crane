@@ -145,7 +145,6 @@ LoopifyMutualTmcTemporary::da(LoopifyMutualTmcTemporary::Color c,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const LoopifyMutualTmcTemporary::num *_loop_n = &n;
-  LoopifyMutualTmcTemporary::Color _loop_c = c;
   while (true) {
     if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
             _loop_n->v())) {
@@ -153,7 +152,7 @@ LoopifyMutualTmcTemporary::da(LoopifyMutualTmcTemporary::Color c,
     } else {
       const auto &[n0] =
           std::get<typename LoopifyMutualTmcTemporary::num::Su>(_loop_n->v());
-      switch (_loop_c) {
+      switch (c) {
       case Color::RED: {
         return db(*n0);
       }
@@ -162,7 +161,7 @@ LoopifyMutualTmcTemporary::da(LoopifyMutualTmcTemporary::Color c,
       }
       case Color::BLUE: {
         _loop_n = crane_raw(n0);
-        _loop_c = Color::RED;
+        c = Color::RED;
         break;
       }
       default:
@@ -246,16 +245,15 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::of_nat(uint64_t n) {
   // cell fills.
   std::optional<LoopifyMutualTmcTemporary::num> _root{};
   std::shared_ptr<LoopifyMutualTmcTemporary::num> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = num::z();
       (_write ? *(*_write = std::make_shared<LoopifyMutualTmcTemporary::num>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell = typename LoopifyMutualTmcTemporary::num::Su(nullptr);
       LoopifyMutualTmcTemporary::num &_node = (
           _write ? *(*_write = std::make_shared<LoopifyMutualTmcTemporary::num>(
@@ -263,7 +261,7 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::of_nat(uint64_t n) {
                  : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename LoopifyMutualTmcTemporary::num::Su>(_node.v_mut()).n;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }
@@ -302,7 +300,7 @@ LoopifyMutualTmcTemporary::to_nat(const LoopifyMutualTmcTemporary::num &n) {
     } else {
       auto _f = std::move(std::get<_after_to_nat_in_Su>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;

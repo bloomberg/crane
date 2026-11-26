@@ -137,12 +137,12 @@ struct LoopifyMethodVaryingFnArg {
           crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
           const tree &a2 = *_f.a2;
           const tree &a2_value = a2;
-          _stack.emplace_back(_after_go_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_after_go_in_Node_2{_result});
           _stack.emplace_back(_call{&a2_value, f});
         } else {
           auto _f = std::move(std::get<_after_go_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         }
       }
       return _result;

@@ -171,15 +171,14 @@ public:
     std::optional<List<A>> _root{};
     crane::rc<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = List<A>::nil();
         (_write ? *(*_write = crane::make_rc<List<A>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t n0 = _loop_n - 1;
+        uint64_t n0 = n - 1;
         auto &&_sv = *_loop_self;
         if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           auto _value = List<A>::nil();
@@ -194,7 +193,7 @@ public:
                       : _root.emplace(std::move(_cell)));
           _write = &crane::get<typename List<A>::Cons>(_node.v_mut()).l;
           _loop_self = crane_raw(a1);
-          _loop_n = n0;
+          n = n0;
           continue;
         }
       }

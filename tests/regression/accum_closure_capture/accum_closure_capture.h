@@ -76,15 +76,14 @@ struct AccumClosureCapture {
       // Loop replaces the tail recursion: each recursive call updates the loop
       // variables.
       const fn_list *_loop_self = this;
-      uint64_t _loop_init = init;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
-          return _loop_init;
+          return init;
         } else {
           const auto &[a0, a1] = std::get<typename fn_list::FCons>(_sv.v());
           _loop_self = crane_raw(a1);
-          _loop_init = a0(_loop_init);
+          init = a0(init);
         }
       }
     }
@@ -277,14 +276,13 @@ struct AccumClosureCapture {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_tree_sum_in_Node_2{a1,
-                                                        std::move(_result)});
+          _stack.emplace_back(_after_tree_sum_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + a1) + _result);
         }
       }
       return _result;

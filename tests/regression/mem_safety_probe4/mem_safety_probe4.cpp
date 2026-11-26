@@ -41,7 +41,7 @@ uint64_t MemSafetyProbe4::sum_through(
       auto _f = std::move(std::get<_after_sum_through_in_Mycons>(_popped));
       _stack.pop_back();
       MemSafetyProbe4::tree a0 = std::move(_f.a0);
-      _result = a0.sum_values(std::move(_result));
+      _result = a0.sum_values(_result);
     }
   }
   return _result;
@@ -88,7 +88,7 @@ uint64_t MemSafetyProbe4::add_through(
       auto _f = std::move(std::get<_after_add_through_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
-      _result = (std::move(_result) + f(UINT64_C(0)));
+      _result = (_result + f(UINT64_C(0)));
     }
   }
   return _result;
@@ -142,7 +142,7 @@ uint64_t MemSafetyProbe4::double_partial(
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
       crane::fn<uint64_t(uint64_t)> g = std::move(_f.g);
-      _result = (f(std::move(_result)) + g(UINT64_C(0)));
+      _result = (f(_result) + g(UINT64_C(0)));
     }
   }
   return _result;
@@ -194,7 +194,7 @@ uint64_t MemSafetyProbe4::weighted_sum(
       _stack.pop_back();
       uint64_t w = _f.w;
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
-      _result = (f(w) + std::move(_result));
+      _result = (f(w) + _result);
     }
   }
   return _result;
@@ -275,7 +275,7 @@ uint64_t MemSafetyProbe4::mysum(const MemSafetyProbe4::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_mysum_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -323,7 +323,7 @@ uint64_t MemSafetyProbe4::process_list(
       auto _f = std::move(std::get<_after_process_list_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
-      _result = apply_to(std::move(f), std::move(_result));
+      _result = apply_to(std::move(f), _result);
     }
   }
   return _result;
@@ -334,20 +334,19 @@ uint64_t MemSafetyProbe4::nested_apply(
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l, uint64_t base) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_base = base;
   const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
             _loop_l->v())) {
-      return _loop_base;
+      return base;
     } else {
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
           _loop_l->v());
       crane::fn<uint64_t(uint64_t)> f =
           [&](uint64_t _x0) -> uint64_t { return a0.sum_values(_x0); };
-      _loop_base = f(_loop_base);
+      base = f(base);
       _loop_l = crane_raw(a1);
     }
   }

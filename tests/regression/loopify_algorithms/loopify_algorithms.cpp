@@ -30,7 +30,7 @@ uint64_t LoopifyAlgorithms::len_impl(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_len_impl_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;
@@ -44,15 +44,14 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = _loop_l;
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t f = _loop_fuel - 1;
+      uint64_t f = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
@@ -63,7 +62,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v());
         auto filter_multiples =
-            [&](uint64_t p, const List<uint64_t> &rest) -> List<uint64_t> {
+            [&](const List<uint64_t> &rest) -> List<uint64_t> {
               // Explicit stack replaces the non-tail recursion of
               // filter_multiples: _call frames are pending calls, _after frames
               // resume a caller.
@@ -92,7 +91,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
                   } else {
                     const auto &[a00, a10] =
                         std::get<typename List<uint64_t>::Cons>(rest.v());
-                    if ((p ? a00 % p : a00) == UINT64_C(0)) {
+                    if ((a0 ? a00 % a0 : a00) == UINT64_C(0)) {
                       _stack.emplace_back(_call{crane_raw(a10)});
                     } else {
                       _stack.emplace_back(_after_filter_multiples_in_false{a00});
@@ -115,8 +114,8 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_l = filter_multiples(a0, *a1);
-        _loop_fuel = f;
+        _loop_l = filter_multiples(*a1);
+        fuel = f;
         continue;
       }
     }
@@ -197,24 +196,23 @@ List<uint64_t> LoopifyAlgorithms::prefix_sums(uint64_t acc,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
+      auto _value = List<uint64_t>::cons(acc, List<uint64_t>::nil());
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
+      auto _cell = typename List<uint64_t>::Cons(acc, nullptr);
       List<uint64_t> &_node =
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      _loop_acc = (_loop_acc + a0);
+      acc = (acc + a0);
       continue;
     }
   }
@@ -268,14 +266,12 @@ List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_n = n;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       return _loop_l;
     } else {
-      uint64_t f = _loop_fuel - 1;
-      if (_loop_n <= UINT64_C(0)) {
+      uint64_t f = fuel - 1;
+      if (n <= UINT64_C(0)) {
         return _loop_l;
       } else {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
@@ -284,10 +280,8 @@ List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
           const auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l.v());
           _loop_l = a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
-          _loop_n =
-              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
-                                                  : (_loop_n - UINT64_C(1))));
-          _loop_fuel = f;
+          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          fuel = f;
         }
       }
     }
@@ -306,16 +300,15 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
   // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_fuel = fuel;
   List<uint64_t> _loop_l = l;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t f = _loop_fuel - 1;
+      uint64_t f = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
@@ -325,59 +318,57 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v());
-        auto filter_out =
-            [&](uint64_t val, const List<uint64_t> &rest) -> List<uint64_t> {
-              // Explicit stack replaces the non-tail recursion of filter_out:
-              // _call frames are pending calls, _after frames resume a caller.
-              struct _call {
-                const List<uint64_t> *rest;
-              };
+        auto filter_out = [&](const List<uint64_t> &rest) -> List<uint64_t> {
+          // Explicit stack replaces the non-tail recursion of filter_out: _call
+          // frames are pending calls, _after frames resume a caller.
+          struct _call {
+            const List<uint64_t> *rest;
+          };
 
-              struct _after_filter_out_in_false {
-                uint64_t a00;
-              };
+          struct _after_filter_out_in_false {
+            uint64_t a00;
+          };
 
-              using _frame = std::variant<_call, _after_filter_out_in_false>;
-              List<uint64_t> _result{};
-              crane::small_vector<_frame> _stack;
-              _stack.emplace_back(_call{&rest});
-              while (!_stack.empty()) {
-                _frame &_popped = _stack.back();
-                if (std::holds_alternative<_call>(_popped)) {
-                  auto _f = std::move(std::get<_call>(_popped));
-                  _stack.pop_back();
-                  const List<uint64_t> &rest = *_f.rest;
-                  if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                          rest.v())) {
-                    _result = List<uint64_t>::nil();
-                  } else {
-                    const auto &[a00, a10] =
-                        std::get<typename List<uint64_t>::Cons>(rest.v());
-                    if (val == a00) {
-                      _stack.emplace_back(_call{crane_raw(a10)});
-                    } else {
-                      _stack.emplace_back(_after_filter_out_in_false{a00});
-                      _stack.emplace_back(_call{crane_raw(a10)});
-                    }
-                  }
+          using _frame = std::variant<_call, _after_filter_out_in_false>;
+          List<uint64_t> _result{};
+          crane::small_vector<_frame> _stack;
+          _stack.emplace_back(_call{&rest});
+          while (!_stack.empty()) {
+            _frame &_popped = _stack.back();
+            if (std::holds_alternative<_call>(_popped)) {
+              auto _f = std::move(std::get<_call>(_popped));
+              _stack.pop_back();
+              const List<uint64_t> &rest = *_f.rest;
+              if (std::holds_alternative<typename List<uint64_t>::Nil>(rest.v())) {
+                _result = List<uint64_t>::nil();
+              } else {
+                const auto &[a00, a10] =
+                    std::get<typename List<uint64_t>::Cons>(rest.v());
+                if (a0 == a00) {
+                  _stack.emplace_back(_call{crane_raw(a10)});
                 } else {
-                  auto _f =
-                      std::move(std::get<_after_filter_out_in_false>(_popped));
-                  _stack.pop_back();
-                  uint64_t a00 = _f.a00;
-                  _result = List<uint64_t>::cons(a00, std::move(_result));
+                  _stack.emplace_back(_after_filter_out_in_false{a00});
+                  _stack.emplace_back(_call{crane_raw(a10)});
                 }
               }
-              return _result;
-            };
+            } else {
+              auto _f =
+                  std::move(std::get<_after_filter_out_in_false>(_popped));
+              _stack.pop_back();
+              uint64_t a00 = _f.a00;
+              _result = List<uint64_t>::cons(a00, std::move(_result));
+            }
+          }
+          return _result;
+        };
         auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_fuel = f;
-        _loop_l = filter_out(a0, *a1);
+        fuel = f;
+        _loop_l = filter_out(*a1);
         continue;
       }
     }
@@ -454,15 +445,14 @@ List<uint64_t> LoopifyAlgorithms::take_impl(uint64_t k,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_k = k;
   while (true) {
-    if (_loop_k <= 0) {
+    if (k <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_k - 1;
+      uint64_t m = k - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
@@ -479,7 +469,7 @@ List<uint64_t> LoopifyAlgorithms::take_impl(uint64_t k,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_k = m;
+        k = m;
         continue;
       }
     }
@@ -494,17 +484,16 @@ LoopifyAlgorithms::windows_aux(uint64_t n, const List<uint64_t> &l,
   // cell fills.
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
-  uint64_t _loop_fuel = fuel;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();
       (_write ? *(*_write =
                       std::make_shared<List<List<uint64_t>>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t f = _loop_fuel - 1;
+      uint64_t f = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<List<uint64_t>>::nil();
         (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
@@ -529,7 +518,7 @@ LoopifyAlgorithms::windows_aux(uint64_t n, const List<uint64_t> &l,
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
-          _loop_fuel = f;
+          fuel = f;
           _loop_l = crane_raw(a1);
           continue;
         }
@@ -626,16 +615,14 @@ uint64_t LoopifyAlgorithms::max_prefix_sum(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_max_prefix_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      uint64_t rest = std::move(_result);
+      uint64_t rest = _result;
       uint64_t sum = (a0 + rest);
       if (rest == UINT64_C(0)) {
         _result = UINT64_C(0);
+      } else if (rest < sum) {
+        _result = sum;
       } else {
-        if (rest < sum) {
-          _result = std::move(sum);
-        } else {
-          _result = std::move(rest);
-        }
+        _result = rest;
       }
     }
   }
@@ -679,7 +666,7 @@ uint64_t LoopifyAlgorithms::weighted_sum(uint64_t i, const List<uint64_t> &l) {
       _stack.pop_back();
       uint64_t i = _f.i;
       uint64_t a0 = _f.a0;
-      _result = ((i * a0) + std::move(_result));
+      _result = ((i * a0) + _result);
     }
   }
   return _result;
@@ -724,7 +711,7 @@ uint64_t LoopifyAlgorithms::step_sum(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_step_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t contribution = _f.contribution;
-      _result = (contribution + std::move(_result));
+      _result = (contribution + _result);
     }
   }
   return _result;

@@ -134,25 +134,23 @@ struct LoopifyGenerators {
     // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_x = x;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t m = _loop_n - 1;
-        auto _cell = typename List<uint64_t>::Cons(_loop_x, nullptr);
+        uint64_t m = n - 1;
+        auto _cell = typename List<uint64_t>::Cons(x, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_x = f(_loop_x);
-        _loop_n = m;
+        x = f(x);
+        n = m;
         continue;
       }
     }
@@ -229,37 +227,32 @@ struct LoopifyGenerators {
     // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_seed = seed;
-    uint64_t _loop_n = n;
-    uint64_t _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t g = _loop_fuel - 1;
-        if (_loop_n == UINT64_C(0)) {
+        uint64_t g = fuel - 1;
+        if (n == UINT64_C(0)) {
           auto _value = List<uint64_t>::nil();
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto [val, next_seed] = f(_loop_seed);
+          auto [val, next_seed] = f(seed);
           auto _cell = typename List<uint64_t>::Cons(val, nullptr);
           List<uint64_t> &_node =
               (_write ? *(*_write = std::make_shared<List<uint64_t>>(
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-          _loop_seed = next_seed;
-          _loop_n =
-              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
-                                                  : (_loop_n - UINT64_C(1))));
-          _loop_fuel = g;
+          seed = next_seed;
+          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          fuel = g;
           continue;
         }
       }
@@ -277,47 +270,44 @@ struct LoopifyGenerators {
   template <typename F1>
     requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t>
   static List<uint64_t> tabulate(uint64_t n, F1 &&f) {
-    {
-      uint64_t _lc1_i = n;
+    uint64_t _lc1_i = n;
 
-      // Explicit stack replaces the non-tail recursion of go: _call frames are
-      // pending calls, _after frames resume a caller.
-      struct _call {
-        uint64_t i;
-      };
+    // Explicit stack replaces the non-tail recursion of go: _call frames are
+    // pending calls, _after frames resume a caller.
+    struct _call {
+      uint64_t i;
+    };
 
-      struct _after_go_in_S {
-        uint64_t i;
-      };
+    struct _after_go_in_S {
+      uint64_t i;
+    };
 
-      using _frame = std::variant<_call, _after_go_in_S>;
-      List<uint64_t> _lc1_result{};
-      crane::small_vector<_frame> _lc1_stack;
-      _lc1_stack.emplace_back(_call{_lc1_i});
-      while (!_lc1_stack.empty()) {
-        _frame &_popped = _lc1_stack.back();
-        if (std::holds_alternative<_call>(_popped)) {
-          auto _f = std::move(std::get<_call>(_popped));
-          _lc1_stack.pop_back();
-          uint64_t _lc1_i = _f.i;
-          if (_lc1_i <= 0) {
-            _lc1_result = List<uint64_t>::nil();
-          } else {
-            uint64_t j = _lc1_i - 1;
-            _lc1_stack.emplace_back(_after_go_in_S{_lc1_i});
-            _lc1_stack.emplace_back(_call{j});
-          }
+    using _frame = std::variant<_call, _after_go_in_S>;
+    List<uint64_t> _lc1_result{};
+    crane::small_vector<_frame> _lc1_stack;
+    _lc1_stack.emplace_back(_call{_lc1_i});
+    while (!_lc1_stack.empty()) {
+      _frame &_popped = _lc1_stack.back();
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
+        _lc1_stack.pop_back();
+        uint64_t _lc1_i = _f.i;
+        if (_lc1_i <= 0) {
+          _lc1_result = List<uint64_t>::nil();
         } else {
-          auto _f = std::move(std::get<_after_go_in_S>(_popped));
-          _lc1_stack.pop_back();
-          uint64_t _lc1_i = _f.i;
-          _lc1_result =
-              List<uint64_t>::cons(f((((n - _lc1_i) > n ? 0 : (n - _lc1_i)))),
-                                   std::move(_lc1_result));
+          uint64_t j = _lc1_i - 1;
+          _lc1_stack.emplace_back(_after_go_in_S{_lc1_i});
+          _lc1_stack.emplace_back(_call{j});
         }
+      } else {
+        auto _f = std::move(std::get<_after_go_in_S>(_popped));
+        _lc1_stack.pop_back();
+        uint64_t _lc1_i = _f.i;
+        _lc1_result = List<uint64_t>::cons(
+            f((((n - _lc1_i) > n ? 0 : (n - _lc1_i)))), std::move(_lc1_result));
       }
-      return _lc1_result;
     }
+    return _lc1_result;
   }
 
   /// Helper: replicate single element n times.

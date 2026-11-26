@@ -125,7 +125,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -163,15 +163,13 @@ struct LoopifyNumbers {
   static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    uint64_t _loop_x = x;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
-        return _loop_x;
+      if (n <= 0) {
+        return x;
       } else {
-        uint64_t m = _loop_n - 1;
-        _loop_x = f(_loop_x);
-        _loop_n = m;
+        uint64_t m = n - 1;
+        x = f(x);
+        n = m;
       }
     }
   }
@@ -203,7 +201,7 @@ struct LoopifyNumbers {
         _stack.pop_back();
         uint64_t n = _f.n;
         if (n <= 0) {
-          _result = std::move(x);
+          _result = x;
         } else {
           uint64_t n_ = n - 1;
           if (n_ <= 0) {
@@ -217,7 +215,7 @@ struct LoopifyNumbers {
       } else {
         auto _f = std::move(std::get<_after_nest_apply_in_S>(_popped));
         _stack.pop_back();
-        _result = f(std::move(_result));
+        _result = f(_result);
       }
     }
     return _result;

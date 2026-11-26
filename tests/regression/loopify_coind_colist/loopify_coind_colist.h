@@ -224,15 +224,14 @@ struct LoopifyCoindColist {
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     colist<T1> _loop_l = l;
-    uint64_t _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         auto _value = List<T1>::nil();
         (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t f = _loop_fuel - 1;
+        uint64_t f = fuel - 1;
         if (std::holds_alternative<typename colist<T1>::Conil>(_loop_l.v())) {
           auto _value = List<T1>::nil();
           (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
@@ -247,7 +246,7 @@ struct LoopifyCoindColist {
                      : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
           _loop_l = a1;
-          _loop_fuel = f;
+          fuel = f;
           continue;
         }
       }

@@ -37,7 +37,7 @@ bool LoopifyDispatchOnCall::parity(const LoopifyDispatchOnCall::tree &t) {
       auto _f = std::move(std::get<_after_parity_in_Node>(_popped));
       _stack.pop_back();
       const LoopifyDispatchOnCall::tree &r0 = *_f.r0;
-      if (std::move(_result)) {
+      if (_result) {
         _stack.emplace_back(_after_parity_in_true{});
         _stack.emplace_back(_call{&r0});
       } else {
@@ -46,7 +46,7 @@ bool LoopifyDispatchOnCall::parity(const LoopifyDispatchOnCall::tree &t) {
     } else {
       auto _f = std::move(std::get<_after_parity_in_true>(_popped));
       _stack.pop_back();
-      _result = !(std::move(_result));
+      _result = !(_result);
     }
   }
   return _result;
@@ -162,12 +162,12 @@ uint64_t LoopifyDispatchOnCall::size(const LoopifyDispatchOnCall::tree &t) {
       auto _f = std::move(std::get<_after_size_in_Node>(_popped));
       _stack.pop_back();
       const LoopifyDispatchOnCall::tree &r0 = *_f.r0;
-      _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_after_size_in_Node_2{_result});
       _stack.emplace_back(_call{&r0});
     } else {
       auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     }
   }
   return _result;

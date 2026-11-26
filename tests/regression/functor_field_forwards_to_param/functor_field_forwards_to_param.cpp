@@ -7,12 +7,10 @@ bool FunctorFieldForwardsToParam::BoolDec::eq_dec(bool x, bool y) {
     } else {
       return false;
     }
+  } else if (y) {
+    return false;
   } else {
-    if (y) {
-      return false;
-    } else {
-      return true;
-    }
+    return true;
   }
 }
 

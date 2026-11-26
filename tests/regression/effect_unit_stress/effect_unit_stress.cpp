@@ -88,12 +88,10 @@ std::string EffectUnitStress::nested_if_monadic(bool b1, bool b2) {
     } else {
       return "first";
     }
+  } else if (b2) {
+    return "second";
   } else {
-    if (b2) {
-      return "second";
-    } else {
-      return "neither";
-    }
+    return "neither";
   }
 }
 

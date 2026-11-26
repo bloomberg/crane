@@ -74,12 +74,10 @@ struct SharedVariantReuse {
               crane::get<typename tree::Node>(_sv.v());
           if (k < a1) {
             _loop_self = crane_raw(a0);
+          } else if (a1 < k) {
+            _loop_self = crane_raw(a3);
           } else {
-            if (a1 < k) {
-              _loop_self = crane_raw(a3);
-            } else {
-              return std::make_optional<uint64_t>(a2);
-            }
+            return std::make_optional<uint64_t>(a2);
           }
         }
       }
@@ -239,7 +237,7 @@ struct SharedVariantReuse {
           auto _f = std::move(crane::get<_after_total_in_Cons>(_popped));
           _stack.pop_back();
           uint64_t a0 = _f.a0;
-          _result = (a0 + std::move(_result));
+          _result = (a0 + _result);
         }
       }
       return _result;

@@ -13,13 +13,12 @@ uint64_t LoopifySwitchBreak::eval_ops(
     uint64_t acc) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_acc = acc;
   const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> *_loop_ops = &ops;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Nil>(
             _loop_ops->v())) {
-      return _loop_acc;
+      return acc;
     } else {
       const auto &[a0, a1] = std::get<
           typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Cons>(
@@ -27,12 +26,12 @@ uint64_t LoopifySwitchBreak::eval_ops(
       const auto &[t, v] = a0;
       switch (t) {
       case Tag::ADD: {
-        _loop_acc = (_loop_acc + v);
+        acc = (acc + v);
         _loop_ops = crane_raw(a1);
         break;
       }
       case Tag::MUL: {
-        _loop_acc = (_loop_acc * v);
+        acc = (acc * v);
         _loop_ops = crane_raw(a1);
         break;
       }
@@ -58,13 +57,12 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
   // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_acc = acc;
   const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> *_loop_ops = &ops;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Nil>(
             _loop_ops->v())) {
-      auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
+      auto _value = List<uint64_t>::cons(acc, List<uint64_t>::nil());
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
@@ -75,31 +73,31 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
       const auto &[t, v] = a0;
       switch (t) {
       case Tag::ADD: {
-        auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
+        auto _cell = typename List<uint64_t>::Cons(acc, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_acc = (_loop_acc + v);
+        acc = (acc + v);
         _loop_ops = crane_raw(a1);
         continue;
         break;
       }
       case Tag::MUL: {
-        auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
+        auto _cell = typename List<uint64_t>::Cons(acc, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_acc = (_loop_acc * v);
+        acc = (acc * v);
         _loop_ops = crane_raw(a1);
         continue;
         break;
       }
       case Tag::KEEP: {
-        auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
+        auto _cell = typename List<uint64_t>::Cons(acc, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
@@ -203,15 +201,15 @@ uint64_t LoopifySwitchBreak::count_tag(
     } else if (std::holds_alternative<_after_count_tag_in_pair>(_popped)) {
       auto _f = std::move(std::get<_after_count_tag_in_pair>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     } else if (std::holds_alternative<_after_count_tag_in_pair_2>(_popped)) {
       auto _f = std::move(std::get<_after_count_tag_in_pair_2>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     } else {
       auto _f = std::move(std::get<_after_count_tag_in_pair_3>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;

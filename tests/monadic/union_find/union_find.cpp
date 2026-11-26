@@ -439,7 +439,6 @@ Comparison Pos::compare_cont(Comparison r, const Positive &x,
   // variables.
   const Positive *_loop_y = &y;
   const Positive *_loop_x = &x;
-  Comparison _loop_r = r;
   while (true) {
     if (std::holds_alternative<typename Positive::XI>(_loop_x->v())) {
       const auto &[a0] = std::get<typename Positive::XI>(_loop_x->v());
@@ -451,7 +450,7 @@ Comparison Pos::compare_cont(Comparison r, const Positive &x,
         const auto &[a00] = std::get<typename Positive::XO>(_loop_y->v());
         _loop_y = crane_raw(a00);
         _loop_x = crane_raw(a0);
-        _loop_r = Comparison::GT;
+        r = Comparison::GT;
       } else {
         return Comparison::GT;
       }
@@ -461,7 +460,7 @@ Comparison Pos::compare_cont(Comparison r, const Positive &x,
         const auto &[a00] = std::get<typename Positive::XI>(_loop_y->v());
         _loop_y = crane_raw(a00);
         _loop_x = crane_raw(a0);
-        _loop_r = Comparison::LT;
+        r = Comparison::LT;
       } else if (std::holds_alternative<typename Positive::XO>(_loop_y->v())) {
         const auto &[a00] = std::get<typename Positive::XO>(_loop_y->v());
         _loop_y = crane_raw(a00);
@@ -471,7 +470,7 @@ Comparison Pos::compare_cont(Comparison r, const Positive &x,
       }
     } else {
       if (std::holds_alternative<typename Positive::XH>(_loop_y->v())) {
-        return _loop_r;
+        return r;
       } else {
         return Comparison::LT;
       }
@@ -568,7 +567,7 @@ bool Coq_Pos::eq_dec(const Positive &p, const Positive &x0) {
     } else if (std::holds_alternative<_after_eq_dec_in_XI>(_popped)) {
       auto _f = std::move(std::get<_after_eq_dec_in_XI>(_popped));
       _stack.pop_back();
-      if (std::move(_result)) {
+      if (_result) {
         _result = true;
       } else {
         _result = false;
@@ -576,7 +575,7 @@ bool Coq_Pos::eq_dec(const Positive &p, const Positive &x0) {
     } else {
       auto _f = std::move(std::get<_after_eq_dec_in_XO>(_popped));
       _stack.pop_back();
-      if (std::move(_result)) {
+      if (_result) {
         _result = true;
       } else {
         _result = false;
@@ -965,7 +964,7 @@ std::shared_ptr<crane::array_storage<node>> make_ST(STRefs, uint64_t n) {
   std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
       std::make_shared<crane::array_storage<std::pair<uint64_t, uint64_t>>>(
           crane::st::extent(n), std::make_pair(UINT64_C(0), UINT64_C(0)));
-  STMonad::template for_each_with<void, uint64_t, std::monostate>(
+  STMonad::template for_each_with<uint64_t, std::monostate>(
       ListDef::seq(UINT64_C(0), n), std::monostate{},
       [=](std::monostate, uint64_t i) {
         std::span<std::pair<uint64_t, uint64_t>>{*a}[i] =
@@ -1001,14 +1000,14 @@ uint64_t find_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a,
       uint64_t x = _f.x;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = std::move(x);
+        _result = x;
       } else {
         uint64_t fuel_ = fuel - 1;
         std::pair<uint64_t, uint64_t> x_ =
             std::span<const std::pair<uint64_t, uint64_t>>{a}[x];
         const auto &[p, k] = x_;
         if (p == x) {
-          _result = std::move(x);
+          _result = x;
         } else {
           _stack.emplace_back(_after_find_ST_in_false{x, k});
           _stack.emplace_back(_call{p, fuel_});
@@ -1021,7 +1020,7 @@ uint64_t find_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a,
       uint64_t k = _f.k;
       uint64_t r0 = std::move(_result);
       a[x] = std::make_pair(r0, k);
-      _result = std::move(r0);
+      _result = r0;
     }
   }
   return _result;
@@ -1043,15 +1042,13 @@ void union_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
     if (kx < ky) {
       a[rx] = std::make_pair(ry, kx);
       return;
+    } else if (ky < kx) {
+      a[ry] = std::make_pair(rx, ky);
+      return;
     } else {
-      if (ky < kx) {
-        a[ry] = std::make_pair(rx, ky);
-        return;
-      } else {
-        a[ry] = std::make_pair(rx, ky);
-        a[rx] = std::make_pair(rx, (kx + 1));
-        return;
-      }
+      a[ry] = std::make_pair(rx, ky);
+      a[rx] = std::make_pair(rx, (kx + 1));
+      return;
     }
   }
 }
@@ -1195,16 +1192,14 @@ uf union_fun(uint64_t n,
     if (kx < ky) {
       return NatMap::template add<std::pair<uint64_t, uint64_t>>(
           rx, std::make_pair(ry, kx), std::move(s1));
+    } else if (ky < kx) {
+      return NatMap::template add<std::pair<uint64_t, uint64_t>>(
+          ry, std::make_pair(rx, ky), std::move(s1));
     } else {
-      if (ky < kx) {
-        return NatMap::template add<std::pair<uint64_t, uint64_t>>(
-            ry, std::make_pair(rx, ky), std::move(s1));
-      } else {
-        return NatMap::template add<std::pair<uint64_t, uint64_t>>(
-            rx, std::make_pair(rx, (kx + 1)),
-            NatMap::template add<std::pair<uint64_t, uint64_t>>(
-                ry, std::make_pair(rx, ky), std::move(s1)));
-      }
+      return NatMap::template add<std::pair<uint64_t, uint64_t>>(
+          rx, std::make_pair(rx, (kx + 1)),
+          NatMap::template add<std::pair<uint64_t, uint64_t>>(
+              ry, std::make_pair(rx, ky), std::move(s1)));
     }
   }
 }
@@ -1286,24 +1281,22 @@ List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
   // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  uint64_t _loop_len = len;
-  uint64_t _loop_start = start;
   while (true) {
-    if (_loop_len <= 0) {
+    if (len <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t len0 = _loop_len - 1;
-      auto _cell = typename List<uint64_t>::Cons(_loop_start, nullptr);
+      uint64_t len0 = len - 1;
+      auto _cell = typename List<uint64_t>::Cons(start, nullptr);
       List<uint64_t> &_node =
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-      _loop_len = len0;
-      _loop_start = (_loop_start + 1);
+      len = len0;
+      start = (start + 1);
       continue;
     }
   }

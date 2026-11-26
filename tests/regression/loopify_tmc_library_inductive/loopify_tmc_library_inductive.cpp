@@ -14,26 +14,24 @@ T Fin::of_nat_lt(uint64_t p, uint64_t n) {
   // cell fills.
   std::optional<T> _root{};
   std::shared_ptr<T> *_write = nullptr;
-  uint64_t _loop_n = n;
-  uint64_t _loop_p = p;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       throw std::logic_error("absurd case");
     } else {
-      uint64_t n_ = _loop_n - 1;
-      if (_loop_p <= 0) {
+      uint64_t n_ = n - 1;
+      if (p <= 0) {
         auto _value = T::f1(n_);
         (_write ? *(*_write = std::make_shared<T>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t p_ = _loop_p - 1;
+        uint64_t p_ = p - 1;
         auto _cell = typename T::FS(n_, nullptr);
         T &_node = (_write ? *(*_write = std::make_shared<T>(std::move(_cell)))
                            : _root.emplace(std::move(_cell)));
         _write = &std::get<typename T::FS>(_node.v_mut()).a1;
-        _loop_n = n_;
-        _loop_p = p_;
+        n = n_;
+        p = p_;
         continue;
       }
     }

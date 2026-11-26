@@ -3,16 +3,14 @@
 void StArrayLoops::zero_from(std::span<uint64_t> arr, uint64_t i, uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
-  uint64_t _loop_i = i;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return;
     } else {
-      uint64_t m = _loop_n - 1;
-      arr[_loop_i] = UINT64_C(0);
-      _loop_n = m;
-      _loop_i = (_loop_i + 1);
+      uint64_t m = n - 1;
+      arr[i] = UINT64_C(0);
+      n = m;
+      i = (i + 1);
     }
   }
   return;

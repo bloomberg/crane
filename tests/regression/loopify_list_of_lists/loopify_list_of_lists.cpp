@@ -146,16 +146,15 @@ LoopifyListOfLists::transpose_fuel(uint64_t fuel,
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<List<uint64_t>> _loop_ll = ll;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();
       (_write ? *(*_write =
                       std::make_shared<List<List<uint64_t>>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
               _loop_ll.v())) {
         auto _value = List<List<uint64_t>>::nil();
@@ -191,7 +190,7 @@ LoopifyListOfLists::transpose_fuel(uint64_t fuel,
             _write =
                 &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
             _loop_ll = std::move(tails);
-            _loop_fuel = fuel_;
+            fuel = fuel_;
             continue;
           }
         }
@@ -230,7 +229,7 @@ uint64_t LoopifyListOfLists::list_len(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_list_len_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     }
   }
   return _result;
@@ -269,7 +268,7 @@ uint64_t LoopifyListOfLists::total_length(const List<List<uint64_t>> &ll) {
       auto _f = std::move(std::get<_after_total_length_in_Cons>(_popped));
       _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = (list_len(std::move(a0)) + std::move(_result));
+      _result = (list_len(std::move(a0)) + _result);
     }
   }
   return _result;
@@ -419,7 +418,7 @@ uint64_t LoopifyListOfLists::max_length(const List<List<uint64_t>> &ll) {
       auto _f = std::move(std::get<_after_max_length_in_Cons>(_popped));
       _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = std::max(list_len(std::move(a0)), std::move(_result));
+      _result = std::max(list_len(std::move(a0)), _result);
     }
   }
   return _result;

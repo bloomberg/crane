@@ -39,7 +39,7 @@ uint64_t InlinedAliasResumeFrame::h(uint64_t n) {
       _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t m = _f.m;
-      uint64_t r1 = std::move(_result);
+      uint64_t r1 = _result;
       _stack.emplace_back(_after_h_in_S_2{n, r1});
       _stack.emplace_back(_call{m});
     } else {
@@ -47,7 +47,7 @@ uint64_t InlinedAliasResumeFrame::h(uint64_t n) {
       _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t r1 = _f.r1;
-      uint64_t r2 = std::move(_result);
+      uint64_t r2 = _result;
       _result = ((((r1 + r2) + n) + List<uint64_t>::nil().length()) +
                  List<bool>::nil().length());
     }

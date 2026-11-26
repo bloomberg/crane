@@ -56,17 +56,17 @@ uint64_t LoopifyGapNestedFix::rose_sum(const LoopifyGapNestedFix::rose &r) {
       auto _f = std::move(std::get<_after_rose_sum_in_Cons>(_popped));
       _stack.pop_back();
       const List<LoopifyGapNestedFix::rose> &a10 = *_f.a10;
-      _stack.emplace_back(_after_sum_list_in_Cons{std::move(_result)});
+      _stack.emplace_back(_after_sum_list_in_Cons{_result});
       _stack.emplace_back(_call_sum_list{&a10});
     } else if (std::holds_alternative<_after_sum_list_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_sum_list_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     } else {
       auto _f = std::move(std::get<_after_sum_list_in_Rose0>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;

@@ -204,13 +204,13 @@ struct LoopifyOwnedChildPointer {
           _stack.pop_back();
           uint64_t a0 = _f.a0;
           const t &b = *_f.b;
-          _stack.emplace_back(_after_sz_in_pair_2{a0, std::move(_result)});
+          _stack.emplace_back(_after_sz_in_pair_2{a0, _result});
           _stack.emplace_back(_call{&b});
         } else {
           auto _f = std::move(crane::get<_after_sz_in_pair_2>(_popped));
           _stack.pop_back();
           uint64_t a0 = _f.a0;
-          _result = ((a0 + _f._tmp2) + std::move(_result));
+          _result = ((a0 + _f._tmp2) + _result);
         }
       }
       return _result;
@@ -414,13 +414,13 @@ struct LoopifyOwnedChildPointer {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_sum_in_Node_2{a1, std::move(_result)});
+          _stack.emplace_back(_after_sum_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + a1) + _result);
         }
       }
       return _result;

@@ -42,30 +42,28 @@ uint64_t LoopifyTailPtrAlias::rot(uint64_t n, const LoopifyTailPtrAlias::lst &l,
                                   uint64_t s) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_s = s;
   LoopifyTailPtrAlias::lst _loop_acc = acc;
   LoopifyTailPtrAlias::lst _loop_l = l;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
-      return _loop_s;
+    if (n <= 0) {
+      return s;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (std::holds_alternative<typename LoopifyTailPtrAlias::lst::Nil>(
               _loop_l.v())) {
-        return _loop_s;
+        return s;
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyTailPtrAlias::lst::Cons>(_loop_l.v());
         if (a0 <= 0) {
           LoopifyTailPtrAlias::lst _next_acc = LoopifyTailPtrAlias::lst(*a1);
-          _loop_s = (_loop_s + hd(_loop_acc));
+          s = (s + hd(_loop_acc));
           _loop_l = lst::cons(UINT64_C(0), lst::cons(m, lst::nil()));
-          _loop_n = m;
+          n = m;
           _loop_acc = std::move(_next_acc);
         } else {
           uint64_t _x = a0 - 1;
-          return _loop_s;
+          return s;
         }
       }
     }
