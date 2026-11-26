@@ -557,7 +557,15 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var ?(filled = []) env id pl
          that a destination which is itself a name for the box -- [using sel
          = std::any] -- is not a recovery target: [any_cast<sel>] reads a box
          that was never doubly wrapped and throws. *)
-      | _ -> Coerce.coerce cx ~from:Any ~into:cpp_ty (as_value ()) )
+      | _ -> (
+        (* A box holds a callable at the grouping its Core type spells, and
+           is recovered at it; the slot the argument was built against may
+           group it otherwise, as the call writes its type argument. *)
+        let recovered = Coerce.coerce cx ~from:Any ~into:cpp_ty (as_value ()) in
+        match arg_expected_ty with
+        | Some into when into <> cpp_ty && Cpp_ir.Types.same_arrows into cpp_ty ->
+          Coerce.into_slot ~origin:Rg (Typed.typed cpp_ty recovered) (Exactly into)
+        | _ -> recovered ) )
     (* Monadic parameter (reified mode only): the callee expects
        [shared_ptr<ITree<R>>].  If the argument already produces a reified
        tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)

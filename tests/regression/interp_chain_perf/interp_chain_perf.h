@@ -909,7 +909,7 @@ struct InterpChainPerf {
         }())));
     return [=, x = std::move(x)](Nat x0) {
       return crane_convert<Itree<BotE<crane::obj>, std::pair<Nat, T1>>>(
-          crane::any_cast<crane::fn<
+          crane_any_cast<crane::fn<
               Itree<BotE<crane::obj>, std::pair<Nat, crane::obj>>(Nat)>>(
               case_1(Sum1<crane::obj, crane::obj, crane::obj>(x)))(
               std::move(x0)));

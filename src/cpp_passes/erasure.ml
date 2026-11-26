@@ -124,12 +124,21 @@ let needs_deep_recovery : ty -> bool = function
     Base.Type_util.is_prod_global g && List.exists (fun a -> not (is_any_shaped a)) args
   | _ -> false
 
+(** [boxed_whole_readable ty] — [ty] is a callable that may have been boxed
+    whole ([crane_erase_fn]'s curried [crane::fn<crane::obj(crane::obj)>]),
+    which the tolerant caster reads at [ty]'s signature: any signature with
+    an argument but the boxed convention's own. *)
+let boxed_whole_readable : ty -> bool = function
+  | Function ((_ :: _ as dom), cod) -> not (is_any_shaped cod && List.for_all is_any_shaped dom)
+  | _ -> false
+
 (** [tolerant ty] — a cast to [ty] cannot be resolved now and must defer to
     [crane_any_cast].  A bare type variable is one: instantiated at
     [std::any] -- [trigger]'s answer type under an erased interpretation --
     a plain [std::any_cast<std::any>] looks for a box inside the box. *)
 let tolerant (ty : ty) =
-  instance_dependent ty <> None || needs_deep_recovery ty || match ty with Variable _ -> true | _ -> false
+  instance_dependent ty <> None || needs_deep_recovery ty
+  || match ty with Variable _ -> true | _ -> boxed_whole_readable ty
 
 (** [is_method n] -- [n] is rendered as a member function: one the registry
     found in its up-front scan, which every candidate a render collects is

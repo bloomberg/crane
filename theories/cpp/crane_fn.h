@@ -360,6 +360,33 @@ template <class X, class Y> struct crane_all_any<std::pair<X, Y>> {
   using type = std::pair<crane::obj, crane::obj>;
 };
 
+// A callable boxed whole ([crane_erase_fn] without a result type) is a
+// [crane::fn<crane::obj(crane::obj)>] taking its arguments one at a time,
+// each partial application boxed in turn.  Read at a signature [R(A...)], it
+// is called through an adapter that boxes each argument, opens each partial
+// application, and recovers the result at [R].
+template <class T> struct crane_boxed_callable {
+  static constexpr bool reads = false;
+};
+template <class R, class... A> struct crane_boxed_callable<crane::fn<R(A...)>> {
+  static constexpr bool reads = sizeof...(A) > 0 &&
+                                !(std::is_same_v<R, crane::obj> &&
+                                  (std::is_same_v<std::remove_cvref_t<A>, crane::obj> && ...));
+  static crane::fn<R(A...)> from(crane::fn<crane::obj(crane::obj)> g) {
+    return [g = std::move(g)](A... as) -> R {
+      crane::obj r;
+      crane::fn<crane::obj(crane::obj)> step = g;
+      std::size_t i = 0;
+      ((r = step(crane::obj(std::remove_cvref_t<A>(as))),
+        ++i < sizeof...(A)
+            ? (void)(step = crane::any_cast<crane::fn<crane::obj(crane::obj)>>(r))
+            : (void)0),
+       ...);
+      return crane_any_cast<R>(r);
+    };
+  }
+};
+
 // [crane::any_cast<T>], generalized to recover a pair [T = std::pair<X, Y>]
 // whose components were themselves boxed independently as
 // [std::pair<crane::obj, crane::obj>] rather than stored directly as a concrete
@@ -384,6 +411,11 @@ template <class T> T crane_any_cast(const crane::obj &a) {
     // [crane::obj] itself (a type-class instance with a fully erased carrier).
     // Casting [any] to [any] is the identity, not an unwrap.
     return a;
+  } else if constexpr (crane_boxed_callable<T>::reads) {
+    if (auto *p = crane::any_cast<T>(&a))
+      return *p;
+    return crane_boxed_callable<T>::from(
+        crane::any_cast<crane::fn<crane::obj(crane::obj)>>(a));
   } else if constexpr (crane_is_pair<T>::value) {
     if (auto *p = crane::any_cast<T>(&a)) {
       return *p;

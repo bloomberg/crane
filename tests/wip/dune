@@ -222,17 +222,6 @@
   (deps eq_dec_self_werror.t.exe)
   (action (run ./eq_dec_self_werror.t.exe))))
 
-(subdir id_any_cast_flat_fn
- (rule
-  (targets id_any_cast_flat_fn.t.exe)
-  (deps IdAnyCastFlatFn.vo id_any_cast_flat_fn.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} id_any_cast_flat_fn.t.exe id_any_cast_flat_fn.t.cpp id_any_cast_flat_fn.cpp)))
- (rule
-  (alias runtest)
-  (deps id_any_cast_flat_fn.t.exe)
-  (action (run ./id_any_cast_flat_fn.t.exe))))
-
 (subdir local_fix_alias_untyped_apply
  (rule
   (targets local_fix_alias_untyped_apply.t.exe)

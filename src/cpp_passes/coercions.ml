@@ -53,37 +53,50 @@ let erased_fn_instantiation ?(box = Cpp_ir.Type.Any) : Cpp_ir.Lowered.Expr.t -> 
 
 (** [regroup_curried ~from ~into expr]: [expr], a function value of the C++
     type [from], as one of [into] where the two are one function type with
-    its arrows grouped otherwise ({!Cpp_ir.Types.same_arrows}) and [into]
-    takes at least as many arguments at once as [from] at every step -- a
-    curried value reaching a flat slot: an adapter taking [into]'s
-    arguments and applying [expr] to them as [from] groups them,
-    [\[=\](A a, B b) { return f(a)(b); }].  The other direction, a flat
-    value reaching a curried slot, is {!eta_global}.  [expr] itself where
-    the types are not so related. *)
+    its arrows grouped otherwise ({!Cpp_ir.Types.same_arrows}): an adapter
+    taking [into]'s arguments group by group and applying [expr] to them as
+    [from] groups them, once it has all of a group of [from]'s.  A curried
+    value reaching a flat slot is [\[=\](A a, B b) { return f(a)(b); }];
+    a flat one reaching a curried slot is [\[=\](A a) { return \[=\](B b)
+    { return f(a, b); }; }].  [expr] itself where the types are not so
+    related. *)
 let regroup_curried ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
-  let rec go depth (from : Cpp_ir.Lowered.Type.t) (into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) =
+  (* [f] applied to [args] group by group as its type [t] takes them;
+     [None] where a group would straddle the end of [args]. *)
+  let rec apply f (t : Cpp_ir.Lowered.Type.t) args =
+    match (strip_cpp_ref_const t, args) with
+    | t, [] -> Some (f, t)
+    | Function (d, c), _ when List.compare_length_with args (List.length d) >= 0 ->
+      let now = List.filteri (fun i _ -> i < List.length d) args
+      and rest = List.filteri (fun i _ -> i >= List.length d) args in
+      apply (Cpp_ir.Build.call f now) c rest
+    | _ -> None
+  in
+  (* The adapter for the slot [into] at depth [depth], the arguments of
+     the levels above it ([pending]) not yet a whole group of [from]'s. *)
+  let rec go depth pending (from : Cpp_ir.Lowered.Type.t) (into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) =
     let from = strip_cpp_ref_const from and into = strip_cpp_ref_const into in
-    match (from, into) with
-    | Function _, Function (dom', cod') when from <> into && Cpp_ir.Types.same_arrows from into -> (
+    match into with
+    | Function (dom', cod') when pending <> [] || (from <> into && Cpp_ir.Types.same_arrows from into) -> (
       let params = adapter_params ~prefix:(Printf.sprintf "_rg%d_" depth) dom' in
-      (* [f] applied to [args] group by group as its type [t] takes them;
-         [None] where a group would straddle the end of [args]. *)
-      let rec apply f (t : Cpp_ir.Lowered.Type.t) args =
-        match (strip_cpp_ref_const t, args) with
-        | t, [] -> Some (f, t)
-        | Function (d, c), _ when List.compare_length_with args (List.length d) >= 0 ->
-          let now = List.filteri (fun i _ -> i < List.length d) args
-          and rest = List.filteri (fun i _ -> i >= List.length d) args in
-          apply (Cpp_ir.Build.call f now) c rest
-        | _ -> None
+      let args = pending @ List.map adapter_arg params in
+      let body =
+        match apply expr from args with
+        | Some (body, rest) -> Some (go (depth + 1) [] rest cod' body)
+        | None -> (
+          (* A group of [from]'s straddles this level: the next level takes
+             the rest of it. *)
+          match strip_cpp_ref_const cod' with
+          | Function _ -> Some (go (depth + 1) args from cod' expr)
+          | _ -> None )
       in
-      match apply expr from (List.map adapter_arg params) with
-      | Some (body, rest) -> Cpp_ir.Build.lambda params None [Return (Some (go (depth + 1) rest cod' body))] ~capture:Stored
+      match body with
+      | Some body -> Cpp_ir.Build.lambda params None [Return (Some body)] ~capture:Stored
       | None -> expr )
     | _ -> expr
   in
-  go 0 from into expr
+  go 0 [] from into expr
 
 (** [nest ?into params body]: a closure taking [params] and returning
     [body], its parameters grouped as the function type [into] groups its

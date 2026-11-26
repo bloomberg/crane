@@ -1009,7 +1009,7 @@ struct InterpStateCaseHandler {
               return h_inc<crane::obj>(crane_convert<IncE>(a0));
             })));
     return [=, x = std::move(x)](Nat x0) {
-      return crane_convert<Itree<noE, std::pair<Nat, T1>>>(crane::any_cast<
+      return crane_convert<Itree<noE, std::pair<Nat, T1>>>(crane_any_cast<
           crane::fn<Itree<noE, std::pair<Nat, crane::obj>>(Nat)>>(
           case_1(Sum1<crane::obj, crane::obj, crane::obj>(x)))(std::move(x0)));
     };
