@@ -128,14 +128,28 @@ type expansion = {
 (** The variable an argument names: [y] itself, or [y] moved from. *)
 let named_variable (a : expr) = match a with Local y | Move (Local y) -> Some y | _ -> None
 
+(** Whether [stmts] move out of [x], anywhere. *)
+let moves_out x (stmts : stmt list) =
+  let found = ref false in
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> fe e); stmt = (fun s -> Cpp_ir.Children.stmt v s); type_ = ignore}
+  and fe (e : expr) =
+    (match e with Move (Local y) when Id.equal x y -> found := true | _ -> ());
+    Cpp_ir.Children.expr v e
+  in
+  List.iter (Cpp_ir.Children.stmt v) stmts;
+  !found
+
 (** The parameters of [l] that may stand for the variable their argument in
     [args] names, rather than be bound to it: a parameter [p] whose argument
     is [y] or [std::move(y)], when [l] never assigns [p], does not name [y]
     itself -- free, or declared at any depth, where a reference to [y] would
     mean another variable -- and no other argument names [y].  Reading [p]
-    is then reading [y].  Used only where the call is the last thing its
-    body does, so that nothing reads [y] after the lambda's statements could
-    have changed what it holds. *)
+    is then reading [y].  A body that moves out of [p] may do so out of [y]
+    only where the call moved [y] in: an argument [y] the caller lent stays
+    bound to a copy.  Used only where the call is the last thing its body
+    does, so that nothing reads [y] after the lambda's statements could have
+    changed what it holds. *)
 let aliased_params (l : lambda) params args =
   let free = V.free_in_body l.body
   and assigned = V.assigned l.body
@@ -145,10 +159,12 @@ let aliased_params (l : lambda) params args =
   List.concat
     (List.map2
        (fun ((p, _), named) a ->
+         let moved_in = match (a : expr) with Move _ -> true | _ -> false in
          match named_variable a with
          | Some y
            when named && (not (Id.Set.mem p assigned)) && (not (V.mem y free)) && (not (V.mem y declared))
-                && once y ->
+                && once y
+                && (moved_in || not (moves_out p l.body)) ->
            [(p, y)]
          | _ -> [] )
        (List.combine params (List.map (fun (_, x) -> x <> None) l.params))

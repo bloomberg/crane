@@ -41,18 +41,35 @@ let rename v x (stmts : stmt list) =
   and m () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id () in
   List.map fs stmts
 
+(** Whether [stmts] move out of [x], anywhere. *)
+let moves_out x (stmts : stmt list) =
+  let found = ref false in
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> fe e); stmt = (fun s -> Cpp_ir.Children.stmt v s); type_ = ignore}
+  and fe (e : expr) =
+    (match e with Move (Local y) when Id.equal x y -> found := true | _ -> ());
+    Cpp_ir.Children.expr v e
+  in
+  List.iter (Cpp_ir.Children.stmt v) stmts;
+  !found
+
 (** [body], the body of a function or lambda whose by-value parameters are
-    [params], each with its declared type, with every copy of one that is
-    its last use dropped.  [live] is what is read after the statement list
-    being rewritten, in the statements around it. *)
-let rec body (params : (Id.t * ty) list) (stmts : stmt list) : stmt list =
+    [params] -- each with its declared type, and whether the function owns
+    what it holds -- with every copy of one that is its last use dropped.
+    A parameter the function is only lent, though by value, may not be
+    moved out of: its copy is dropped only where nothing after it moves out
+    of the copy.  [live] is what is read after the statement list being
+    rewritten, in the statements around it. *)
+let rec body (params : (Id.t * (ty * bool)) list) (stmts : stmt list) : stmt list =
   let candidates = List.filter (fun (x, _) -> not (named_by_lambda x stmts)) params in
   let rec list live (ss : stmt list) : stmt list =
     match ss with
     | [] -> []
     | Bind_variable (v, Declare (t, _), Local x) :: rest
       when (not (Id.equal v x))
-           && (match List.assoc_opt x candidates with Some t' -> t = t' | None -> false)
+           && (match List.assoc_opt x candidates with
+               | Some (t', owned) -> t = t' && (owned || not (moves_out v rest))
+               | None -> false)
            && (not (IdSet.mem x live))
            && (not (IdSet.mem x (used rest)))
            && not (V.mem x (V.declared rest)) ->
@@ -77,14 +94,21 @@ and lambdas (e : expr) : expr =
   | Lambda l -> Lambda {l with body = body (by_value_params l) l.body}
   | _ -> Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:lambdas ~stmt:(fun s -> s) ~type_:Fun.id ()) e
 
-(** A lambda's parameters passed by value, by name. *)
+(** A lambda's parameters passed by value, by name, with their types and
+    whether the lambda owns them ({!owned}). *)
 and by_value_params (l : lambda) =
   List.filter_map
     (fun (t, x) ->
       match x with
-      | Some x when by_value t (List.assoc_opt x l.modes) -> Some (x, t)
+      | Some x when by_value t (List.assoc_opt x l.modes) -> Some (x, (t, owned (List.assoc_opt x l.modes)))
       | _ -> None)
     l.params
+
+(** Whether a parameter recorded [mode] is owned by its function: the
+    caller moved or copied it in.  One recorded nothing is taken to be lent,
+    the safer reading. *)
+and owned (mode : Cpp_ir.Param_mode.t option) =
+  match mode with Some m -> m.ownership = Owned | None -> false
 
 (** Whether a parameter declared [t] and recorded [mode] is passed by value
     and may be written: not a reference, not [const]. *)
@@ -98,7 +122,13 @@ let with_lambdas params (stmts : stmt list) =
   body params (List.map fs stmts)
 
 let transform_decl (d : Cpp_ir.Lowered.Decl.t) : Cpp_ir.Lowered.Decl.t =
-  let params ps modes = List.filter (fun (x, t) -> by_value t (List.assoc_opt x modes)) ps in
+  let params ps modes =
+    List.filter_map
+      (fun (x, t) ->
+        let m = List.assoc_opt x modes in
+        if by_value t m then Some (x, (t, owned m)) else None)
+      ps
+  in
   let rec member ((f, a, b) : _ Cpp_ir.Field.member) : _ Cpp_ir.Field.member =
     match f with
     | Method m -> (Method {m with body = with_lambdas (params m.params m.modes) m.body}, a, b)

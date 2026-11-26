@@ -14,7 +14,9 @@
 
     The parameter must be passed by value -- the function's own copy, so
     that writing it is seen by no caller -- and declared at the copy's
-    type, and no lambda of the function may name it: a lambda capturing it
+    type; one the function is only lent, though by value, may not be moved
+    out of, so nothing after the copy may move out of it; and no lambda of
+    the function may name it: a lambda capturing it
     by reference would see the writes.  Nothing may read it after the copy,
     in the statements after the copy's or after any statement enclosing
     it; within a loop, anything the loop reads counts, as it runs again.
