@@ -499,7 +499,14 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
         | Some adapter -> Cpp_ir.Typed.of_node ~fallback:Cpp_ir.Typed.unannotated adapter
         | None -> Typed_checks.adapted ~before:named expected_ty (Calls.curry_to_expected cx env ?expected_ty use cglob) ) )
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} when is_custom r ->
-    form @@ gen_expr_custom_cons cx slot env ty r ts
+    ( match gen_expr_custom_cons cx slot env ty r ts with
+    (* A nullary constructor is its name, typed at the instantiation it was
+       built at, which may group a function type as its slot does. *)
+    | Entity (_, _, Some {custom_yields = Some t; _}) as e -> (
+      match form e with
+      | {ty = Typed t0; _} when t0 <> t && Cpp_ir.Types.same_arrows_unqualified t0 t -> Typed.v ~ty:(Typed t) e
+      | x -> x )
+    | e -> form e )
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _}
     when ts = []
          &&

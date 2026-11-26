@@ -237,6 +237,7 @@ let region cx ~ret body =
   let reified = ctx.input.itree_mode = Reified in
   let parameters ?slot_ty ~body ids scope = push_parameters cx ?slot_ty ~ns ~tvars:type_vars ~reified ~body ids scope in
   let is_lambda a = match strip_magic a with Core.Expr.Lambda _ -> true | _ -> false in
+  let is_global_call a = match strip_magic a with Core.Expr.Apply {callee = Core.Expr.Global _; _} -> true | _ -> false in
   (* A lambda stored in a constructor's field is written against [slot]
      where the constructor's lowering says what it is, otherwise against the
      field's type: its Core type converted. *)
@@ -249,7 +250,7 @@ let region cx ~ret body =
       | None, None -> None
     in
     walk (parameters ?slot_ty ~body ids scope) body
-  and walk scope = function
+  and walk ?pos scope = function
     (* A record projection ({!Match.gen_record_projection}, {!Match.gen_record_match_stmts}:
        after a custom match, before any other) declares its fields at the
        types they are bound at, pinned by nothing: as statements, with a
@@ -405,9 +406,12 @@ let region cx ~ret body =
        it is passed at, its binders refined against that parameter's Core type
        ({!Lambda_params.slot_refined_lambda}): the callee's declared
        type at the call's reading ({!Core_plan.Elaborate.instantiate}), where it
-       erases nothing.  Read with no type the call's position states. *)
+       erases nothing, its arrows grouped as the call writes its type
+       arguments ({!Calls.grouped_instantiation}), which may follow the
+       grouping of the position the call is in ([pos], as the call
+       enclosing it groups its parameter there). *)
     | Core.Expr.Apply {callee = Core.Expr.Global (use : Core.Global_use.t);
-                       arguments = args} when List.exists is_lambda args ->
+                       arguments = args} when List.exists (fun a -> is_lambda a || is_global_call a) args ->
       let call = Core_plan.Elaborate.elaborate_arguments ~lex:scope.lex use args in
       let inst =
         Core_plan.Elaborate.instantiate ~lex:scope.lex ~expected_core:None ~stated_core:None ~caller:ctx.input.body_owner
@@ -431,9 +435,37 @@ let region cx ~ret body =
         let rec go i = function [] -> None | r :: rest -> if r == a then Some i else go (i + 1) rest in
         go 0 call.regular
       in
+      let env = Base.Common.empty_env () in
+      let grouping = lazy (Calls.grouped_instantiation cx env ?expected:pos inst) in
+      let orig_param i = Core_plan.Param_pos.nth inst.params_orig (Core_plan.Param_pos.of_regular ~leading i) in
+      (* The parameter at the call's grouping, where it is that grouping of
+         [e]; [e] otherwise ({!Calls.argument_position}). *)
+      let grouped i (e : Cpp_ir.Lowered.Type.t option) =
+        if Base.Table.is_custom use.callee then e
+        else
+          let grouping = Lazy.force grouping in
+          match (Option.bind (orig_param i) (Calls.grouped_parameter cx env grouping), e) with
+          | Some s, Some e
+            when s <> e
+                 && Cpp_ir.Types.same_arrows s
+                      (Cpp_ir.Types.substitute (fun j -> Core.Scheme.Var.assoc_tvar j grouping) e) ->
+            Some s
+          | _ -> e
+      in
       List.iter
         (fun a ->
           match (strip_magic a, regular_index a) with
+          | Core.Expr.Apply {callee = Core.Expr.Global _; _}, Some i ->
+            let pos =
+              match param_core_ty i with
+              | Some t -> (
+                match Types.cpp_of_core cx env t with
+                | c when Cpp_ir.Types.prints_as_any c -> None
+                | c -> grouped i (Some c)
+                | exception _ -> None )
+              | None -> None
+            in
+            walk ?pos scope a
           | (Core.Expr.Lambda _ as lam), Some i ->
             let expected_core_ty =
               match param_core_ty i with Some t when not (core_type_contains_erased t) -> Some t | _ -> None
@@ -465,6 +497,7 @@ let region cx ~ret body =
                 | exception _ -> None )
               | None -> None
             in
+            let slot_ty = grouped i slot_ty in
             walk (parameters ?slot_ty ~body ids scope) body
           | _ -> walk scope a )
         args

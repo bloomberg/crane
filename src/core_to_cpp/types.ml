@@ -447,6 +447,48 @@ let slot_repr_of_cpp_type cx t =
     passing the wrong scope. *)
 let cpp_of_core cx env t = cpp_ir_of_core_type cx env (get_current_type_vars cx) t
 
+(** [spell_as_declared orig t]: [t], the C++ type of a callee's parameter
+    declared at the Core type [orig] once the call's instantiation is
+    substituted, with its arrows grouped as the declaration groups them
+    ({!Cpp_ir.Types.arrow_site}): the arrows [orig] writes in one group,
+    and a function type a type variable of [orig] is instantiated at as one
+    more, spelled as its values are.  [fold_left]'s step, declared
+    [B -> A -> B], at [B := nat -> nat -> nat] takes
+    [crane::fn<uint64_t(uint64_t, uint64_t)>] and the element, and returns
+    the flat [B], not three arguments in one group. *)
+let spell_as_declared (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  let rec spell (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+    match (orig, t) with
+    | Core.Type.Meta {contents = Some o}, _ -> spell o t
+    | Core.Type.Arrow _, Function (doms, cod) ->
+      let odoms = core_value_domains orig in
+      let k = List.length odoms in
+      if k = 0 then
+        (* Every arrow erased: the C++ type is the codomain's. *)
+        let rec codomain = function
+          | Core.Type.Arrow {result; _} -> codomain result
+          | Core.Type.Meta {contents = Some o} -> codomain o
+          | o -> o
+        in
+        spell (codomain orig) t
+      else if List.length doms < k then t
+      else
+        let here = List.filteri (fun i _ -> i < k) doms and rest = List.filteri (fun i _ -> i >= k) doms in
+        let ocod = core_drop_arrows k orig in
+        let cod = spell ocod (if rest = [] then cod else Function (rest, cod)) in
+        Function (List.map2 spell odoms here, cod)
+    (* An inductive's arguments, or a carrier variable's, are spelled as
+       the declaration writes them too: [list (A -> A)] at a function [A]
+       holds callables taking [A] as one group, and so does [F (A -> B)]. *)
+    | ( (Core.Type.Global_app {type_arguments = oargs; _} | Core.Type.Variable_app {arguments = oargs; _}),
+        Entity_application (g, args, vs) )
+      when List.compare_lengths oargs args = 0 ->
+      Entity_application (g, List.map2 spell oargs args, vs)
+    | _, In_namespace (r, t') -> In_namespace (r, spell orig t')
+    | _ -> t
+  in
+  spell orig t
+
 (** What a callee of the Core type [t] returns once given [n] value
     arguments, converted; [auto] (C++ deduces it) where [t] has fewer
     arrows. *)

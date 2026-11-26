@@ -399,6 +399,16 @@ let regular_field cx env ~is_boxed c ~slot i e =
              && (let ct = instantiated_field_cpp_ty ft in
                  (not (has_tany_in_type ct)) && Types.names_only_scoped_tvars cx ct) ->
         Some (instantiated_field_cpp_ty ft)
+      (* A field at a variable the constructor instantiates at a function
+         type is built at the grouping the constructor's type argument
+         writes: [List<crane::fn<crane::fn<R(B)>(A)>>::cons] stores a
+         callable taking [A], whatever grouping its Core type flattens
+         to. *)
+      | Core.Type.Variable _
+        when (match instantiated_field_cpp_ty ft with
+              | Function _ as ct -> not (Cpp_ir.Types.prints_as_any ct || has_tany_in_type ct)
+              | _ -> false) ->
+        Some (instantiated_field_cpp_ty ft)
       | Core.Type.Variable _ -> None
       | Core.Type.Variable_app _ ->
         (* A field that applies one of the inductive's [template
@@ -991,6 +1001,11 @@ let custom cx env ~ret ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty :
           (fun local slot ->
             if slot = Any then Any
             else if Cpp_ir.Types.prints_as_any local then slot
+            (* A function type the destination groups otherwise: the
+               destination's grouping, which the call that takes the value
+               wrote. *)
+            else if local <> slot && Cpp_ir.Types.same_arrows_unqualified local slot then
+              Cpp_ir.Types.regroup_as local slot
             (* Erased only in part -- [pair<std::any, ...>] where a field's
                class variable had no instance in scope -- the destination
                fills the part it knows, [St<ptr>]. *)
@@ -1170,7 +1185,27 @@ let custom_field cx ?var env c ~ret ~slot r i e =
           | _ -> cpp_ty )
         | _ -> cpp_ty
       in
-      if Cpp_ir.Types.prints_as_any cpp_ty then None
+      (* The field at the constructor's instantiation as the destination
+         refined it, where that only groups a function type in it
+         otherwise: a list's element, and its tail, as the call taking the
+         list wrote them. *)
+      let regrouped =
+        match List.nth_opt field_types_for_wrap i with
+        | Some ft -> (
+          match
+            Cpp_ir.Types.substitute
+              (fun j -> if j >= 1 then List.nth_opt ctor_temps_at_slot (j - 1) else None)
+              (Types.cpp_of_core cx env ft)
+          with
+          | at_slot when at_slot <> cpp_ty && Cpp_ir.Types.same_arrows_unqualified cpp_ty at_slot ->
+            let r = Cpp_ir.Types.regroup_as cpp_ty at_slot in
+            if r <> cpp_ty then Some r else None
+          | _ -> None
+          | exception e when CErrors.noncritical e -> None )
+        | None -> None
+      in
+      if Option.has_some regrouped then regrouped
+      else if Cpp_ir.Types.prints_as_any cpp_ty then None
       else (match cpp_ty with
         | Entity_application (g, _, _) when is_list_global g -> None
         | _ -> Some cpp_ty)

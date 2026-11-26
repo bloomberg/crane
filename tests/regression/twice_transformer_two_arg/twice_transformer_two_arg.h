@@ -23,7 +23,7 @@ struct TwiceTransformerTwoArg {
                   crane::fn<uint64_t(bool, uint64_t)> h) {
                 return [=, k = k, h = std::move(h)](bool b,
                                                     uint64_t n) {
-                  return (k(h, b, n) + UINT64_C(1));
+                  return (k(h)(b, n) + UINT64_C(1));
                 };
               };
             },

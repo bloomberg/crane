@@ -143,12 +143,7 @@ public:
   }
 };
 
-struct ListDef {
-  template <typename T1>
-  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
-};
-
-struct NestedListFnSlotFit {
+struct NestedCurriedInstantiation {
   template <typename T1> static T1 hd_or(T1 d, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return d;
@@ -158,58 +153,78 @@ struct NestedListFnSlotFit {
     }
   }
 
-  template <typename T1> static T1 nth_or(const List<T1> &l, uint64_t n, T1 d) {
-    return ListDef::template nth<T1>(n, l, std::move(d));
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1> &&
+             std::is_invocable_r_v<T1, F0 &, const T1 &>
+  static T1 twice(F0 &&f, const T1 &x) {
+    return f(f(x));
   }
 
   static inline const uint64_t result = []() {
-    return List<bool>::cons(
-        true,
-        List<bool>::cons(false,
-                         List<bool>::cons(true,
-                                          List<bool>::nil())))
-               .template map<crane::fn<uint64_t(uint64_t)>>(hd_or<
-        crane::fn<crane::fn<uint64_t(uint64_t)>(bool)>>(
-        [](bool b) {
-          return [=](uint64_t n) -> uint64_t {
-            if (b) {
-              return n;
-            } else {
-              return UINT64_C(1);
-            }
-          };
-        },
-        crane_convert<List<crane::fn<crane::fn<uint64_t(uint64_t)>(bool)>>>(
-            nth_or<List<crane::fn<uint64_t(bool, uint64_t)>>>(
-                List<List<crane::fn<crane::fn<uint64_t(uint64_t)>(bool)>>>::nil(),
-                UINT64_C(0),
-                List<crane::fn<uint64_t(bool,
-                                        uint64_t)>>::nil()))))
+    return twice<crane::fn<uint64_t(uint64_t)>>(
+        hd_or<crane::fn<
+            crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>(
+            [](crane::fn<uint64_t(uint64_t)>) {
+              return [](uint64_t n) { return n; };
+            },
+            List<crane::fn<
+                crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>::cons(
+                [](crane::fn<uint64_t(uint64_t)> g) {
+                  return [=, g = std::move(g)](uint64_t n) {
+                    return (g(n) + UINT64_C(1));
+                  };
+                },
+                List<crane::fn<crane::fn<uint64_t(uint64_t)>(
+                    crane::fn<uint64_t(uint64_t)>)>>::nil())),
+        [](uint64_t n) { return (n * UINT64_C(2)); })(UINT64_C(3));
+  }();
+  static inline const uint64_t result2 = []() {
+    return List<bool>::cons(true,
+                            List<bool>::cons(false,
+                                             List<bool>::nil()))
+               .template map<crane::fn<uint64_t(uint64_t)>>(
+        hd_or<crane::fn<crane::fn<uint64_t(uint64_t)>(bool)>>(
+            [](bool) {
+              return [](uint64_t n) { return n; };
+            },
+            List<crane::fn<crane::fn<uint64_t(uint64_t)>(bool)>>::cons(
+                [](bool b) {
+                  return [=](uint64_t n) -> uint64_t {
+                    if (b) {
+                      return (n * UINT64_C(10));
+                    } else {
+                      return n;
+                    }
+                  };
+                },
+                List<crane::fn<crane::fn<uint64_t(uint64_t)>(bool)>>::nil())))
                .template fold_left<uint64_t>(
         [](uint64_t a,
            const crane::fn<uint64_t(uint64_t)> &f) {
-          return (a + f(UINT64_C(6)));
+          return (a + f(UINT64_C(4)));
         },
         UINT64_C(0));
   }();
+  static inline const uint64_t result3 = []() {
+    return twice<crane::fn<uint64_t(uint64_t)>>(
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(UINT64_C(2),
+                                 List<uint64_t>::nil()))
+            .template fold_left<crane::fn<
+            crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>(
+            [](crane::fn<
+                crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>,
+               uint64_t e) {
+              return [=](crane::fn<uint64_t(uint64_t)> g) {
+                return [=, g = std::move(g)](uint64_t n) { return (g(n) + e); };
+              };
+            },
+            [](crane::fn<uint64_t(uint64_t)> g) {
+              return [=, g = std::move(g)](uint64_t n) {
+                return (g(n) + UINT64_C(1));
+              };
+            }),
+        [](uint64_t n) { return n; })(UINT64_C(3));
+  }();
 };
-
-template <typename T1>
-T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
-  if (n <= 0) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-      return default0;
-    } else {
-      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
-      return a0;
-    }
-  } else {
-    uint64_t m = n - 1;
-    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-      return default0;
-    } else {
-      const auto &[_, a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *a10, std::move(default0));
-    }
-  }
-}

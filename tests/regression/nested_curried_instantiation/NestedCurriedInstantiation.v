@@ -1,19 +1,23 @@
 (** Found by Ephyra round 28. A list literal of lambdas whose element type is
     a function transformer, [(nat -> nat) -> nat -> nat], passed to a
     polymorphic function ([hd_or]) whose result is the step of [twice]. The
-    list's element type is spelled curried,
-    [List<crane::fn<crane::fn<uint64_t(uint64_t)>(crane::fn<...>)>>], but each
-    element lambda is written flat, taking [(crane::fn<uint64_t(uint64_t)>,
-    uint64_t)], and does not convert to the one-argument [crane::fn]. The
-    typed-fit check finds nothing. Without [twice] (the same [hd_or] call
-    applied to its two arguments directly) it compiles. [result2] shows the
-    same with a plain two-argument element type under [map]; [result3] a
-    [fold_left] step at the transformer type (no matching member function
-    for call to 'fold_left'). Kin of round 25's
-    [pick_curried_fn_overapply] and [fn_list_state_alias_fit] (both fixed).
-    Expected: compiles, [result = 8], [result2 = 44], [result3 = 7]. Actual: "no viable conversion from
-    '(lambda ...)' to 'crane::fn<crane::fn<unsigned long long (unsigned long
-    long)> (crane::fn<unsigned long long (unsigned long long)>)>'". *)
+    call wrote its type argument the way the step's slot groups it,
+    [List<crane::fn<crane::fn<uint64_t(uint64_t)>(crane::fn<...>)>>], but
+    each element lambda was written flat, taking [(crane::fn<uint64_t
+    (uint64_t)>, uint64_t)], and did not convert ("no viable conversion").
+    [result2] showed the same with a plain two-argument element type under
+    [map]; [result3] a [fold_left] step at the transformer type, built flat
+    while the member [fold_left]'s template argument was curried ("no
+    matching member function for call to 'fold_left'").
+
+    Fixed: a call's instantiation is read once, each variable at its
+    instantiation with a function type grouped as the call's expected
+    result writes it ([Calls.grouped_instantiation]), and every argument is
+    built at its parameter at that grouping where the two are one type
+    grouped otherwise ([Calls.grouped_parameter], in
+    [Calls.argument_position]), a methodified callee's receiver variables
+    included; a constructor field at a variable is built at the
+    constructor's written type argument ([Constructors.regular_field]). *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Stdlib Require Import List.

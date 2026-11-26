@@ -600,14 +600,27 @@ let absurd_coercion cx from (into : Cpp_ir.Lowered.Type.t) =
   && into <> Void
   && not (Types.resolves_to_any_type cx into)
 
+(** The C++ type of a global named at the Core type [core_ty], an
+    instantiation of [decl], the type it is declared at where given: its
+    arrows grouped as the declaration groups them
+    ({!Types.spell_as_declared}), so [twice] at [A := nat -> nat] takes its
+    step as [crane::fn<F(F)>] and its argument, not three arguments in one
+    group. *)
+let declared_cpp cx env ?(decl : Core.Type.t option) core_ty =
+  Option.map
+    (fun t ->
+      let c = Types.cpp_of_core cx env t in
+      match decl with Some d -> Types.spell_as_declared d c | None -> c )
+    core_ty
+
 (** Make a global named in value position into an expression a caller can
     invoke ({!Cpp_passes.Coercions.eta_global}), given the Core type
     [core_ty] it is used at, the slot type [expected_ty], the arrow site
     [callee_site] it is spelled at, and whether an erased callable parameter
     keeps its signature ([exact]).  [None] where its name is a value
     already. *)
-let eta_global_plan cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~callee_site ~exact core_ty : Cpp_ir.Lowered.Coercion.plan option =
-  let declared = Option.map (Types.cpp_of_core cx env) core_ty in
+let eta_global_plan cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?decl ~callee_site ~exact core_ty : Cpp_ir.Lowered.Coercion.plan option =
+  let declared = declared_cpp cx env ?decl core_ty in
   match Cpp_passes.Coercions.eta_global_outer ~declared ~into:expected_ty with
   | None -> None
   | Some _ -> Some (Eta_global {declared; into = expected_ty; site = callee_site; exact})
@@ -779,6 +792,7 @@ type origin =
       cx : Lowering_state.t;
       env : env;
       core_ty : Core.Type.t option;
+      decl : Core.Type.t option;
       callee_site : Cpp_ir.Types.arrow_site;
       exact : bool;
     }  (** {!eta_global_plan}: [_ec], a value from {!named_value} *)
@@ -890,8 +904,8 @@ let plan_of origin (x : Cpp_ir.Typed.t) ~(value : Cpp_ir.Lowered.Expr.t) (into :
   | Crossing, Typed from, Some into -> crossing_plan ~from ~into
   | Ee {core_arity; returns_a_lambda; arity}, _, expected_ty ->
     eta_short_plan ?expected_ty ~core_arity ~returns_a_lambda ~arity ()
-  | Ec {cx; env; core_ty; callee_site; exact}, _, expected_ty ->
-    eta_global_plan cx env ?expected_ty ~callee_site ~exact core_ty
+  | Ec {cx; env; core_ty; decl; callee_site; exact}, _, expected_ty ->
+    eta_global_plan cx env ?expected_ty ?decl ~callee_site ~exact core_ty
   | Tvar_name t, _, _ -> name_fn_arg_plan t value
   | Ue {cx; term; from}, _, Some into ->
     ue_plan cx ~term ~from ~into ~lambda:(match value with Lambda _ -> true | _ -> false)
@@ -971,8 +985,8 @@ let slot_of_expected (t : Cpp_ir.Lowered.Type.t option) : Cpp_ir.Lowered.Slot_ty
 (** The value a global or variable named at the Core type [core_ty] is,
     typed for {!into_slot} at origin [Ec]: a global's name at the grouping
     it is declared at, a variable at its type. *)
-let named_value cx env core_ty (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Typed.t =
-  let declared = Option.map (Types.cpp_of_core cx env) core_ty in
+let named_value cx env ?decl core_ty (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Typed.t =
+  let declared = declared_cpp cx env ?decl core_ty in
   let from : Cpp_ir.Lowered.Value_type.t =
     match (Cpp_ir.Typed.head cglob, declared) with
     | Entity (r, _, _), Some (Function (dom, cod)) -> (
@@ -1055,8 +1069,8 @@ let at_param cx env ?(value : Cpp_ir.Typed.t option) param_core_ty e (expr : Cpp
 
 (** A global or variable named at the Core type [core_ty] put in the slot
     [expected_ty] states ({!eta_global_plan}). *)
-let eta_global cx env ?expected_ty ?(callee_site = Cpp_ir.Types.Declared) ?(exact = false) core_ty cglob =
-  into_slot ~origin:(Ec {cx; env; core_ty; callee_site; exact}) (named_value cx env core_ty cglob)
+let eta_global cx env ?expected_ty ?decl ?(callee_site = Cpp_ir.Types.Declared) ?(exact = false) core_ty cglob =
+  into_slot ~origin:(Ec {cx; env; core_ty; decl; callee_site; exact}) (named_value cx env ?decl core_ty cglob)
     (slot_of_expected expected_ty)
 
 (** [built plan x into]: [x] adapted to [into] as its site decides

@@ -222,6 +222,28 @@ let rec exists : type p. (p Type.t -> bool) -> p Type.t -> bool =
     curried, as a type variable spells it. *)
 let same_arrows a b = spell_arrows Through_tvar a = spell_arrows Through_tvar b
 
+(** [t] with no namespace qualifier anywhere in it. *)
+let unqualified : type p. p Type.t -> p Type.t =
+ fun t -> map (fun (t : p Type.t) -> match t with In_namespace (_, t) -> t | t -> t) t
+
+(** Whether [a] and [b] are one type grouped otherwise, or alike, once the
+    namespaces they are qualified in are set aside. *)
+let same_arrows_unqualified a b = same_arrows (unqualified a) (unqualified b)
+
+(** [regroup_as t g]: [t], with each function type in it grouped as the
+    corresponding one in [g] groups it, [t]'s spelling kept elsewhere (the
+    namespaces it is qualified in).  For [t] and [g] that
+    {!same_arrows_unqualified}. *)
+let rec regroup_as : type p. p Type.t -> p Type.t -> p Type.t =
+ fun t g ->
+  match (t, g) with
+  | In_namespace (n, a), _ -> In_namespace (n, regroup_as a g)
+  | _, In_namespace (_, b) -> regroup_as t b
+  | Entity_application (h, xs, vs), Entity_application (_, ys, _) when List.compare_lengths xs ys = 0 ->
+    Entity_application (h, List.map2 regroup_as xs ys, vs)
+  | Function _, Function _ -> g
+  | _ -> t
+
 (** [t] respelled as [site] spells its arrows, or [None] where that
     changes nothing. *)
 let respell_arrows site t =

@@ -33,9 +33,8 @@ struct DequeNilCurriedElement {
                 return (g(n) + UINT64_C(7));
               };
             },
-            std::deque<
-                crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>,
-                                   uint64_t)>>{}),
+            std::deque<crane::fn<
+                crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>{}),
         [](uint64_t n) { return (n * UINT64_C(2)); })(UINT64_C(3));
   }();
 };

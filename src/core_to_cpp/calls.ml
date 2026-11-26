@@ -48,6 +48,9 @@ type call_plan = {
   result_tvar_map : (Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) Lazy.t;
       (** The callee's variables as the call's expected result instantiates
           them, read for a parameter the substitution left erased. *)
+  grouping : (Core.Scheme.Var.t * Cpp_ir.Lowered.Type.t) list Lazy.t;
+      (** Each of the callee's variables at its instantiation, a function
+          type grouped as the call writes it ({!grouped_instantiation}). *)
 }
 
 (** Checks the plan [abi] of a function against [live], the C++ type of its
@@ -696,7 +699,7 @@ let curry_to_expected cx env ?expected_ty (use : Core.Global_use.t) cglob =
     | Some (Function (dom, _)) -> Cpp_ir.Types.Declared_at (List.length dom)
     | _ -> Cpp_ir.Types.Declared
   in
-  Coerce.eta_global cx env ?expected_ty ~callee_site core_ty cglob
+  Coerce.eta_global cx env ?expected_ty ?decl:decl_ty ~callee_site core_ty cglob
 
 (** The plan a call of the class field [x] through a concrete instance is
     written against.  The instance declares each method as a member template
@@ -757,6 +760,38 @@ type lowered_call = {
           filler of a phantom parameter, so that a later parameter can be
           written: no instantiation of the variable *)
 }
+
+(** [regroup_by_expected ?expected id by_var]: the type arguments [by_var]
+    of a call to [id], each that the call's expected result writes with its
+    arrows grouped otherwise taking that grouping -- [pure f] put where
+    [ap] takes [F (A -> B)], at [A -> B := nat -> nat -> nat]: the value is
+    read there, and a type argument is a choice the call makes.  The
+    variable's spelling is read off the expected type where the callee's
+    codomain names the variable, bare or under inductives or a carrier
+    variable. *)
+let regroup_by_expected cx env ?(expected : Cpp_ir.Lowered.Type.t option) id
+    (by_var : (Core.Scheme.Var.t * Cpp_ir.Lowered.Type.t) list) =
+  let has_function = Cpp_ir.Types.exists (function Cpp_ir.Type.Function _ -> true | _ -> false) in
+  match (expected, callee_core_type cx id) with
+  | Some exp, Some core_ty when List.exists (fun (_, t) -> has_function t) by_var ->
+    let rec bind acc (p : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) =
+      match (resolve_meta p, t) with
+      | _, (Const t | Reference (_, t) | In_namespace (_, t)) -> bind acc p t
+      | Core.Type.Variable {variable = j; _}, t -> if List.mem_assoc j acc then acc else (j, t) :: acc
+      | ( (Core.Type.Global_app {type_arguments = ps; _} | Core.Type.Variable_app {arguments = ps; _}),
+          Entity_application (_, ts, _) )
+        when List.compare_lengths ps ts = 0 ->
+        List.fold_left2 bind acc ps ts
+      | _ -> acc
+    in
+    let bound = bind [] (core_codomain core_ty) (Types.unfold_cpp_typedef cx env exp) in
+    List.map
+      (fun (v, t) ->
+        match List.assoc_opt (Core.Scheme.Var.ordinal v) bound with
+        | Some t' when Cpp_ir.Types.same_arrows_unqualified t t' -> (v, Cpp_ir.Types.regroup_as t t')
+        | _ -> (v, t) )
+      by_var
+  | _ -> by_var
 
 (** [call_type_args ~caller ?expected_ty env id plan args] -- the type
     arguments a call to [id] from the declaration [caller] writes, given its
@@ -1101,29 +1136,7 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
      there, and a type argument is a choice the call makes.  The variable's
      spelling is read off the expected type where the callee's codomain
      names the variable under inductives or a carrier variable. *)
-  let regular_type_args =
-    let has_function = Cpp_ir.Types.exists (function Cpp_ir.Type.Function _ -> true | _ -> false) in
-    match (expected_ty, callee_core_type cx id) with
-    | Some exp, Some core_ty when List.exists (fun (_, t) -> has_function t) regular_type_args ->
-      let rec bind acc (p : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) =
-        match (resolve_meta p, t) with
-        | _, (Const t | Reference (_, t) | In_namespace (_, t)) -> bind acc p t
-        | Core.Type.Variable {variable = j; _}, t -> if List.mem_assoc j acc then acc else (j, t) :: acc
-        | ( (Core.Type.Global_app {type_arguments = ps; _} | Core.Type.Variable_app {arguments = ps; _}),
-            Entity_application (_, ts, _) )
-          when List.compare_lengths ps ts = 0 ->
-          List.fold_left2 bind acc ps ts
-        | _ -> acc
-      in
-      let bound = bind [] (core_codomain core_ty) (Types.unfold_cpp_typedef cx env exp) in
-      List.map
-        (fun (v, t) ->
-          match List.assoc_opt (Core.Scheme.Var.ordinal v) bound with
-          | Some t' when t' <> t && Cpp_ir.Types.same_arrows t t' -> (v, t')
-          | _ -> (v, t) )
-        regular_type_args
-    | _ -> regular_type_args
-  in
+  let regular_type_args = regroup_by_expected cx env ?expected:expected_ty id regular_type_args in
   (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
      non-empty but all entries were erased (Core.Type.Erased Core.Erasure_reason.Type_argument) →
      filter_erased_type_args drops them all. (b) tys is empty — the Rocq
@@ -1856,6 +1869,26 @@ let binding_results_of id compute =
       compute
   end
 
+(** [grouped_instantiation ?expected inst]: each variable of the callee
+    of the call [inst] at the type the call instantiates it at, spelled as a
+    type argument is ({!Types.template_arg_of_core_type}), a function type
+    grouped as the call's expected result writes it
+    ({!regroup_by_expected}).  The one reading of the call's instantiation
+    every type derived from it is spelled by: the arguments' slots, a
+    callable built for a parameter, the elements of a container passed
+    ({!grouped_parameter}). *)
+let grouped_instantiation cx env ?expected (inst : Core_plan.Elaborated_call.instantiated) =
+  let tvars = get_current_type_vars cx in
+  let by_var =
+    List.filter_map
+      (fun (v, ty) ->
+        match Types.template_arg_of_core_type cx ~site:Cpp_ir.Types.Declared env tvars ty with
+        | t -> Some (v, t)
+        | exception e when CErrors.noncritical e -> None )
+      (Base.Core_util.Var_types.bindings inst.tys)
+  in
+  regroup_by_expected cx env ?expected inst.call.callee by_var
+
 (** [plan_call ?expected_ty env inst] -- what the instantiated call [inst]
     ({!Core_plan.Elaborate.instantiate}) needs to know before its arguments are
     generated, beyond its instantiation: the C++ types its result and its
@@ -2027,7 +2060,8 @@ let plan_call cx ~ret ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (in
     tvars = tvars;
     concrete_tvar_type = concrete_tvar_type;
     instance_promoted = instance_promoted_map;
-    result_tvar_map = result_tvar_map
+    result_tvar_map = result_tvar_map;
+    grouping = lazy (grouped_instantiation cx env ?expected:expected_ty inst)
   }
 
 (** Where the [i]th regular argument of a call is generated: the parameter
@@ -2066,47 +2100,7 @@ let local_callable cx env j occ =
     ({!plan_call}) is generated: {!argument_position}.  [local_callable j
     occ] says whether the variable [j] read at [occ] holds a function. *)
 
-(** [spell_as_declared orig t]: [t], the C++ type of a callee's parameter
-    declared at the Core type [orig] once the call's instantiation is
-    substituted, with its arrows grouped as the declaration groups them
-    ({!Cpp_ir.Types.arrow_site}): the arrows [orig] writes in one group,
-    and a function type a type variable of [orig] is instantiated at as one
-    more, spelled as its values are.  [fold_left]'s step, declared
-    [B -> A -> B], at [B := nat -> nat -> nat] takes
-    [crane::fn<uint64_t(uint64_t, uint64_t)>] and the element, and returns
-    the flat [B], not three arguments in one group. *)
-let spell_as_declared (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-  let rec spell (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-    match (orig, t) with
-    | Core.Type.Meta {contents = Some o}, _ -> spell o t
-    | Core.Type.Arrow _, Function (doms, cod) ->
-      let odoms = core_value_domains orig in
-      let k = List.length odoms in
-      if k = 0 then
-        (* Every arrow erased: the C++ type is the codomain's. *)
-        let rec codomain = function
-          | Core.Type.Arrow {result; _} -> codomain result
-          | Core.Type.Meta {contents = Some o} -> codomain o
-          | o -> o
-        in
-        spell (codomain orig) t
-      else if List.length doms < k then t
-      else
-        let here = List.filteri (fun i _ -> i < k) doms and rest = List.filteri (fun i _ -> i >= k) doms in
-        let ocod = core_drop_arrows k orig in
-        let cod = spell ocod (if rest = [] then cod else Function (rest, cod)) in
-        Function (List.map2 spell odoms here, cod)
-    (* An inductive's arguments, or a carrier variable's, are spelled as
-       the declaration writes them too: [list (A -> A)] at a function [A]
-       holds callables taking [A] as one group, and so does [F (A -> B)]. *)
-    | ( (Core.Type.Global_app {type_arguments = oargs; _} | Core.Type.Variable_app {arguments = oargs; _}),
-        Entity_application (g, args, vs) )
-      when List.compare_lengths oargs args = 0 ->
-      Entity_application (g, List.map2 spell oargs args, vs)
-    | _, In_namespace (r, t') -> In_namespace (r, spell orig t')
-    | _ -> t
-  in
-  spell orig t
+let spell_as_declared = Types.spell_as_declared
 
 (** The parameter declared [orig] at the type arguments a call writes
     ([written_by_var]), and whether a variable it names is left to C++ to
@@ -2120,6 +2114,14 @@ let parameter_at_written cx env ~written_by_var (orig : Core.Type.t) =
       IntSet.exists (fun i -> Core.Scheme.Var.assoc_tvar i written_by_var = None) (collect_tvars_set IntSet.empty orig)
     in
     Some (t, deduced)
+
+(** The parameter declared [orig] at the call's [grouping]
+    ({!grouped_instantiation}); [None] where it names a variable the call
+    does not instantiate. *)
+let grouped_parameter cx env grouping (orig : Core.Type.t) =
+  if IntSet.for_all (fun i -> Option.has_some (Core.Scheme.Var.assoc_tvar i grouping)) (collect_tvars_set IntSet.empty orig)
+  then Option.map fst (parameter_at_written cx env ~written_by_var:grouping orig)
+  else None
 
 (** The slot an argument of the call to [id] fills at the parameter
     declared at the Core type [orig]: what C++ checks it against.  A
@@ -2415,6 +2417,31 @@ let argument_position cx ~ret ~local_callable env id plan i core_arg =
     | Core.Expr.Boxed_value {value = Core.Expr.Lambda _; _}
     | Core.Expr.Lambda_group_barrier {value = Core.Expr.Lambda _; _}) when deduced_callable ->
       Option.map deduce_erased_domains arg_expected_ty
+    | _ -> arg_expected_ty
+  in
+  (* The argument is built at the grouping the parameter takes at the
+     call's instantiation ({!grouped_parameter}) where the two are one type
+     grouped otherwise: the call may write a type argument the way its
+     expected result groups it ({!regroup_by_expected}), and everything
+     passed at the variable is then that callable -- a lambda, a global
+     named as a value, a list literal of callables.  A type still naming
+     the callee's own variables (a global named as a value is read against
+     the declared parameter) is compared at the instantiation. *)
+  let arg_expected_ty =
+    let grouping = Lazy.force plan.grouping in
+    let grouped =
+      if Base.Table.is_custom id then None
+      else Option.bind (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index) (grouped_parameter cx env grouping)
+    in
+    let at_grouping e = Cpp_ir.Types.substitute (fun i -> Core.Scheme.Var.assoc_tvar i grouping) e in
+    match (grouped, arg_expected_ty) with
+    | Some s, Some e when s <> e && Cpp_ir.Types.same_arrows_unqualified s (at_grouping e) -> Some s
+    (* Nothing stated for the argument but the instantiation: the slot is
+       that instantiation, grouped as the call writes it. *)
+    | Some s, None -> (
+      match param_expected_subst () with
+      | Some e when s <> e && Cpp_ir.Types.same_arrows s e -> Some s
+      | _ -> None )
     | _ -> arg_expected_ty
   in
   (* When the callee's declared parameter type is value-dependent and

@@ -297,29 +297,6 @@ let gen_call_args cx (slot : Slot.slot) ~written_by_var ?(filled = []) env id pl
           ~expected:arg_expected_ty
           (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
     in
-    (* The argument is built at the slot's grouping where the two are one
-       type grouped otherwise: the slot is the parameter at the type
-       arguments the call writes, which may take a function type the way
-       the call's expected result does. *)
-    let arg_expected_ty =
-      let grouping =
-        match arg_slot with
-        | Exactly s -> Some s
-        (* A callable C++ deduces is still invoked as the parameter's type
-           at those type arguments says ([is_invocable_r_v<T1, F0 &, T1>]). *)
-        | Forwarded -> (
-          match
-            Option.bind (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
-              (Calls.parameter_at_written cx env ~written_by_var)
-          with
-          | Some (t, false) -> Some t
-          | _ -> None )
-        | _ -> None
-      in
-      match (grouping, arg_expected_ty) with
-      | Some s, Some e when s <> e && Cpp_ir.Types.same_arrows s e -> Some s
-      | _ -> arg_expected_ty
-    in
     let arg_typed =
       let at =
         Slot.at ~ret ?expected_ty:arg_expected_ty ~slot:

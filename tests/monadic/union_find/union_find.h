@@ -2257,7 +2257,7 @@ template <Int I, OrderedType X> struct Raw {
 
   template <typename T1>
   static List<std::pair<key, T1>> elements(const tree<T1> &m) {
-    return elements_aux<T1>(List<std::pair<typename X::t, T1>>::nil(), m);
+    return elements_aux<T1>(List<std::pair<key, T1>>::nil(), m);
   }
 
   template <typename T1, typename T2, typename F0>

@@ -17,12 +17,12 @@ struct TwiceTwiceEtaFlat {
     return twice<crane::fn<uint64_t(uint64_t)>>(
         twice<crane::fn<
             crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>(
-            [](crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>,
-                                  uint64_t)> _ec0) {
+            [](
+                crane::fn<crane::fn<uint64_t(uint64_t)>(
+                    crane::fn<uint64_t(uint64_t)>)> _ec0) {
               return [=, _ec0 = std::move(_ec0)](
-                  crane::fn<uint64_t(uint64_t)> _ec1,
-                  uint64_t _ec2) {
-                return twice<crane::fn<uint64_t(uint64_t)>>(_ec0, _ec1)(_ec2);
+                  crane::fn<uint64_t(uint64_t)> _ec1) {
+                return twice<crane::fn<uint64_t(uint64_t)>>(_ec0, _ec1);
               };
             },
             [](crane::fn<uint64_t(uint64_t)> h) {

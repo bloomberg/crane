@@ -16387,3 +16387,58 @@
   (alias runtest)
   (deps sig_is_its_witness.t.exe)
   (action (run ./sig_is_its_witness.t.exe))))
+
+(subdir nested_curried_instantiation
+ (rule
+  (targets nested_curried_instantiation.t.exe)
+  (deps NestedCurriedInstantiation.vo nested_curried_instantiation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_curried_instantiation.t.exe nested_curried_instantiation.t.cpp nested_curried_instantiation.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_curried_instantiation.t.exe)
+  (action (run ./nested_curried_instantiation.t.exe))))
+
+(subdir deque_nil_curried_element
+ (rule
+  (targets deque_nil_curried_element.t.exe)
+  (deps DequeNilCurriedElement.vo deque_nil_curried_element.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_nil_curried_element.t.exe deque_nil_curried_element.t.cpp deque_nil_curried_element.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_nil_curried_element.t.exe)
+  (action (run ./deque_nil_curried_element.t.exe))))
+
+(subdir twice_twice_eta_flat
+ (rule
+  (targets twice_twice_eta_flat.t.exe)
+  (deps TwiceTwiceEtaFlat.vo twice_twice_eta_flat.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} twice_twice_eta_flat.t.exe twice_twice_eta_flat.t.cpp twice_twice_eta_flat.cpp)))
+ (rule
+  (alias runtest)
+  (deps twice_twice_eta_flat.t.exe)
+  (action (run ./twice_twice_eta_flat.t.exe))))
+
+(subdir twice_transformer_two_arg
+ (rule
+  (targets twice_transformer_two_arg.t.exe)
+  (deps TwiceTransformerTwoArg.vo twice_transformer_two_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} twice_transformer_two_arg.t.exe twice_transformer_two_arg.t.cpp twice_transformer_two_arg.cpp)))
+ (rule
+  (alias runtest)
+  (deps twice_transformer_two_arg.t.exe)
+  (action (run ./twice_transformer_two_arg.t.exe))))
+
+(subdir nested_list_fn_slot_fit
+ (rule
+  (targets nested_list_fn_slot_fit.t.exe)
+  (deps NestedListFnSlotFit.vo nested_list_fn_slot_fit.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_list_fn_slot_fit.t.exe nested_list_fn_slot_fit.t.cpp nested_list_fn_slot_fit.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_list_fn_slot_fit.t.exe)
+  (action (run ./nested_list_fn_slot_fit.t.exe))))

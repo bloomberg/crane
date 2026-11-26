@@ -1,14 +1,17 @@
 (** Found by Ephyra round 28. A list of lists of two-argument functions,
     [list (list (bool -> nat -> nat))], given to [nth_or] whose result is
-    [hd_or]'s list, the [hd_or] call partially applied as [map]'s function (so
-    the element type is instantiated as [bool -> (nat -> nat)]). The typed-fit
-    check finds the argument, whose inner element type is curried,
-    [list<list<fn(bool)->fn(nat)->nat>>], put in a slot spelled flat,
-    [list<list<fn(bool,nat)->nat>>] (argument, convert); the C++ compiles and
-    is right. With one level of list ([hd_or d []] directly) the check
-    passes. Variant of [nested_curried_instantiation]. Expected: extracts
-    under CRANE_CHECK_IR, [result = 13]. Actual: "Crane IR check (typed fit):
-    ... (argument, convert)". *)
+    [hd_or]'s list, the [hd_or] call partially applied as [map]'s function
+    (so the element type is instantiated as [bool -> (nat -> nat)]). [nth_or]
+    kept its type argument flat, [List<crane::fn<uint64_t(bool, uint64_t)>>],
+    though its result went where [hd_or] takes the curried list: the
+    expected type was compared with the type argument with namespace
+    qualifiers in the way. The typed-fit check found the argument, built
+    curried, in the flat slot (argument, convert); the C++ compiled through
+    a [crane_convert] and was right.
+
+    Fixed: a type argument takes its expected result's grouping whatever
+    namespaces the two are written in ([Calls.regroup_by_expected],
+    [Cpp_ir.Types.same_arrows_unqualified], [Cpp_ir.Types.regroup_as]). *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Stdlib Require Import List.

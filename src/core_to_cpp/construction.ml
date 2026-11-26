@@ -288,8 +288,12 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
                ({!Types.template_params_of_core}, at [Declared]). *)
             match Types.template_params_of_core cx ~site:Cpp_ir.Types.Declared env [a] with
             | [(Function _ as f)]
-              when Types.names_only_scoped_tvars cx f && not (Base.Type_util.has_tany_written f) ->
-              Some f
+              when Types.names_only_scoped_tvars cx f && not (Base.Type_util.has_tany_written f) -> (
+              (* At the grouping the destination writes, as the field's
+                 instantiation is taken ({!Constructors.custom}). *)
+              match List.nth_opt ctor_temps_at_slot (j - 1) with
+              | Some t when t <> f && Cpp_ir.Types.same_arrows_unqualified f t -> Some (Cpp_ir.Types.regroup_as f t)
+              | _ -> Some f )
             | _ -> None )
           | _ -> None )
         | _ -> None
@@ -395,6 +399,16 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
          ([~site:Declared]); currying here would make the instantiation
          disagree with the type the declaration spells. *)
       let temps = Types.template_params_of_core cx ~site:Cpp_ir.Types.Declared env tys in
+      (* A function type the destination writes grouped otherwise is that
+         grouping, as a regular constructor takes it
+         ({!Constructors.temps_from_slot}): the slot is the type argument
+         a call wrote, which the value has to be. *)
+      let temps =
+        match Option.map (fun t -> Base.Type_util.unqualify_ty (Types.unfold_cpp_typedef cx env t)) expected_ty with
+        | Some (Entity_application (n', etys, _)) when globref_equal n n' && List.compare_lengths etys temps = 0 ->
+          List.map2 (fun t e -> if t <> e && Cpp_ir.Types.same_arrows t e then e else t) temps etys
+        | _ -> temps
+      in
       let temps = filter_erased_type_args temps in
       let temps = Types.ind_promoted_type_args cx n @ temps in
       (* Step 2b: Recover type args from the return type when unresolved metas

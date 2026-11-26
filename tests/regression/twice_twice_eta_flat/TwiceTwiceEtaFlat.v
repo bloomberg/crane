@@ -1,15 +1,19 @@
 (** Found by Ephyra round 28. [twice] passed unapplied as [twice]'s step,
     [twice twice g], the result itself the step of an outer [twice], at
-    [A := (nat -> nat) -> nat -> nat]. The unapplied [twice] is eta-expanded
-    to a lambda taking [_ec0] at the flat
+    [A := (nat -> nat) -> nat -> nat]. The unapplied [twice] was
+    eta-expanded to a lambda taking [_ec0] at the flat
     [crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>, uint64_t)>] and
     returning a flat two-argument lambda, while the inner [twice]'s template
-    argument is the curried
+    argument was the curried
     [crane::fn<crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>];
-    inside, [twice<crane::fn<uint64_t(uint64_t)>>(_ec0, _ec1)] does not match
-    either. Kin of round 25's [twice_fn_transformer_step] (fixed) and of
-    [nested_curried_instantiation]. Expected: compiles, [result = 8].
-    Actual: "no matching function for call to 'twice'". *)
+    inside, [twice<crane::fn<uint64_t(uint64_t)>>(_ec0, _ec1)] did not match
+    either ("no matching function for call to 'twice'").
+
+    Fixed: a global named as a value is compared with its slot at the call's
+    grouping ([Calls.argument_position]), and its eta adapter takes the
+    parameters its declaration groups, at the type arguments its use
+    writes ([Coerce.declared_cpp], [Types.spell_as_declared]):
+    [twice]'s step as [crane::fn<F(F)>], not two arguments in one group. *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 
