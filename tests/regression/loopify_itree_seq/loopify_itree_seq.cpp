@@ -107,12 +107,10 @@ void LoopifyItreeSeq::spin() {
   return;
 }
 
-void LoopifyItreeSeq::forever(uint64_t n) {
+void LoopifyItreeSeq::forever(uint64_t) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    _loop_n = (_loop_n + 1);
   }
   return;
 }

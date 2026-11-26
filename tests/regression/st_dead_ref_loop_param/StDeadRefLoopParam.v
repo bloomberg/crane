@@ -1,15 +1,17 @@
 (** Found by Ephyra round 28 (ST programs on main: [FZ_ST_MAIN]). A
     tail-recursive local helper in the ST monad whose accumulator [acc] is
-    read only by a [newSTRef] whose reference is never used. The dead
-    allocation is dropped, but the loop that replaces the tail recursion
-    still copies the parameter into [_loop_acc] and reassigns it each
-    iteration, so the suite's [-Werror] rejects the variable as set but not
-    used. Seen with pair-valued references (with a [nat] reference the read
-    survives as an unused [_x] and it compiles). Kin of the st-code-rank2
-    round 26 [st_dead_stores] (fixed there) and round 5's
-    [unused_let_local_fix_werror]. Expected: compiles, [result = 53].
-    Actual: "variable '_loop_acc' set but not used
-    [-Werror,-Wunused-but-set-variable]". *)
+    read only by a [newSTRef] whose reference is never used. Seen with
+    pair-valued references (with a [nat] reference the read survived as an
+    unused [_x] and compiled). Kin of the st-code-rank2 round 26
+    [st_dead_stores] and round 5's [unused_let_local_fix_werror].
+
+    Expected: compiles with the suite's flags; [result = 53].
+
+    Fixed: the dead allocation was dropped, but the loop that replaces the
+    tail recursion still copied the parameter into [_loop_acc] and
+    reassigned it each iteration, which clang rejects under [-Werror] as set
+    but not used.  A finishing pass ([dead_stores], ported from
+    st-code-rank2) drops a by-value variable only ever assigned. *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Stdlib Require Import Arith.

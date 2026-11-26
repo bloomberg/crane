@@ -16398,3 +16398,14 @@
   (alias runtest)
   (deps eq_dec_self_werror.t.exe)
   (action (run ./eq_dec_self_werror.t.exe))))
+
+(subdir st_dead_ref_loop_param
+ (rule
+  (targets st_dead_ref_loop_param.t.exe)
+  (deps StDeadRefLoopParam.vo st_dead_ref_loop_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_dead_ref_loop_param.t.exe st_dead_ref_loop_param.t.cpp st_dead_ref_loop_param.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_dead_ref_loop_param.t.exe)
+  (action (run ./st_dead_ref_loop_param.t.exe))))

@@ -73,7 +73,6 @@ struct DequeAnyCast {
           std::deque<typename _tcI0::m_carrier> rest =
               std::deque<typename _tcI0::m_carrier>(l.begin() + 1, l.end());
           const auto &m_op0 = _tcI0::m_op;
-          crane::obj _x = _tcI0::m_id;
           _stack.emplace_back(_after_mfold_in_cons{x});
           _stack.emplace_back(_call{std::move(rest)});
         }

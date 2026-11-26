@@ -88,19 +88,17 @@ struct StDeadRefLoopParam {
         std::make_shared<std::pair<uint64_t, uint64_t>>(
             std::make_pair(UINT64_C(2), UINT64_C(1)));
     auto h =
-        [](uint64_t k, uint64_t acc,
+        [](uint64_t k, uint64_t,
            const std::shared_ptr<std::pair<uint64_t, uint64_t>> &)
              -> uint64_t {
           // Loop replaces the tail recursion: each recursive call updates the
           // loop variables.
-          uint64_t _loop_acc = acc;
           uint64_t _loop_k = k;
           while (true) {
             if (_loop_k <= 0) {
               return UINT64_C(5);
             } else {
               uint64_t k_ = _loop_k - 1;
-              _loop_acc = UINT64_C(7);
               _loop_k = k_;
             }
           }
