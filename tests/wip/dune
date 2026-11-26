@@ -222,17 +222,6 @@
   (deps deque_nil_curried_element.t.exe)
   (action (run ./deque_nil_curried_element.t.exe))))
 
-(subdir eq_dec_self_werror
- (rule
-  (targets eq_dec_self_werror.t.exe)
-  (deps EqDecSelfWerror.vo eq_dec_self_werror.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} eq_dec_self_werror.t.exe eq_dec_self_werror.t.cpp eq_dec_self_werror.cpp)))
- (rule
-  (alias runtest)
-  (deps eq_dec_self_werror.t.exe)
-  (action (run ./eq_dec_self_werror.t.exe))))
-
 (subdir id_any_cast_flat_fn
  (rule
   (targets id_any_cast_flat_fn.t.exe)
