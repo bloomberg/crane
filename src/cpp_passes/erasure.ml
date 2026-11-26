@@ -839,6 +839,166 @@ let instantiate_foreign (d : settled) : settled =
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
   Map.decl (rw ()) (Map.decl (instantiating ~boxing) d)
 
+(** Dead stores: a variable declared by value that nothing reads, only
+    assigns, is not kept.  Each assignment to it goes, and so does its
+    declaration, where it is a local; a parameter stays, unnamed by the
+    printer as one nothing reads.  What an assignment or an initialiser
+    computes is still evaluated where it may have an effect: a call stays as
+    a statement.  Anything else that is not plainly free of effects keeps
+    the variable.
+
+    A loop helper's parameter read only by a value dropped as dead (a
+    reference allocated and never used) is a loop variable only ever
+    assigned.  Names are resolved over the whole body: a variable declared
+    more than once, or at a reference type, is left alone. *)
+let drop_dead_stores (d : settled) : settled =
+  let store (s : stmt) : (Id.t * expr) option =
+    match s with
+    | Bind_variable (x, Existing, e) | Assign (Local x, e) | Expression (Binary (Assign, Local x, e)) -> Some (x, e)
+    | _ -> None
+  in
+  (* Whether evaluating [e] has no effect: it calls no function but a
+     constructor (or its factory) or a mapping's text whose type is no
+     monadic action, and no mapped operation but a pure one, and runs no
+     lambda. *)
+  let pure_global r =
+    match r with
+    | GlobRef.ConstructRef _ -> true
+    | _ when Base.Table.is_mapped_operation r -> (Base.Mapping_operation.find r).purity = Base.Mapping_operation.Pure
+    | _ when Base.Table.is_custom r -> (
+      match Base.Table.find_type r with
+      | ty -> not (Base.Type_util.is_monadic_core_type (Base.Type_util.core_codomain ty))
+      | exception Not_found -> Base.Table.is_inline_custom r )
+    | _ -> false
+  in
+  let rec effect_free (e : expr) =
+    let here =
+      match e with
+      | Call ({constructs = Some _; _}, _, _) -> true
+      | Call (_, Entity (r, _, _), _) -> pure_global r
+      | Foreign (Call, f) -> pure_global f.custom
+      | Call _ | Lambda _ | Foreign _ -> false
+      | _ -> true
+    in
+    here
+    &&
+    let ok = ref true in
+    Cpp_ir.Subterms.expr ~expr:(fun e -> if not (effect_free e) then ok := false) ~stmts:(fun _ -> ok := false) e;
+    !ok
+  in
+  let by_value (t : ty) = match t with Reference _ -> false | _ -> true in
+  let body params (ss : stmt list) =
+    (* Each name declared, with whether it is declared once, by value. *)
+    let decls = Hashtbl.create 16 in
+    let declare x t =
+      Hashtbl.replace decls x (match Hashtbl.find_opt decls x with Some _ -> false | None -> by_value t)
+    in
+    List.iter (fun (x, t) -> declare x t) params;
+    let reads = Hashtbl.create 16 in
+    (* The variable a store being read assigns, where the store would be
+       dropped whole: what it reads of itself, [x = x + 1], is no read of
+       [x]. *)
+    let self = ref None in
+    let rec v : phase Cpp_ir.Children.visitor = {expr = (fun e -> fe e); stmt = (fun s -> fs s); type_ = ignore}
+    and fe (e : expr) =
+      match e with
+      | Local x -> if !self <> Some x then Hashtbl.replace reads x ()
+      | Lambda l ->
+        List.iter (fun (t, x) -> Option.iter (fun x -> declare x t) x) l.params;
+        Cpp_ir.Children.expr v e
+      | _ -> Cpp_ir.Children.expr v e
+    and fs (s : stmt) =
+      match (store s, s) with
+      | Some (x, e), _ ->
+        let saved = !self in
+        (* Only a store dropped whole reads nothing: one whose value is kept
+           as a statement still reads what it reads. *)
+        if effect_free e then self := Some x;
+        fe e;
+        self := saved
+      | None, Bind_variable (x, Declare (t, _), init) ->
+        declare x t;
+        fe init
+      | None, (Declare (x, t, _) | Declare_value_initialized (x, t)) -> declare x t
+      | None, s ->
+        (* What [s] binds itself, other than by a declaration: by reference
+           or at a type not said here. *)
+        let bound =
+          match s with
+          | Structured_binding (xs, _) -> xs
+          | For_range (x, _, _) | If_declaration {name = x; _} -> [x]
+          | Match (_, branches, _) ->
+            List.concat_map (fun (b : phase Match.branch) -> (match b.var with Some x -> [x] | None -> []) @ List.map (fun (f : phase Match.field_binding) -> f.name) b.field_bindings) branches
+          | Custom_match m -> List.concat_map (fun (b : phase Custom_match.branch) -> List.map (fun (p : phase Custom_match.param) -> p.name) b.params) m.branches
+          | _ -> []
+        in
+        List.iter (fun x -> Hashtbl.replace decls x false) bound;
+        Cpp_ir.Children.stmt v s
+    in
+    List.iter fs ss;
+    let unread x = Hashtbl.find_opt decls x = Some true && not (Hashtbl.mem reads x) in
+    (* An unread variable some store or initialiser of which computes what
+       cannot be dropped or kept as a statement stays. *)
+    let kept = Hashtbl.create 4 in
+    let removable (e : expr) = effect_free e || match e with Call _ -> true | _ -> false in
+    let rec note (s : stmt) =
+      ( match (store s, s) with
+      | Some (x, e), _ when unread x && not (removable e) -> Hashtbl.replace kept x ()
+      | None, Bind_variable (x, Declare _, init) when unread x && not (removable init) -> Hashtbl.replace kept x ()
+      | _ -> () );
+      Cpp_ir.Children.stmt nv s
+    and nv : phase Cpp_ir.Children.visitor = {expr = (fun e -> Cpp_ir.Children.expr nv e); stmt = note; type_ = ignore} in
+    List.iter note ss;
+    let dead x = unread x && not (Hashtbl.mem kept x) in
+    (* A store to, or the declaration of, a dead variable: gone, its value
+       evaluated where it may have an effect; [None] where that cannot be
+       said, which keeps every statement as it is. *)
+    let blocked = ref false in
+    let rec removed (e : expr) : stmt list option =
+      if effect_free e then Some [] else match e with Call _ -> Some [Expression (Map.expr (rw ()) e)] | _ -> None
+    and rs (s : stmt) : stmt list =
+      match (store s, s) with
+      | Some (x, e), _ when dead x -> (
+        match removed e with Some r -> r | None -> blocked := true; [s] )
+      | None, Bind_variable (x, Declare _, init) when dead x -> (
+        match removed init with Some r -> r | None -> blocked := true; [s] )
+      | None, (Declare (x, _, _) | Declare_value_initialized (x, _)) when dead x -> []
+      | _ -> [Map.stmt (rw ()) s]
+    and stmts ss = List.concat_map rs ss
+    and rw () =
+      rewriter ~stmts ~expr:(fun e -> Map.expr (rw ()) e) ~stmt:(fun s -> match rs s with [s'] -> s' | ss -> Block ss)
+        ~type_:same_type ()
+    in
+    if Hashtbl.fold (fun x _ any -> any || dead x) decls false then
+      let ss' = stmts ss in
+      if !blocked then None else Some ss'
+    else None
+  in
+  (* Dropping one store may leave what it read unread: again, a few times. *)
+  let rec fixpoint params ss n =
+    match body params ss with Some ss' when n > 0 -> fixpoint params ss' (n - 1) | Some ss' -> ss' | None -> ss
+  in
+  let fix params ss = fixpoint params ss 4 in
+  let rec member ((f, a, b) : _ Cpp_ir.Field.member) : _ Cpp_ir.Field.member =
+    match f with
+    | Method m -> (Method {m with body = fix m.params m.body}, a, b)
+    | Nested_struct (x, ms) -> (Nested_struct (x, List.map member ms), a, b)
+    | Out_of_line_declaration (Method m) -> (Out_of_line_declaration (Method {m with body = fix m.params m.body}), a, b)
+    | _ -> (f, a, b)
+  in
+  let rec decl (d : decl) : decl =
+    match d with
+    | Function ({shape = Definition (ps, body); _} as fn) -> Function {fn with shape = Definition (ps, fix ps body)}
+    | Template (ps, c, d) -> Template (ps, c, decl d)
+    | Namespace (x, ds) -> Namespace (x, List.map decl ds)
+    | Struct s -> Struct {s with fields = List.map member s.fields}
+    | Merged_struct_members s -> Merged_struct_members {s with fields = List.map member s.fields}
+    | Member_definition ({member = Method m; _} as md) ->
+      Member_definition {md with member = Method {m with body = fix m.params m.body}}
+    | _ -> d
+  in
+  decl d
+
 (* A type that qualifies a member in value position, [T::f(..)], spelled as
    the value it names: a named global written as an expression -- no
    [typename], since what follows is not a type, and with the namespace

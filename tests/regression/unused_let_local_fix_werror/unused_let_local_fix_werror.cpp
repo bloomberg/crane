@@ -14,7 +14,6 @@
 /// mapped match on nat, and y alongside; h assigns x a call, which
 /// is kept as a statement.
 uint64_t UnusedLetLocalFixWerror::f(uint64_t) {
-  List<uint64_t> l = List<uint64_t>::nil();
   {
     const List<bool> &_lc1_l0 = List<bool>::nil();
     // Loop replaces the tail recursion: each recursive call updates the loop
@@ -33,7 +32,6 @@ uint64_t UnusedLetLocalFixWerror::f(uint64_t) {
 }
 
 uint64_t UnusedLetLocalFixWerror::g(uint64_t) {
-  List<uint64_t> l = List<uint64_t>::nil();
   {
     const List<bool> &_lc1_l0 = List<bool>::nil();
     // Loop replaces the tail recursion: each recursive call updates the loop

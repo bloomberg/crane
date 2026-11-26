@@ -93,42 +93,33 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct LocalFixInlinedFnJoin {
+struct SigFnMatchJoin {
+  template <typename T1> static T1 pick(bool b, T1 x, T1 y) {
+    if (b) {
+      return x;
+    } else {
+      return y;
+    }
+  }
+
   static inline const uint64_t result = []() {
-    return []() {
-      crane::fn<uint64_t(uint64_t)> w;
-      List<bool> l = List<bool>::nil();
-      crane::fn<uint64_t(uint64_t)> acc = [](uint64_t) { return UINT64_C(1); };
-      w = [&]() {
-        if (std::holds_alternative<typename List<bool>::Nil>(l.v_mut())) {
-          return std::move(acc);
-        } else {
-          auto &[_, a1] = std::get<typename List<bool>::Cons>(l.v_mut());
-          const List<bool> &a1_value = *a1;
-          auto go2 =
-              [](List<bool> l2, crane::fn<uint64_t(uint64_t)>,
-                 uint64_t)
-                   -> uint64_t {
-                // Loop replaces the tail recursion: each recursive call updates
-                // the loop variables.
-                List<bool> _loop_l2 = std::move(l2);
-                while (true) {
-                  if (std::holds_alternative<typename List<bool>::Nil>(
-                          _loop_l2.v_mut())) {
-                    return UINT64_C(0);
-                  } else {
-                    auto &[_, a10] =
-                        std::get<typename List<bool>::Cons>(_loop_l2.v_mut());
-                    _loop_l2 = List<bool>(*a10);
-                  }
-                }
-              };
-          return [=, a1_value = a1_value](uint64_t _pa0) {
-            return go2(a1_value, [](uint64_t) { return UINT64_C(0); }, _pa0);
-          };
-        }
-      }();
-      return (w(UINT64_C(0)) + w(UINT64_C(1)));
+    crane::fn<uint64_t(uint64_t)> w = []() -> crane::fn<uint64_t(uint64_t)> {
+      auto &&_sv = pick<List<bool>>(true, List<bool>::nil(),
+                                    List<bool>::cons(true, List<bool>::nil()));
+      if (std::holds_alternative<typename List<bool>::Nil>(_sv.v())) {
+        return [](uint64_t) { return UINT64_C(1); };
+      } else {
+        const auto &[a0, _] = std::get<typename List<bool>::Cons>(_sv.v());
+        return pick<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>(
+            a0,
+            [](uint64_t) {
+              return [](uint64_t) { return UINT64_C(2); };
+            },
+            [](uint64_t) {
+              return [](uint64_t) { return UINT64_C(3); };
+            })(UINT64_C(0));
+      }
     }();
+    return w(UINT64_C(0));
   }();
 };

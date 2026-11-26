@@ -106,28 +106,6 @@
   (deps mrec_ctx_wrapped_in_ret.t.exe)
   (action (run ./mrec_ctx_wrapped_in_ret.t.exe))))
 
-(subdir carrier_alias_promoted
- (rule
-  (targets carrier_alias_promoted.t.exe)
-  (deps CarrierAliasPromoted.vo carrier_alias_promoted.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_alias_promoted.t.exe carrier_alias_promoted.t.cpp carrier_alias_promoted.cpp)))
- (rule
-  (alias runtest)
-  (deps carrier_alias_promoted.t.exe)
-  (action (run ./carrier_alias_promoted.t.exe))))
-
-(subdir carrier_holder_before_alias
- (rule
-  (targets carrier_holder_before_alias.t.exe)
-  (deps CarrierHolderBeforeAlias.vo carrier_holder_before_alias.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_holder_before_alias.t.exe carrier_holder_before_alias.t.cpp carrier_holder_before_alias.cpp)))
- (rule
-  (alias runtest)
-  (deps carrier_holder_before_alias.t.exe)
-  (action (run ./carrier_holder_before_alias.t.exe))))
-
 ; --- Vellvm mem-scan: a borrowed field's last read moved into a class method.
 
 ; --- A class's concept printed after the struct whose template uses it.
@@ -151,8 +129,6 @@
 
 ; --- A local fix captured by reference escapes through a state-monad bind.
 
-
-
 (subdir shared_event_subevent
  (rule
   (targets shared_event_subevent.t.exe)
@@ -163,20 +139,6 @@
   (alias runtest)
   (deps shared_event_subevent.t.exe)
   (action (run ./shared_event_subevent.t.exe))))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 (subdir itree_two_self_calls
  (rule
@@ -199,92 +161,4 @@
   (alias runtest)
   (deps hk_argument_after_phantom.t.exe)
   (action (run ./hk_argument_after_phantom.t.exe))))
-
-(subdir eq_dec_self_werror
- (rule
-  (targets eq_dec_self_werror.t.exe)
-  (deps EqDecSelfWerror.vo eq_dec_self_werror.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} eq_dec_self_werror.t.exe eq_dec_self_werror.t.cpp eq_dec_self_werror.cpp)))
- (rule
-  (alias runtest)
-  (deps eq_dec_self_werror.t.exe)
-  (action (run ./eq_dec_self_werror.t.exe))))
-
-(subdir local_fix_alias_untyped_apply
- (rule
-  (targets local_fix_alias_untyped_apply.t.exe)
-  (deps LocalFixAliasUntypedApply.vo local_fix_alias_untyped_apply.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_alias_untyped_apply.t.exe local_fix_alias_untyped_apply.t.cpp local_fix_alias_untyped_apply.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_alias_untyped_apply.t.exe)
-  (action (run ./local_fix_alias_untyped_apply.t.exe))))
-
-(subdir local_fix_inlined_fn_join
- (rule
-  (targets local_fix_inlined_fn_join.t.exe)
-  (deps LocalFixInlinedFnJoin.vo local_fix_inlined_fn_join.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_inlined_fn_join.t.exe local_fix_inlined_fn_join.t.cpp local_fix_inlined_fn_join.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_inlined_fn_join.t.exe)
-  (action (run ./local_fix_inlined_fn_join.t.exe))))
-
-(subdir mapped_component_alias_flat
- (rule
-  (targets mapped_component_alias_flat.t.exe)
-  (deps MappedComponentAliasFlat.vo mapped_component_alias_flat.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mapped_component_alias_flat.t.exe mapped_component_alias_flat.t.cpp mapped_component_alias_flat.cpp)))
- (rule
-  (alias runtest)
-  (deps mapped_component_alias_flat.t.exe)
-  (action (run ./mapped_component_alias_flat.t.exe))))
-
-(subdir overapplied_alias_result_fit
- (rule
-  (targets overapplied_alias_result_fit.t.exe)
-  (deps OverappliedAliasResultFit.vo overapplied_alias_result_fit.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} overapplied_alias_result_fit.t.exe overapplied_alias_result_fit.t.cpp overapplied_alias_result_fit.cpp)))
- (rule
-  (alias runtest)
-  (deps overapplied_alias_result_fit.t.exe)
-  (action (run ./overapplied_alias_result_fit.t.exe))))
-
-(subdir sig_closure_witness_fit
- (rule
-  (targets sig_closure_witness_fit.t.exe)
-  (deps SigClosureWitnessFit.vo sig_closure_witness_fit.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_closure_witness_fit.t.exe sig_closure_witness_fit.t.cpp sig_closure_witness_fit.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_closure_witness_fit.t.exe)
-  (action (run ./sig_closure_witness_fit.t.exe))))
-
-(subdir sig_fn_match_join
- (rule
-  (targets sig_fn_match_join.t.exe)
-  (deps SigFnMatchJoin.vo sig_fn_match_join.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_fn_match_join.t.exe sig_fn_match_join.t.cpp sig_fn_match_join.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_fn_match_join.t.exe)
-  (action (run ./sig_fn_match_join.t.exe))))
-
-(subdir st_dead_ref_loop_param
- (rule
-  (targets st_dead_ref_loop_param.t.exe)
-  (deps StDeadRefLoopParam.vo st_dead_ref_loop_param.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} st_dead_ref_loop_param.t.exe st_dead_ref_loop_param.t.cpp st_dead_ref_loop_param.cpp)))
- (rule
-  (alias runtest)
-  (deps st_dead_ref_loop_param.t.exe)
-  (action (run ./st_dead_ref_loop_param.t.exe))))
 

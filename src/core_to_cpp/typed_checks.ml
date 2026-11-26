@@ -134,13 +134,14 @@ let rec core_type_of cx (e : Core.Expr.t) : Core.Type.t option =
         Global_app {head = Names.GlobRef.ConstRef (Lazy.force primitive_array); type_arguments = [t]; index_arguments = []})
       (core_type_of cx default)
   | Apply {callee = (Fixpoint _ | Cofixpoint _) as f; arguments} ->
-    Option.bind (core_type_of cx f) (Base.Type_util.strip_arrows_n (Base.Type_util.count_real_core_args arguments))
+    Option.bind (core_type_of cx f)
+      (Base.Type_util.strip_arrows_through_aliases (Base.Type_util.count_real_core_args arguments))
   | Apply {callee; arguments} -> (
     match Core_plan.Query.infer_core_body_type e with
     | Some _ as t -> t
     | None ->
       Option.bind (core_type_of cx callee)
-        (Base.Type_util.strip_arrows_n (Base.Type_util.count_real_core_args arguments)) )
+        (Base.Type_util.strip_arrows_through_aliases (Base.Type_util.count_real_core_args arguments)) )
   | _ -> Core_plan.Query.infer_core_body_type e
 
 (** {!core_type_of} [body], under the binder [x] of type [t]: the binder
@@ -192,7 +193,14 @@ let of_built cx env (e : Core.Expr.t) (x : Cpp_ir.Lowered.Expr.t) : Typed.t =
     | (Entity _ | Scope _ | Type_member _), Typed (Function _), Global {callee; _} ->
       Typed.v ~ty:(global_value_type cx env callee (core_type_of cx e)) x
     | Lambda l, Typed t, _ -> (
-      match Cpp_ir.Arrows.of_type t with
+      (* A lambda is a closure whatever names its type: an alias, or a
+         typed mapping that is its component ([sig A P] at a function [A]). *)
+      let arrows =
+        match Cpp_ir.Arrows.of_type t with
+        | Some _ as a -> a
+        | None -> Cpp_ir.Arrows.of_type (Coerce.normal (Coerce.aliases_in cx) t)
+      in
+      match arrows with
       | Some a ->
         let doms, result = Cpp_ir.Arrows.curried a in
         let n = List.length l.params in

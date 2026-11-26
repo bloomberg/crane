@@ -2621,6 +2621,44 @@ let bool_value v =
                        arguments = [];
                        occurrence = Core.Occurrence.fresh ()}
 
+(** Whether the constant [c] decides the equality of its last two
+    arguments: its type is [forall .., {x = y} + {_}], [x] and [y] its last
+    two binders in that order, and [n] arguments saturate it.  Such a
+    decision on one value is [left]: [right] would prove [x <> x]. *)
+let decides_equality c n =
+  let env = Global.env () in
+  (* A functor's parameter, or a module type's, is not in the environment. *)
+  Environ.mem_constant c env
+  &&
+  let binders, concl = Term.decompose_prod (Environ.lookup_constant c env).Declarations.const_type in
+  let is_ref name t =
+    match Constr.kind t with
+    | Constr.Ind (i, _) -> GlobRef.CanOrd.equal (GlobRef.IndRef i) (Rocqlib.lib_ref name)
+    | _ -> false
+  in
+  Int.equal n (List.length binders)
+  &&
+  match Constr.kind concl with
+  | Constr.App (s, [|p; _|]) when is_ref "core.sumbool.type" s -> (
+    match Constr.kind p with
+    | Constr.App (e, [|_; x; y|]) when is_ref "core.eq.type" e -> (
+      match (Constr.kind x, Constr.kind y) with
+      | Constr.Rel 2, Constr.Rel 1 -> true
+      | _ -> false )
+    | _ -> false )
+  | _ -> false
+
+(** [left] of a [sumbool]. *)
+let sumbool_left () =
+  let sumbool = Rocqlib.lib_ref "core.sumbool.type" in
+  match sumbool with
+  | GlobRef.IndRef i ->
+    Core.Expr.Construct {result_type = Core.Type.Global_app {head = sumbool; type_arguments = []; index_arguments = []};
+                         constructor = GlobRef.ConstructRef (i, 1);
+                         arguments = [];
+                         occurrence = Core.Occurrence.fresh ()}
+  | _ -> assert false
+
 (** Whether [x] and [y] are one value ({!same_value}) and its [negb]. *)
 let negation_of_itself x y =
   let negb = Rocqlib.lib_ref "core.bool.negb" in
@@ -2634,15 +2672,23 @@ let negation_of_itself x y =
 
 (** [Some v] when [f a] is a comparison of one value with itself
     ({!same_value}), or an [orb] or [andb] of one value and its [negb], [v]
-    its value as a [bool] constructor. *)
+    its value as a [bool] constructor; or a decision of equality on one
+    value ({!decides_equality}), [v] its [left]. *)
 let fold_self_comparison f a =
   match (f, a) with
-  | Core.Expr.Global {callee = GlobRef.ConstRef c; _}, [x; y] when same_value x y ->
-    Option.map bool_value (Cmap.find_opt c self_comparisons)
+  | Core.Expr.Global {callee = GlobRef.ConstRef c; _}, [x; y] when same_value x y && Cmap.mem c self_comparisons ->
+    Some (bool_value (Cmap.find c self_comparisons))
   | Core.Expr.Global {callee = c; _}, [x; y] when negation_of_itself x y ->
     if GlobRef.CanOrd.equal c (Rocqlib.lib_ref "core.bool.orb") then Some (bool_value true)
     else if GlobRef.CanOrd.equal c (Rocqlib.lib_ref "core.bool.andb") then Some (bool_value false)
     else None
+  | Core.Expr.Global {callee = GlobRef.ConstRef c; _}, _ :: _ :: _ -> (
+    (* A decision of equality on one value.  Its earlier arguments (a type,
+       a decision for the elements) go with it: Rocq evaluation has no
+       effect to keep. *)
+    match List.rev a with
+    | y :: x :: _ when same_value x y && decides_equality c (List.length a) -> Some (sumbool_left ())
+    | _ -> None )
   | _ -> None
 
 (** Core simplification: beta-reduction, iota-reduction, let-inlining, and

@@ -486,7 +486,7 @@ let gen_match_branch cx (slot : Slot.slot) env (typ : Core.Type.t) rty cname ids
             else
               Local binding_name
           in
-          List.map (fun st -> Lifting.local_var_subst_stmt ~keep_cast:true var_name subst_expr st) stmts
+          Lifting.local_var_subst_stmts cx ~keep_cast:true var_name subst_expr stmts
         else
           stmts )
       body_stmts
@@ -1378,7 +1378,7 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
                      Local name
                    | _ -> Coerce.unbox cpp_ty (Cpp_ir.Expr.Local name)
                  in
-                 List.map (fun st -> Lifting.local_var_subst_stmt ~keep_cast:true name cast_expr st) stmts
+                 Lifting.local_var_subst_stmts cx ~keep_cast:true name cast_expr stmts
                else stmts)
             br_stmts
             br_ids

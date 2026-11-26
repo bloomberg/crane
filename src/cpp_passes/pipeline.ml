@@ -90,6 +90,8 @@ let access_moves = Base.Pipeline_trace.pass "access_moves" Erasure.lower_access_
 let constexpr = Base.Pipeline_trace.pass "constexpr" Erasure.decide_constexpr
 let immortal_globals = Base.Pipeline_trace.pass "immortal_globals" Erasure.immortal_globals
 let foreign = Base.Pipeline_trace.pass "foreign" Erasure.instantiate_foreign
+(* A variable only ever assigned is not kept ({!Erasure.drop_dead_stores}). *)
+let dead_stores = Base.Pipeline_trace.pass "dead_stores" Erasure.drop_dead_stores
 let qualifiers = Base.Pipeline_trace.pass "qualifiers" Erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
 let pointer_slots u = Base.Pipeline_trace.pass "pointer_slots" (Erasure.lower_pointer_slots u)
@@ -209,7 +211,7 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     initialiser holding a lambda that captures is invoked in place.  [u] is
     the unit the declaration is of. *)
 let instantiation_passes u =
-  [foreign; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
+  [foreign; dead_stores; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
 
 let pass_names =
   Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_plan.Context.detached)

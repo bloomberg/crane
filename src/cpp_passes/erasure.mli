@@ -146,6 +146,11 @@ val supply_template_args : settled -> settled
     its instantiated scrutinee. *)
 val instantiate_foreign : settled -> settled
 
+(** [drop_dead_stores decl]: a variable declared by value that nothing
+    reads, only assigns, loses its assignments and, for a local, its
+    declaration; a value that may have an effect is still evaluated. *)
+val drop_dead_stores : settled -> settled
+
 (** [lower_qualifiers decl] spells each type qualifying a member in value
     position as what the printer writes there: a named global becomes the
     value it names.  After {!instantiate_foreign}, which turns a mapped
