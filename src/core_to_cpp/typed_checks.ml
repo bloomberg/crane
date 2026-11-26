@@ -134,13 +134,14 @@ let rec core_type_of cx (e : Core.Expr.t) : Core.Type.t option =
         Global_app {head = Names.GlobRef.ConstRef (Lazy.force primitive_array); type_arguments = [t]; index_arguments = []})
       (core_type_of cx default)
   | Apply {callee = (Fixpoint _ | Cofixpoint _) as f; arguments} ->
-    Option.bind (core_type_of cx f) (Base.Type_util.strip_arrows_n (Base.Type_util.count_real_core_args arguments))
+    Option.bind (core_type_of cx f)
+      (Base.Type_util.strip_arrows_through_aliases (Base.Type_util.count_real_core_args arguments))
   | Apply {callee; arguments} -> (
     match Core_plan.Query.infer_core_body_type e with
     | Some _ as t -> t
     | None ->
       Option.bind (core_type_of cx callee)
-        (Base.Type_util.strip_arrows_n (Base.Type_util.count_real_core_args arguments)) )
+        (Base.Type_util.strip_arrows_through_aliases (Base.Type_util.count_real_core_args arguments)) )
   | _ -> Core_plan.Query.infer_core_body_type e
 
 (** {!core_type_of} [body], under the binder [x] of type [t]: the binder

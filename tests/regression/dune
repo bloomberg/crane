@@ -16420,3 +16420,14 @@
   (alias runtest)
   (deps overapplied_alias_result_fit.t.exe)
   (action (run ./overapplied_alias_result_fit.t.exe))))
+
+(subdir local_fix_alias_untyped_apply
+ (rule
+  (targets local_fix_alias_untyped_apply.t.exe)
+  (deps LocalFixAliasUntypedApply.vo local_fix_alias_untyped_apply.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_alias_untyped_apply.t.exe local_fix_alias_untyped_apply.t.cpp local_fix_alias_untyped_apply.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_alias_untyped_apply.t.exe)
+  (action (run ./local_fix_alias_untyped_apply.t.exe))))

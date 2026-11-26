@@ -1785,16 +1785,7 @@ let record_call_sig ?(written : Cpp_ir.Lowered.Type.t option) ?declared_arity cx
        may be template arguments, so its argument count says nothing of
        them), and not the arrows a type variable its codomain is instantiated
        at has. *)
-    let rec drop n (t : Core.Type.t) =
-      if n <= 0 then Some t
-      else
-        match resolve_meta t with
-        | Arrow {parameter; result} when Base.Core_util.is_erased_type parameter -> drop n result
-        | Arrow {result; _} -> drop (n - 1) result
-        | Global_app {head = GlobRef.ConstRef _; _} as a -> (
-          match expand_core_fun_alias a with Arrow _ as f -> drop n f | _ -> None )
-        | _ -> None
-    in
+    let drop = Base.Type_util.strip_arrows_through_aliases in
     (* How many arguments [f] applies beyond the callee's declared call:
        none where it is that call, or that call kept as a constant; [n] where
        it is a call of that call, or of a call of it ([hd_or d l 3] applied

@@ -1,13 +1,20 @@
 (** Found by Ephyra round 28. A top-level constant of a function-type alias
     ([st A := nat -> A * nat]) defined by a local fixpoint over [st nat],
     applied to [[]]: its accumulator is an [st nat] and both branches return
-    [sret _]. Under CRANE_CHECK_IR the typed-lowering check finds an
+    [sret _]. Under CRANE_CHECK_IR the typed-lowering check found an
     application lowered with no type ("a apply lowered without a type, in
-    f: apply/1:apply/2:fixpoint"). The C++ compiles and is right. Kin of
+    f: apply/1:apply/2:fixpoint"). The C++ compiled and was right. Kin of
     round 15's [local_fix_alias_function_result] and round 25's
-    [local_fix_alias_acc_join] (both fixed), which failed the typed-fit
-    check. Expected: extracts under CRANE_CHECK_IR, [result = 703]. Actual:
-    "Crane IR check (typed lowering): a apply lowered without a type". *)
+    [local_fix_alias_acc_join].
+
+    Fixed: the constant is eta-expanded, so the fixpoint's application is
+    applied once more; its Core type was read by dropping arrows from the
+    fixpoint's, which ran out at the alias [st nat].  The arrows are now
+    dropped through a function alias ([Type_util.strip_arrows_through_aliases],
+    read by [Typed_checks.core_type_of] and [Calls.record_call_sig]), so
+    the application is a [nat * nat].
+
+    Expected: extracts under CRANE_CHECK_IR, [result = 703]. *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From Stdlib Require Import List.

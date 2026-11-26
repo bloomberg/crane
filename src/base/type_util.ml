@@ -925,6 +925,20 @@ let rec strip_arrows_n n ty =
     | Core.Type.Arrow {result = rest; _} -> strip_arrows_n (n - 1) rest
     | _ -> None
 
+(** {!strip_arrows_n}, reading a function alias the arrows run into as the
+    arrows it abbreviates: [st nat] applied once more, [st A := nat -> A *
+    nat], is [nat * nat]. *)
+let rec strip_arrows_through_aliases n ty =
+  if n <= 0 then Some ty
+  else
+    match resolve_meta ty with
+    | Core.Type.Arrow {parameter = t1; result = rest} when Core_util.is_erased_type t1 ->
+      strip_arrows_through_aliases n rest
+    | Core.Type.Arrow {result = rest; _} -> strip_arrows_through_aliases (n - 1) rest
+    | Core.Type.Global_app {head = GlobRef.ConstRef _; _} as a -> (
+      match expand_core_fun_alias a with Core.Type.Arrow _ as f -> strip_arrows_through_aliases n f | _ -> None )
+    | _ -> None
+
 (** Strip one level of reference or const-qualification from a C++ type.
     Normalises lambda parameter types before building [Function] types.
     Unlike [Control_to_cpp.Tail.strip_ref_and_const_type] this is intentionally
