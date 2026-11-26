@@ -151,6 +151,9 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
     (* A fresh identity used only through its views, and only where it is
        created, is held in a local instead of its canonical owner. *)
     on_decl "local_storage" Local_storage.transform_decl;
+    (* A copy of a by-value parameter that is its last use -- a loop's
+       variable -- is the parameter itself. *)
+    on_decl "param_copies" Param_copies.transform_decl;
     (* A string literal where C++ deduces the type is the string object, not
        the character array. *)
     on_decl "deduced_literals" Deduced_literals.transform_decl;
