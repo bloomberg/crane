@@ -1048,7 +1048,7 @@ Uses `crane::rc` (non-atomic count in the same allocation as the value)
 instead of `std::shared_ptr` for recursive fields, and takes precedence over
 `bsl::shared_ptr`. Sound only when values are not shared across threads. A
 unit whose program uses a mapping that runs code on several threads
-(`<thread>`, `<future>`, `crane_thread.h`, `bsl_thread.h`, `bsl_future.h`,
+(`<thread>`, `<future>`, `bsl_thread.h`, `bsl_future.h`,
 `stm_adapter.h`: `Monads.Thread`, `Monads.Par`, `Monads.STM` and their BDE
 flavours) keeps `std::shared_ptr`, with the warning
 `crane-non-atomic-rc-concurrent`. Under this option a constructor's factory

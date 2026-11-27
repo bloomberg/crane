@@ -17,6 +17,7 @@ Crane Extract Inductive threadE => ""
 
 Crane Extract Inlined Constant thread => "bsl::thread" From "bsl_thread.h".
 Crane Extract Inlined Constant spawn => "bsl::thread(%a0, %a1)" From "bsl_thread.h".
+Crane Extract Inlined Constant join => "%a0.join()".
 Crane Extract Inlined Constant sleep =>
   "bsl::this_thread::sleep_for(std::chrono::milliseconds(%a0))"
   From "bsl_thread.h" "chrono".

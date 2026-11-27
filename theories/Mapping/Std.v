@@ -55,20 +55,23 @@ Local Open Scope pstring_scope.
     chain of concatenations appends to one growing temporary, as C++
     evaluates [a + b + c]; through views each link would allocate a string
     of its own.  The result is cut to [max_length] bytes, as Rocq's is;
-    [crane::string_capped] moves the temporary through. *)
+    [substr] of the temporary takes over its buffer (C++23). *)
 #[export] Instance string_cat_mapping : OperationMapping (Ref PrimString.cat) :=
-  {| operation_headers := ["string"; "crane_string.h"];
-     operation_cpp := Expr "crane::string_capped(%arg(s1) + %arg(s2))";
+  {| operation_headers := ["string"];
+     operation_cpp := Expr "(%arg(s1) + %arg(s2)).substr(0, 16777211)";
      operation_contract :=
        PureOperation
          [{| argument_name := "s1"; argument_use := ReadCanonical |};
           {| argument_name := "s2"; argument_use := ReadCanonical |}]
          ReturnValue [] |}.
 
-(** Total, as Rocq's: an index out of range reads the null character. *)
+(** Total, as Rocq's: an index out of range reads the null character.  The
+    byte is read unsigned, 0..255, as Rocq's [char63]; an [int63] is never
+    negative, so one unsigned comparison is the bounds check. *)
 #[export] Instance string_get_mapping : OperationMapping (Ref PrimString.get) :=
-  {| operation_headers := ["crane_string.h"];
-     operation_cpp := Expr "crane::string_get(%arg(s), %arg(i))";
+  {| operation_headers := ["cstdint"; "cstddef"];
+     operation_cpp :=
+       Expr "static_cast<std::int64_t>(static_cast<std::size_t>(%arg(i)) < %arg(s).size() ? static_cast<unsigned char>(%arg(s)[static_cast<std::size_t>(%arg(i))]) : 0)";
      operation_contract :=
        PureOperation
          [{| argument_name := "s"; argument_use := Read |};
@@ -78,8 +81,9 @@ Local Open Scope pstring_scope.
 (** Total, as Rocq's: the length is clamped to [max_length] and the
     character to its low byte. *)
 #[export] Instance string_make_mapping : OperationMapping (Ref PrimString.make) :=
-  {| operation_headers := ["crane_string.h"];
-     operation_cpp := Expr "crane::string_make(%arg(n), %arg(c))";
+  {| operation_headers := ["string"; "algorithm"; "cstdint"];
+     operation_cpp :=
+       Expr "std::string(static_cast<std::size_t>(std::min<std::int64_t>(%arg(n), 16777211)), static_cast<char>(%arg(c)))";
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -87,27 +91,30 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 
 #[export] Instance string_max_length_mapping : OperationMapping (Ref PrimString.max_length) :=
-  {| operation_headers := ["crane_string.h"];
-     operation_cpp := Expr "crane::string_max_length";
+  {| operation_headers := ["cstdint"];
+     operation_cpp := Expr "INT64_C(16777211)";
      operation_contract := PureOperation [] ReturnValue [] |}.
 
 (** Lexicographic on the bytes read unsigned, as Rocq's.  The result is
     the [comparison] enum, whose constructors are numbered in declaration
-    order ([Eq], [Lt], [Gt]); [%ret] names it. *)
+    order ([Eq], [Lt], [Gt]); [%ret] names it.  [std::string_view]'s [<]
+    compares the bytes unsigned ([std::char_traits<char>]). *)
 #[export] Instance string_compare_mapping : OperationMapping (Ref PrimString.compare) :=
-  {| operation_headers := ["crane_string.h"];
-     operation_cpp := Expr "static_cast<%ret>(crane::string_compare(%arg(s1), %arg(s2)))";
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<%ret>((%arg(s1) < %arg(s2)) + 2 * (%arg(s1) > %arg(s2)))";
      operation_contract :=
        PureOperation
          [{| argument_name := "s1"; argument_use := Read |};
           {| argument_name := "s2"; argument_use := Read |}]
          ReturnValue [] |}.
 
-(** Total, as Rocq's; returns an owner, though it reads its
-    argument through a view. *)
+(** Total, as Rocq's: an offset past the end gives the empty string, where
+    [substr] would throw, and the length is clamped to what remains; returns
+    an owner, though it reads its argument through a view. *)
 #[export] Instance string_sub_mapping : OperationMapping (Ref PrimString.sub) :=
-  {| operation_headers := ["crane_string.h"];
-     operation_cpp := Expr "crane::string_sub(%arg(s), %arg(off), %arg(len))";
+  {| operation_headers := ["string"; "cstddef"];
+     operation_cpp :=
+       Expr "(static_cast<std::size_t>(%arg(off)) <= %arg(s).size() ? std::string(%arg(s).substr(static_cast<std::size_t>(%arg(off)), static_cast<std::size_t>(%arg(len)))) : std::string())";
      operation_contract :=
        PureOperation
          [{| argument_name := "s"; argument_use := Read |};

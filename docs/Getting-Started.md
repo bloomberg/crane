@@ -87,7 +87,7 @@ own C++ file containing `main`.
 
 The `-I` is needed because generated code includes Crane's runtime headers:
 `small_vector.h` and `crane_fn.h` here, and depending on what you extract
-also `rc.h`, `lazy.h`, `persistent_array.h`, `crane_string.h` and others.
+also `rc.h`, `lazy.h`, `persistent_array.h`, `crane_st.h` and others.
 They are header-only and live in `theories/cpp` in the Crane checkout
 (`theories/cpp_bde` for BDE builds); they are not installed onto the system
 include path, so point `-I` at that directory or copy the headers into your

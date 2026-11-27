@@ -102,11 +102,6 @@ public:
 
 namespace crane::st {
 
-// The number of elements of an array of size n.
-template <class I> std::size_t extent(const I &n) {
-  return static_cast<std::size_t>(n);
-}
-
 // A fresh array holding the elements of the list xs, in order.
 template <class T, class L>
 std::shared_ptr<array_storage<T>> new_list_array(const L &xs) {

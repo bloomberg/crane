@@ -141,11 +141,10 @@ From Corelib Require Import PrimString.
      operation_contract :=
        PureOperation [{| argument_name := "s"; argument_use := Read |}] ReturnValue [] |}.
 
-(** Cut to [max_length] bytes, as Rocq's ([crane::string_capped] is
-    generic over the string type). *)
+(** Cut to [max_length] bytes, as Rocq's. *)
 #[export] Instance bde_string_cat_mapping : OperationMapping (Ref PrimString.cat) :=
-  {| operation_headers := ["bsl_string.h"; "crane_string.h"];
-     operation_cpp := Expr "crane::string_capped(%arg(s1) + %arg(s2))";
+  {| operation_headers := ["bsl_string.h"];
+     operation_cpp := Expr "(%arg(s1) + %arg(s2)).substr(0, 16777211)";
      operation_contract :=
        PureOperation
          [{| argument_name := "s1"; argument_use := ReadCanonical |};
@@ -579,47 +578,50 @@ From Corelib Require Import PrimFloat.
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
-(** The other float primitives follow Rocq's kernel in crane_float.h. *)
+(** The other float primitives follow Rocq's kernel, as the standard
+    mapping writes them ({!Mapping.StdCore}). *)
 #[export] Instance bde_float_compare_mapping : OperationMapping (Ref PrimFloat.compare) :=
-  {| operation_headers := ["crane_float.h"];
-     operation_cpp := Expr "crane::float_compare<%ret>(%arg(x), %arg(y))";
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<%ret>(%arg(x) < %arg(y) ? 1 : %arg(x) > %arg(y) ? 2 : %arg(x) == %arg(y) ? 0 : 3)";
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_normfr_mantissa_mapping : OperationMapping (Ref PrimFloat.normfr_mantissa) :=
-  {| operation_headers := ["crane_float.h"];
-     operation_cpp := Expr "crane::float_normfr_mantissa(%arg(x))";
+  {| operation_headers := ["cmath"; "cstdint"];
+     operation_cpp :=
+       Expr "(std::fabs(%arg(x)) >= 0.5 && std::fabs(%arg(x)) < 1.0 ? static_cast<std::int64_t>(std::ldexp(std::fabs(%arg(x)), 53)) : 0)";
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_frshiftexp_mapping : OperationMapping (Ref PrimFloat.frshiftexp) :=
-  {| operation_headers := ["crane_float.h"];
-     operation_cpp := Expr "crane::float_frshiftexp<%ret>(%arg(x))";
+  {| operation_headers := ["cmath"; "cstdint"];
+     operation_cpp :=
+       Expr "(std::isfinite(%arg(x)) && %arg(x) != 0.0 ? %ret{std::scalbn(%arg(x), -(std::ilogb(%arg(x)) + 1)), static_cast<std::int64_t>(std::ilogb(%arg(x))) + 2102} : %ret{%arg(x), 0})";
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_ldshiftexp_mapping : OperationMapping (Ref PrimFloat.ldshiftexp) :=
-  {| operation_headers := ["crane_float.h"];
-     operation_cpp := Expr "crane::float_ldshiftexp(%arg(x), %arg(e))";
+  {| operation_headers := ["cmath"; "algorithm"; "cstdint"];
+     operation_cpp := Expr "std::ldexp(%arg(x), static_cast<int>(std::min<std::int64_t>(%arg(e), 4202) - 2101))";
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "e"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_next_up_mapping : OperationMapping (Ref PrimFloat.next_up) :=
-  {| operation_headers := ["crane_float.h"];
-     operation_cpp := Expr "crane::float_next_up(%arg(x))";
+  {| operation_headers := ["cmath"; "limits"];
+     operation_cpp := Expr "std::nextafter(%arg(x), std::numeric_limits<double>::infinity())";
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_next_down_mapping : OperationMapping (Ref PrimFloat.next_down) :=
-  {| operation_headers := ["crane_float.h"];
-     operation_cpp := Expr "crane::float_next_down(%arg(x))";
+  {| operation_headers := ["cmath"; "limits"];
+     operation_cpp := Expr "std::nextafter(%arg(x), -std::numeric_limits<double>::infinity())";
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]

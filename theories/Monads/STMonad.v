@@ -393,7 +393,7 @@ Crane Extraction Implicit getElems [R].
 #[export] Instance new_array_mapping : OperationMapping (Ref (@newArray)) :=
   {| operation_headers := ["crane_st.h"; "memory"];
      operation_cpp :=
-       Expr "std::make_shared<crane::array_storage<%stored(contents)>>(crane::st::extent(%arg(n)), %arg(def))";
+       Expr "std::make_shared<crane::array_storage<%stored(contents)>>(static_cast<std::size_t>(%arg(n)), %arg(def))";
      operation_contract :=
        EffectfulOperation
          [{| argument_name := "n"; argument_use := Read |};

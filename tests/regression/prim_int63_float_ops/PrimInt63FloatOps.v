@@ -1,5 +1,5 @@
 (** The PrimInt63 and PrimFloat primitives [Mapping.Std] mapped last
-    (crane_int63.h, crane_float.h): signed readings, carrying arithmetic,
+    (crane_int63.h, and <cmath> in the mapping): signed readings, carrying arithmetic,
     exact products and divisions, leading and trailing zeros, the float
     comparison and the exponent primitives.  Each check compares a
     primitive's result at an edge case with the value Rocq computes; [Eval]

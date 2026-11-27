@@ -3521,8 +3521,8 @@ let get_custom_imports () =
     (List.fold_right StringSet.add (Mapping_plan.instantiated_headers ()) (imports_of (written_customs ())))
 
 (* The headers whose mappings put the program's values on several threads:
-   [std::thread] and [std::async] and Crane's [crane::thread] over the
-   former, BDE's [bsl::thread] and [bsl::async], and Crane's transactional
+   [std::thread] and [std::async], BDE's [bsl::thread] and [bsl::async], and
+   Crane's transactional
    memory ([stm_adapter.h], both flavours), which exists to be shared by
    threads the program's caller starts -- a hash map in TVars is called from
    many [std::thread]s of a driver that the extracted code never sees.  A
@@ -3531,7 +3531,7 @@ let get_custom_imports () =
    every reader -- the generated code and the header's preamble -- sees one
    answer. *)
 let concurrency_headers =
-  ["thread"; "future"; "crane_thread.h"; "bsl_thread.h"; "bsl_future.h"; "stm_adapter.h"]
+  ["thread"; "future"; "bsl_thread.h"; "bsl_future.h"; "stm_adapter.h"]
 
 let runs_on_threads refs =
   StringSet.exists (fun h -> List.mem h concurrency_headers) (imports_of refs)

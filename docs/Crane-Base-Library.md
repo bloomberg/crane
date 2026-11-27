@@ -83,10 +83,11 @@ string mapping. Both set `Crane StdLib "std"`.
   `diveucl`, `diveucl_21`, `addmuldiv`, `compare`, `compares`, `head0`,
   `tail0`.
 - `PrimFloat`: `add`, `sub`, `mul`, `div`, `opp`, `abs`, `sqrt`, `eqb`,
-  `ltb`, `leb`, `of_uint63`, `classify`, `compare`, and through
-  `crane_float.h`: `normfr_mantissa`, `frshiftexp`, `ldshiftexp`, `next_up`,
-  `next_down`.
-- `PrimString` (`crane_string.h`): `length`, `cat` (cut to `max_length`, as
+  `ltb`, `leb`, `of_uint63`, `classify`, `compare`, `normfr_mantissa`,
+  `frshiftexp`, `ldshiftexp`, `next_up`, `next_down`, each written with
+  `<cmath>` in the mapping.
+- `PrimString`, each written with `std::string`/`std::string_view` in the
+  mapping: `length`, `cat` (cut to `max_length`, as
   in Rocq), `get` (the byte, unsigned), `make` (length clamped to
   `max_length`), `max_length` (16777211), `compare`, `sub`.
 
@@ -233,7 +234,8 @@ in `STMDefs.v`.
 
 ### `Monads/Thread.v` / `Monads/ThreadBDE.v`
 
-`thread` (a `crane::thread`: copyable, joinable from any copy), `spawn`,
+`thread` (a `std::shared_future<void>` from `std::async`: copyable, joinable
+from any copy, the last copy waiting for the thread), `spawn`,
 `join`, `sleep` (milliseconds), `runConc`. `concE` composes `threadE` with
 `consoleE`. Shared definitions in `ThreadDefs.v`.
 
@@ -352,12 +354,10 @@ Generated code includes these by name, so `theories/cpp` (or
 | `persistent_array.h` | the copy-on-write array `PrimArray` maps to |
 | `shared_array.h` | `crane::shared_array<T>`, an immutable shared array; static blocks for baked constants |
 | `crane_st.h` | `crane::array_storage<T>`, one addressable element each, and the ST array helpers |
-| `crane_string.h` | the `PrimString` operations |
-| `crane_int63.h`, `crane_float.h` | the `PrimInt63` and `PrimFloat` primitives without an operator |
+| `crane_int63.h` | the `PrimInt63` primitives without an operator (carrying products and two-word divisions loop) |
 | `conslist.h` | `crane::list<T>`, a persistent cons list, available as a container mapping |
 | `aggregate.h` | a struct's fields as a pack (C++26) or counted bindings (C++20) |
 | `crane_bake.h` | the `Crane Bake` writer and reader |
-| `crane_thread.h` | `crane::thread`, a copyable thread handle |
 | `crane_itree.h` | reified interaction trees |
 | `crane_real.h` | the `Real` class |
 | `stm_adapter.h`, `crane-stm/` | the STM API and its implementation |

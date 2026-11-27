@@ -941,8 +941,8 @@ val non_atomic_rc_requested : unit -> bool
 (** A unit's configuration: what it decides, from the customs its program
     names, about the runtime it is written against.  [concurrent]: whether
     it runs on several threads -- its program names a custom extraction
-    from a header that starts threads ([<thread>], [<future>],
-    [crane_thread.h], their BDE spellings) or from Crane's transactional
+    from a header that starts threads ([<thread>], [<future>], their BDE
+    spellings) or from Crane's transactional
     memory ([stm_adapter.h]), whose values are shared by threads the caller
     starts. *)
 type unit_config = {concurrent : bool}
