@@ -1010,6 +1010,35 @@ let on_bodies f (d : settled) : settled =
   in
   decl d
 
+(* Whether a call of [r] has no effect: a constructor, a pure mapped
+   operation, a mapping's text whose type is no monadic action. *)
+let pure_global r =
+  match r with
+  | GlobRef.ConstructRef _ -> true
+  | _ when Base.Table.is_mapped_operation r -> (Base.Mapping_operation.find r).purity = Base.Mapping_operation.Pure
+  | _ when Base.Table.is_custom r -> (
+    match Base.Table.find_type r with
+    | ty -> not (Base.Type_util.is_monadic_core_type (Base.Type_util.core_codomain ty))
+    | exception Not_found -> Base.Table.is_inline_custom r )
+  | _ -> false
+
+(* Whether evaluating [e] has no effect: it calls no function but a
+   constructor (or its factory) or a {!pure_global}, and runs no lambda. *)
+let rec effect_free (e : expr) =
+  let here =
+    match e with
+    | Call ({constructs = Some _; _}, _, _) -> true
+    | Call (_, Entity (r, _, _), _) -> pure_global r
+    | Foreign (Call, f) -> pure_global f.custom
+    | Call _ | Lambda _ | Foreign _ -> false
+    | _ -> true
+  in
+  here
+  &&
+  let ok = ref true in
+  Cpp_ir.Subterms.expr ~expr:(fun e -> if not (effect_free e) then ok := false) ~stmts:(fun _ -> ok := false) e;
+  !ok
+
 (** Dead stores: a variable declared by value that nothing reads, only
     assigns, is not kept.  Each assignment to it goes -- [x = e;], or a
     mapping's store [%a0 = %a1] on it that scalar replacement left
@@ -1025,35 +1054,6 @@ let on_bodies f (d : settled) : settled =
     whole body: a variable declared more than once, or at a reference type,
     is left alone. *)
 let drop_dead_stores (d : settled) : settled =
-  (* Whether evaluating [e] has no effect: it calls no function but a
-     constructor (or its factory) or a mapping's text whose type is no
-     monadic action, and no mapped operation but a pure one, and runs no
-     lambda. *)
-  let pure_global r =
-    match r with
-    | GlobRef.ConstructRef _ -> true
-    | _ when Base.Table.is_mapped_operation r -> (Base.Mapping_operation.find r).purity = Base.Mapping_operation.Pure
-    | _ when Base.Table.is_custom r -> (
-      match Base.Table.find_type r with
-      | ty -> not (Base.Type_util.is_monadic_core_type (Base.Type_util.core_codomain ty))
-      | exception Not_found -> Base.Table.is_inline_custom r )
-    | _ -> false
-  in
-  let rec effect_free (e : expr) =
-    let here =
-      match e with
-      | Call ({constructs = Some _; _}, _, _) -> true
-      | Call (_, Entity (r, _, _), _) -> pure_global r
-      | Foreign (Call, f) -> pure_global f.custom
-      | Call _ | Lambda _ | Foreign _ -> false
-      | _ -> true
-    in
-    here
-    &&
-    let ok = ref true in
-    Cpp_ir.Subterms.expr ~expr:(fun e -> if not (effect_free e) then ok := false) ~stmts:(fun _ -> ok := false) e;
-    !ok
-  in
   let by_value (t : ty) = match t with Reference _ -> false | _ -> true in
   let body params (ss : stmt list) =
     (* Each name declared, with whether it is declared once, by value. *)
@@ -1255,6 +1255,149 @@ let propagate_copies (d : settled) : settled =
       (* What a propagation leaves of a copy put back, [x = x;], does
          nothing. *)
       | s :: rest when (match store s with Some (x, Local y) -> Id.equal x y | _ -> false) -> stmts rest
+      | s :: rest -> Map.stmt (rw ()) s :: stmts rest
+      | [] -> []
+    and rw () = rewriter ~stmts ~expr:(fun e -> Map.expr (rw ()) e) ~stmt:(fun s -> Map.stmt (rw ()) s) ~type_:same_type () in
+    stmts ss
+  in
+  on_bodies body d
+
+(** A value bound to a variable only to be moved into the statement after
+    it is computed there: [List<bool> bs = std::move(_result); _result =
+    cons(b, std::move(bs));] is [_result = cons(b, std::move(_result));],
+    and [List<A> vs = elems(a); return std::make_pair(n, std::move(vs));]
+    returns [std::make_pair(n, elems(a))].  Only where the variable is used
+    once, in the very next statement, as the operand of a move, at a place
+    that is always evaluated (not inside a lambda, a conditional, [&&] or
+    [||]), every other operand evaluated with it is free of effects and
+    shares with the value no variable either of them moves -- so no order of
+    evaluation changes, and no read meets a move it would have preceded --
+    and its declared type is the type of the
+    value ([auto], or a value whose type is recorded and the same): nothing
+    converts it at the binding.  The value is itself moved or a call's
+    result, which a move's operand may be. *)
+let inline_single_uses (d : settled) : settled =
+  let body params (ss : stmt list) =
+    let decls = Hashtbl.create 16 in
+    let declare x (t : ty) = Hashtbl.replace decls x (match Hashtbl.find_opt decls x with Some _ -> None | None -> Some t) in
+    List.iter (fun (x, t) -> declare x t) params;
+    let rec note (s : stmt) =
+      ( match s with
+      | Bind_variable (x, (Declare (t, _) | Declare_deduced (Typed t, _)), _) | Declare (x, t, _) | Declare_value_initialized (x, t) ->
+        declare x t
+      | s -> List.iter (fun x -> Hashtbl.replace decls x None) (bound_otherwise s) );
+      Cpp_ir.Children.stmt nv s
+    and nv : phase Cpp_ir.Children.visitor = {expr = (fun e -> Cpp_ir.Children.expr nv e); stmt = note; type_ = ignore} in
+    List.iter note ss;
+    let type_of (e : expr) : ty option =
+      match e with
+      | Move (Local y) | Local y -> ( match Hashtbl.find_opt decls y with Some t -> t | None -> None )
+      | Call ({yields = Typed t; _}, _, _) -> Some t
+      | Foreign (_, {yields = Some t; _}) -> Some t
+      | _ -> None
+    in
+    (* One type, however it is held: {!Base.Type_util.cpp_ty_eq}, a custom
+       type spelled as one of its arguments (an erased [itree E A] is [A]),
+       and a mapping's instantiated text or a named C++ type compared part
+       by part. *)
+    let rec same (a : ty) (b : ty) =
+      Base.Type_util.cpp_ty_eq a b
+      ||
+      let as_argument (t : ty) =
+        match t with
+        | Entity_application (g, xs, _) | Foreign {custom = g; types = xs; _} -> (
+          match Base.Type_util.spelled_as_argument g with Some k -> List.nth_opt xs k | None -> None )
+        | _ -> None
+      in
+      match (as_argument a, as_argument b) with
+      | Some a', _ -> same a' b
+      | _, Some b' -> same a b'
+      | None, None ->
+      match (a, b) with
+      | (Const a | In_namespace (_, a)), b | b, (Const a | In_namespace (_, a)) -> same a b
+      | Entity_application (g, xs, _), Entity_application (g', ys, _) ->
+        GlobRef.CanOrd.equal g g' && List.compare_lengths xs ys = 0 && List.for_all2 same xs ys
+      | Foreign f, Foreign f' ->
+        GlobRef.CanOrd.equal f.custom f'.custom && List.compare_lengths f.types f'.types = 0 && List.for_all2 same f.types f'.types
+      | External (n, xs), External (n', ys) -> String.equal n n' && List.compare_lengths xs ys = 0 && List.for_all2 same xs ys
+      | Named (n, xs), Named (n', ys) -> Id.equal n n' && List.compare_lengths xs ys = 0 && List.for_all2 same xs ys
+      | _ -> a = b
+    in
+    let fits (b : phase Binding.t) init =
+      match b with
+      | Declare_deduced _ -> true
+      | Declare ((Reference _ | Auto), _) -> false
+      | Declare (t, _) -> (
+        match type_of init with Some t' -> same t' t | None -> false )
+      | _ -> false
+    in
+    let movable (init : expr) = match init with Move _ | Call _ | Foreign (Call, _) -> true | _ -> false in
+    let occurrences x (e : expr) =
+      let n = ref 0 in
+      let rec go (e : expr) =
+        (match e with Local y when Id.equal x y -> incr n | _ -> ());
+        Cpp_ir.Subterms.expr ~expr:go ~stmts:(fun ss -> if Cpp_ir.Variables.mem x (Cpp_ir.Variables.free_in_body ss) then n := !n + 2) e
+      in
+      go e;
+      !n
+    in
+    (* Whether the one occurrence of [x] in [e] is a move's operand at a
+       place always evaluated, every operand evaluated beside it free of
+       effects. *)
+    let rec placed x (e : expr) =
+      match e with
+      | Move (Local y) -> Id.equal x y
+      | Local _ | Lambda _ | Conditional _ | Binary ((And | Or), _, _) -> false
+      | _ ->
+        let kids = ref [] and stmts_inside = ref false in
+        Cpp_ir.Subterms.expr ~expr:(fun k -> kids := k :: !kids) ~stmts:(fun _ -> stmts_inside := true) e;
+        (not !stmts_inside)
+        &&
+        match List.partition (fun k -> occurrences x k > 0) !kids with
+        | [k], others -> List.for_all effect_free others && placed x k
+        | _ -> false
+    in
+    let moved_in (e : expr) =
+      let acc = ref [] in
+      let rec go (e : expr) =
+        (match e with Move (Local y) -> acc := y :: !acc | _ -> ());
+        Cpp_ir.Subterms.expr ~expr:go ~stmts:(fun _ -> ()) e
+      in
+      go e;
+      !acc
+    in
+    let value_of (s : stmt) : expr option =
+      match s with
+      | Return (Some e) | Expression e | Bind_variable (_, _, e) -> Some e
+      | s -> Option.map snd (store s)
+    in
+    let substitute x init (s : stmt) : stmt =
+      let rec fe (e : expr) : expr = match e with Move (Local y) when Id.equal x y -> init | _ -> Map.expr (m ()) e
+      and fs (s : stmt) : stmt = Map.stmt (m ()) s
+      and m () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
+      fs s
+    in
+    let rec stmts (ss : stmt list) : stmt list =
+      match ss with
+      | Bind_variable (x, b, init) :: s :: rest
+        when movable init && fits b init
+             && (not (Cpp_ir.Variables.mem x (Cpp_ir.Variables.free_in_body rest)))
+             && (match (s, value_of s) with
+                 (* the variable assigned is no use of the value *)
+                 | Bind_variable (z, _, _), _ when Id.equal x z -> false
+                 | _, Some e ->
+                   occurrences x e = 1 && placed x e
+                   (* the value and the rest of the statement share no
+                      variable either of them moves: a read and a move of
+                      it would be unsequenced *)
+                   && (let others = List.filter (fun y -> not (Id.equal x y)) (Cpp_ir.Variables.free_in_expr e) in
+                       let moved = moved_in init @ moved_in e in
+                       not
+                         (List.exists
+                            (fun y -> List.exists (Id.equal y) others && List.exists (Id.equal y) moved)
+                            (Cpp_ir.Variables.free_in_expr init)))
+                 | _, None -> false) ->
+        stmts (substitute x init s :: rest)
       | s :: rest -> Map.stmt (rw ()) s :: stmts rest
       | [] -> []
     and rw () = rewriter ~stmts ~expr:(fun e -> Map.expr (rw ()) e) ~stmt:(fun s -> Map.stmt (rw ()) s) ~type_:same_type () in

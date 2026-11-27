@@ -160,8 +160,32 @@ let gen_bind_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : Core.Exp
             binder = bound_by_bind env } : Cpp_ir.Lowered.Stmt.t)
         :: gen_stmts cx (Slot.at ~ret ~slot ()) env k f
       | None ->
+        let body = gen_stmts cx (Slot.at ~ret ~slot ()) env k f in
+        (* A variable the continuation returns as it is is declared at the
+           type the function returns, where that is the same type written
+           through an alias: [STArray node], not the [STArray (nat * nat)]
+           the action's value was inferred at. *)
+        let ty =
+          match (ret, List.rev body) with
+          | Some r, Return (Some (Local y | Move (Local y))) :: _ when Names.Id.equal x y ->
+            let al = Coerce.aliases_in cx in
+            (* the result an erased tree is written as, [%t1] *)
+            let rec result (t : Cpp_ir.Lowered.Type.t) =
+              match t with
+              | Entity_application (g, xs, _) -> (
+                match Option.bind (Base.Type_util.spelled_as_argument g) (List.nth_opt xs) with
+                | Some t -> result t
+                | None -> t )
+              | t -> t
+            in
+            let r = result r in
+            let r' = Coerce.normal al r and ty' = Coerce.normal al ty in
+            if r <> ty && (r' = ty' || Base.Type_util.cpp_ty_eq r' ty') then r
+            else ty
+          | _ -> ty
+        in
         Typed_checks.agreement cx ~site:"bind result" action (Exactly ty);
-        (Cpp_ir.Typed.bind ?binder:(bound_by_bind env) (x) (ty) (a) : Cpp_ir.Lowered.Stmt.t) :: gen_stmts cx (Slot.at ~ret ~slot ()) env k f
+        (Cpp_ir.Typed.bind ?binder:(bound_by_bind env) (x) (ty) (a) : Cpp_ir.Lowered.Stmt.t) :: body
     end
   | _ ->
     (* No lambda parameters (eta-reduced continuation like bare Ret).

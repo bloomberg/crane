@@ -1395,6 +1395,19 @@ let rec multiline_body = function
   | Operand ->
     false
 
+(** Whether [d] holds a block at all -- a lambda's body -- whatever its
+    layout. *)
+let rec holds_body = function
+  | Body _ -> true
+  | Cat ds | Fill (ds, _) | Args (ds, _, _, _) -> List.exists holds_body ds
+  | Fill_next (s, ds, _) -> List.exists holds_body (s :: ds)
+  | Choose (a, _) -> holds_body a
+  | Group d | Nest (_, d) | Align d | Anchor d | Rhs d | Flatten d -> holds_body d
+  | Ternary (a, b) -> holds_body a || holds_body b
+  | Text _ | Lit _ | Break _ | Hard | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ | Last_space _
+  | Operand ->
+    false
+
 (** The string literal [d] is, if it is one ({!is_literal}). *)
 let rec literal_text = function
   | Lit s -> Some s
@@ -1581,7 +1594,11 @@ let rec run o (cmds : (int * mode * doc) list) =
         in
         if hopeless then run o ((ind, Flat, Cat (interleave (Text " ") items @ [Text close])) :: rest)
         else if lambda_inside && anonymous then aligned (one_per_line items)
-        else if lambda_inside then broken (one_per_line items)
+        (* A lambda before the last argument, in a list that does not fit
+           on one line, puts every argument on a line of its own: filled,
+           what follows the lambda's closing brace would hang under the
+           parenthesis. *)
+        else if lambda_inside || List.exists holds_body (but_last items) then broken (one_per_line items)
         else if may_try o (fill items) then
           let tail = closers rest in
           if

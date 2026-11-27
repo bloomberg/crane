@@ -168,6 +168,11 @@ val drop_dead_stores : settled -> settled
     value. *)
 val propagate_copies : settled -> settled
 
+(** [inline_single_uses decl]: a value bound to a variable only to be moved
+    into the statement after it is computed there, where no order of
+    evaluation changes and nothing converts it at the binding. *)
+val inline_single_uses : settled -> settled
+
 (** [drop_trailing_returns decl]: a [return;] ending a function's body,
     or a branch of the conditional or match ending it, is dropped
     ({!Branch_tails.drop_trailing_returns}). *)
