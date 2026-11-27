@@ -29,10 +29,10 @@ From Crane.Libraries.ParseALot.Lexer.DFA Require Import CanonNF.
 
     Deliberately declared at module top level rather than inside [IntDFAFn]:
     Crane extracts a functor to a C++ *template*, generated from the functor
-    body, so a [Crane Extract Inlined Constant] attached to a constant of an
-    applied-functor instance never reaches the emitted template and is
-    silently ignored. A top-level constant has a stable global name that the
-    inline mapping does resolve against. *)
+    body, so an operation mapping of a constant of an applied-functor
+    instance never reaches the emitted template and is silently ignored. A
+    top-level constant has a stable global name that the mapping does
+    resolve against. *)
 Fixpoint dfa_nth {X : Type} (l : list X) (n : N) (d : X) : X :=
   match l with
   | [] => d

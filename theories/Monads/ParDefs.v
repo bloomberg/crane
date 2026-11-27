@@ -11,6 +11,12 @@
 From Corelib Require Import PrimString.
 From Crane Require Extraction.
 From Crane Require Import Monads.ITree.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Axiom future : Type -> Type.
 
@@ -24,7 +30,10 @@ Definition async {E} `{parE -< E} {A B} (f : A -> B) (a : A)
 Definition get_thread {E} `{parE -< E} {B} (t : future B)
   : itree E B := embed (GetThread t).
 
-Crane Extract Inlined Constant get_thread => "%a0.get()".
+#[export] Instance get_thread_mapping : OperationMapping (Ref (@get_thread)) :=
+  effect_cpp [] ["t"]
+    (Structured (Method (Arg "t") "get" [])).
 
 Axiom run_par : forall {A}, itree parE A -> A.
-Crane Extract Inlined Constant run_par => "%a0".
+#[export] Instance run_par_mapping : OperationMapping (Ref (@run_par)) :=
+  pass_through [] "t" [].

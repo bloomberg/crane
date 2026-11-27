@@ -14,6 +14,12 @@ From ITree Require Import
   Events.Exception
   ITree
 .
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 
 (* An error type used for runtime errors. *)
@@ -28,5 +34,6 @@ Definition failwith
 (* An erased tree performs its events where it is built, and nothing handles
    a [Throw] there: [failwith s] raises [s] as a C++ exception, at the type its
    call yields. *)
-Crane Extract Inlined Constant failwith =>
-  "[&]() -> %ret { throw std::runtime_error(%a0); }()" From "stdexcept".
+#[export] Instance failwith_mapping : OperationMapping (Ref (@failwith)) :=
+  effect_cpp ["stdexcept"] ["s"]
+    (Expr "[&]() -> %ret { throw std::runtime_error(%arg(s)); }()").

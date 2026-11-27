@@ -13,6 +13,12 @@
 From Corelib Require Import PrimString.
 From Crane Require Extraction.
 From Crane Require Import Monads.ITree.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Inductive envE : Type -> Type :=
 | GetEnv : string -> envE (option string)
@@ -26,8 +32,10 @@ Definition set_env {E} `{envE -< E} (name value : string) : itree E unit :=
 Definition unset_env {E} `{envE -< E} (name : string) : itree E unit :=
   embed (UnsetEnv name).
 
-Crane Extract Inlined Constant set_env =>
-  "setenv(%a0.c_str(), %a1.c_str(), 1)" From "cstdlib".
+#[export] Instance set_env_mapping : OperationMapping (Ref (@set_env)) :=
+  effect_cpp ["cstdlib"] ["name"; "value"]
+    (Structured (Call "setenv" [] [Method (Arg "name") "c_str" []; Method (Arg "value") "c_str" []; lit 1])).
 
-Crane Extract Inlined Constant unset_env =>
-  "unsetenv(%a0.c_str())" From "cstdlib".
+#[export] Instance unset_env_mapping : OperationMapping (Ref (@unset_env)) :=
+  effect_cpp ["cstdlib"] ["name"]
+    (Structured (Call "unsetenv" [] [Method (Arg "name") "c_str" []])).

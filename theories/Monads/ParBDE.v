@@ -9,11 +9,20 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.BDE.
 From Crane Require Export Monads.ParDefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive parE => ""
-  [ "bsl::async(bsl::launch::async, %a0, %a1)" "%a0.get()" ]
-  From "bsl_future.h".
+#[export] Instance parE_mapping (T : Type) : TypeMapping (parE T) :=
+  event_family ["bsl_future.h"]
+    [event (Ref (@MkThread)) "bsl::async(bsl::launch::async, %a0, %a1)";
+     event (Ref (@GetThread)) "%a0.get()"].
 
-Crane Extract Inlined Constant future => "bsl::future<%t0>" From "bsl_future.h".
-Crane Extract Inlined Constant async =>
-  "bsl::async(bsl::launch::async, %a0, %a1)" From "bsl_future.h".
+#[export] Instance future_mapping (A : Type) : TypeMapping (future A) :=
+  value_type ["bsl_future.h"] (Apply "bsl::future" [TypeArg (SourceType A)]) UnknownCopy.
+#[export] Instance async_mapping : OperationMapping (Ref (@async)) :=
+  effect_args ["bsl_future.h"] (uses Take ["f"; "a"])
+    (Structured (Call "bsl::async" [] [Verbatim "bsl::launch::async"; Arg "f"; Arg "a"])).

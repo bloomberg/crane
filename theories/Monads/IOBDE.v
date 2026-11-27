@@ -9,15 +9,22 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.BDE.
 From Crane Require Export Monads.IODefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive consoleE => ""
-  [ "bsl::cout << %a0"
-    "bsl::cout << %a0 << '\n'"
-    "[&]() -> bsl::string { bsl::string s; bsl::getline(bsl::cin, s); return s; }()" ]
-  From "bsl_iostream.h".
+#[export] Instance consoleE_mapping (T : Type) : TypeMapping (consoleE T) :=
+  event_family ["bsl_iostream.h"]
+    [event (Ref (@Print)) "bsl::cout << %a0";
+     event (Ref (@PrintEndline)) "bsl::cout << %a0 << '\n'";
+     event (Ref (@GetLine)) "[&]() -> bsl::string { bsl::string s; bsl::getline(bsl::cin, s); return s; }()"].
 
-Crane Extract Inductive fileE => ""
-  [ "[&]() -> bsl::string {
+#[export] Instance fileE_mapping (T : Type) : TypeMapping (fileE T) :=
+  event_family ["fstream"; "bsl_iostream.h"; "bdls_filesystemutil.h"]
+    [event (Ref (@ReadFile)) "[&]() -> bsl::string {
   bsl::ifstream file(%a0);
   if (!file) {
       bsl::cerr << ""Failed to open file "" << %a0 << '\n';
@@ -26,49 +33,58 @@ Crane Extract Inductive fileE => ""
   return bsl::string(
       bsl::istreambuf_iterator<char>(file),
       bsl::istreambuf_iterator<char>());
-}()"
-    "[&]() {
+}()";
+     event (Ref (@WriteFile)) "[&]() {
   bsl::ofstream file(%a0);
   file << %a1;
-}()"
-    "[&]() {
+}()";
+     event (Ref (@AppendFile)) "[&]() {
   bsl::ofstream file(%a0, bsl::ios::app);
   file << %a1;
-}()"
-    "bdls::FilesystemUtil::exists(%a0)"
-    "bdls::FilesystemUtil::remove(%a0)" ]
-  From "fstream" "bsl_iostream.h" "bdls_filesystemutil.h".
+}()";
+     event (Ref (@FileExists)) "bdls::FilesystemUtil::exists(%a0)";
+     event (Ref (@RemoveFile)) "bdls::FilesystemUtil::remove(%a0)"].
 
-Crane Extract Inlined Constant print => "bsl::cout << %a0" From "bsl_iostream.h".
-Crane Extract Inlined Constant print_endline => "bsl::cout << %a0 << '\n'" From "bsl_iostream.h".
-Crane Extract Inlined Constant get_line =>
-  "bsl::getline(bsl::cin, %result)" From "bsl_iostream.h".
+#[export] Instance print_mapping : OperationMapping (Ref (@print)) :=
+  effect_cpp ["bsl_iostream.h"] ["s"]
+    (Structured (Binop Shl (Verbatim "bsl::cout") (Arg "s"))).
+#[export] Instance print_endline_mapping : OperationMapping (Ref (@print_endline)) :=
+  effect_cpp ["bsl_iostream.h"] ["s"]
+    (Structured (Binop Shl (Binop Shl (Verbatim "bsl::cout") (Arg "s")) (Verbatim "'\n'"))).
+#[export] Instance get_line_mapping : OperationMapping (Ref (@get_line)) :=
+  effect_cpp ["bsl_iostream.h"] []
+    (WithBody "" "bsl::getline(bsl::cin, %result)").
 
-Crane Extract Inlined Constant read =>
-"[&]() -> bsl::string {
-  bsl::ifstream file(%a0);
+#[export] Instance read_mapping : OperationMapping (Ref (@read)) :=
+  effect_cpp ["fstream"; "bsl_iostream.h"] ["path"]
+    (Expr "[&]() -> bsl::string {
+  bsl::ifstream file(%arg(path));
   if (!file) {
-      bsl::cerr << ""Failed to open file "" << %a0 << '\n';
+      bsl::cerr << ""Failed to open file "" << %arg(path) << '\n';
       return bsl::string{};
   }
   return bsl::string(
       bsl::istreambuf_iterator<char>(file),
       bsl::istreambuf_iterator<char>());
-}()" From "fstream" "bsl_iostream.h".
+}()").
 
-Crane Extract Inlined Constant write_file =>
-"[&]() {
-  bsl::ofstream file(%a0);
-  file << %a1;
-}()" From "fstream".
+#[export] Instance write_file_mapping : OperationMapping (Ref (@write_file)) :=
+  effect_cpp ["fstream"] ["path"; "content"]
+    (Expr "[&]() {
+  bsl::ofstream file(%arg(path));
+  file << %arg(content);
+}()").
 
-Crane Extract Inlined Constant append_file =>
-"[&]() {
-  bsl::ofstream file(%a0, bsl::ios::app);
-  file << %a1;
-}()" From "fstream".
+#[export] Instance append_file_mapping : OperationMapping (Ref (@append_file)) :=
+  effect_cpp ["fstream"] ["path"; "content"]
+    (Expr "[&]() {
+  bsl::ofstream file(%arg(path), bsl::ios::app);
+  file << %arg(content);
+}()").
 
-Crane Extract Inlined Constant file_exists =>
-  "bdls::FilesystemUtil::exists(%a0)" From "bdls_filesystemutil.h".
-Crane Extract Inlined Constant remove_file =>
-  "bdls::FilesystemUtil::remove(%a0)" From "bdls_filesystemutil.h".
+#[export] Instance file_exists_mapping : OperationMapping (Ref (@file_exists)) :=
+  effect_cpp ["bdls_filesystemutil.h"] ["path"]
+    (Expr "bdls::FilesystemUtil::exists(%arg(path))").
+#[export] Instance remove_file_mapping : OperationMapping (Ref (@remove_file)) :=
+  effect_cpp ["bdls_filesystemutil.h"] ["path"]
+    (Expr "bdls::FilesystemUtil::remove(%arg(path))").

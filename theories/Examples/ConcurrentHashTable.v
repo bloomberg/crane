@@ -5,20 +5,23 @@
 
    Flavor-independent implementation. Import a flavor file ([Monads.STM]
    or [Monads.STMBDE]) before extraction to supply the C++ inline customs.
-   The [CHT.max] function needs a flavor-specific inline custom:
-   - Std: [Crane Extract Inlined Constant CHT.max => "std::max(%a0, %a1)".]
-   - BDE: [Crane Extract Inlined Constant CHT.max => "bsl::max(%a0, %a1)".]
+   The [CHT.max] function needs a flavor-specific operation mapping, an
+   [OperationMapping (Ref CHT.max)] calling [std::max] or [bsl::max].
 *)
 From Stdlib Require Import List Bool.
 From Crane Require Extraction.
 From Crane Require Import Monads.ITree Monads.IODefs Monads.STMDefs External.VectorDefs.
 From Corelib Require Import PrimInt63.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
 
 Import ListNotations.
 Set Implicit Arguments.
 
 Axiom nat_of_int : int -> nat.
-Crane Extract Inlined Constant nat_of_int => "static_cast<unsigned int>(%a0)".
+#[export] Instance nat_of_int_mapping : OperationMapping (Ref nat_of_int) :=
+  pure [] ["i"%pstring] (wrap Crane.Cpp.U32 (Crane.Cpp.Arg "i"%pstring)).
 
 Module CHT.
 

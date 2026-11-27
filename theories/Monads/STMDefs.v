@@ -11,6 +11,12 @@
 From Corelib Require Import PrimString PrimInt63.
 From Crane Require Extraction.
 From Crane Require Import Monads.ITree Monads.IODefs External.VectorDefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Open Scope itree_scope.
 
@@ -28,10 +34,13 @@ Inductive stmVecE : Type -> Type :=
 Inductive stmControlE : Type -> Type :=
 | Retry : forall A, stmControlE A.
 
-Crane Extract Inductive stmVecE => ""
-  [ "%a0.at(%a1)" "%a0.empty()" ].
-Crane Extract Inductive stmControlE => ""
-  [ "stm::retry<%t0>()" ].
+#[export] Instance stmVecE_mapping (T : Type) : TypeMapping (stmVecE T) :=
+  event_family []
+    [event (Ref (@GetSTM)) "%a0.at(%a1)";
+     event (Ref (@IsEmptySTM)) "%a0.empty()"].
+#[export] Instance stmControlE_mapping (T : Type) : TypeMapping (stmControlE T) :=
+  event_family []
+    [event (Ref (@Retry)) "stm::retry<%t0>()"].
 
 Definition stmE := tvarE +' stmVecE +' stmControlE.
 Crane Extract Skip stmE.
@@ -48,13 +57,25 @@ Definition retry {A} : itree stmE A := embed (Retry A).
 Definition get_stm {E} `{stmVecE -< E} {A} (v : vector A) (i : int) : itree E A := embed (GetSTM v i).
 Definition is_empty_stm {E} `{stmVecE -< E} {A} (v : vector A) : itree E bool := embed (IsEmptySTM v).
 
-Crane Extract Inlined Constant atomically => "stm::atomically([&] { return %a0; })".
-Crane Extract Inlined Constant or_else => "stm::orElse<%t0>(%a0, %a1)".
-Crane Extract Inlined Constant retry => "stm::retry<%t0>()".
+#[export] Instance atomically_mapping : OperationMapping (Ref (@atomically)) :=
+  effect_cpp [] ["t"]
+    (Expr "stm::atomically([&] { return %arg(t); })").
+#[export] Instance or_else_mapping : OperationMapping (Ref (@or_else)) :=
+  effect_cpp [] ["t1"; "t2"]
+    (Structured (Call "stm::orElse" [TypeParameter "A"] [Arg "t1"; Arg "t2"])).
+#[export] Instance retry_mapping : OperationMapping (Ref (@retry)) :=
+  effect_cpp [] []
+    (Structured (Call "stm::retry" [TypeParameter "A"] [])).
 (* At the TVar's element type, which a lambda's own closure type is not. *)
-Crane Extract Inlined Constant new_tvar => "stm::newTVar<%t1>(%a0)".
-Crane Extract Inlined Constant get_stm => "%a0.at(%a1)".
-Crane Extract Inlined Constant is_empty_stm => "%a0.empty()".
+#[export] Instance new_tvar_mapping : OperationMapping (Ref (@new_tvar)) :=
+  effect_args [] (uses Take ["a"])
+    (Structured (Call "stm::newTVar" [TypeParameter "A"] [Arg "a"])).
+#[export] Instance get_stm_mapping : OperationMapping (Ref (@get_stm)) :=
+  effect_cpp [] ["v"; "i"]
+    (Structured (Method (Arg "v") "at" [Arg "i"])).
+#[export] Instance is_empty_stm_mapping : OperationMapping (Ref (@is_empty_stm)) :=
+  effect_cpp [] ["v"]
+    (Structured (Method (Arg "v") "empty" [])).
 
 Definition check (b : bool) : itree stmE unit :=
   if b then Ret tt else retry.

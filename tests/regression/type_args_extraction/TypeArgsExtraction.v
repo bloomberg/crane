@@ -1,8 +1,10 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(* Test: Type arguments to a function can be referred to with %t0,%t1,...
-    Accessing those arguments during extraction is invaluable for
-    correctly typing output terms, particularly lambda arguments passed to ITree loop combinators. *)
+(* Test: an operation mapping can name the type arguments of a use
+    ([TypeParameter] in a structured body).  [Monads.ITree] maps [rec] and
+    [call] to [crane::rec<A, B>] and [crane::rec_call<A, B>], naming the
+    recursion's argument and result types, which is what types the lambda
+    passed to the loop combinator. *)
 
 From ITree Require Import
   ITree
@@ -27,17 +29,6 @@ Definition double_n (n : nat) : itree void1 nat
 
 
 Require Import Crane.Mapping.NatInt.
-
-
-Crane Extract Inlined Constant rec =>
-        "
-         [&]() -> %t2 {
-         static  std::function<%t1(%t2)> __self;
-         __self = %a0;
-         return __self(%a1);;
- }()
-" From "functional".
-Crane Extract Inlined Constant call => "__self(%a0)".
 
 
 Crane Extraction "type_args_extraction" double_n.

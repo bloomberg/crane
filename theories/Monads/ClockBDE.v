@@ -9,18 +9,24 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.BDE.
 From Crane Require Export Monads.ClockDefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive clockE => ""
-  [ "static_cast<int64_t>(bsls::SystemTime::nowMonotonicClock().totalMilliseconds())"
-    "static_cast<int64_t>(bsls::SystemTime::nowRealtimeClock().totalMilliseconds())" ]
-  From "bsls_systemtime.h".
+#[export] Instance clockE_mapping (T : Type) : TypeMapping (clockE T) :=
+  event_family ["bsls_systemtime.h"]
+    [event (Ref (@SteadyNow)) "static_cast<int64_t>(bsls::SystemTime::nowMonotonicClock().totalMilliseconds())";
+     event (Ref (@SystemNow)) "static_cast<int64_t>(bsls::SystemTime::nowRealtimeClock().totalMilliseconds())"].
 
-Crane Extract Inlined Constant steady_now =>
-  "static_cast<int64_t>(bsls::SystemTime::nowMonotonicClock().totalMilliseconds())"
-  From "bsls_systemtime.h".
-Crane Extract Inlined Constant system_now =>
-  "static_cast<int64_t>(bsls::SystemTime::nowRealtimeClock().totalMilliseconds())"
-  From "bsls_systemtime.h".
-Crane Extract Inlined Constant now =>
-  "static_cast<int64_t>(bsls::SystemTime::nowRealtimeClock().totalMilliseconds())"
-  From "bsls_systemtime.h".
+#[export] Instance steady_now_mapping : OperationMapping (Ref (@steady_now)) :=
+  effect_cpp ["bsls_systemtime.h"] []
+    (Structured (Convert Exact (Int I64) (Method (Call "bsls::SystemTime::nowMonotonicClock" [] []) "totalMilliseconds" []))).
+#[export] Instance system_now_mapping : OperationMapping (Ref (@system_now)) :=
+  effect_cpp ["bsls_systemtime.h"] []
+    (Structured (Convert Exact (Int I64) (Method (Call "bsls::SystemTime::nowRealtimeClock" [] []) "totalMilliseconds" []))).
+#[export] Instance now_mapping : OperationMapping (Ref (@now)) :=
+  effect_cpp ["bsls_systemtime.h"] []
+    (Structured (Convert Exact (Int I64) (Method (Call "bsls::SystemTime::nowRealtimeClock" [] []) "totalMilliseconds" []))).

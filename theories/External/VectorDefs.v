@@ -11,6 +11,12 @@
 From Corelib Require Import PrimInt63.
 From Crane Require Extraction.
 From Crane Require Import Monads.ITree.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Axiom vector : Type -> Type.
 
@@ -23,9 +29,11 @@ Inductive vectorE : Type -> Type :=
 | IsEmpty : forall {A}, vector A -> vectorE bool
 | Assign : forall {A}, vector A -> int -> A -> vectorE (vector A).
 
-Crane Extract Inductive vectorE => ""
-  [ "{}" "%a0.at(%a1)" "%a0.push_back(%a1)"
-    "%a0.pop_back()" "%a0.size()" "%a0.empty()" "%a0.assign(%a1, %a2)" ].
+#[export] Instance vectorE_mapping (T : Type) : TypeMapping (vectorE T) :=
+  event_family []
+    [event (Ref (@EmptyVec)) "{}"; event (Ref (@Get)) "%a0.at(%a1)"; event (Ref (@Push)) "%a0.push_back(%a1)";
+     event (Ref (@Pop)) "%a0.pop_back()"; event (Ref (@Size)) "%a0.size()"; event (Ref (@IsEmpty)) "%a0.empty()";
+     event (Ref (@Assign)) "%a0.assign(%a1, %a2)"].
 
 Definition empty_vector {E} `{vectorE -< E} (A : Type) : itree E (vector A) :=
   embed (EmptyVec A).
@@ -42,10 +50,17 @@ Definition is_empty {E} `{vectorE -< E} {A} (v : vector A) : itree E bool :=
 Definition assign {E} `{vectorE -< E} {A} (v : vector A) (x : int) (a : A)
   : itree E (vector A) := embed (Assign v x a).
 
-Crane Extract Inlined Constant empty_vector => "{}".
-Crane Extract Inlined Constant get => "%a0.at(%a1)".
-Crane Extract Inlined Constant push => "%a0.push_back(%a1)".
-Crane Extract Inlined Constant pop => "%a0.pop_back()".
-Crane Extract Inlined Constant size => "%a0.size()".
-Crane Extract Inlined Constant is_empty => "%a0.empty()".
-Crane Extract Inlined Constant assign => "%a0.assign(%a1, %a2)".
+#[export] Instance empty_vector_mapping : OperationMapping (Ref (@empty_vector)) :=
+  effect_cpp [] [] (Structured (Verbatim "{}")).
+#[export] Instance get_mapping : OperationMapping (Ref (@get)) :=
+  effect_cpp [] ["v"; "x"] (Structured (Method (Arg "v") "at" [Arg "x"])).
+#[export] Instance push_mapping : OperationMapping (Ref (@push)) :=
+  effect_args [] (uses ReadCanonical ["v"] ++ uses Take ["a"]) (Structured (Method (Arg "v") "push_back" [Arg "a"])).
+#[export] Instance pop_mapping : OperationMapping (Ref (@pop)) :=
+  effect_cpp [] ["v"] (Structured (Method (Arg "v") "pop_back" [])).
+#[export] Instance size_mapping : OperationMapping (Ref (@size)) :=
+  effect_cpp [] ["v"] (Structured (Method (Arg "v") "size" [])).
+#[export] Instance is_empty_mapping : OperationMapping (Ref (@is_empty)) :=
+  effect_cpp [] ["v"] (Structured (Method (Arg "v") "empty" [])).
+#[export] Instance assign_mapping : OperationMapping (Ref (@assign)) :=
+  effect_args [] (uses ReadCanonical ["v"; "x"] ++ uses Take ["a"]) (Structured (Method (Arg "v") "assign" [Arg "x"; Arg "a"])).

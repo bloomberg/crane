@@ -9,6 +9,12 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.BDE.
 From Crane Require Export Monads.DirDefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 (**
    Safety: the BDE create/remove/getWorkingDirectory mappings already report
@@ -19,10 +25,11 @@ From Crane Require Export Monads.DirDefs.
    accumulates so a huge or adversarial directory cannot exhaust memory
    (CWE-400).
 *)
-Crane Extract Inductive dirE => ""
-  [ "(bdls::FilesystemUtil::createDirectories(%a0.c_str(), true) == 0)"
-    "(bdls::FilesystemUtil::remove(%a0.c_str(), true) == 0)"
-    "[&]() -> List<bsl::string> {
+#[export] Instance dirE_mapping (T : Type) : TypeMapping (dirE T) :=
+  event_family ["bdls_filesystemutil.h"; "filesystem"; "system_error"]
+    [event (Ref (@CreateDirectory)) "(bdls::FilesystemUtil::createDirectories(%a0.c_str(), true) == 0)";
+     event (Ref (@RemoveDirectory)) "(bdls::FilesystemUtil::remove(%a0.c_str(), true) == 0)";
+     event (Ref (@ListDirectory)) "[&]() -> List<bsl::string> {
   auto result = List<bsl::string>::nil();
   std::error_code _ec;
   std::size_t _count = 0;
@@ -31,30 +38,30 @@ Crane Extract Inductive dirE => ""
     result = List<bsl::string>::cons(_it->path().filename().string(), std::move(result));
   }
   return result;
-}()"
-    "[&]() -> bsl::string { bsl::string s; bdls::FilesystemUtil::getWorkingDirectory(&s); return s; }()" ]
-  From "bdls_filesystemutil.h" "filesystem" "system_error".
+}()";
+     event (Ref (@CurrentPath)) "[&]() -> bsl::string { bsl::string s; bdls::FilesystemUtil::getWorkingDirectory(&s); return s; }()"].
 
-Crane Extract Inlined Constant create_directory =>
-  "(bdls::FilesystemUtil::createDirectories(%a0.c_str(), true) == 0)"
-  From "bdls_filesystemutil.h".
+#[export] Instance create_directory_mapping : OperationMapping (Ref (@create_directory)) :=
+  effect_cpp ["bdls_filesystemutil.h"] ["path"]
+    (Expr "(bdls::FilesystemUtil::createDirectories(%arg(path).c_str(), true) == 0)").
 
-Crane Extract Inlined Constant remove_directory =>
-  "(bdls::FilesystemUtil::remove(%a0.c_str(), true) == 0)"
-  From "bdls_filesystemutil.h".
+#[export] Instance remove_directory_mapping : OperationMapping (Ref (@remove_directory)) :=
+  effect_cpp ["bdls_filesystemutil.h"] ["path"]
+    (Expr "(bdls::FilesystemUtil::remove(%arg(path).c_str(), true) == 0)").
 
-Crane Extract Inlined Constant list_directory =>
-"[&]() -> List<bsl::string> {
+#[export] Instance list_directory_mapping : OperationMapping (Ref (@list_directory)) :=
+  effect_cpp ["bdls_filesystemutil.h"; "filesystem"; "system_error"] ["path"]
+    (Expr "[&]() -> List<bsl::string> {
   auto result = List<bsl::string>::nil();
   std::error_code _ec;
   std::size_t _count = 0;
-  std::filesystem::directory_iterator _it(std::filesystem::path(%a0), _ec), _end;
+  std::filesystem::directory_iterator _it(std::filesystem::path(%arg(path)), _ec), _end;
   for (; !_ec && _it != _end && _count < 65536; _it.increment(_ec), ++_count) {
     result = List<bsl::string>::cons(_it->path().filename().string(), std::move(result));
   }
   return result;
-}()" From "bdls_filesystemutil.h" "filesystem" "system_error".
+}()").
 
-Crane Extract Inlined Constant current_path =>
-  "[&]() -> bsl::string { bsl::string s; bdls::FilesystemUtil::getWorkingDirectory(&s); return s; }()"
-  From "bdls_filesystemutil.h".
+#[export] Instance current_path_mapping : OperationMapping (Ref (@current_path)) :=
+  effect_cpp ["bdls_filesystemutil.h"] []
+    (Expr "[&]() -> bsl::string { bsl::string s; bdls::FilesystemUtil::getWorkingDirectory(&s); return s; }()").

@@ -9,6 +9,12 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
 From Crane Require Export Monads.DirDefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 (**
    Safety: every mapping uses the non-throwing [std::error_code] overload so an
@@ -20,10 +26,11 @@ From Crane Require Export Monads.DirDefs.
    memory (CWE-400); on the cap or on any iteration error it
    returns the entries gathered so far.
 *)
-Crane Extract Inductive dirE => ""
-  [ "[&]() -> bool { std::error_code _ec; std::filesystem::create_directories(std::filesystem::path(%a0), _ec); return !_ec; }()"
-    "[&]() -> bool { std::error_code _ec; std::filesystem::remove_all(std::filesystem::path(%a0), _ec); return !_ec; }()"
-    "[&]() -> List<std::string> {
+#[export] Instance dirE_mapping (T : Type) : TypeMapping (dirE T) :=
+  event_family ["filesystem"; "system_error"; "cstddef"; "utility"]
+    [event (Ref (@CreateDirectory)) "[&]() -> bool { std::error_code _ec; std::filesystem::create_directories(std::filesystem::path(%a0), _ec); return !_ec; }()";
+     event (Ref (@RemoveDirectory)) "[&]() -> bool { std::error_code _ec; std::filesystem::remove_all(std::filesystem::path(%a0), _ec); return !_ec; }()";
+     event (Ref (@ListDirectory)) "[&]() -> List<std::string> {
   auto result = List<std::string>::nil();
   std::error_code _ec;
   std::size_t _count = 0;
@@ -32,30 +39,30 @@ Crane Extract Inductive dirE => ""
     result = List<std::string>::cons(_it->path().filename().string(), std::move(result));
   }
   return result;
-}()"
-    "[&]() -> std::string { std::error_code _ec; auto _p = std::filesystem::current_path(_ec); return _ec ? std::string{} : _p.string(); }()" ]
-  From "filesystem" "system_error" "cstddef" "utility".
+}()";
+     event (Ref (@CurrentPath)) "[&]() -> std::string { std::error_code _ec; auto _p = std::filesystem::current_path(_ec); return _ec ? std::string{} : _p.string(); }()"].
 
-Crane Extract Inlined Constant create_directory =>
-  "[&]() -> bool { std::error_code _ec; std::filesystem::create_directories(std::filesystem::path(%a0), _ec); return !_ec; }()"
-  From "filesystem" "system_error".
+#[export] Instance create_directory_mapping : OperationMapping (Ref (@create_directory)) :=
+  effect_cpp ["filesystem"; "system_error"] ["path"]
+    (Expr "[&]() -> bool { std::error_code _ec; std::filesystem::create_directories(std::filesystem::path(%arg(path)), _ec); return !_ec; }()").
 
-Crane Extract Inlined Constant remove_directory =>
-  "[&]() -> bool { std::error_code _ec; std::filesystem::remove_all(std::filesystem::path(%a0), _ec); return !_ec; }()"
-  From "filesystem" "system_error".
+#[export] Instance remove_directory_mapping : OperationMapping (Ref (@remove_directory)) :=
+  effect_cpp ["filesystem"; "system_error"] ["path"]
+    (Expr "[&]() -> bool { std::error_code _ec; std::filesystem::remove_all(std::filesystem::path(%arg(path)), _ec); return !_ec; }()").
 
-Crane Extract Inlined Constant list_directory =>
-"[&]() -> List<std::string> {
+#[export] Instance list_directory_mapping : OperationMapping (Ref (@list_directory)) :=
+  effect_cpp ["filesystem"; "system_error"; "cstddef"; "utility"] ["path"]
+    (Expr "[&]() -> List<std::string> {
   auto result = List<std::string>::nil();
   std::error_code _ec;
   std::size_t _count = 0;
-  std::filesystem::directory_iterator _it(std::filesystem::path(%a0), _ec), _end;
+  std::filesystem::directory_iterator _it(std::filesystem::path(%arg(path)), _ec), _end;
   for (; !_ec && _it != _end && _count < 65536; _it.increment(_ec), ++_count) {
     result = List<std::string>::cons(_it->path().filename().string(), std::move(result));
   }
   return result;
-}()" From "filesystem" "system_error" "cstddef" "utility".
+}()").
 
-Crane Extract Inlined Constant current_path =>
-  "[&]() -> std::string { std::error_code _ec; auto _p = std::filesystem::current_path(_ec); return _ec ? std::string{} : _p.string(); }()"
-  From "filesystem" "system_error".
+#[export] Instance current_path_mapping : OperationMapping (Ref (@current_path)) :=
+  effect_cpp ["filesystem"; "system_error"] []
+    (Expr "[&]() -> std::string { std::error_code _ec; auto _p = std::filesystem::current_path(_ec); return _ec ? std::string{} : _p.string(); }()").

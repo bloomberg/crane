@@ -9,18 +9,25 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
 From Crane Require Export Monads.EnvDefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive envE => ""
-  [ "[&]() -> std::optional<std::string> {
+#[export] Instance envE_mapping (T : Type) : TypeMapping (envE T) :=
+  event_family ["cstdlib"; "optional"; "string"]
+    [event (Ref (@GetEnv)) "[&]() -> std::optional<std::string> {
   auto* v = std::getenv(%a0.c_str());
   return v ? std::optional<std::string>(v) : std::optional<std::string>();
-}()"
-    "setenv(%a0.c_str(), %a1.c_str(), 1)"
-    "unsetenv(%a0.c_str())" ]
-  From "cstdlib" "optional" "string".
+}()";
+     event (Ref (@SetEnv)) "setenv(%a0.c_str(), %a1.c_str(), 1)";
+     event (Ref (@UnsetEnv)) "unsetenv(%a0.c_str())"].
 
-Crane Extract Inlined Constant get_env =>
-"[&]() -> std::optional<std::string> {
-  auto* v = std::getenv(%a0.c_str());
+#[export] Instance get_env_mapping : OperationMapping (Ref (@get_env)) :=
+  effect_cpp ["cstdlib"; "optional"; "string"] ["name"]
+    (Expr "[&]() -> std::optional<std::string> {
+  auto* v = std::getenv(%arg(name).c_str());
   return v ? std::optional<std::string>(v) : std::optional<std::string>();
-}()" From "cstdlib" "optional" "string".
+}()").

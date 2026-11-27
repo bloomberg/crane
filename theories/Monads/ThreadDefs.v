@@ -14,6 +14,12 @@
 From Corelib Require Import PrimInt63 PrimString.
 From Crane Require Extraction.
 From Crane Require Import Monads.ITree Monads.IODefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Axiom thread : Type.
 
@@ -32,4 +38,5 @@ Definition sleep {E} `{threadE -< E} (d : int) : itree E unit :=
   embed (Sleep d).
 
 Axiom run_conc : forall {A}, itree concE A -> A.
-Crane Extract Inlined Constant run_conc => "%a0".
+#[export] Instance run_conc_mapping : OperationMapping (Ref (@run_conc)) :=
+  pass_through [] "t" [].

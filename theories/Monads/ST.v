@@ -252,6 +252,9 @@ Definition run {V : nat -> Type} {E : Type -> Type} `{exceptE Err -< E} {A : Typ
 
 (** * Extraction *)
 
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+Import Crane.Cpp.
+
 (** The references and arrays the extracted program is written against:
     their types are mapped below, whatever [Refs] they come from. *)
 Axiom cpp_refs : Refs.
@@ -263,9 +266,10 @@ Axiom run_cpp : forall {V : nat -> Type} {A : Type},
 
 Crane Extract Skip Event.
 Crane Extract Skip code_ok.
-Crane Extract Inlined Constant run_cpp => "%a0".
+#[global] Instance run_cpp_mapping : OperationMapping (Ref (@run_cpp)) := pass_through [] "t" [].
 (** [Refs] holds only types, so it is a one-constructor enum in C++. *)
-Crane Extract Inlined Constant cpp_refs => "Refs::BUILD_REFS".
+#[global] Instance cpp_refs_mapping : OperationMapping (Ref cpp_refs) :=
+  pure [] [] (Verbatim "Refs::BUILD_REFS").
 
 (** References and arrays are typed mappings: a reference is a
     [std::shared_ptr<A>] and an array a
@@ -281,8 +285,6 @@ Crane Extract Inlined Constant cpp_refs => "Refs::BUILD_REFS".
     valid at every element type.  Shared pointers do not collect cycles of
     references. *)
 
-From Crane Require Import Mapping.Descriptor Mapping.Cpp.
-Import Crane.Cpp.
 
 (** The [Refs] a program is written against is a C++ value with nothing
     in it: the operations take no such argument. *)

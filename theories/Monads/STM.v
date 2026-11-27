@@ -10,12 +10,25 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std Monads.IO External.Vector.
 From Crane Require Export Monads.STMDefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive tvarE => ""
-  [ "stm::newTVar(%a0)" "stm::readTVar(%a0)" "stm::writeTVar(%a0, %a1)" ]
-  From "stm_adapter.h".
+#[export] Instance tvarE_mapping (T : Type) : TypeMapping (tvarE T) :=
+  event_family ["stm_adapter.h"]
+    [event (Ref (@NewTVar)) "stm::newTVar(%a0)";
+     event (Ref (@ReadTVar)) "stm::readTVar(%a0)";
+     event (Ref (@WriteTVar)) "stm::writeTVar(%a0, %a1)"].
 
-Crane Extract Inlined Constant TVar => "stm::TVar<%t0>" From "stm_adapter.h".
+#[export] Instance TVar_mapping (A : Type) : TypeMapping (TVar A) :=
+  value_type ["stm_adapter.h"] (Apply "stm::TVar" [TypeArg (SourceType A)]) UnknownCopy.
 
-Crane Extract Inlined Constant read_tvar => "stm::readTVar(%a0)".
-Crane Extract Inlined Constant write_tvar => "stm::writeTVar(%a0, %a1)".
+#[export] Instance read_tvar_mapping : OperationMapping (Ref (@read_tvar)) :=
+  effect_cpp [] ["v"]
+    (Structured (Call "stm::readTVar" [] [Arg "v"])).
+#[export] Instance write_tvar_mapping : OperationMapping (Ref (@write_tvar)) :=
+  effect_args [] (uses ReadCanonical ["v"] ++ uses Take ["a"])
+    (Structured (Call "stm::writeTVar" [] [Arg "v"; Arg "a"])).

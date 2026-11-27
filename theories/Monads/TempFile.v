@@ -23,9 +23,16 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
 From Crane Require Export Monads.TempFileDefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive tempFileE => ""
-  [ "[&]() -> std::string {
+#[export] Instance tempFileE_mapping (T : Type) : TypeMapping (tempFileE T) :=
+  event_family ["filesystem"; "random"; "string"; "fcntl.h"; "sys/stat.h"; "unistd.h"; "cerrno"; "stdexcept"]
+    [event (Ref (@CreateTempFile)) "[&]() -> std::string {
   std::string _n = std::filesystem::path(%a0).filename().string();
   if (_n.empty() || _n == ""."" || _n == "".."") _n = ""tmp"";
   std::filesystem::path _base = std::filesystem::temp_directory_path();
@@ -44,8 +51,8 @@ Crane Extract Inductive tempFileE => ""
     ::close(_fd);
     return _p;
   }
-}()"
-    "[&]() -> std::string {
+}()";
+     event (Ref (@CreateTempDir)) "[&]() -> std::string {
   std::string _n = std::filesystem::path(%a0).filename().string();
   if (_n.empty() || _n == ""."" || _n == "".."") _n = ""tmp"";
   std::filesystem::path _dir = std::filesystem::temp_directory_path();
@@ -57,13 +64,12 @@ Crane Extract Inductive tempFileE => ""
     if (errno != EEXIST)
       throw std::runtime_error(""crane: failed to create temporary directory"");
   }
-}()" ]
-  From "filesystem" "random" "string" "fcntl.h" "sys/stat.h" "unistd.h"
-       "cerrno" "stdexcept".
+}()"].
 
-Crane Extract Inlined Constant create_temp_file =>
-"[&]() -> std::string {
-  std::string _n = std::filesystem::path(%a0).filename().string();
+#[export] Instance create_temp_file_mapping : OperationMapping (Ref (@create_temp_file)) :=
+  effect_cpp ["filesystem"; "random"; "string"; "fcntl.h"; "sys/stat.h"; "unistd.h"; "cerrno"; "stdexcept"] ["prefix"]
+    (Expr "[&]() -> std::string {
+  std::string _n = std::filesystem::path(%arg(prefix)).filename().string();
   if (_n.empty() || _n == ""."" || _n == "".."") _n = ""tmp"";
   std::filesystem::path _base = std::filesystem::temp_directory_path();
   std::random_device _rng;
@@ -81,12 +87,12 @@ Crane Extract Inlined Constant create_temp_file =>
     ::close(_fd);
     return _p;
   }
-}()" From "filesystem" "random" "string" "fcntl.h" "sys/stat.h" "unistd.h"
-       "cerrno" "stdexcept".
+}()").
 
-Crane Extract Inlined Constant create_temp_dir =>
-"[&]() -> std::string {
-  std::string _n = std::filesystem::path(%a0).filename().string();
+#[export] Instance create_temp_dir_mapping : OperationMapping (Ref (@create_temp_dir)) :=
+  effect_cpp ["filesystem"; "random"; "string"; "sys/stat.h"; "cerrno"; "stdexcept"] ["prefix"]
+    (Expr "[&]() -> std::string {
+  std::string _n = std::filesystem::path(%arg(prefix)).filename().string();
   if (_n.empty() || _n == ""."" || _n == "".."") _n = ""tmp"";
   std::filesystem::path _dir = std::filesystem::temp_directory_path();
   std::random_device _rng;
@@ -97,4 +103,4 @@ Crane Extract Inlined Constant create_temp_dir =>
     if (errno != EEXIST)
       throw std::runtime_error(""crane: failed to create temporary directory"");
   }
-}()" From "filesystem" "random" "string" "sys/stat.h" "cerrno" "stdexcept".
+}()").

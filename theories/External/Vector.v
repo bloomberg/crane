@@ -8,4 +8,12 @@ From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
 From Crane Require Export External.VectorDefs.
 
-Crane Extract Inlined Constant vector => "std::vector<%t0>" From "vector".
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+
+#[export] Instance vector_mapping (A : Type) : TypeMapping (vector A) :=
+  value_type ["vector"] (Apply "std::vector" [TypeArg (SourceType A)]) UnknownCopy.

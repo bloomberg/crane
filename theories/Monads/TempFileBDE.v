@@ -23,9 +23,16 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.BDE.
 From Crane Require Export Monads.TempFileDefs.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+Import PrimString.PStringNotations.
+From Stdlib Require List.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive tempFileE => ""
-  [ "[&]() -> bsl::string {
+#[export] Instance tempFileE_mapping (T : Type) : TypeMapping (tempFileE T) :=
+  event_family ["bdls_filesystemutil.h"; "bsl_string.h"; "random"; "fcntl.h"; "sys/stat.h"; "unistd.h"; "cerrno"; "stdexcept"]
+    [event (Ref (@CreateTempFile)) "[&]() -> bsl::string {
   bsl::string _base;
   bdls::FilesystemUtil::getSystemTemporaryDirectory(&_base);
   bsl::string _n = %a0;
@@ -47,8 +54,8 @@ Crane Extract Inductive tempFileE => ""
     ::close(_fd);
     return _p;
   }
-}()"
-    "[&]() -> bsl::string {
+}()";
+     event (Ref (@CreateTempDir)) "[&]() -> bsl::string {
   bsl::string _base;
   bdls::FilesystemUtil::getSystemTemporaryDirectory(&_base);
   bsl::string _n = %a0;
@@ -63,15 +70,14 @@ Crane Extract Inductive tempFileE => ""
     if (errno != EEXIST)
       throw std::runtime_error(""crane: failed to create temporary directory"");
   }
-}()" ]
-  From "bdls_filesystemutil.h" "bsl_string.h" "random" "fcntl.h" "sys/stat.h"
-       "unistd.h" "cerrno" "stdexcept".
+}()"].
 
-Crane Extract Inlined Constant create_temp_file =>
-"[&]() -> bsl::string {
+#[export] Instance create_temp_file_mapping : OperationMapping (Ref (@create_temp_file)) :=
+  effect_cpp ["bdls_filesystemutil.h"; "bsl_string.h"; "random"; "fcntl.h"; "sys/stat.h"; "unistd.h"; "cerrno"; "stdexcept"] ["prefix"]
+    (Expr "[&]() -> bsl::string {
   bsl::string _base;
   bdls::FilesystemUtil::getSystemTemporaryDirectory(&_base);
-  bsl::string _n = %a0;
+  bsl::string _n = %arg(prefix);
   bsl::string::size_type _sl = _n.find_last_of('/');
   if (_sl != bsl::string::npos) _n = _n.substr(_sl + 1);
   if (_n.empty() || _n == ""."" || _n == "".."") _n = ""tmp"";
@@ -90,14 +96,14 @@ Crane Extract Inlined Constant create_temp_file =>
     ::close(_fd);
     return _p;
   }
-}()" From "bdls_filesystemutil.h" "bsl_string.h" "random" "fcntl.h"
-       "sys/stat.h" "unistd.h" "cerrno" "stdexcept".
+}()").
 
-Crane Extract Inlined Constant create_temp_dir =>
-"[&]() -> bsl::string {
+#[export] Instance create_temp_dir_mapping : OperationMapping (Ref (@create_temp_dir)) :=
+  effect_cpp ["bdls_filesystemutil.h"; "bsl_string.h"; "random"; "sys/stat.h"; "cerrno"; "stdexcept"] ["prefix"]
+    (Expr "[&]() -> bsl::string {
   bsl::string _base;
   bdls::FilesystemUtil::getSystemTemporaryDirectory(&_base);
-  bsl::string _n = %a0;
+  bsl::string _n = %arg(prefix);
   bsl::string::size_type _sl = _n.find_last_of('/');
   if (_sl != bsl::string::npos) _n = _n.substr(_sl + 1);
   if (_n.empty() || _n == ""."" || _n == "".."") _n = ""tmp"";
@@ -109,5 +115,4 @@ Crane Extract Inlined Constant create_temp_dir =>
     if (errno != EEXIST)
       throw std::runtime_error(""crane: failed to create temporary directory"");
   }
-}()" From "bdls_filesystemutil.h" "bsl_string.h" "random" "sys/stat.h"
-       "cerrno" "stdexcept".
+}()").
