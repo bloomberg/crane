@@ -307,16 +307,14 @@ struct LoopifyAdoptedFixAliasResult {
           if (k < k_) {
             _stack.emplace_back(_after_map2_in_true{f, k, std::move(e)});
             _stack.emplace_back(_call{&m_, *a1});
+          } else if (k_ < k) {
+            _stack.emplace_back(_after_map2_aux_in_true{f, k_, e_});
+            _stack.emplace_back(
+                _call_map2_aux{crane_raw(a10), std::move(a1), std::move(e), f,
+                               k, std::move(m)});
           } else {
-            if (k_ < k) {
-              _stack.emplace_back(_after_map2_aux_in_true{f, k_, e_});
-              _stack.emplace_back(
-                  _call_map2_aux{crane_raw(a10), std::move(a1), std::move(e), f,
-                                 k, std::move(m)});
-            } else {
-              _stack.emplace_back(_after_map2_in_false{f, k, std::move(e), e_});
-              _stack.emplace_back(_call{crane_raw(a10), *a1});
-            }
+            _stack.emplace_back(_after_map2_in_false{f, k, std::move(e), e_});
+            _stack.emplace_back(_call{crane_raw(a10), *a1});
           }
         }
       } else if (std::holds_alternative<_after_map2_aux_in_true>(_popped)) {

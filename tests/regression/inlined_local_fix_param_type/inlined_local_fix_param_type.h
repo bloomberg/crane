@@ -169,7 +169,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -307,33 +307,29 @@ struct InlinedLocalFixParamType {
   }
 
   template <typename T1> static List<std::optional<tree>> f(const T1 &a) {
-    {
-      const List<tree> &_lc1_l = [&]() {
-        List<std::pair<uint64_t, T1>> l = List<std::pair<uint64_t, T1>>::cons(
-            std::make_pair(UINT64_C(0), a),
-            List<std::pair<uint64_t, T1>>::nil());
-        List<tree> acc = List<tree>::nil();
-        if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
-                l.v_mut())) {
-          return acc;
-        } else {
-          return List<bool>::cons(true, List<bool>::nil()).template flat_map<
-              tree>([](bool) { return List<tree>::nil(); });
-        }
-      }();
-      const List<std::optional<tree>> &_lc1_x =
-          List<std::optional<tree>>::nil();
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      const List<tree> *_lc1_loop_l = &_lc1_l;
-      while (true) {
-        if (std::holds_alternative<typename List<tree>::Nil>(_lc1_loop_l->v())) {
-          return List<std::optional<tree>>::nil();
-        } else {
-          const auto &[_, a1] =
-              std::get<typename List<tree>::Cons>(_lc1_loop_l->v());
-          _lc1_loop_l = crane_raw(a1);
-        }
+    const List<tree> &_lc1_l = [&]() {
+      List<std::pair<uint64_t, T1>> l = List<std::pair<uint64_t, T1>>::cons(
+          std::make_pair(UINT64_C(0), a), List<std::pair<uint64_t, T1>>::nil());
+      List<tree> acc = List<tree>::nil();
+      if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
+              l.v_mut())) {
+        return acc;
+      } else {
+        return List<bool>::cons(true, List<bool>::nil()).template flat_map<tree>(
+            [](bool) { return List<tree>::nil(); });
+      }
+    }();
+    const List<std::optional<tree>> &_lc1_x = List<std::optional<tree>>::nil();
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    const List<tree> *_lc1_loop_l = &_lc1_l;
+    while (true) {
+      if (std::holds_alternative<typename List<tree>::Nil>(_lc1_loop_l->v())) {
+        return List<std::optional<tree>>::nil();
+      } else {
+        const auto &[_, a1] =
+            std::get<typename List<tree>::Cons>(_lc1_loop_l->v());
+        _lc1_loop_l = crane_raw(a1);
       }
     }
   }
@@ -351,12 +347,10 @@ struct InlinedLocalFixParamType {
         return (_self_go(_self_go, *a1) + 1);
       }
     };
-    {
-      const List<List<T1>> &_lc1_l = List<List<T1>>::cons(
-          List<T1>::nil(),
-          List<List<T1>>::cons(List<T1>::nil(), List<List<T1>>::nil()));
-      return go_impl(go_impl, _lc1_l);
-    }
+    const List<List<T1>> &_lc1_l = List<List<T1>>::cons(
+        List<T1>::nil(),
+        List<List<T1>>::cons(List<T1>::nil(), List<List<T1>>::nil()));
+    return go_impl(go_impl, _lc1_l);
   }
 
   static inline const uint64_t u = g<bool>(true);

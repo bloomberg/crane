@@ -247,27 +247,20 @@ struct GlobalStateTests {
     } else {
       std::shared_ptr<uint64_t> x = std::make_shared<uint64_t>(UINT64_C(0));
       std::shared_ptr<uint64_t> y = std::make_shared<uint64_t>(UINT64_C(1));
-      auto fib_loop =
-          [](uint64_t k, const std::shared_ptr<uint64_t> &x0,
-             const std::shared_ptr<uint64_t> &y0)
-               -> uint64_t {
-            // Loop replaces the tail recursion: each recursive call updates the
-            // loop variables.
-            uint64_t _loop_k = k;
-            while (true) {
-              if (_loop_k <= 0) {
-                return *x0;
-              } else {
-                uint64_t k_ = _loop_k - 1;
-                uint64_t x_ = *x0;
-                uint64_t y_ = *y0;
-                *x0 = y_;
-                *y0 = (x_ + y_);
-                _loop_k = k_;
-              }
-            }
-          };
-      return fib_loop(n, std::move(x), std::move(y));
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
+      while (true) {
+        if (n <= 0) {
+          return *x;
+        } else {
+          uint64_t k_ = n - 1;
+          uint64_t x_ = *x;
+          uint64_t y_ = *y;
+          *x = y_;
+          *y = (x_ + y_);
+          n = k_;
+        }
+      }
     }
   }
 

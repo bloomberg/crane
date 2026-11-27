@@ -96,22 +96,19 @@ struct LetFix {
   static uint64_t local_sum(const List<uint64_t> &l);
 
   template <typename T1> static List<T1> local_rev(const List<T1> &l) {
-    {
-      List<T1> _lc1_acc = List<T1>::nil();
-      const List<T1> &_lc1_xs = l;
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      const List<T1> *_lc1_loop_xs = &_lc1_xs;
-      List<T1> _lc1_loop_acc = std::move(_lc1_acc);
-      while (true) {
-        if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_xs->v())) {
-          return _lc1_loop_acc;
-        } else {
-          const auto &[a0, a1] =
-              std::get<typename List<T1>::Cons>(_lc1_loop_xs->v());
-          _lc1_loop_xs = crane_raw(a1);
-          _lc1_loop_acc = List<T1>::cons(a0, std::move(_lc1_loop_acc));
-        }
+    List<T1> _lc1_acc = List<T1>::nil();
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    const List<T1> *_lc1_loop_xs = &l;
+    List<T1> _lc1_loop_acc = std::move(_lc1_acc);
+    while (true) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_xs->v())) {
+        return _lc1_loop_acc;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<T1>::Cons>(_lc1_loop_xs->v());
+        _lc1_loop_xs = crane_raw(a1);
+        _lc1_loop_acc = List<T1>::cons(a0, std::move(_lc1_loop_acc));
       }
     }
   }

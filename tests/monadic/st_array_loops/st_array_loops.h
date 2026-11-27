@@ -18,22 +18,13 @@
 #include <utility>
 #include <variant>
 
-struct nat_ix_stref;
+template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-struct STRefNat;
-template <typename I, typename T>
-concept STRefClass = requires {
-  { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
-  { I::STRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
-};
-
-struct StArrayLoops {
-  static void zero_from(std::span<uint64_t> arr, uint64_t i, uint64_t n);
-  static uint64_t sum_from(std::span<const uint64_t> arr, uint64_t i,
-                           uint64_t n);
-  static std::pair<uint64_t, List<uint64_t>> loops_list(uint64_t n);
+template <typename I, typename V, typename A>
+concept Code = requires {
+  { I::code() } -> std::convertible_to<uint64_t>;
 };
 
 template <typename A> struct List {
@@ -150,29 +141,13 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct STRefNat {
-  // DATA
-  uint64_t s;
-
-  // ACCESSORS
-  STRefNat clone() const { return {s}; }
-
-  // CREATORS
-  static STRefNat mkstref(uint64_t s) { return {s}; }
-
-  uint64_t STRefToIxNat() const {
-    const auto &[s] = *this;
-    return s;
-  }
+template <typename T1> struct code_const {
+  constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-struct nat_ix_stref {
-  static crane::obj mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
-
-  static uint64_t STRefToIx(crane::obj _p_a0) {
-    STRefNat a0 = crane::any_cast<STRefNat>(_p_a0);
-    return a0.STRefToIxNat();
-  }
+struct StArrayLoops {
+  static void zero_from(std::span<uint64_t> arr, uint64_t i, uint64_t n);
+  static uint64_t sum_from(std::span<const uint64_t> arr, uint64_t i,
+                           uint64_t n);
+  static std::pair<uint64_t, List<uint64_t>> loops_list(uint64_t n);
 };
-
-static_assert(STRefClass<nat_ix_stref, uint64_t>);

@@ -352,7 +352,7 @@ struct LoopifyPredicates {
         auto _f = std::move(std::get<_after_forall_pred_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        _result = (p(a0) && std::move(_result));
+        _result = (p(a0) && _result);
       }
     }
     return _result;
@@ -392,7 +392,7 @@ struct LoopifyPredicates {
         auto _f = std::move(std::get<_after_exists_pred_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        _result = (p(a0) || std::move(_result));
+        _result = (p(a0) || _result);
       }
     }
     return _result;
@@ -403,7 +403,6 @@ struct LoopifyPredicates {
                                                 uint64_t idx) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    uint64_t _loop_idx = idx;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -412,9 +411,9 @@ struct LoopifyPredicates {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          return std::make_optional<uint64_t>(_loop_idx);
+          return std::make_optional<uint64_t>(idx);
         } else {
-          _loop_idx = (_loop_idx + UINT64_C(1));
+          idx = (idx + UINT64_C(1));
           _loop_l = crane_raw(a1);
         }
       }
@@ -433,7 +432,6 @@ struct LoopifyPredicates {
     // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_idx = idx;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -446,17 +444,17 @@ struct LoopifyPredicates {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          auto _cell = typename List<uint64_t>::Cons(_loop_idx, nullptr);
+          auto _cell = typename List<uint64_t>::Cons(idx, nullptr);
           List<uint64_t> &_node =
               (_write ? *(*_write = std::make_shared<List<uint64_t>>(
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-          _loop_idx = (_loop_idx + UINT64_C(1));
+          idx = (idx + UINT64_C(1));
           _loop_l = crane_raw(a1);
           continue;
         } else {
-          _loop_idx = (_loop_idx + UINT64_C(1));
+          idx = (idx + UINT64_C(1));
           _loop_l = crane_raw(a1);
           continue;
         }

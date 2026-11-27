@@ -259,23 +259,21 @@ template <typename K, typename V> struct CHT {
   static std::vector<stm::TVar<List<std::pair<T1, T2>>>>
   mk_buckets(int64_t num) {
     std::vector<stm::TVar<List<std::pair<T1, T2>>>> buckets = {};
-    {
-      uint64_t _lc1_n = static_cast<unsigned int>(num);
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      uint64_t _lc1_loop_n = _lc1_n;
-      while (true) {
-        if (_lc1_loop_n <= 0) {
-          return buckets;
-        } else {
-          uint64_t n_ = _lc1_loop_n - 1;
-          stm::TVar<List<std::pair<T1, T2>>> b = stm::atomically([&] {
-            return stm::newTVar<List<std::pair<T1, T2>>>(
-                List<std::pair<T1, T2>>::nil());
-          });
-          buckets.push_back(std::move(b));
-          _lc1_loop_n = n_;
-        }
+    uint64_t _lc1_n = static_cast<unsigned int>(num);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    uint64_t _lc1_loop_n = _lc1_n;
+    while (true) {
+      if (_lc1_loop_n <= 0) {
+        return buckets;
+      } else {
+        uint64_t n_ = _lc1_loop_n - 1;
+        stm::TVar<List<std::pair<T1, T2>>> b = stm::atomically([&] {
+          return stm::newTVar<List<std::pair<T1, T2>>>(
+              List<std::pair<T1, T2>>::nil());
+        });
+        buckets.push_back(std::move(b));
+        _lc1_loop_n = n_;
       }
     }
   }

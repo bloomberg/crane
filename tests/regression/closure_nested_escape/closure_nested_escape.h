@@ -36,7 +36,7 @@ struct ClosureNestedEscape {
   /// mul(10) where n=3 → 3*10 = 30.
   /// Expected: 30.
   static inline const uint64_t test3 = []() -> uint64_t {
-    auto [_x, g] = make_pair_fix(UINT64_C(3));
+    auto [_, g] = make_pair_fix(UINT64_C(3));
     return g(UINT64_C(10));
   }();
 };

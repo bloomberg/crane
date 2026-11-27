@@ -164,12 +164,12 @@ using entry = SigT<prod2, psem>;
     std::make_pair(UINT64_C(0), List<uint64_t>::nil()),
     std::make_pair(
         crane::obj(crane_erase_fn([](const auto &tup) {
-          const auto &[v, _x] =
+          const auto &[v, _] =
               crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
           return wrap_string(crane::any_cast<std::string>(v));
         })),
         crane::obj(crane_erase_fn([](const auto &tup) {
-          const auto &[v, _x] =
+          const auto &[v, _] =
               crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
           return wrap_string(crane::any_cast<std::string>(v));
         }))));

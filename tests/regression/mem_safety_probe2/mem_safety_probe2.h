@@ -455,7 +455,7 @@ struct MemSafetyProbe2 {
         } else {
           auto _f = std::move(std::get<_after_mylength_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + std::move(_result));
+          _result = (UINT64_C(1) + _result);
         }
       }
       return _result;

@@ -34,7 +34,7 @@ uint64_t MemSafetyProbe7::sum_list(const MemSafetyProbe7::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -118,7 +118,7 @@ uint64_t MemSafetyProbe7::sum_fns(
       auto _f = std::move(std::get<_after_sum_fns_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(std::monostate)> a0 = std::move(_f.a0);
-      _result = (a0(std::monostate{}) + std::move(_result));
+      _result = (a0(std::monostate{}) + _result);
     }
   }
   return _result;
@@ -246,7 +246,7 @@ uint64_t MemSafetyProbe7::apply_all(
       auto _f = std::move(std::get<_after_apply_all_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = a0(std::move(_result));
+      _result = a0(_result);
     }
   }
   return _result;
@@ -259,18 +259,17 @@ MemSafetyProbe7::mylist<uint64_t> MemSafetyProbe7::make_nat_list(uint64_t n) {
   // cell fills.
   std::optional<MemSafetyProbe7::mylist<uint64_t>> _root{};
   std::shared_ptr<MemSafetyProbe7::mylist<uint64_t>> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = mylist<uint64_t>::mynil();
       (_write ? *(*_write = std::make_shared<MemSafetyProbe7::mylist<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       auto _cell =
-          typename MemSafetyProbe7::mylist<uint64_t>::Mycons(_loop_n, nullptr);
+          typename MemSafetyProbe7::mylist<uint64_t>::Mycons(n, nullptr);
       MemSafetyProbe7::mylist<uint64_t> &_node =
           (_write ? *(*_write =
                           std::make_shared<MemSafetyProbe7::mylist<uint64_t>>(
@@ -280,7 +279,7 @@ MemSafetyProbe7::mylist<uint64_t> MemSafetyProbe7::make_nat_list(uint64_t n) {
           &std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
               _node.v_mut())
               .a1;
-      _loop_n = n_;
+      n = n_;
       continue;
     }
   }

@@ -527,7 +527,7 @@ template <OrderedType X> struct Coq_Raw {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(s.v());
-      const auto &[k_, _x] = a0;
+      const auto &[k_, _] = a0;
       auto &&_sv = X::compare(k, k_);
       if (std::holds_alternative<typename Compare<typename X::t>::LT>(_sv.v())) {
         return false;
@@ -1269,31 +1269,29 @@ template <Int I, OrderedType X> struct Raw {
           }
         }
       }
-    } else {
-      if (I::gt_le_dec(std::move(hr), I::add(std::move(hl), I::_2))) {
-        if (std::holds_alternative<typename tree<T1>::Leaf>(r.v())) {
-          return assert_false<T1>(l, std::move(x), d, r);
+    } else if (I::gt_le_dec(std::move(hr), I::add(std::move(hl), I::_2))) {
+      if (std::holds_alternative<typename tree<T1>::Leaf>(r.v())) {
+        return assert_false<T1>(l, std::move(x), d, r);
+      } else {
+        const auto &[a00, a10, a20, a30, _] =
+            std::get<typename tree<T1>::Node>(r.v());
+        if (I::ge_lt_dec(height<T1>(*a30), height<T1>(*a00))) {
+          return create<T1>(create<T1>(l, std::move(x), d, *a00), a10, a20,
+                            *a30);
         } else {
-          const auto &[a00, a10, a20, a30, _] =
-              std::get<typename tree<T1>::Node>(r.v());
-          if (I::ge_lt_dec(height<T1>(*a30), height<T1>(*a00))) {
-            return create<T1>(create<T1>(l, std::move(x), d, *a00), a10, a20,
-                              *a30);
+          auto &&_sv1 = *a00;
+          if (std::holds_alternative<typename tree<T1>::Leaf>(_sv1.v())) {
+            return assert_false<T1>(l, std::move(x), d, r);
           } else {
-            auto &&_sv1 = *a00;
-            if (std::holds_alternative<typename tree<T1>::Leaf>(_sv1.v())) {
-              return assert_false<T1>(l, std::move(x), d, r);
-            } else {
-              const auto &[a01, a11, a21, a31, _] =
-                  std::get<typename tree<T1>::Node>(_sv1.v());
-              return create<T1>(create<T1>(l, std::move(x), d, *a01), a11, a21,
-                                create<T1>(*a31, a10, a20, *a30));
-            }
+            const auto &[a01, a11, a21, a31, _] =
+                std::get<typename tree<T1>::Node>(_sv1.v());
+            return create<T1>(create<T1>(l, std::move(x), d, *a01), a11, a21,
+                              create<T1>(*a31, a10, a20, *a30));
           }
         }
-      } else {
-        return create<T1>(l, std::move(x), d, r);
       }
+    } else {
+      return create<T1>(l, std::move(x), d, r);
     }
   }
 
@@ -1385,21 +1383,15 @@ template <Int I, OrderedType X> struct Raw {
                   std::get<typename tree<T1>::Node>(r.v());
               if (I::gt_le_dec(a4, I::add(a40, I::_2))) {
                 return bal<T1>(*a0, a1, a2, join<T1>(*a3, x0_, x1_, r));
+              } else if (I::gt_le_dec(a40, I::add(a4, I::_2))) {
+                return bal<T1>(_self_join_aux(_self_join_aux, *a00), a10, a20,
+                               *a30);
               } else {
-                if (I::gt_le_dec(a40, I::add(a4, I::_2))) {
-                  return bal<T1>(_self_join_aux(_self_join_aux, *a00), a10, a20,
-                                 *a30);
-                } else {
-                  return create<T1>(l, x0_, x1_, r);
-                }
+                return create<T1>(l, x0_, x1_, r);
               }
             }
           };
-      auto join_aux =
-          [&](const tree<T1> &r) -> tree<T1> {
-            return join_aux_impl(join_aux_impl, r);
-          };
-      return join_aux(x2_);
+      return join_aux_impl(join_aux_impl, x2_);
     }
   }
 

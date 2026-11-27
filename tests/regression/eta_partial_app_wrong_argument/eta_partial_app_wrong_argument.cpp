@@ -24,32 +24,26 @@ bool EtaPartialAppWrongArgument::z(const List<uint64_t> &l,
     } else {
       const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(m.v());
       const List<uint64_t> &a10_value = *a10;
-      auto go =
-          [&](const List<bool> &k, const crane::fn<bool(uint64_t)> &,
-              uint64_t x0_0)
-               -> bool {
-            // Loop replaces the tail recursion: each recursive call updates the
-            // loop variables.
-            const List<bool> *_loop_k = &k;
-            while (true) {
-              if (std::holds_alternative<typename List<bool>::Nil>(_loop_k->v())) {
-                crane::fn<bool(uint64_t)> cf = [](uint64_t) { return false; };
-                crane::fn<uint64_t(uint64_t)> cg =
-                    [=](uint64_t) { return a00; };
-                return cf(cg(x0_0));
-              } else {
-                const auto &[_, a11] =
-                    std::get<typename List<bool>::Cons>(_loop_k->v());
-                const List<bool> &a11_value = *a11;
-                _loop_k = &a11_value;
-              }
-            }
+      const List<bool> &_lc1_k = List<bool>::nil();
+      const crane::fn<bool(uint64_t)> &_lc1_x0 =
+          [=, a10_value = a10_value, a1_value = a1_value](uint64_t _x0) -> bool {
+            return z(a1_value, a10_value, _x0);
           };
-      return go(List<bool>::nil(), [=, a10_value = a10_value,
-                                    a1_value = a1_value](uint64_t _x0) -> bool {
-                                     return z(a1_value, a10_value, _x0);
-                                   },
-                x0_);
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
+      const List<bool> *_lc1_loop_k = &_lc1_k;
+      while (true) {
+        if (std::holds_alternative<typename List<bool>::Nil>(_lc1_loop_k->v())) {
+          crane::fn<bool(uint64_t)> cf = [](uint64_t) { return false; };
+          crane::fn<uint64_t(uint64_t)> cg = [=](uint64_t) { return a00; };
+          return cf(cg(x0_));
+        } else {
+          const auto &[_, a11] =
+              std::get<typename List<bool>::Cons>(_lc1_loop_k->v());
+          const List<bool> &a11_value = *a11;
+          _lc1_loop_k = &a11_value;
+        }
+      }
     }
   }
 }

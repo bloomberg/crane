@@ -155,16 +155,14 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
           std::move(std::get<_after_perms_choices_fuel_in_Cons_2>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result =
-          map_cons(std::move(a0), std::move(_f._tmp3)).app(std::move(_result));
+      _result = map_cons(a0, std::move(_f._tmp3)).app(std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_perms_choices_fuel_in_Nil>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result =
-          map_cons(std::move(a0),
-                   List<List<uint64_t>>::cons(List<uint64_t>::nil(),
-                                              List<List<uint64_t>>::nil()))
+          map_cons(a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                                  List<List<uint64_t>>::nil()))
               .app(std::move(_result));
     }
   }
@@ -212,7 +210,7 @@ uint64_t LoopifyCombinatorics::len_list(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_len_list_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;
@@ -250,7 +248,7 @@ uint64_t LoopifyCombinatorics::factorial_impl(uint64_t n) {
       auto _f = std::move(std::get<_after_factorial_impl_in_S>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = (n * std::move(_result));
+      _result = (n * _result);
     }
   }
   return _result;
@@ -551,7 +549,7 @@ bool LoopifyCombinatorics::elem(uint64_t x, const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_elem_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (x == a0 || std::move(_result));
+      _result = (x == a0 || _result);
     }
   }
   return _result;

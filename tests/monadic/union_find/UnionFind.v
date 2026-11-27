@@ -45,7 +45,6 @@ From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.STMonad
 .
 
@@ -64,31 +63,31 @@ Inductive op : Type :=
 
 Section Imperative.
 
-  Context {St : Type}.
+  Context {R : STRefs}.
 
-  Let V : nat -> Type := fun _ => node.
-  Let E0 := STEvent nat St V +' exceptE Err.
+  Notation V := (fun _ : nat => node).
+  Notation E0 := (STEvent R V +' exceptE Err).
 
-  Definition make_ST (n : nat) : itree E0 (STArray nat St node) :=
-    a <- newArray 0 0 (n - 1) (0, 0);;
-    for_each_with (seq 0 n) tt (fun _ i => writeArray (idx := 0) a i (i, 0));;
+  Definition make_ST (n : nat) : itree E0 (STArray node) :=
+    a <- newArray n (0, 0);;
+    for_each_with (seq 0 n) tt (fun _ i => writeArray a i (i, 0));;
     Ret a.
 
   (** The operations take the array as a section variable rather than as an
       argument of the recursion: see [UnionFind] below. *)
   Section Operations.
 
-    Context (n : nat) (a : STArray nat St node).
+    Context (n : nat) (a : STArray node).
 
     Fixpoint find_ST (fuel : nat) (x : nat) : itree E0 nat :=
       match fuel with
       | O => Ret x
       | S fuel' =>
-          '(p, k) <- readArray (idx := 0) a x;;
+          '(p, k) <- readArray a x;;
           if p =? x then Ret x
           else
             r <- find_ST fuel' p;;
-            writeArray (idx := 0) a x (r, k);;
+            writeArray a x (r, k);;
             Ret r
       end.
 
@@ -97,11 +96,11 @@ Section Imperative.
       ry <- find_ST n y;;
       if rx =? ry then Ret tt
       else
-        '(_, kx) <- readArray (idx := 0) a rx;;
-        '(_, ky) <- readArray (idx := 0) a ry;;
-        if kx <? ky then writeArray (idx := 0) a rx (ry, kx)
-        else if ky <? kx then writeArray (idx := 0) a ry (rx, ky)
-        else (writeArray (idx := 0) a ry (rx, ky);; writeArray (idx := 0) a rx (rx, S kx)).
+        '(_, kx) <- readArray a rx;;
+        '(_, ky) <- readArray a ry;;
+        if kx <? ky then writeArray a rx (ry, kx)
+        else if ky <? kx then writeArray a ry (rx, ky)
+        else (writeArray a ry (rx, ky);; writeArray a rx (rx, S kx)).
 
     Definition same_ST (x y : nat) : itree E0 bool :=
       rx <- find_ST n x;;
@@ -184,7 +183,7 @@ Module UnionFind.
       [union_ST], [same_ST] and [run_ST] take the array, a
       [std::shared_ptr<std::vector<node>>], by const reference, and write
       its elements through it. *)
-  Definition union_find_ST := @union_find_ST unit.
+  Definition union_find_ST := @union_find_ST cpp_refs.
 
   Definition union_find_fun := Eval unfold union_find_fun in union_find_fun.
 

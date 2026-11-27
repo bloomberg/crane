@@ -50,58 +50,52 @@ ConstraintSubstitutionObj::h2b(uint64_t n36) {
             }
           }());
     } else {
-      auto go41 =
-          [&](const List<
-              ConstraintSubstitutionObj::st<ConstraintSubstitutionObj::pt>> &l42,
-              const Sum<ConstraintSubstitutionObj::st<uint64_t>,
-                        std::optional<ConstraintSubstitutionObj::tree>> &acc43)
-               -> Sum<ConstraintSubstitutionObj::st<uint64_t>,
-                      std::optional<ConstraintSubstitutionObj::tree>> {
-            // Loop replaces the tail recursion: each recursive call updates the
-            // loop variables.
-            Sum<ConstraintSubstitutionObj::st<uint64_t>,
-                std::optional<ConstraintSubstitutionObj::tree>> _loop_acc43 =
-                acc43;
-            const List<
-                ConstraintSubstitutionObj::st<ConstraintSubstitutionObj::pt>> *_loop_l42 =
-                &l42;
-            while (true) {
-              if (std::holds_alternative<
-                      typename List<ConstraintSubstitutionObj::st<
-                          ConstraintSubstitutionObj::pt>>::Nil>(_loop_l42->v())) {
-                return Sum<ConstraintSubstitutionObj::st<uint64_t>,
-                           std::optional<ConstraintSubstitutionObj::tree>>::inr(
-                    std::optional<ConstraintSubstitutionObj::tree>());
-              } else {
-                const auto &[_, a1] =
-                    std::get<typename List<ConstraintSubstitutionObj::st<
-                        ConstraintSubstitutionObj::pt>>::Cons>(_loop_l42->v());
-                _loop_acc43 = [&]() -> Sum<
-                    ConstraintSubstitutionObj::st<uint64_t>,
-                    std::optional<ConstraintSubstitutionObj::tree>> {
-                  if (n36 <= 0) {
-                    return Sum<ConstraintSubstitutionObj::st<uint64_t>,
-                               std::optional<ConstraintSubstitutionObj::tree>>::inl(
-                        sret<uint64_t>(UINT64_C(7)));
-                  } else {
-                    uint64_t _x0 = n36 - 1;
-                    return _loop_acc43;
-                  }
-                }();
-                _loop_l42 = crane_raw(a1);
-              }
-            }
-          };
-      return go41(
+      const List<ConstraintSubstitutionObj::st<ConstraintSubstitutionObj::pt>> &_lc1_l42 =
           List<uint64_t>::nil().template flat_map<
               ConstraintSubstitutionObj::st<ConstraintSubstitutionObj::pt>>(
               [](uint64_t) {
                 return List<ConstraintSubstitutionObj::st<
                     ConstraintSubstitutionObj::pt>>::nil();
-              }),
+              });
+      const Sum<ConstraintSubstitutionObj::st<uint64_t>,
+                std::optional<ConstraintSubstitutionObj::tree>> &_lc1_acc43 =
           Sum<ConstraintSubstitutionObj::st<uint64_t>,
               std::optional<ConstraintSubstitutionObj::tree>>::inr(
-              std::make_optional<ConstraintSubstitutionObj::tree>(tree::leaf())));
+              std::make_optional<ConstraintSubstitutionObj::tree>(tree::leaf()));
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
+      Sum<ConstraintSubstitutionObj::st<uint64_t>,
+          std::optional<ConstraintSubstitutionObj::tree>> _lc1_loop_acc43 =
+          _lc1_acc43;
+      const List<ConstraintSubstitutionObj::st<ConstraintSubstitutionObj::pt>> *_lc1_loop_l42 =
+          &_lc1_l42;
+      while (true) {
+        if (std::holds_alternative<
+                typename List<ConstraintSubstitutionObj::st<
+                    ConstraintSubstitutionObj::pt>>::Nil>(_lc1_loop_l42->v())) {
+          return Sum<ConstraintSubstitutionObj::st<uint64_t>,
+                     std::optional<ConstraintSubstitutionObj::tree>>::inr(
+              std::optional<ConstraintSubstitutionObj::tree>());
+        } else {
+          const auto &[_, a1] =
+              std::get<
+                  typename List<ConstraintSubstitutionObj::st<
+                      ConstraintSubstitutionObj::pt>>::Cons>(_lc1_loop_l42->v());
+          _lc1_loop_acc43 =
+              [&]() -> Sum<ConstraintSubstitutionObj::st<uint64_t>,
+                           std::optional<ConstraintSubstitutionObj::tree>> {
+                if (n36 <= 0) {
+                  return Sum<ConstraintSubstitutionObj::st<uint64_t>,
+                             std::optional<ConstraintSubstitutionObj::tree>>::inl(
+                      sret<uint64_t>(UINT64_C(7)));
+                } else {
+                  uint64_t _x0 = n36 - 1;
+                  return _lc1_loop_acc43;
+                }
+              }();
+          _lc1_loop_l42 = crane_raw(a1);
+        }
+      }
     }
   } else {
     uint64_t _x = n36 - 1;

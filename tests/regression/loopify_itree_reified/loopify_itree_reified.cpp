@@ -50,7 +50,7 @@ LoopifyItreeReified::count_taus(uint64_t fuel,
     } else {
       auto _f = std::move(std::get<_after_count_taus_in_TauF>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;

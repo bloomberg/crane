@@ -3,18 +3,15 @@
 #include <phantom_filler_not_written.h>
 
 #include <iostream>
+#include <memory>
 
 int main() {
-  auto xs = List<uint64_t>::cons(
-      3, List<uint64_t>::cons(4, List<uint64_t>::cons(5, List<uint64_t>::nil())));
-  int failures = 0;
-  auto sum = PhantomFillerNotWritten::sum_list(xs);
-  if (sum != 12) {
-    std::cout << "sum_list: expected 12, got " << sum << std::endl;
-    ++failures;
+  auto c = std::make_shared<uint64_t>(7);
+  auto r = PhantomFillerNotWritten::run_count(c, 3);
+  if (r != 3) {
+    std::cout << "run_count: expected 3, got " << r << std::endl;
+    return 1;
   }
-  if (failures == 0) {
-    std::cout << "phantom_filler_not_written: all tests passed" << std::endl;
-  }
-  return failures;
+  std::cout << "phantom_filler_not_written: all tests passed" << std::endl;
+  return 0;
 }

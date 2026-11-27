@@ -1,6 +1,6 @@
 #include "io.h"
 
-void iotest::test1(const std::string &) { return; }
+void iotest::test1(std::string_view) { return; }
 
 void iotest::test2(const std::string &s) {
   std::cout << s;

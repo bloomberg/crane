@@ -83,10 +83,37 @@ uint64_t MemSafetyProbe::apply_all(
       auto _f = std::move(std::get<_after_apply_all_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(x) + std::move(_result));
+      _result = (a0(x) + _result);
     }
   }
   return _result;
+}
+
+/// ---- TEST 4: Fold composing closures ----
+/// Each iteration wraps the accumulator in a new closure that captures
+/// a tree value. Tests deep closure chaining with value type captures.
+uint64_t MemSafetyProbe::fold_compose(
+    const MemSafetyProbe::mylist<MemSafetyProbe::tree> &trees,
+    const crane::fn<uint64_t(uint64_t)> &acc, uint64_t x0_) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
+  const MemSafetyProbe::mylist<MemSafetyProbe::tree> *_loop_trees = &trees;
+  while (true) {
+    if (std::holds_alternative<
+            typename MemSafetyProbe::mylist<MemSafetyProbe::tree>::Mynil>(
+            _loop_trees->v())) {
+      return _loop_acc(x0_);
+    } else {
+      const auto &[a0, a1] = std::get<
+          typename MemSafetyProbe::mylist<MemSafetyProbe::tree>::Mycons>(
+          _loop_trees->v());
+      const MemSafetyProbe::mylist<MemSafetyProbe::tree> &a1_value = *a1;
+      _loop_acc =
+          [=, a0 = a0](uint64_t n) { return _loop_acc(a0.sum_values(n)); };
+      _loop_trees = &a1_value;
+    }
+  }
 }
 
 /// ---- TEST 5: Partial application + match scrutinee reuse ----

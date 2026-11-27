@@ -338,3 +338,14 @@
   (alias runtest)
   (deps thread.t.exe)
   (action (run ./thread.t.exe))))
+
+(subdir imp_while
+ (rule
+  (targets imp_while.t.exe)
+  (deps ImpWhile.vo imp_while.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} imp_while.t.exe imp_while.t.cpp imp_while.cpp)))
+ (rule
+  (alias runtest)
+  (deps imp_while.t.exe)
+  (action (run ./imp_while.t.exe))))

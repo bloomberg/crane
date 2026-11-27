@@ -187,7 +187,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -273,30 +273,26 @@ struct FunctorComp {
 
     static List<uint64_t> to_list(typename C::t c) {
       uint64_t _arg0 = C::size(c);
-      {
-        uint64_t _lc1_fuel = _arg0;
-        const List<uint64_t> &_lc1_acc = List<uint64_t>::nil();
-        typename C::t _lc1_c0 = std::move(c);
-        // Loop replaces the tail recursion: each recursive call updates the
-        // loop variables.
-        typename C::t _lc1_loop_c0 = std::move(_lc1_c0);
-        List<uint64_t> _lc1_loop_acc = _lc1_acc;
-        uint64_t _lc1_loop_fuel = _lc1_fuel;
-        while (true) {
-          if (_lc1_loop_fuel <= 0) {
-            return _lc1_loop_acc.rev();
+      const List<uint64_t> &_lc1_acc = List<uint64_t>::nil();
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
+      typename C::t _lc1_loop_c0 = std::move(c);
+      List<uint64_t> _lc1_loop_acc = _lc1_acc;
+      uint64_t _lc1_loop_fuel = _arg0;
+      while (true) {
+        if (_lc1_loop_fuel <= 0) {
+          return _lc1_loop_acc.rev();
+        } else {
+          uint64_t f = _lc1_loop_fuel - 1;
+          auto _cs = C::pop(_lc1_loop_c0);
+          if (_cs.has_value()) {
+            const std::pair<uint64_t, typename C::t> &p = *_cs;
+            const auto &[x, c_] = p;
+            _lc1_loop_c0 = c_;
+            _lc1_loop_acc = List<uint64_t>::cons(x, std::move(_lc1_loop_acc));
+            _lc1_loop_fuel = f;
           } else {
-            uint64_t f = _lc1_loop_fuel - 1;
-            auto _cs = C::pop(_lc1_loop_c0);
-            if (_cs.has_value()) {
-              const std::pair<uint64_t, typename C::t> &p = *_cs;
-              const auto &[x, c_] = p;
-              _lc1_loop_c0 = c_;
-              _lc1_loop_acc = List<uint64_t>::cons(x, std::move(_lc1_loop_acc));
-              _lc1_loop_fuel = f;
-            } else {
-              return _lc1_loop_acc.rev();
-            }
+            return _lc1_loop_acc.rev();
           }
         }
       }

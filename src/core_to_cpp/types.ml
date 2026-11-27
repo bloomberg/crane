@@ -634,18 +634,61 @@ let rec normalize_erased_types cx : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type
     Function (List.map (normalize_erased_types cx) ps, normalize_erased_types cx r)
   | t -> t
 
-(** How many of [id]'s leading template parameters no signature mentions,
-    counted by {!Base.Type_util.explicit_tvar_prefix} off its declared type: its
-    leading phantoms.  Nothing deduces them, so a call writes them, and
-    {!Core_plan.Callable_abi} records them as [Phantom] parameters of [id]'s plan.  The
-    declaration emitter counts the same run and leaves those parameters
-    undefaulted. *)
+(** Whether [id]'s declaration declares a template parameter for its scheme
+    variable of index [i]: one its declared type spells
+    ({!Base.Type_util.spelled_tvars_indexed}), or an index the body reads.
+    A callee written by a mapping's text rather than declared by Crane takes
+    the arguments its text names, so every variable counts. *)
+let declares_tvar cx id =
+  match callee_core_type cx id with
+  | _ when Base.Table.is_custom id || Base.Table.is_mapped_operation id -> fun _ -> true
+  | None -> fun _ -> true
+  | Some core_ty ->
+    let cty = cpp_ir_of_core_type cx (empty_env ()) [] (type_simpl core_ty) in
+    let declared =
+      IntSet.union
+        (IntSet.of_list (List.map fst (Base.Type_util.spelled_tvars_indexed cty)))
+        (collect_core_type_index_tvars core_ty)
+    in
+    (* The C++ type above may write a variable through something it does not
+       spell as an application -- a class's [Type -> Type] field, [memM B] --
+       so the Core type is read too: a variable occurring there outside the
+       positions a custom template does not name, and outside the
+       parameters C++ drops (erased ones, type-class instances), is
+       spelled. *)
+    let rec spelled_in i (t : Core.Type.t) =
+      match resolve_meta t with
+      | Variable {variable = j; _} -> j = i
+      | Variable_app {head; arguments} -> head = i || List.exists (spelled_in i) arguments
+      | Global_app {head = g; type_arguments; _} -> (
+        match Base.Type_util.custom_referenced_positions_opt g with
+        | Some referenced ->
+          List.exists (fun (k, t) -> IntSet.mem k referenced && spelled_in i t) (List.mapi (fun k t -> (k, t)) type_arguments)
+        | None -> List.exists (spelled_in i) type_arguments )
+      | Arrow {parameter; result} ->
+        ((not (Base.Core_util.is_erased_type parameter || Base.Table.is_typeclass_type parameter)) && spelled_in i parameter)
+        || spelled_in i result
+      | _ -> false
+    in
+    fun i -> IntSet.mem i declared || spelled_in i core_ty
+
+(** How many of [id]'s leading template parameters no signature mentions:
+    its leading phantoms, among the variables it declares
+    ({!declares_tvar}), of the run {!Base.Type_util.explicit_tvar_prefix}
+    counts off its declared type.  Nothing deduces them, so a call writes
+    them, and {!Core_plan.Callable_abi} records them as [Phantom] parameters
+    of [id]'s plan.  The declaration emitter counts the same run and leaves
+    those parameters undefaulted. *)
 let leading_phantom_count cx id =
   match callee_core_type cx id with
   | None -> 0
   | Some core_ty ->
-    let cty =
-      cpp_ir_of_core_type cx (empty_env ()) [] (type_simpl core_ty)
-    in
+    let cty = cpp_ir_of_core_type cx (empty_env ()) [] (type_simpl core_ty) in
     let force_required = collect_core_type_index_tvars core_ty in
-    explicit_tvar_prefix ~force_required cty
+    let n = explicit_tvar_prefix ~force_required cty in
+    let indexed =
+      List.sort_uniq Int.compare
+        (List.map fst (Base.Type_util.get_tvars_indexed cty) @ IntSet.elements force_required)
+    in
+    let declares = declares_tvar cx id in
+    List.length (List.filter declares (List.filteri (fun k _ -> k < n) indexed))

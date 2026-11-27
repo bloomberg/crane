@@ -69,7 +69,4 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename T1 = void>
-std::shared_ptr<ITree<Nat>> f(const std::shared_ptr<ITree<Nat>> &x) {
-  return itree_bind(x, [](const Nat &a) { return itree_ret(Nat::s(a)); });
-}
+std::shared_ptr<ITree<Nat>> f(const std::shared_ptr<ITree<Nat>> &x);

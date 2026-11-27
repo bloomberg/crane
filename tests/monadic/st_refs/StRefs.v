@@ -15,7 +15,6 @@ From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.STMonad
 .
 
@@ -24,86 +23,76 @@ Local Open Scope monad_scope.
 
 Section NatRefs.
 
-  Context {T S : Type}.
-  Context {ltu : T -> T -> Prop}.
-  Context `{Ix_Correct T ltu}.
-  Context {HST : STRefClass T}.
-
-  Let V : T -> Type := fun _ => nat.
-  Let E0 := (STEvent T S V) +' exceptE Err.
+  Context {R : STRefs}.
+  Notation E0 := (STEvent R (fun _ : nat => nat) +' exceptE Err).
 
   Definition new_and_read_both_nat : itree E0 (nat * nat) :=
-    r1 <- newSTRef zero 5;;
-    r2 <- newSTRef (suc zero) 6;;
+    r1 <- newSTRef 5;;
+    r2 <- newSTRef 6;;
     x1 <- readSTRef r1;;
     x2 <- readSTRef r2;;
     Ret (x1, x2).
 
   Definition tree_simp_nat : itree E0 nat :=
-    v <- newSTRef zero 5;;
+    v <- newSTRef 5;;
     readSTRef v.
 
-  (** A reference index must not escape into the stored value. *)
-  Fail Definition tree_escape_nat : itree E0 nat :=
-    v <- newSTRef 5;;
-    writeSTRef v (match v with mkSTRef _ _ idx => idx end);;
-    readSTRef v.
+  (** A reference is of an abstract type: no location can be read out of
+      it. *)
+  Fail Definition location_of (v : STRef nat) : nat := v.
 
   Definition tree_simp_another_nat : itree E0 nat :=
-    v <- newSTRef zero 5;;
+    v <- newSTRef 5;;
     writeSTRef v 6;;
     readSTRef v.
 
   (** [swap] from "Lazy Functional State Threads" (Launchbury and Peyton
-      Jones). The reference indices are not inferred yet, so they are passed
-      explicitly; without them the definition fails. *)
-  Definition swap' (v w : STRef S nat) : itree E0 unit :=
-    a <- readSTRef (idx := STRefToIx _ _ v) v;;
-    b <- readSTRef (idx := STRefToIx _ _ w) w;;
-    writeSTRef v b;;
-    writeSTRef w a.
-
-  Fail Definition swap (v w : STRef S nat) : itree E0 unit :=
+      Jones). *)
+  Definition swap (v w : STRef nat) : itree E0 unit :=
     a <- readSTRef v;;
     b <- readSTRef w;;
     writeSTRef v b;;
     writeSTRef w a.
 
+  Definition swapped : itree E0 (nat * nat) :=
+    v <- newSTRef 1;;
+    w <- newSTRef 2;;
+    swap v w;;
+    a <- readSTRef v;;
+    b <- readSTRef w;;
+    Ret (a, b).
+
 End NatRefs.
 
 Section BoolRefs.
 
-  Context {T S : Type}.
-  Context {ltu : T -> T -> Prop}.
-  Context `{Ix_Correct T ltu}.
-  Context {HST : STRefClass T}.
-
-  Let V : T -> Type := fun _ => bool.
-  Let E0 := (STEvent T S V) +' exceptE Err.
+  Context {R : STRefs}.
+  Notation E0 := (STEvent R (fun _ : nat => bool) +' exceptE Err).
 
   Definition new_and_read_both_bool : itree E0 (bool * bool) :=
-    r1 <- newSTRef zero false;;
-    r2 <- newSTRef (suc zero) true;;
+    r1 <- newSTRef false;;
+    r2 <- newSTRef true;;
     x1 <- readSTRef r1;;
     x2 <- readSTRef r2;;
     Ret (x1, x2).
 
   Definition tree_simp_bool : itree E0 bool :=
-    v <- newSTRef zero true;;
+    v <- newSTRef true;;
     readSTRef v.
 
 End BoolRefs.
 
-Module StRefs.
-  (* The index instances are unfolded so that they are extracted here. *)
-  Definition nat_idx : @Ix nat Nat.le := Eval unfold nat_ix in nat_ix.
-  Definition nat_stref : STRefClass nat := Eval unfold nat_ix_stref in nat_ix_stref.
+(** A program cannot return one of its references: the result type of
+    [runST]'s argument does not mention [R]. *)
+Fail Definition leaked := runST (fun R => newSTRef (R := R) (V := fun _ : nat => nat) 5).
 
-  Definition new_and_read_both_nat := Eval unfold new_and_read_both_nat in (@new_and_read_both_nat nat unit Nat.le).
-  Definition tree_simp_nat := Eval unfold tree_simp_nat in (@tree_simp_nat nat unit Nat.le).
-  Definition tree_simp_another_nat := Eval unfold tree_simp_another_nat in (@tree_simp_another_nat nat unit Nat.le).
-  Definition new_and_read_both_bool := Eval unfold new_and_read_both_bool in (@new_and_read_both_bool nat unit Nat.le).
-  Definition tree_simp_bool := Eval unfold tree_simp_bool in (@tree_simp_bool nat unit Nat.le).
+Module StRefs.
+  Definition new_and_read_both_nat : nat * nat := run_st (new_and_read_both_nat (R := cpp_refs)).
+  Definition tree_simp_nat : nat := run_st (tree_simp_nat (R := cpp_refs)).
+  Definition tree_simp_another_nat : nat := run_st (tree_simp_another_nat (R := cpp_refs)).
+  Definition swapped : nat * nat := run_st (swapped (R := cpp_refs)).
+  Definition new_and_read_both_bool : bool * bool := run_st (new_and_read_both_bool (R := cpp_refs)).
+  Definition tree_simp_bool : bool := run_st (tree_simp_bool (R := cpp_refs)).
 End StRefs.
 
 Crane Extraction "st_refs" StRefs.

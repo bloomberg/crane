@@ -19,16 +19,21 @@
 #include <utility>
 #include <variant>
 
-struct nat_ix_stref;
+template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-struct STRefNat;
-template <typename I, typename T>
-concept STRefClass = requires {
-  { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
-  { I::STRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
+enum class STRefs;
+template <typename I, typename V, typename A>
+concept Code = requires {
+  { I::code() } -> std::convertible_to<uint64_t>;
 };
+
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
+struct Nat {};
 
 template <typename A> struct List {
   // TYPES
@@ -109,44 +114,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-
-  uint64_t length() const {
-    const List<A> *_self = this;
-
-    // Explicit stack replaces the non-tail recursion of length: _call frames
-    // are pending calls, _after frames resume a caller.
-    struct _call {
-      const List<A> *_self;
-    };
-
-    struct _after_length_in_Cons {};
-
-    using _frame = std::variant<_call, _after_length_in_Cons>;
-    uint64_t _result{};
-    crane::small_vector<_frame> _stack;
-    _stack.emplace_back(_call{_self});
-    while (!_stack.empty()) {
-      _frame &_popped = _stack.back();
-      if (std::holds_alternative<_call>(_popped)) {
-        auto _f = std::move(std::get<_call>(_popped));
-        _stack.pop_back();
-        const List<A> *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = UINT64_C(0);
-        } else {
-          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_after_length_in_Cons{});
-          _stack.emplace_back(_call{crane_raw(a1)});
-        }
-      } else {
-        auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
-        _stack.pop_back();
-        _result = (std::move(_result) + 1);
-      }
-    }
-    return _result;
-  }
 };
 
 template <typename Err> struct ExceptE {
@@ -182,47 +149,52 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct STRefNat {
-  // DATA
-  uint64_t s;
+enum class STRefs { BUILD_STREFS };
 
-  // ACCESSORS
-  STRefNat clone() const { return {s}; }
-
-  // CREATORS
-  static STRefNat mkstref(uint64_t s) { return {s}; }
-
-  uint64_t STRefToIxNat() const;
+struct STMonad {
+  template <typename T2, typename T3, typename F2>
+  static T3 for_each_with(const List<T2> &xs, const T3 &v, F2 &&f);
 };
 
-struct nat_ix_stref {
-  static crane::obj mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
-
-  static uint64_t STRefToIx(crane::obj _p_a0) {
-    STRefNat a0 = crane::any_cast<STRefNat>(_p_a0);
-    return a0.STRefToIxNat();
-  }
+template <typename T1> struct code_const {
+  constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-static_assert(STRefClass<nat_ix_stref, uint64_t>);
+uint64_t pair_parts(STRefs _x);
+uint64_t fib_step(STRefs _x, uint64_t n);
+uint64_t add_at(STRefs _x, std::span<const uint64_t> arr, uint64_t acc,
+                uint64_t i);
+uint64_t sum_with(STRefs r);
+uint64_t count_back(STRefs r, std::span<uint64_t> arr, uint64_t k);
+uint64_t run_count_back(STRefs r);
+uint64_t ignore_ref(STRefs _x, const uint64_t *_x0, uint64_t n);
+uint64_t pass_view(STRefs r, uint64_t *r0);
+uint64_t unused_param(STRefs r);
 
-struct HkArgumentAfterPhantom {
-  template <typename T1 = void, template <typename> class T2>
-  static std::optional<T2<uint64_t>>
-  count(const std::shared_ptr<crane::array_storage<uint64_t>> &arr,
-        uint64_t n) {
-    if (n <= 0) {
-      return std::optional<T2<uint64_t>>();
+struct StReadableForms {
+  static inline const uint64_t pair_parts = ::pair_parts(STRefs::BUILD_STREFS);
+  static uint64_t fib_step(uint64_t n);
+  static inline const uint64_t sum_with = ::sum_with(STRefs::BUILD_STREFS);
+  static inline const uint64_t count_back =
+      run_count_back(STRefs::BUILD_STREFS);
+  static inline const uint64_t unused_param =
+      ::unused_param(STRefs::BUILD_STREFS);
+};
+
+template <typename T2, typename T3, typename F2>
+T3 STMonad::for_each_with(const List<T2> &xs, const T3 &v, F2 &&f) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  T3 _loop_v = v;
+  const List<T2> *_loop_xs = &xs;
+  while (true) {
+    if (std::holds_alternative<typename List<T2>::Nil>(_loop_xs->v())) {
+      return _loop_v;
     } else {
-      uint64_t n0 = n - 1;
-      return count<crane::obj, T2>(arr, n0);
+      const auto &[a0, a1] = std::get<typename List<T2>::Cons>(_loop_xs->v());
+      T3 v_ = f(_loop_v, a0);
+      _loop_v = std::move(v_);
+      _loop_xs = crane_raw(a1);
     }
   }
-
-  static bool count_list(const List<uint64_t> &xs);
-};
-
-inline uint64_t STRefNat::STRefToIxNat() const {
-  const auto &[s] = *this;
-  return s;
 }

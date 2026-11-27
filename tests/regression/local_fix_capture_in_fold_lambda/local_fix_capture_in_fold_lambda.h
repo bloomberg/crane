@@ -360,23 +360,22 @@ struct LocalFixCaptureInFoldLambda {
             auto go = [&](const List<uint64_t> &l, uint64_t a) -> uint64_t {
               // Loop replaces the tail recursion: each recursive call updates
               // the loop variables.
-              uint64_t _loop_a = a;
               const List<uint64_t> *_loop_l = &l;
               while (true) {
                 if (std::holds_alternative<typename List<uint64_t>::Nil>(
                         _loop_l->v())) {
-                  return _loop_a;
+                  return a;
                 } else {
                   const auto &[a0, a1] =
                       std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-                  _loop_a = [&]() {
+                  a = [&]() {
                     if (std::holds_alternative<typename tree::Leaf>(
                             _self_val.v())) {
-                      return (a0 + _loop_a);
+                      return (a0 + a);
                     } else {
                       const auto &[_, a10, _] =
                           std::get<typename tree::Node>(_self_val.v());
-                      return (a10 + _loop_a);
+                      return (a10 + a);
                     }
                   }();
                   _loop_l = crane_raw(a1);
@@ -623,15 +622,14 @@ struct LocalFixCaptureInFoldLambda {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_tree_obs_in_Node_2{a1,
-                                                        std::move(_result)});
+          _stack.emplace_back(_after_tree_obs_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_obs_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          auto _once1 = (((_f._tmp2 * UINT64_C(7)) + a1) +
-                         (std::move(_result) * UINT64_C(3)));
+          auto _once1 =
+              (((_f._tmp2 * UINT64_C(7)) + a1) + (_result * UINT64_C(3)));
           _result = (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
         }
       }

@@ -215,34 +215,29 @@ struct LoopifyMutualPartialApp {
             if (std::holds_alternative<typename e<CraneU>::Leaf>(_other.v())) {
               const auto &[n] = std::get<typename e<CraneU>::Leaf>(_other.v());
               return Leaf{n};
-            } else {
-              if (std::holds_alternative<typename e<CraneU>::Tag>(_other.v())) {
-                const auto &[u] = std::get<typename e<CraneU>::Tag>(_other.v());
-                return Tag{[&]() -> U {
-                  if constexpr (crane_convertible<U, const CraneU &>) {
-                    return crane_convert<U>(u);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }()};
-              } else {
-                if (std::holds_alternative<typename e<CraneU>::Add>(_other.v())) {
-                  const auto &[a, b] =
-                      std::get<typename e<CraneU>::Add>(_other.v());
-                  return Add{
-                      (a ? std::make_shared<e<U>>(crane_convert<e<U>>(*a))
-                         : nullptr),
-                      (b ? std::make_shared<e<U>>(crane_convert<e<U>>(*b))
-                         : nullptr)};
+            } else if (
+                    std::holds_alternative<typename e<CraneU>::Tag>(_other.v())) {
+              const auto &[u] = std::get<typename e<CraneU>::Tag>(_other.v());
+              return Tag{[&]() -> U {
+                if constexpr (crane_convertible<U, const CraneU &>) {
+                  return crane_convert<U>(u);
                 } else {
-                  const auto &[m] =
-                      std::get<typename e<CraneU>::Meta>(_other.v());
-                  return Meta{
-                      (m ? std::make_shared<md<U>>(crane_convert<md<U>>(*m))
-                         : nullptr)};
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
-              }
+              }()};
+            } else if (
+                    std::holds_alternative<typename e<CraneU>::Add>(_other.v())) {
+              const auto &[a, b] =
+                  std::get<typename e<CraneU>::Add>(_other.v());
+              return Add{(a ? std::make_shared<e<U>>(crane_convert<e<U>>(*a))
+                            : nullptr),
+                         (b ? std::make_shared<e<U>>(crane_convert<e<U>>(*b))
+                            : nullptr)};
+            } else {
+              const auto &[m] = std::get<typename e<CraneU>::Meta>(_other.v());
+              return Meta{(m ? std::make_shared<md<U>>(crane_convert<md<U>>(*m))
+                             : nullptr)};
             }
           }()) {}
 
@@ -363,41 +358,37 @@ struct LoopifyMutualPartialApp {
         : v_([&]() -> variant_t {
             if (std::holds_alternative<typename md<CraneU>::MNull>(_other.v())) {
               return MNull{};
+            } else if (
+                std::holds_alternative<typename md<CraneU>::MConst>(_other.v())) {
+              const auto &[u, x] =
+                  std::get<typename md<CraneU>::MConst>(_other.v());
+              return MConst{
+                  [&]() -> U {
+                    if constexpr (crane_convertible<U, const CraneU &>) {
+                      return crane_convert<U>(u);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  (x ? std::make_shared<e<U>>(crane_convert<e<U>>(*x))
+                     : nullptr)};
+            } else if (
+                std::holds_alternative<typename md<CraneU>::MNode>(_other.v())) {
+              const auto &[l] =
+                  std::get<typename md<CraneU>::MNode>(_other.v());
+              return MNode{(l ? std::make_shared<List<md<U>>>(
+                                    crane_convert<List<md<U>>>(*l))
+                              : nullptr)};
             } else {
-              if (std::holds_alternative<typename md<CraneU>::MConst>(
-                      _other.v())) {
-                const auto &[u, x] =
-                    std::get<typename md<CraneU>::MConst>(_other.v());
-                return MConst{
-                    [&]() -> U {
-                      if constexpr (crane_convertible<U, const CraneU &>) {
-                        return crane_convert<U>(u);
-                      } else {
-                        throw std::logic_error("unreachable: inactive "
-                                               "constructor field at this "
-                                               "instantiation");
-                      }
-                    }(),
-                    (x ? std::make_shared<e<U>>(crane_convert<e<U>>(*x))
-                       : nullptr)};
-              } else {
-                if (std::holds_alternative<typename md<CraneU>::MNode>(
-                        _other.v())) {
-                  const auto &[l] =
-                      std::get<typename md<CraneU>::MNode>(_other.v());
-                  return MNode{(l ? std::make_shared<List<md<U>>>(
-                                        crane_convert<List<md<U>>>(*l))
-                                  : nullptr)};
-                } else {
-                  const auto &[a, b] =
-                      std::get<typename md<CraneU>::MPair>(_other.v());
-                  return MPair{
-                      (a ? std::make_shared<md<U>>(crane_convert<md<U>>(*a))
-                         : nullptr),
-                      (b ? std::make_shared<md<U>>(crane_convert<md<U>>(*b))
-                         : nullptr)};
-                }
-              }
+              const auto &[a, b] =
+                  std::get<typename md<CraneU>::MPair>(_other.v());
+              return MPair{
+                  (a ? std::make_shared<md<U>>(crane_convert<md<U>>(*a))
+                     : nullptr),
+                  (b ? std::make_shared<md<U>>(crane_convert<md<U>>(*b))
+                     : nullptr)};
             }
           }()) {}
 

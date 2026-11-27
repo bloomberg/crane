@@ -152,7 +152,7 @@ struct LoopifyPolymorphic {
       } else {
         auto _f = std::move(std::get<_after_poly_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (UINT64_C(1) + std::move(_result));
+        _result = (UINT64_C(1) + _result);
       }
     }
     return _result;
@@ -249,15 +249,14 @@ struct LoopifyPolymorphic {
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     const List<T1> *_loop_l = &l;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = List<T1>::nil();
         (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t n_ = _loop_n - 1;
+        uint64_t n_ = n - 1;
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
           auto _value = List<T1>::nil();
           (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
@@ -272,7 +271,7 @@ struct LoopifyPolymorphic {
                      : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
-          _loop_n = n_;
+          n = n_;
           continue;
         }
       }
@@ -285,18 +284,17 @@ struct LoopifyPolymorphic {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     const List<T1> *_loop_l = &l;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         return *_loop_l;
       } else {
-        uint64_t n_ = _loop_n - 1;
+        uint64_t n_ = n - 1;
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
           return List<T1>::nil();
         } else {
           const auto &[_, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
           _loop_l = crane_raw(a1);
-          _loop_n = n_;
+          n = n_;
         }
       }
     }
@@ -307,19 +305,16 @@ struct LoopifyPolymorphic {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     const List<T1> *_loop_l = &l;
-    uint64_t _loop_n = n;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         return std::optional<T1>();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
-        if (_loop_n == UINT64_C(0)) {
+        if (n == UINT64_C(0)) {
           return std::make_optional<T1>(a0);
         } else {
           _loop_l = crane_raw(a1);
-          _loop_n =
-              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
-                                                  : (_loop_n - UINT64_C(1))));
+          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
         }
       }
     }
@@ -549,21 +544,20 @@ struct LoopifyPolymorphic {
     // cell fills.
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = List<T1>::nil();
         (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t n_ = _loop_n - 1;
+        uint64_t n_ = n - 1;
         auto _cell = typename List<T1>::Cons(x, nullptr);
         List<T1> &_node =
             (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
-        _loop_n = n_;
+        n = n_;
         continue;
       }
     }

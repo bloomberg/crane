@@ -424,7 +424,7 @@ struct TfunctorListOfTriples {
       const auto &[a0, _] = std::get<typename List<
           std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::Cons>(
           _sv.v());
-      const auto &[p0, _x0] = a0;
+      const auto &[p0, _] = a0;
       const auto &[id, p1] = p0;
       const auto &[t0] = p1;
       return id.add(t0);

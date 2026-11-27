@@ -266,20 +266,14 @@ ValidatedVirtualCrossmatchTraceCase::classify_mfi_with_config(
     uint64_t mfi) {
   if (mfi <= cfg.mfi_cfg_negative) {
     return MFIStrength::MFI_NEGATIVE;
+  } else if (mfi <= cfg.mfi_cfg_weak_positive) {
+    return MFIStrength::MFI_WEAKPOSITIVE;
+  } else if (mfi <= cfg.mfi_cfg_moderate) {
+    return MFIStrength::MFI_MODERATE;
+  } else if (mfi <= cfg.mfi_cfg_strong) {
+    return MFIStrength::MFI_STRONG;
   } else {
-    if (mfi <= cfg.mfi_cfg_weak_positive) {
-      return MFIStrength::MFI_WEAKPOSITIVE;
-    } else {
-      if (mfi <= cfg.mfi_cfg_moderate) {
-        return MFIStrength::MFI_MODERATE;
-      } else {
-        if (mfi <= cfg.mfi_cfg_strong) {
-          return MFIStrength::MFI_STRONG;
-        } else {
-          return MFIStrength::MFI_VERYSTRONG;
-        }
-      }
-    }
+    return MFIStrength::MFI_VERYSTRONG;
   }
 }
 
@@ -473,11 +467,9 @@ bool Bool::bool_dec(bool b1, bool b2) {
     } else {
       return false;
     }
+  } else if (b2) {
+    return false;
   } else {
-    if (b2) {
-      return false;
-    } else {
-      return true;
-    }
+    return true;
   }
 }

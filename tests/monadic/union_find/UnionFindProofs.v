@@ -37,7 +37,6 @@ From ITree Require Import
 From Crane Require Import
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.MonadFacts
   Monads.STMonad
   Monads.STMonadFacts
@@ -54,9 +53,9 @@ Local Open Scope monad_scope.
 Module NatMapFacts := FMapFacts.Facts NatMap.
 
 (** The store of the ST version, and its cell at key [k] of array index 0. *)
-Notation store := (@mem nat (fun _ => node)).
-Notation cell m k := (st_lookup (fun _ => node) (k, 0) m).
-Notation store_add k v m := (st_add (fun _ => node) (k, 0) v m).
+Notation store := (mem (fun _ : nat => node)).
+Notation cell m k := (st_get (V := fun _ : nat => node) k m).
+Notation store_add k v m := (st_put (V := fun _ : nat => node) k v m).
 
 Definition par (s : uf) (x : nat) : nat := fst (get s x).
 
@@ -256,9 +255,9 @@ Definition op_ok (n : nat) (o : op) : Prop :=
 
 Section Simulation.
 
-  Context {St : Type} (n base : nat).
+  Context (n base : nat).
 
-  Let arr : STArray nat St node := MkSTArray nat St node base 0 (n - 1).
+  Let arr : @STArray model_refs node := MkArrLoc base n.
 
   (** The array cell of every element holds its node in the map. *)
   Definition rep (m : store) (s : uf) : Prop :=
@@ -268,24 +267,23 @@ Section Simulation.
     rep (store_add (base + x) nd m) (NatMap.add x nd s).
   Proof.
     intros Hrep Hx i Hi. rewrite get_add. destruct (Nat.eqb_spec x i).
-    - subst i. exact (hmap_lookup_add_eq (V := idx_key_type (fun _ => node)) _ _ _).
-    - rewrite hmap_lookup_add_ne by (intros [=]; lia). auto.
+    - subst i. apply st_get_put_eq.
+    - rewrite st_get_put_ne by lia. auto.
   Qed.
 
   Lemma st_spec_read m s x (Q : store -> node -> Prop) :
     rep m s -> x < n -> Q m (get s x) ->
-    st_spec (E := exceptE Err) (readArray (idx := 0) arr x) m Q.
+    st_spec (E := exceptE Err) (readArray arr x) m Q.
   Proof.
-    intros Hrep Hx HQ. eapply (st_spec_readArray (V := fun _ => node)); [ lia | | exact HQ ].
-    rewrite Nat.sub_0_r. auto.
+    intros Hrep Hx HQ. eapply st_spec_readArray; [ exact Hx | | exact HQ ]. auto.
   Qed.
 
   Lemma st_spec_write m s x nd (Q : store -> unit -> Prop) :
     rep m s -> x < n -> (forall m', rep m' (NatMap.add x nd s) -> Q m' tt) ->
-    st_spec (E := exceptE Err) (writeArray (idx := 0) arr x nd) m Q.
+    st_spec (E := exceptE Err) (writeArray arr x nd) m Q.
   Proof.
-    intros Hrep Hx HQ. apply (st_spec_writeArray (V := fun _ => node)); [ lia |].
-    apply HQ. rewrite Nat.sub_0_r. apply rep_add; assumption.
+    intros Hrep Hx HQ. apply st_spec_writeArray; [ exact Hx |].
+    apply HQ. apply rep_add; assumption.
   Qed.
 
   Lemma find_sim f : forall s m x, rep m s -> Closed n s -> x < n ->
@@ -361,34 +359,34 @@ Section Simulation.
 
 End Simulation.
 
-Lemma make_sim {St : Type} n m :
-  st_spec (E := exceptE Err) (make_ST (St := St) n) m
-    (fun m' a => exists base, a = MkSTArray nat St node base 0 (n - 1) /\ rep n base m' empty_uf).
+Lemma make_sim n m :
+  st_spec (E := exceptE Err) (make_ST (R := model_refs) n) m
+    (fun m' a => exists base, a = MkArrLoc base n /\ rep n base m' empty_uf).
 Proof.
-  unfold make_ST. apply st_spec_bind, (st_spec_newArray (V := fun _ => node)). intros base m1 _.
+  unfold make_ST. apply st_spec_bind, st_spec_newArray. intros base m1 _.
   apply st_spec_bind.
   eapply st_spec_weaken; [| apply (st_spec_for_each_with
     (fun rest _ m => (forall j, In j rest -> j < n)
                      /\ forall i, i < n -> ~ In i rest -> cell m (base + i) = Some (i, 0)))].
   - intros m2 _ [_ Hcells]. apply st_spec_ret. exists base. split; [ reflexivity |].
     intros i Hi. apply Hcells; auto.
-  - intros x xs _ m2 [Hin Hcells]. apply (st_spec_writeArray (V := fun _ => node)); [ specialize (Hin x (or_introl eq_refl)); lia |].
+  - intros x xs _ m2 [Hin Hcells]. apply st_spec_writeArray; [ apply Hin; left; reflexivity |].
     split; [ intros j Hj; apply Hin; right; exact Hj |].
-    intros i Hi Hni. rewrite Nat.sub_0_r. destruct (Nat.eq_dec x i) as [<- | Hne].
-    + exact (hmap_lookup_add_eq (V := idx_key_type (fun _ => node)) _ _ _).
-    + rewrite hmap_lookup_add_ne by (intros [=]; lia).
+    intros i Hi Hni. destruct (Nat.eq_dec x i) as [<- | Hne].
+    + apply st_get_put_eq.
+    + rewrite st_get_put_ne by lia.
       apply Hcells; [ exact Hi |]. intros [|]; contradiction.
   - split; [ intros j Hj; apply in_seq in Hj; lia |].
     intros i Hi Hni. exfalso. apply Hni, in_seq. lia.
 Qed.
 
 (** The imperative union-find computes the pure one. *)
-Theorem union_find_fun_eq_union_find_ST : forall {S : Type} (n : nat) (ops : list op),
+Theorem union_find_fun_eq_union_find_ST : forall (n : nat) (ops : list op),
     Forall (op_ok n) ops ->
-    Ret (union_find_fun n ops) ≈ runST (S := S) (fun St => union_find_ST n ops).
+    Ret (union_find_fun n ops) ≈ runST (fun R => union_find_ST (R := R) n ops).
 Proof.
-  intros S n ops Hok.
-  destruct (st_spec_runST (S := S) (fun St => union_find_ST n ops)
+  intros n ops Hok.
+  destruct (st_spec_runST (fun R => union_find_ST (R := R) n ops)
               (fun bs => bs = union_find_fun n ops)) as (bs & Hrun & ->).
   - unfold union_find_ST. apply st_spec_bind.
     eapply st_spec_weaken; [| apply make_sim ].
@@ -400,5 +398,5 @@ Qed.
 Example union_find_small :
   let ops := [Union 0 1; Union 2 3; Same 0 1; Same 1 2; Union 1 3; Same 0 2; Same 3 4] in
   union_find_fun 5 ops = [true; false; true; false]
-  /\ burn 200 (runST (S := unit) (fun St => union_find_ST 5 ops)) = Ret [true; false; true; false].
+  /\ burn 200 (runST (fun R => union_find_ST (R := R) 5 ops)) = Ret [true; false; true; false].
 Proof. split; lazy; reflexivity. Qed.

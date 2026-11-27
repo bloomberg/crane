@@ -35,7 +35,7 @@ uint64_t MemSafetyProbe14::sum_fns(
       auto _f = std::move(std::get<_after_sum_fns_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(UINT64_C(0)) + std::move(_result));
+      _result = (a0(UINT64_C(0)) + _result);
     }
   }
   return _result;
@@ -143,26 +143,24 @@ MemSafetyProbe14::tree MemSafetyProbe14::make_balanced(uint64_t n) {
   // cell fills.
   std::optional<MemSafetyProbe14::tree> _root{};
   std::shared_ptr<MemSafetyProbe14::tree> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = tree::leaf();
       (_write ? *(*_write = std::make_shared<MemSafetyProbe14::tree>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       auto _cell = typename MemSafetyProbe14::tree::Node(
-          nullptr, _loop_n,
-          std::make_shared<MemSafetyProbe14::tree>(tree::leaf()));
+          nullptr, n, std::make_shared<MemSafetyProbe14::tree>(tree::leaf()));
       MemSafetyProbe14::tree &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe14::tree>(
                           std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe14::tree::Node>(_node.v_mut()).a0;
-      _loop_n = n_;
+      n = n_;
       continue;
     }
   }

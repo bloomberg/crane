@@ -82,7 +82,7 @@ uint64_t LoopifyFramePtrEscape::walk(uint64_t n,
       auto _f = std::move(std::get<_after_walk_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;

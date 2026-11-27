@@ -133,16 +133,13 @@ LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
             {
               _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
             }
+          } else if (a0 <= threshold) {
+            _stack.emplace_back(_after_nested_cond_in_true{});
+            _stack.emplace_back(_call{crane_raw(a1)});
           } else {
-            if (a0 <= threshold) {
-              _stack.emplace_back(_after_nested_cond_in_true{});
-              _stack.emplace_back(_call{crane_raw(a1)});
-            } else {
-              sub = std::make_pair(UINT64_C(0), true);
-              {
-                _result =
-                    (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
-              }
+            sub = std::make_pair(UINT64_C(0), true);
+            {
+              _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
             }
           }
         } else {
@@ -155,7 +152,7 @@ LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
     } else {
       auto _f = std::move(std::get<_after_nested_cond_in_true>(_popped));
       _stack.pop_back();
-      std::pair<uint64_t, bool> sub = std::make_pair(std::move(_result), false);
+      std::pair<uint64_t, bool> sub = std::make_pair(_result, false);
       _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
     }
   }

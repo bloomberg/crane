@@ -1348,8 +1348,7 @@ struct N {
           return f2_(p1, _self_f1(_self_f1, p1));
         }
       };
-      auto f1 = [&](unsigned int p0) -> T1 { return f1_impl(f1_impl, p0); };
-      return f1(p);
+      return f1_impl(f1_impl, p);
     }
   }
 
@@ -1405,11 +1404,8 @@ struct N {
             return _self_f1(_self_f1, y0, y_);
           });
         };
-    {
-      unsigned int _lc1_x0 = t0;
-      T1 _lc1_y = x;
-      return f1_impl(f1_impl, _lc1_x0, std::move(_lc1_y));
-    }
+    T1 _lc1_y = x;
+    return f1_impl(f1_impl, t0, std::move(_lc1_y));
   }
 
   template <typename T1, typename T2, typename F0, typename F2>

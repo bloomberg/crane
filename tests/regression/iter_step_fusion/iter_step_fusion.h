@@ -128,26 +128,23 @@ struct IterStepFusion {
                                          "field at this instantiation");
                 }
               }()};
+            } else if (
+                std::holds_alternative<typename itreeF<CraneU0, CraneU1>::TauF>(
+                    _other.v())) {
+              const auto &[t] =
+                  std::get<typename itreeF<CraneU0, CraneU1>::TauF>(_other.v());
+              return TauF{[&]() -> itree {
+                if constexpr (crane_convertible<itree, const CraneU1 &>) {
+                  return crane_convert<itree>(t);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
             } else {
-              if (std::holds_alternative<
-                      typename itreeF<CraneU0, CraneU1>::TauF>(_other.v())) {
-                const auto &[t] =
-                    std::get<typename itreeF<CraneU0, CraneU1>::TauF>(
-                        _other.v());
-                return TauF{[&]() -> itree {
-                  if constexpr (crane_convertible<itree, const CraneU1 &>) {
-                    return crane_convert<itree>(t);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }()};
-              } else {
-                const auto &[e, k] =
-                    std::get<typename itreeF<CraneU0, CraneU1>::VisF>(
-                        _other.v());
-                return VisF{e, crane_convert<crane::fn<itree(uint64_t)>>(k)};
-              }
+              const auto &[e, k] =
+                  std::get<typename itreeF<CraneU0, CraneU1>::VisF>(_other.v());
+              return VisF{e, crane_convert<crane::fn<itree(uint64_t)>>(k)};
             }
           }()) {}
 

@@ -254,14 +254,13 @@ struct MemSafetyProbe3 {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_tree_sum_in_Node_2{a1,
-                                                        std::move(_result)});
+          _stack.emplace_back(_after_tree_sum_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + a1) + _result);
         }
       }
       return _result;
@@ -636,7 +635,7 @@ struct MemSafetyProbe3 {
   /// TEST 11: Fixpoint that takes a function argument and uses it
   /// alongside captured tree data.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &&>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t apply_n_times(F0 &&f, uint64_t n, uint64_t x) {
     // Explicit stack replaces the non-tail recursion of apply_n_times: _call
     // frames are pending calls, _after frames resume a caller.
@@ -657,7 +656,7 @@ struct MemSafetyProbe3 {
         _stack.pop_back();
         uint64_t n = _f.n;
         if (n <= 0) {
-          _result = std::move(x);
+          _result = x;
         } else {
           uint64_t n_ = n - 1;
           _stack.emplace_back(_after_apply_n_times_in_S{});
@@ -666,7 +665,7 @@ struct MemSafetyProbe3 {
       } else {
         auto _f = std::move(std::get<_after_apply_n_times_in_S>(_popped));
         _stack.pop_back();
-        _result = f(std::move(_result));
+        _result = f(_result);
       }
     }
     return _result;

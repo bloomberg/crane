@@ -25,8 +25,8 @@ struct FixComposeEscape {
         return (_self_add(_self_add, x_) + 1);
       }
     };
-    auto add = [&](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
-    return g(add(x0_));
+    auto add = [&]() -> uint64_t { return add_impl(add_impl, x0_); };
+    return g(add());
   }
 
   /// test1: compose_add 42 id 3 = id (42 + 3) = 45

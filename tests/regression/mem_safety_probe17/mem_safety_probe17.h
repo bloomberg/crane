@@ -184,8 +184,8 @@ struct MemSafetyProbe17 {
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
           uint64_t local_weight = _f.local_weight;
-          _stack.emplace_back(_after_weighted_sum_in_QNode_2{
-              &a3, &a4, local_weight, std::move(_result)});
+          _stack.emplace_back(
+              _after_weighted_sum_in_QNode_2{&a3, &a4, local_weight, _result});
           _stack.emplace_back(_call{_f.a1});
         } else if (
                 std::holds_alternative<_after_weighted_sum_in_QNode_2>(_popped)) {
@@ -195,8 +195,9 @@ struct MemSafetyProbe17 {
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
           uint64_t local_weight = _f.local_weight;
-          _stack.emplace_back(_after_weighted_sum_in_QNode_3{
-              &a4, local_weight, _f._tmp4, std::move(_result)});
+          _stack.emplace_back(_after_weighted_sum_in_QNode_3{&a4, local_weight,
+                                                             _f._tmp4,
+                                                             _result});
           _stack.emplace_back(_call{_f.a3});
         } else if (
                 std::holds_alternative<_after_weighted_sum_in_QNode_3>(_popped)) {
@@ -206,15 +207,15 @@ struct MemSafetyProbe17 {
           const qtree &a4 = *_f.a4;
           uint64_t local_weight = _f.local_weight;
           _stack.emplace_back(_after_weighted_sum_in_QNode_4{
-              local_weight, _f._tmp4, _f._tmp3, std::move(_result)});
+              local_weight, _f._tmp4, _f._tmp3, _result});
           _stack.emplace_back(_call{_f.a4});
         } else {
           auto _f =
               std::move(std::get<_after_weighted_sum_in_QNode_4>(_popped));
           _stack.pop_back();
           uint64_t local_weight = _f.local_weight;
-          _result = ((((local_weight + _f._tmp4) + _f._tmp3) + _f._tmp2) +
-                     std::move(_result));
+          _result =
+              ((((local_weight + _f._tmp4) + _f._tmp3) + _f._tmp2) + _result);
         }
       }
       return _result;
@@ -515,8 +516,7 @@ struct MemSafetyProbe17 {
           const qtree &a1 = *_f.a1;
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
-          _stack.emplace_back(
-              _after_qtree_size_in_QNode_2{&a3, &a4, std::move(_result)});
+          _stack.emplace_back(_after_qtree_size_in_QNode_2{&a3, &a4, _result});
           _stack.emplace_back(_call{_f.a1});
         } else if (
                 std::holds_alternative<_after_qtree_size_in_QNode_2>(_popped)) {
@@ -525,21 +525,21 @@ struct MemSafetyProbe17 {
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
           _stack.emplace_back(
-              _after_qtree_size_in_QNode_3{&a4, _f._tmp4, std::move(_result)});
+              _after_qtree_size_in_QNode_3{&a4, _f._tmp4, _result});
           _stack.emplace_back(_call{_f.a3});
         } else if (
                 std::holds_alternative<_after_qtree_size_in_QNode_3>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_size_in_QNode_3>(_popped));
           _stack.pop_back();
           const qtree &a4 = *_f.a4;
-          _stack.emplace_back(_after_qtree_size_in_QNode_4{_f._tmp4, _f._tmp3,
-                                                           std::move(_result)});
+          _stack.emplace_back(
+              _after_qtree_size_in_QNode_4{_f._tmp4, _f._tmp3, _result});
           _stack.emplace_back(_call{_f.a4});
         } else {
           auto _f = std::move(std::get<_after_qtree_size_in_QNode_4>(_popped));
           _stack.pop_back();
-          _result = ((((UINT64_C(1) + _f._tmp4) + _f._tmp3) + _f._tmp2) +
-                     std::move(_result));
+          _result =
+              ((((UINT64_C(1) + _f._tmp4) + _f._tmp3) + _f._tmp2) + _result);
         }
       }
       return _result;
@@ -606,7 +606,7 @@ struct MemSafetyProbe17 {
           const qtree &a1 = *_f.a1;
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
-          uint64_t da = std::move(_result);
+          uint64_t da = _result;
           _stack.emplace_back(_after_qtree_depth_in_QNode_2{&a3, &a4, da});
           _stack.emplace_back(_call{_f.a1});
         } else if (
@@ -616,7 +616,7 @@ struct MemSafetyProbe17 {
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
           uint64_t da = _f.da;
-          uint64_t db = std::move(_result);
+          uint64_t db = _result;
           _stack.emplace_back(_after_qtree_depth_in_QNode_3{&a4, da, db});
           _stack.emplace_back(_call{_f.a3});
         } else if (
@@ -626,7 +626,7 @@ struct MemSafetyProbe17 {
           const qtree &a4 = *_f.a4;
           uint64_t da = _f.da;
           uint64_t db = _f.db;
-          uint64_t dc = std::move(_result);
+          uint64_t dc = _result;
           _stack.emplace_back(_after_qtree_depth_in_QNode_4{da, db, dc});
           _stack.emplace_back(_call{_f.a4});
         } else {
@@ -635,7 +635,6 @@ struct MemSafetyProbe17 {
           uint64_t da = _f.da;
           uint64_t db = _f.db;
           uint64_t dc = _f.dc;
-          uint64_t dd = std::move(_result);
           uint64_t m1;
           if (da <= db) {
             m1 = db;
@@ -643,8 +642,8 @@ struct MemSafetyProbe17 {
             m1 = da;
           }
           uint64_t m2;
-          if (dc <= dd) {
-            m2 = dd;
+          if (dc <= _result) {
+            m2 = _result;
           } else {
             m2 = dc;
           }
@@ -721,7 +720,7 @@ struct MemSafetyProbe17 {
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
           _stack.emplace_back(
-              _after_qtree_sum_in_QNode_2{a2, &a3, &a4, std::move(_result)});
+              _after_qtree_sum_in_QNode_2{a2, &a3, &a4, _result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_qtree_sum_in_QNode_2>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_sum_in_QNode_2>(_popped));
@@ -729,23 +728,22 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
-          _stack.emplace_back(_after_qtree_sum_in_QNode_3{a2, &a4, _f._tmp4,
-                                                          std::move(_result)});
+          _stack.emplace_back(
+              _after_qtree_sum_in_QNode_3{a2, &a4, _f._tmp4, _result});
           _stack.emplace_back(_call{_f.a3});
         } else if (std::holds_alternative<_after_qtree_sum_in_QNode_3>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_sum_in_QNode_3>(_popped));
           _stack.pop_back();
           uint64_t a2 = _f.a2;
           const qtree &a4 = *_f.a4;
-          _stack.emplace_back(_after_qtree_sum_in_QNode_4{
-              a2, _f._tmp4, _f._tmp3, std::move(_result)});
+          _stack.emplace_back(
+              _after_qtree_sum_in_QNode_4{a2, _f._tmp4, _f._tmp3, _result});
           _stack.emplace_back(_call{_f.a4});
         } else {
           auto _f = std::move(std::get<_after_qtree_sum_in_QNode_4>(_popped));
           _stack.pop_back();
           uint64_t a2 = _f.a2;
-          _result =
-              ((((_f._tmp4 + _f._tmp3) + a2) + _f._tmp2) + std::move(_result));
+          _result = ((((_f._tmp4 + _f._tmp3) + a2) + _f._tmp2) + _result);
         }
       }
       return _result;

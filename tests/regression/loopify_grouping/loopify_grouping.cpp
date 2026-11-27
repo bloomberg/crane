@@ -221,16 +221,14 @@ LoopifyGrouping::partition3(uint64_t pivot, const List<uint64_t> &l) {
         _result = std::make_pair(std::make_pair(
             List<uint64_t>::cons(a0, std::move(less)), std::move(equal)),
                                  std::move(greater));
+      } else if (pivot < a0) {
+        _result =
+            std::make_pair(std::make_pair(std::move(less), std::move(equal)),
+                           List<uint64_t>::cons(a0, std::move(greater)));
       } else {
-        if (pivot < a0) {
-          _result =
-              std::make_pair(std::make_pair(std::move(less), std::move(equal)),
-                             List<uint64_t>::cons(a0, std::move(greater)));
-        } else {
-          _result = std::make_pair(std::make_pair(
-              std::move(less), List<uint64_t>::cons(a0, std::move(equal))),
-                                   std::move(greater));
-        }
+        _result = std::make_pair(std::make_pair(
+            std::move(less), List<uint64_t>::cons(a0, std::move(equal))),
+                                 std::move(greater));
       }
     }
   }
@@ -270,7 +268,7 @@ uint64_t LoopifyGrouping::count_elem(uint64_t x, const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_count_elem_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     }
   }
   return _result;

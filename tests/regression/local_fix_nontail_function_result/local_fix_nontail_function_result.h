@@ -125,7 +125,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -261,18 +261,12 @@ struct LocalFixNontailFunctionResult {
               }
             }
           };
-      auto go =
-          [=, go_impl = std::move(go_impl)](
-              List<tree> l, crane::fn<tree(crane::fn<uint64_t(uint64_t)>)> acc,
-              crane::fn<uint64_t(uint64_t)> x0_0)
-               -> tree {
-            return go_impl(go_impl, std::move(l), std::move(acc),
-                           std::move(x0_0));
-          };
-      return go(List<tree>::nil(), [](const crane::fn<uint64_t(uint64_t)> &) {
-        return tree::leaf();
-      },
-                x0_);
+      List<tree> _lc1_l = List<tree>::nil();
+      crane::fn<tree(crane::fn<uint64_t(uint64_t)>)> _lc1_acc =
+          [](const crane::fn<uint64_t(uint64_t)> &) { return tree::leaf(); };
+      crane::fn<uint64_t(uint64_t)> _lc1_x0_0 = x0_;
+      return go_impl(go_impl, std::move(_lc1_l), std::move(_lc1_acc),
+                     std::move(_lc1_x0_0));
     } else {
       return tree::leaf();
     }

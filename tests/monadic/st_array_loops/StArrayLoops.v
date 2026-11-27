@@ -13,7 +13,6 @@ From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.STMonad.
 
 Import Monads.
@@ -22,36 +21,33 @@ Local Open Scope monad_scope.
 
 Module StArrayLoops.
 
-  Notation NatE := (STEvent nat unit (fun _ : nat => nat) +' exceptE Err).
-  Notation NatArray := (STArray nat unit nat).
+  Notation NatE := (STEvent cpp_refs (fun _ : nat => nat) +' exceptE Err).
+  Notation NatArray := (@STArray cpp_refs nat).
 
   Fixpoint zero_from (arr : NatArray) (i n : nat) : itree NatE unit :=
     match n with
     | O => Ret tt
-    | S m => writeArray (idx := 0) arr i 0;; zero_from arr (S i) m
+    | S m => writeArray arr i 0;; zero_from arr (S i) m
     end.
 
   Fixpoint sum_from (arr : NatArray) (i n : nat) : itree NatE nat :=
     match n with
     | O => Ret 0
     | S m =>
-        x <- readArray (idx := 0) arr i;;
+        x <- readArray arr i;;
         r <- sum_from arr (S i) m;;
         Ret (x + r)
     end.
 
-  Axiom run_nat : forall (A : Type), itree NatE A -> A.
-
   Definition loops_list (n : nat) : nat * list nat :=
-    run_nat (nat * list nat)
-      (arr <- newArray 0 0 (n - 1) 2;;
+    run_st
+      (arr <- newArray n 2;;
        zero_from arr 1 2;;
        s <- sum_from arr 0 n;;
-       elems <- getElems (idx := 0) arr;;
+       elems <- getElems arr;;
        Ret (s, elems)).
 
 End StArrayLoops.
 
 Set Crane Loopify.
-Crane Extract Inlined Constant StArrayLoops.run_nat => "%a0".
 Crane Extraction "st_array_loops" StArrayLoops.

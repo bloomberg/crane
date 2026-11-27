@@ -43,13 +43,13 @@ uint64_t LoopifyTrees::tree_sum(const LoopifyTrees::tree<uint64_t> &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      _stack.emplace_back(_after_tree_sum_in_Node_2{a1, std::move(_result)});
+      _stack.emplace_back(_after_tree_sum_in_Node_2{a1, _result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = (a1 + (_f._tmp2 + std::move(_result)));
+      _result = (a1 + (_f._tmp2 + _result));
     }
   }
   return _result;
@@ -117,22 +117,22 @@ uint64_t LoopifyTrees::leaf_sum(const LoopifyTrees::tree<uint64_t> &t) {
       auto _f = std::move(std::get<_after_leaf_sum_in_Node>(_popped));
       _stack.pop_back();
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      _stack.emplace_back(_after_leaf_sum_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_after_leaf_sum_in_Node_2{_result});
       _stack.emplace_back(_call{&a2});
     } else if (std::holds_alternative<_after_leaf_sum_in_Node_2>(_popped)) {
       auto _f = std::move(std::get<_after_leaf_sum_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     } else if (std::holds_alternative<_after_leaf_sum_in_Node_3>(_popped)) {
       auto _f = std::move(std::get<_after_leaf_sum_in_Node_3>(_popped));
       _stack.pop_back();
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      _stack.emplace_back(_after_leaf_sum_in_Node_4{std::move(_result)});
+      _stack.emplace_back(_after_leaf_sum_in_Node_4{_result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_leaf_sum_in_Node_4>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp4 + std::move(_result));
+      _result = (_f._tmp4 + _result);
     }
   }
   return _result;
@@ -271,22 +271,22 @@ uint64_t LoopifyTrees::count_paths(const LoopifyTrees::tree<uint64_t> &t,
       _stack.pop_back();
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
       uint64_t remaining = _f.remaining;
-      _stack.emplace_back(_after_count_paths_in_false_2{std::move(_result)});
+      _stack.emplace_back(_after_count_paths_in_false_2{_result});
       _stack.emplace_back(_call{remaining, &a2});
     } else if (std::holds_alternative<_after_count_paths_in_false_2>(_popped)) {
       auto _f = std::move(std::get<_after_count_paths_in_false_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp4 + std::move(_result));
+      _result = (_f._tmp4 + _result);
     } else if (std::holds_alternative<_after_count_paths_in_true>(_popped)) {
       auto _f = std::move(std::get<_after_count_paths_in_true>(_popped));
       _stack.pop_back();
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      _stack.emplace_back(_after_count_paths_in_true_2{std::move(_result)});
+      _stack.emplace_back(_after_count_paths_in_true_2{_result});
       _stack.emplace_back(_call{UINT64_C(0), &a2});
     } else {
       auto _f = std::move(std::get<_after_count_paths_in_true_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
+      _result = (_f._tmp2 + _result);
     }
   }
   return _result;
@@ -339,7 +339,7 @@ LoopifyTrees::sum_of_max_branches(const LoopifyTrees::tree<uint64_t> &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      uint64_t lsum = std::move(_result);
+      uint64_t lsum = _result;
       _stack.emplace_back(_after_sum_of_max_branches_in_Node_2{a1, lsum});
       _stack.emplace_back(_call{&a2});
     } else {
@@ -348,8 +348,7 @@ LoopifyTrees::sum_of_max_branches(const LoopifyTrees::tree<uint64_t> &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       uint64_t lsum = _f.lsum;
-      uint64_t rsum = std::move(_result);
-      _result = (a1 + (lsum <= rsum ? rsum : lsum));
+      _result = (a1 + (lsum <= _result ? _result : lsum));
     }
   }
   return _result;
@@ -414,15 +413,14 @@ uint64_t LoopifyTrees::sum_rose_list_fuel(uint64_t fuel,
       uint64_t f = _f.f;
       const List<LoopifyTrees::rose> &a1 = *_f.a1;
       uint64_t a00 = _f.a00;
-      _stack.emplace_back(
-          _after_sum_rose_list_fuel_in_RNode_2{a00, std::move(_result)});
+      _stack.emplace_back(_after_sum_rose_list_fuel_in_RNode_2{a00, _result});
       _stack.emplace_back(_call{&a1, f});
     } else {
       auto _f =
           std::move(std::get<_after_sum_rose_list_fuel_in_RNode_2>(_popped));
       _stack.pop_back();
       uint64_t a00 = _f.a00;
-      _result = (a00 + (_f._tmp2 + std::move(_result)));
+      _result = (a00 + (_f._tmp2 + _result));
     }
   }
   return _result;
@@ -557,7 +555,7 @@ LoopifyTrees::depth_rose_list_fuel(uint64_t fuel,
       _stack.pop_back();
       uint64_t f = _f.f;
       const List<LoopifyTrees::rose> &a1 = *_f.a1;
-      uint64_t d = (std::move(_result) + 1);
+      uint64_t d = (_result + 1);
       _stack.emplace_back(_after_depth_rose_list_fuel_in_RNode_2{d});
       _stack.emplace_back(_call{&a1, f});
     } else {
@@ -565,11 +563,11 @@ LoopifyTrees::depth_rose_list_fuel(uint64_t fuel,
           std::move(std::get<_after_depth_rose_list_fuel_in_RNode_2>(_popped));
       _stack.pop_back();
       uint64_t d = _f.d;
-      uint64_t rest_max = std::move(_result);
+      uint64_t rest_max = _result;
       if (d <= rest_max) {
-        _result = std::move(rest_max);
+        _result = rest_max;
       } else {
-        _result = std::move(d);
+        _result = d;
       }
     }
   }
@@ -758,16 +756,15 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   List<LoopifyTrees::tree<uint64_t>> _loop_trees = trees;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<List<uint64_t>>::nil();
       (_write ? *(*_write =
                       std::make_shared<List<List<uint64_t>>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t f = _loop_fuel - 1;
+      uint64_t f = fuel - 1;
       List<uint64_t> values = extract_tree_values(_loop_trees);
       if (std::holds_alternative<typename List<uint64_t>::Nil>(values.v())) {
         auto _value = List<List<uint64_t>>::nil();
@@ -786,7 +783,7 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
         _write =
             &std::get<typename List<List<uint64_t>>::Cons>(_node.v_mut()).l;
         _loop_trees = std::move(children);
-        _loop_fuel = f;
+        fuel = f;
         continue;
       }
     }
@@ -846,8 +843,7 @@ LoopifyTrees::count_nodes(const LoopifyTrees::tree<uint64_t> &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      std::pair<uint64_t, uint64_t> _tmp2 = std::move(_result);
-      const auto &[lc, ls] = _tmp2;
+      auto [lc, ls] = std::move(_result);
       _stack.emplace_back(_after_count_nodes_in_pair{a1, lc, ls});
       _stack.emplace_back(_call{&a2});
     } else {
@@ -856,8 +852,7 @@ LoopifyTrees::count_nodes(const LoopifyTrees::tree<uint64_t> &t) {
       uint64_t a1 = _f.a1;
       uint64_t lc = _f.lc;
       uint64_t ls = _f.ls;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[rc, rs] = _tmp1;
+      auto [rc, rs] = std::move(_result);
       _result = std::make_pair(((lc + rc) + 1), (a1 + (ls + rs)));
     }
   }
@@ -1136,12 +1131,10 @@ uint64_t LoopifyTrees::max4_impl(uint64_t a, uint64_t b, uint64_t c,
     } else {
       return c;
     }
+  } else if (a <= b) {
+    return b;
   } else {
-    if (a <= b) {
-      return b;
-    } else {
-      return a;
-    }
+    return a;
   }
 }
 
@@ -1153,12 +1146,10 @@ uint64_t LoopifyTrees::min3(uint64_t a, uint64_t b, uint64_t c) {
     } else {
       return c;
     }
+  } else if (b <= c) {
+    return b;
   } else {
-    if (b <= c) {
-      return b;
-    } else {
-      return c;
-    }
+    return c;
   }
 }
 
@@ -1170,12 +1161,10 @@ uint64_t LoopifyTrees::max3(uint64_t a, uint64_t b, uint64_t c) {
     } else {
       return c;
     }
+  } else if (c <= b) {
+    return b;
   } else {
-    if (c <= b) {
-      return b;
-    } else {
-      return c;
-    }
+    return c;
   }
 }
 
@@ -1224,8 +1213,7 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t> &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      std::pair<uint64_t, uint64_t> _tmp2 = std::move(_result);
-      const auto &[lmin, lmax] = _tmp2;
+      auto [lmin, lmax] = std::move(_result);
       _stack.emplace_back(_after_tree_min_max_in_pair{a1, lmin, lmax});
       _stack.emplace_back(_call{&a2});
     } else {
@@ -1234,8 +1222,7 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t> &t) {
       uint64_t a1 = _f.a1;
       uint64_t lmin = _f.lmin;
       uint64_t lmax = _f.lmax;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[rmin, rmax] = _tmp1;
+      auto [rmin, rmax] = std::move(_result);
       _result = std::make_pair(min3((lmin == UINT64_C(0) ? a1 : lmin),
                                     (rmin == UINT64_C(0) ? a1 : rmin), a1),
                                max3(lmax, rmax, a1));
@@ -1246,66 +1233,61 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t> &t) {
 
 /// all_paths_sum t sums all root-to-leaf path sums.
 uint64_t LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<uint64_t> &t) {
-  {
-    uint64_t _lc1_acc = UINT64_C(0);
-    const LoopifyTrees::tree<uint64_t> &_lc1_tree0 = t;
+  uint64_t _lc1_acc = UINT64_C(0);
 
-    // Explicit stack replaces the non-tail recursion of sum_with_acc: _call
-    // frames are pending calls, _after frames resume a caller.
-    struct _call {
-      const LoopifyTrees::tree<uint64_t> *tree0;
-      uint64_t acc;
-    };
+  // Explicit stack replaces the non-tail recursion of sum_with_acc: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
+    const LoopifyTrees::tree<uint64_t> *tree0;
+    uint64_t acc;
+  };
 
-    struct _after_sum_with_acc_in_Node {
-      const LoopifyTrees::tree<uint64_t> *a2;
-      uint64_t new_acc;
-    };
+  struct _after_sum_with_acc_in_Node {
+    const LoopifyTrees::tree<uint64_t> *a2;
+    uint64_t new_acc;
+  };
 
-    struct _after_sum_with_acc_in_Node_2 {
-      uint64_t _tmp2;
-    };
+  struct _after_sum_with_acc_in_Node_2 {
+    uint64_t _tmp2;
+  };
 
-    using _frame = std::variant<_call, _after_sum_with_acc_in_Node,
-                                _after_sum_with_acc_in_Node_2>;
-    uint64_t _lc1_result{};
-    crane::small_vector<_frame> _lc1_stack;
-    _lc1_stack.emplace_back(_call{&_lc1_tree0, _lc1_acc});
-    while (!_lc1_stack.empty()) {
-      _frame &_popped = _lc1_stack.back();
-      if (std::holds_alternative<_call>(_popped)) {
-        auto _f = std::move(std::get<_call>(_popped));
-        _lc1_stack.pop_back();
-        const LoopifyTrees::tree<uint64_t> &_lc1_tree0 = *_f.tree0;
-        uint64_t _lc1_acc = _f.acc;
-        if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
-                _lc1_tree0.v())) {
-          _lc1_result = std::move(_lc1_acc);
-        } else {
-          const auto &[a0, a1, a2] =
-              std::get<typename LoopifyTrees::tree<uint64_t>::Node>(
-                  _lc1_tree0.v());
-          uint64_t new_acc = (_lc1_acc + a1);
-          _lc1_stack.emplace_back(
-              _after_sum_with_acc_in_Node{crane_raw(a2), new_acc});
-          _lc1_stack.emplace_back(_call{crane_raw(a0), new_acc});
-        }
-      } else if (std::holds_alternative<_after_sum_with_acc_in_Node>(_popped)) {
-        auto _f = std::move(std::get<_after_sum_with_acc_in_Node>(_popped));
-        _lc1_stack.pop_back();
-        const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-        uint64_t new_acc = _f.new_acc;
-        _lc1_stack.emplace_back(
-            _after_sum_with_acc_in_Node_2{std::move(_lc1_result)});
-        _lc1_stack.emplace_back(_call{&a2, new_acc});
+  using _frame = std::variant<_call, _after_sum_with_acc_in_Node,
+                              _after_sum_with_acc_in_Node_2>;
+  uint64_t _lc1_result{};
+  crane::small_vector<_frame> _lc1_stack;
+  _lc1_stack.emplace_back(_call{&t, _lc1_acc});
+  while (!_lc1_stack.empty()) {
+    _frame &_popped = _lc1_stack.back();
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
+      _lc1_stack.pop_back();
+      const LoopifyTrees::tree<uint64_t> &t = *_f.tree0;
+      uint64_t _lc1_acc = _f.acc;
+      if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
+              t.v())) {
+        _lc1_result = _lc1_acc;
       } else {
-        auto _f = std::move(std::get<_after_sum_with_acc_in_Node_2>(_popped));
-        _lc1_stack.pop_back();
-        _lc1_result = (_f._tmp2 + std::move(_lc1_result));
+        const auto &[a0, a1, a2] =
+            std::get<typename LoopifyTrees::tree<uint64_t>::Node>(t.v());
+        uint64_t new_acc = (_lc1_acc + a1);
+        _lc1_stack.emplace_back(
+            _after_sum_with_acc_in_Node{crane_raw(a2), new_acc});
+        _lc1_stack.emplace_back(_call{crane_raw(a0), new_acc});
       }
+    } else if (std::holds_alternative<_after_sum_with_acc_in_Node>(_popped)) {
+      auto _f = std::move(std::get<_after_sum_with_acc_in_Node>(_popped));
+      _lc1_stack.pop_back();
+      const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
+      uint64_t new_acc = _f.new_acc;
+      _lc1_stack.emplace_back(_after_sum_with_acc_in_Node_2{_lc1_result});
+      _lc1_stack.emplace_back(_call{&a2, new_acc});
+    } else {
+      auto _f = std::move(std::get<_after_sum_with_acc_in_Node_2>(_popped));
+      _lc1_stack.pop_back();
+      _lc1_result = (_f._tmp2 + _lc1_result);
     }
-    return _lc1_result;
   }
+  return _lc1_result;
 }
 
 /// tree_contains x t checks if value exists in tree.
@@ -1352,14 +1334,13 @@ bool LoopifyTrees::tree_contains(uint64_t x,
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      _stack.emplace_back(
-          _after_tree_contains_in_Node_2{a1, std::move(_result)});
+      _stack.emplace_back(_after_tree_contains_in_Node_2{a1, _result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_tree_contains_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = (x == a1 || (_f._tmp2 || std::move(_result)));
+      _result = (x == a1 || (_f._tmp2 || _result));
     }
   }
   return _result;

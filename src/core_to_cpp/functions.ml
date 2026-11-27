@@ -462,6 +462,20 @@ let declared_signature : Cpp_ir.Lowered.Decl.t -> _ = function
 let plan_function_head cx ?deduced_callables ?modes ~minted n ty (temps : head_params)
     (declared : Core_plan.Callable_abi.signature) =
   let temps, signature, relaxations = relax_function_head temps declared in
+  (* A variable the declared type spells nowhere is no parameter
+     ({!Types.declares_tvar}): declared until the relaxations have erased
+     what still named it ({!Core_plan.Head_relaxation.Unmentioned}), then
+     left out.  A callee generated elsewhere is planned the same way
+     ({!Calls.callee_abi}). *)
+  let declares = Types.declares_tvar cx n in
+  let temps =
+    List.filter
+      (fun (_, name) ->
+        match List.assoc_opt name minted with
+        | Some (Core_plan.Callable_abi.Scheme_param i) -> declares i
+        | _ -> true )
+      temps
+  in
   Core_plan.Callable_abi.of_head ?deduced_callables ?modes ~signature ~relaxations ~minted
     ~omitted:(Tvars.type_arg_omission n)
     ~phantom_prefix:(Types.leading_phantom_count cx n)
@@ -855,6 +869,9 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
     fun x -> List.assoc_opt x by_id
   in
   let reference_allowed = not (is_pinned cx n) in
+  (* A parameter every partial application of [n] supplies is passed by the
+     call the closure makes: it may be a view. *)
+  let supplied = supplied_parameters cx n in
   (* The callables kept as [crane::fn], by binder: decided here, where every
      binder is still at its source position -- [all_ids] is innermost first,
      so the [p]th is source parameter [n_params - 1 - p] -- and read by name
@@ -883,6 +900,10 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
   (* Convert Core types to C++ types and wrap with const. Owned shared_ptr params:
      pass by value (shared_ptr<T>) Borrowed shared_ptr params: pass by const ref
      (const shared_ptr<T>&) *)
+  let source_index =
+    let by_id = List.mapi (fun p (x, _, _) -> (x, n_params - 1 - p)) all_ids_with_owned in
+    fun x -> match List.assoc_opt x by_id with Some i -> i | None -> max_int
+  in
   let ids =
     List.map
       (fun (x, ty, owned) ->
@@ -895,7 +916,7 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
         let cpp_ty = Monadic.reify_monadic_param_type cx ty cpp_ty in
         let wrapped, mode =
           Ownership.wrap_param_by_ownership cx ~is_owned:owned ?access:(access_of x) ~reference_allowed
-            ~view_allowed:reference_allowed ~core:ty cpp_ty
+            ~view_allowed:(reference_allowed || source_index x < supplied) ~core:ty cpp_ty
         in
         ((x, wrapped), (x, mode)) )
       ids_with_owned
@@ -2108,12 +2129,17 @@ type generated_fun = {
 }
 
 (** A template's definition goes in the header, anything else's in the
-    implementation file. *)
-let definition_file_of tvars = if tvars = [] then Implementation else Header
+    implementation file: whether [d] declares template parameters, not
+    whether its Core type has variables -- one C++ spells nowhere is no
+    parameter ({!Core_plan.Plan_templates.phantom_aware_temps}). *)
+let rec definition_file_of (d : Cpp_ir.Lowered.Decl.t) =
+  match d with
+  | Template (_ :: _, _, _) -> Header
+  | Template ([], _, d) -> definition_file_of d
+  | _ -> Implementation
 
-(** [d] as a definition, in the file its template variables [tvars] put it
-    in. *)
-let defined d tvars = Defined (d, definition_file_of tvars)
+(** [d] as a definition, in the file it is written in. *)
+let defined d = Defined (d, definition_file_of d)
 
 (** Generate each function of a mutually recursive group, translating each
     body once, then lower the group's control from its ControlIR where that
@@ -2130,7 +2156,7 @@ let gen_dfuns_dual cx fds =
       (List.map (fun ((ds, _, _), _) -> ds) generated)
   in
   List.map2
-    (fun ds ((_, env, tvars), lifted) -> {entity = defined ds tvars; env = env; lifted = lifted})
+    (fun ds ((_, env, _), lifted) -> {entity = defined ds; env = env; lifted = lifted})
     lowered generated
 
 (** Generate a single Core.Decl.Value function, translating its body once. *)
@@ -2138,7 +2164,7 @@ let gen_decl_for_pp_dual__inner cx n b ty =
   let (gf_entity, gf_env), gf_lifted =
     collecting_lifted cx @@ fun () ->
     match gen_decl_for_pp cx n b ty with
-    | Some ds, env, tvars -> (defined ds tvars, env)
+    | Some ds, env, _ -> (defined ds, env)
     | None, _, _ ->
       (* Not a function: a declaration, and no definition anywhere. *)
       let spec, env = gen_spec cx n b ty in

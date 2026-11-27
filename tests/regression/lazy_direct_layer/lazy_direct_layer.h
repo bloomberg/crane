@@ -57,29 +57,25 @@ struct LazyDirectLayer {
               const auto &[r] =
                   crane::get<typename treeF<CraneU>::RetF>(_other.v());
               return RetF{r};
-            } else {
-              if (crane::holds_alternative<typename treeF<CraneU>::TauF>(
-                      _other.v())) {
-                const auto &[t] =
-                    crane::get<typename treeF<CraneU>::TauF>(_other.v());
-                return TauF{[&]() -> tree {
-                  if constexpr (crane_convertible<tree, const CraneU &>) {
-                    return crane_convert<tree>(t);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }()};
-              } else {
-                if (crane::holds_alternative<typename treeF<CraneU>::VisF>(
-                        _other.v())) {
-                  const auto &[e, k] =
-                      crane::get<typename treeF<CraneU>::VisF>(_other.v());
-                  return VisF{e, crane_convert<crane::fn<tree(uint64_t)>>(k)};
+            } else if (crane::holds_alternative<typename treeF<CraneU>::TauF>(
+                           _other.v())) {
+              const auto &[t] =
+                  crane::get<typename treeF<CraneU>::TauF>(_other.v());
+              return TauF{[&]() -> tree {
+                if constexpr (crane_convertible<tree, const CraneU &>) {
+                  return crane_convert<tree>(t);
                 } else {
-                  return StopF{};
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
-              }
+              }()};
+            } else if (crane::holds_alternative<typename treeF<CraneU>::VisF>(
+                           _other.v())) {
+              const auto &[e, k] =
+                  crane::get<typename treeF<CraneU>::VisF>(_other.v());
+              return VisF{e, crane_convert<crane::fn<tree(uint64_t)>>(k)};
+            } else {
+              return StopF{};
             }
           }()) {}
 
@@ -143,11 +139,7 @@ struct LazyDirectLayer {
   static treeF<tree> observe(const tree &t);
   static tree Ret(uint64_t n);
   static tree Tau(const tree &t);
-
-  static tree Vis(uint64_t e, const crane::fn<tree(uint64_t)> &k) {
-    return tree::go(treeF<tree>::visf(e, k));
-  }
-
+  static tree Vis(uint64_t e, const crane::fn<tree(uint64_t)> &k);
   static inline const tree Stop =
       crane::immortal(tree::go(treeF<tree>::stopf()));
   static tree taus(uint64_t n, uint64_t r);

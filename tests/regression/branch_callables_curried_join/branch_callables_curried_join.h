@@ -180,7 +180,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -410,15 +410,14 @@ struct BranchCallablesCurriedJoin {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_tree_obs_in_Node_2{a1,
-                                                        std::move(_result)});
+          _stack.emplace_back(_after_tree_obs_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_obs_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          auto _once1 = (((_f._tmp2 * UINT64_C(7)) + a1) +
-                         (std::move(_result) * UINT64_C(3)));
+          auto _once1 =
+              (((_f._tmp2 * UINT64_C(7)) + a1) + (_result * UINT64_C(3)));
           _result = (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
         }
       }

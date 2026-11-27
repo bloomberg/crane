@@ -103,23 +103,20 @@ struct LocalTailLoopDefault {
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
   static List<uint64_t> rev_map(F0 &&f, const List<uint64_t> &l) {
-    {
-      const List<uint64_t> &_lc1_l0 = l;
-      List<uint64_t> _lc1_acc = List<uint64_t>::nil();
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      List<uint64_t> _lc1_loop_acc = std::move(_lc1_acc);
-      const List<uint64_t> *_lc1_loop_l0 = &_lc1_l0;
-      while (true) {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _lc1_loop_l0->v())) {
-          return _lc1_loop_acc;
-        } else {
-          const auto &[a0, a1] =
-              std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
-          _lc1_loop_acc = List<uint64_t>::cons(f(a0), std::move(_lc1_loop_acc));
-          _lc1_loop_l0 = crane_raw(a1);
-        }
+    List<uint64_t> _lc1_acc = List<uint64_t>::nil();
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    List<uint64_t> _lc1_loop_acc = std::move(_lc1_acc);
+    const List<uint64_t> *_lc1_loop_l0 = &l;
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(
+              _lc1_loop_l0->v())) {
+        return _lc1_loop_acc;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
+        _lc1_loop_acc = List<uint64_t>::cons(f(a0), std::move(_lc1_loop_acc));
+        _lc1_loop_l0 = crane_raw(a1);
       }
     }
   }

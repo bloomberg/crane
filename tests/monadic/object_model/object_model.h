@@ -14,17 +14,15 @@
 #include <utility>
 #include <variant>
 
-struct nat_ix_stref;
+template <typename T1> struct code_const;
 template <typename Err> struct ExceptE;
 struct Err;
-struct STRefNat;
-template <typename S> struct Point;
-template <typename S> struct Account;
-template <typename S> struct BankAccountCollection;
-template <typename I, typename T>
-concept STRefClass = requires {
-  { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
-  { I::STRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
+struct Point;
+struct Account;
+struct BankAccountCollection;
+template <typename I, typename V, typename A>
+concept Code = requires {
+  { I::code() } -> std::convertible_to<uint64_t>;
 };
 
 struct Z {};
@@ -62,67 +60,25 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct STRefNat {
-  // DATA
-  uint64_t s;
-
-  // ACCESSORS
-  STRefNat clone() const { return {s}; }
-
-  // CREATORS
-  static STRefNat mkstref(uint64_t s) { return {s}; }
-
-  uint64_t STRefToIxNat() const {
-    const auto &[s] = *this;
-    return s;
-  }
+template <typename T1> struct code_const {
+  constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-struct nat_ix_stref {
-  static crane::obj mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
-
-  static uint64_t STRefToIx(crane::obj _p_a0) {
-    STRefNat a0 = crane::any_cast<STRefNat>(_p_a0);
-    return a0.STRefToIxNat();
-  }
-};
-
-static_assert(STRefClass<nat_ix_stref, uint64_t>);
-
-template <typename S> struct Point {
+struct Point {
   crane::fn<int64_t(std::monostate)> getX;
   crane::fn<void(int64_t)> moveD;
   crane::fn<int64_t(std::monostate)> offsetX;
-
-  // ACCESSORS
-  template <typename CraneU> operator Point<CraneU>() const {
-    return {crane_convert<crane::fn<int64_t(std::monostate)>>(getX), moveD,
-            crane_convert<crane::fn<int64_t(std::monostate)>>(offsetX)};
-  }
 };
 
-template <typename S> struct Account {
+struct Account {
   crane::fn<int64_t(std::monostate)> getBalance;
   crane::fn<int64_t(uint64_t)> deposit;
   crane::fn<std::optional<int64_t>(int64_t)> withdraw;
-
-  // ACCESSORS
-  template <typename CraneU> operator Account<CraneU>() const {
-    return {crane_convert<crane::fn<int64_t(std::monostate)>>(getBalance),
-            crane_convert<crane::fn<int64_t(uint64_t)>>(deposit),
-            crane_convert<crane::fn<std::optional<int64_t>(int64_t)>>(withdraw)};
-  }
 };
 
-template <typename S> struct BankAccountCollection {
-  Account<S> checking;
-  Account<S> saving;
-
-  // ACCESSORS
-  template <typename CraneU> operator BankAccountCollection<CraneU>() const {
-    return {crane_convert<Account<CraneU>>(checking),
-            crane_convert<Account<CraneU>>(saving)};
-  }
+struct BankAccountCollection {
+  Account checking;
+  Account saving;
 };
 
 std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext();

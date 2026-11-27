@@ -486,12 +486,12 @@ std::pair<Z, Z> BinInt::div_eucl(const Z &a, const Z &b) {
 }
 
 Z BinInt::div(const Z &a, const Z &b) {
-  auto [q, _x] = BinInt::div_eucl(a, b);
+  auto [q, _] = BinInt::div_eucl(a, b);
   return std::move(q);
 }
 
 Z BinInt::modulo(const Z &a, const Z &b) {
-  auto [_x, r] = BinInt::div_eucl(a, b);
+  auto [_, r] = BinInt::div_eucl(a, b);
   return std::move(r);
 }
 
@@ -536,30 +536,26 @@ EpochCellGlyphTraceCase::phase_from_angle(const Z &angle_deg) {
   if (BinInt::ltb(wrapped, Z::zpos(Positive::xi(Positive::xo(Positive::xi(
                                Positive::xi(Positive::xo(Positive::xh())))))))) {
     return LunarPhase::NEWMOON;
+  } else if (
+      BinInt::ltb(
+          wrapped,
+          Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xo(
+              Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))))) {
+    return LunarPhase::FIRSTQUARTER;
+  } else if (
+      BinInt::ltb(
+          wrapped,
+          Z::zpos(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
+              Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))))))) {
+    return LunarPhase::FULLMOON;
+  } else if (BinInt::ltb(
+                 std::move(wrapped),
+                 Z::zpos(Positive::xi(Positive::xi(
+                     Positive::xo(Positive::xi(Positive::xi(Positive::xi(
+                         Positive::xo(Positive::xo(Positive::xh()))))))))))) {
+    return LunarPhase::LASTQUARTER;
   } else {
-    if (BinInt::ltb(
-            wrapped,
-            Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xo(
-                Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))))) {
-      return LunarPhase::FIRSTQUARTER;
-    } else {
-      if (BinInt::ltb(
-              wrapped,
-              Z::zpos(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
-                  Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))))))) {
-        return LunarPhase::FULLMOON;
-      } else {
-        if (BinInt::ltb(
-                std::move(wrapped),
-                Z::zpos(Positive::xi(Positive::xi(
-                    Positive::xo(Positive::xi(Positive::xi(Positive::xi(
-                        Positive::xo(Positive::xo(Positive::xh()))))))))))) {
-          return LunarPhase::LASTQUARTER;
-        } else {
-          return LunarPhase::NEWMOON;
-        }
-      }
-    }
+    return LunarPhase::NEWMOON;
   }
 }
 
@@ -610,25 +606,18 @@ EpochCellGlyphTraceCase::zodiac_code(EpochCellGlyphTraceCase::ZodiacSign z) {
 bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(const Z &dial_pos) {
   if (BinInt::eqb(dial_pos, Z::zpos(Positive::xh()))) {
     return true;
+  } else if (BinInt::eqb(dial_pos,
+                         Z::zpos(Positive::xo(Positive::xi(Positive::xh()))))) {
+    return true;
+  } else if (BinInt::eqb(dial_pos, Z::zpos(Positive::xo(Positive::xo(
+                                       Positive::xi(Positive::xh())))))) {
+    return true;
+  } else if (BinInt::eqb(dial_pos,
+                         Z::zpos(Positive::xi(Positive::xo(
+                             Positive::xo(Positive::xo(Positive::xh()))))))) {
+    return true;
   } else {
-    if (BinInt::eqb(dial_pos,
-                    Z::zpos(Positive::xo(Positive::xi(Positive::xh()))))) {
-      return true;
-    } else {
-      if (BinInt::eqb(
-              dial_pos,
-              Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))) {
-        return true;
-      } else {
-        if (BinInt::eqb(dial_pos,
-                        Z::zpos(Positive::xi(Positive::xo(
-                            Positive::xo(Positive::xo(Positive::xh()))))))) {
-          return true;
-        } else {
-          return false;
-        }
-      }
-    }
+    return false;
   }
 }
 
@@ -730,91 +719,64 @@ EpochCellGlyphTraceCase::predict_zodiac_sign(
   if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xi(
                            Positive::xi(Positive::xi(Positive::xh()))))))) {
     return ZodiacSign::ARIES;
+  } else if (
+      BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+                           Positive::xi(Positive::xi(Positive::xh())))))))) {
+    return ZodiacSign::TAURUS;
+  } else if (BinInt::ltb(
+                 deg, Z::zpos(
+                          Positive::xo(Positive::xi(Positive::xo(Positive::xi(
+                              Positive::xi(Positive::xo(Positive::xh()))))))))) {
+    return ZodiacSign::GEMINI;
+  } else if (BinInt::ltb(
+                 deg, Z::zpos(
+                          Positive::xo(Positive::xo(Positive::xo(Positive::xi(
+                              Positive::xi(Positive::xi(Positive::xh()))))))))) {
+    return ZodiacSign::CANCER;
+  } else if (
+      BinInt::ltb(
+          deg,
+          Z::zpos(Positive::xo(Positive::xi(Positive::xi(Positive::xo(
+              Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))))))) {
+    return ZodiacSign::LEO;
+  } else if (
+      BinInt::ltb(
+          deg,
+          Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
+              Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))))) {
+    return ZodiacSign::VIRGO;
+  } else if (
+      BinInt::ltb(
+          deg,
+          Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xo(
+              Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))))) {
+    return ZodiacSign::LIBRA;
+  } else if (
+      BinInt::ltb(
+          deg,
+          Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xo(
+              Positive::xi(Positive::xi(Positive::xi(Positive::xh())))))))))) {
+    return ZodiacSign::SCORPIO;
+  } else if (BinInt::ltb(
+                 deg,
+                 Z::zpos(Positive::xo(Positive::xi(
+                     Positive::xi(Positive::xi(Positive::xo(Positive::xo(
+                         Positive::xo(Positive::xo(Positive::xh()))))))))))) {
+    return ZodiacSign::SAGITTARIUS;
+  } else if (BinInt::ltb(
+                 deg,
+                 Z::zpos(Positive::xo(Positive::xo(
+                     Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+                         Positive::xo(Positive::xo(Positive::xh()))))))))))) {
+    return ZodiacSign::CAPRICORN;
+  } else if (BinInt::ltb(
+                 std::move(deg),
+                 Z::zpos(Positive::xo(Positive::xi(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xo(
+                         Positive::xi(Positive::xo(Positive::xh()))))))))))) {
+    return ZodiacSign::AQUARIUS;
   } else {
-    if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xo(Positive::xi(
-                             Positive::xi(Positive::xi(Positive::xh())))))))) {
-      return ZodiacSign::TAURUS;
-    } else {
-      if (BinInt::ltb(
-              deg,
-              Z::zpos(Positive::xo(Positive::xi(Positive::xo(
-                  Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))))))) {
-        return ZodiacSign::GEMINI;
-      } else {
-        if (BinInt::ltb(deg,
-                        Z::zpos(
-                            Positive::xo(Positive::xo(Positive::xo(Positive::xi(
-                                Positive::xi(Positive::xi(Positive::xh()))))))))) {
-          return ZodiacSign::CANCER;
-        } else {
-          if (BinInt::ltb(
-                  deg,
-                  Z::zpos(Positive::xo(
-                      Positive::xi(Positive::xi(Positive::xo(Positive::xi(
-                          Positive::xo(Positive::xo(Positive::xh())))))))))) {
-            return ZodiacSign::LEO;
-          } else {
-            if (BinInt::ltb(deg,
-                            Z::zpos(Positive::xo(
-                                Positive::xo(Positive::xi(
-                                    Positive::xo(Positive::xi(Positive::xi(
-                                        Positive::xo(Positive::xh())))))))))) {
-              return ZodiacSign::VIRGO;
-            } else {
-              if (BinInt::ltb(
-                      deg, Z::zpos(Positive::xo(
-                               Positive::xi(Positive::xo(
-                                   Positive::xo(Positive::xi(Positive::xo(
-                                       Positive::xi(Positive::xh())))))))))) {
-                return ZodiacSign::LIBRA;
-              } else {
-                if (BinInt::ltb(
-                        deg, Z::zpos(Positive::xo(
-                                 Positive::xo(Positive::xo(
-                                     Positive::xo(Positive::xi(Positive::xi(
-                                         Positive::xi(Positive::xh())))))))))) {
-                  return ZodiacSign::SCORPIO;
-                } else {
-                  if (BinInt::ltb(
-                          deg, Z::zpos(Positive::xo(
-                                   Positive::xi(
-                                       Positive::xi(
-                                           Positive::xi(
-                                               Positive::xo(Positive::xo(
-                                                   Positive::xo(Positive::xo(
-                                                       Positive::xh()))))))))))) {
-                    return ZodiacSign::SAGITTARIUS;
-                  } else {
-                    if (BinInt::ltb(
-                            deg,
-                            Z::zpos(Positive::xo(Positive::xo(
-                                Positive::xi(Positive::xi(
-                                    Positive::xo(Positive::xi(Positive::xo(
-                                        Positive::xo(Positive::xh()))))))))))) {
-                      return ZodiacSign::CAPRICORN;
-                    } else {
-                      if (BinInt::ltb(
-                              std::move(deg),
-                              Z::zpos(Positive::xo(
-                                  Positive::xi(
-                                      Positive::xo(
-                                          Positive::xi(
-                                              Positive::xo(Positive::xo(
-                                                  Positive::xi(Positive::xo(
-                                                      Positive::xh()))))))))))) {
-                        return ZodiacSign::AQUARIUS;
-                      } else {
-                        return ZodiacSign::PISCES;
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+    return ZodiacSign::PISCES;
   }
 }
 
@@ -924,23 +886,19 @@ EpochCellGlyphTraceCase::DialGlyph
 EpochCellGlyphTraceCase::glyph_at_cell(const Z &cell) {
   if (BinInt::eqb(cell, Z::z0())) {
     return DialGlyph::GLYPH_SIGMATOTAL;
-  } else {
-    if (BinInt::eqb(cell,
-                    Z::zpos(Positive::xo(Positive::xi(Positive::xh()))))) {
-      return DialGlyph::GLYPH_SIGMA;
-    } else {
-      if (BinInt::eqb(cell, Z::zpos(Positive::xo(
+  } else if (BinInt::eqb(cell,
+                         Z::zpos(Positive::xo(Positive::xi(Positive::xh()))))) {
+    return DialGlyph::GLYPH_SIGMA;
+  } else if (
+          BinInt::eqb(cell, Z::zpos(Positive::xo(
                                 Positive::xo(Positive::xi(Positive::xh())))))) {
-        return DialGlyph::GLYPH_ETA;
-      } else {
-        if (BinInt::eqb(cell, Z::zpos(Positive::xi(Positive::xo(
-                                  Positive::xo(Positive::xo(Positive::xh()))))))) {
-          return DialGlyph::GLYPH_SIGMA;
-        } else {
-          return DialGlyph::GLYPH_EMPTY;
-        }
-      }
-    }
+    return DialGlyph::GLYPH_ETA;
+  } else if (
+          BinInt::eqb(cell, Z::zpos(Positive::xi(Positive::xo(
+                                Positive::xo(Positive::xo(Positive::xh()))))))) {
+    return DialGlyph::GLYPH_SIGMA;
+  } else {
+    return DialGlyph::GLYPH_EMPTY;
   }
 }
 

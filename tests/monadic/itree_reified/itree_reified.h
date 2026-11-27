@@ -24,7 +24,7 @@ struct ITreeReified {
   /// Traverse an itree E T, logging at every Tau and Vis node.
   /// The result lives in itree (ioE +' E) T: original effects on
   /// the right, logging effects (IO) on the left.
-  template <typename T1 = void, typename T2>
+  template <typename T2>
   static std::shared_ptr<ITree<T2>>
   with_logging_body(const std::type_identity_t<
       crane::fn<std::shared_ptr<ITree<T2>>(std::shared_ptr<ITree<T2>>)>> &rec,
@@ -61,11 +61,10 @@ struct ITreeReified {
     }
   }
 
-  template <typename T1 = void, typename T2>
+  template <typename T2>
   static std::shared_ptr<ITree<T2>>
   with_logging(const std::shared_ptr<ITree<T2>> &t) {
-    return with_logging_body<crane::obj, T2>(with_logging<crane::obj, T2>,
-                                             t->observe());
+    return with_logging_body<T2>(with_logging<T2>, t->observe());
   }
 
   /// A simple tree to instrument.

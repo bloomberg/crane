@@ -30,8 +30,7 @@
 
 static void *worker(void *) {
   // Never returns: the (loopified) computation loops forever by construction.
-  volatile auto r = fibst_repro<FibstCofixReproTests::nat_stref,
-                                FibstCofixReproTests::nat_idx, uint64_t>(5);
+  volatile auto r = FibstCofixReproTests::fibst_repro(5);
   (void)r;
   return nullptr;
 }

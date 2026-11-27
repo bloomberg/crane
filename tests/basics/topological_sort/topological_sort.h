@@ -343,7 +343,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -439,50 +439,46 @@ struct TopologicalSort {
   static List<T1>
   get_elems(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
             const List<std::pair<T1, T1>> &l) {
-    {
-      const List<std::pair<T1, T1>> &_lc1_l0 = l;
-      List<T1> _lc1_h = List<T1>::nil();
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      List<T1> _lc1_loop_h = std::move(_lc1_h);
-      const List<std::pair<T1, T1>> *_lc1_loop_l0 = &_lc1_l0;
-      while (true) {
-        if (std::holds_alternative<typename List<std::pair<T1, T1>>::Nil>(
-                _lc1_loop_l0->v())) {
-          return _lc1_loop_h;
-        } else {
-          const auto &[a0, a1] =
-              std::get<typename List<std::pair<T1, T1>>::Cons>(
-                  _lc1_loop_l0->v());
-          const List<std::pair<T1, T1>> &a1_value = *a1;
-          const auto &[e1, e2] = a0;
-          std::optional<T1> f1 =
-              _lc1_loop_h.find([=](const T1 &x) { return eqb_node(e1, x); });
-          std::optional<T1> f2 =
-              _lc1_loop_h.find([=](const T1 &x) { return eqb_node(e2, x); });
-          if (f1.has_value()) {
-            const T1 &_x = *f1;
-            if (f2.has_value()) {
-              const T1 &_x0 = *f2;
-              _lc1_loop_l0 = &a1_value;
-            } else {
-              _lc1_loop_h = List<T1>::cons(e2, std::move(_lc1_loop_h));
-              _lc1_loop_l0 = &a1_value;
-            }
+    List<T1> _lc1_h = List<T1>::nil();
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    List<T1> _lc1_loop_h = std::move(_lc1_h);
+    const List<std::pair<T1, T1>> *_lc1_loop_l0 = &l;
+    while (true) {
+      if (std::holds_alternative<typename List<std::pair<T1, T1>>::Nil>(
+              _lc1_loop_l0->v())) {
+        return _lc1_loop_h;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<std::pair<T1, T1>>::Cons>(_lc1_loop_l0->v());
+        const List<std::pair<T1, T1>> &a1_value = *a1;
+        const auto &[e1, e2] = a0;
+        std::optional<T1> f1 =
+            _lc1_loop_h.find([=](const T1 &x) { return eqb_node(e1, x); });
+        std::optional<T1> f2 =
+            _lc1_loop_h.find([=](const T1 &x) { return eqb_node(e2, x); });
+        if (f1.has_value()) {
+          const T1 &_x = *f1;
+          if (f2.has_value()) {
+            const T1 &_x0 = *f2;
+            _lc1_loop_l0 = &a1_value;
           } else {
-            if (f2.has_value()) {
-              const T1 &_x = *f2;
+            _lc1_loop_h = List<T1>::cons(e2, std::move(_lc1_loop_h));
+            _lc1_loop_l0 = &a1_value;
+          }
+        } else {
+          if (f2.has_value()) {
+            const T1 &_x = *f2;
+            _lc1_loop_h = List<T1>::cons(e1, std::move(_lc1_loop_h));
+            _lc1_loop_l0 = &a1_value;
+          } else {
+            if (eqb_node(e1, e2)) {
               _lc1_loop_h = List<T1>::cons(e1, std::move(_lc1_loop_h));
               _lc1_loop_l0 = &a1_value;
             } else {
-              if (eqb_node(e1, e2)) {
-                _lc1_loop_h = List<T1>::cons(e1, std::move(_lc1_loop_h));
-                _lc1_loop_l0 = &a1_value;
-              } else {
-                _lc1_loop_h = List<T1>::cons(
-                    e1, List<T1>::cons(e2, std::move(_lc1_loop_h)));
-                _lc1_loop_l0 = &a1_value;
-              }
+              _lc1_loop_h = List<T1>::cons(
+                  e1, List<T1>::cons(e2, std::move(_lc1_loop_h)));
+              _lc1_loop_l0 = &a1_value;
             }
           }
         }
@@ -535,7 +531,7 @@ struct TopologicalSort {
     });
     if (_cs.has_value()) {
       const std::pair<T1, List<T1>> &p = *_cs;
-      const auto &[_x, es] = p;
+      const auto &[_, es] = p;
       return es;
     } else {
       return List<T1>::nil();
@@ -590,7 +586,7 @@ struct TopologicalSort {
     } else {
       const auto &[a0, _] =
           std::get<typename List<std::pair<T1, List<T1>>>::Cons>(graph0.v());
-      const auto &[e, _x0] = a0;
+      const auto &[e, _] = a0;
       return std::make_optional<T1>(cycle_entry_aux<T1>(
           eqb_node, graph0, List<T1>::nil(), e, graph0.length()));
     }

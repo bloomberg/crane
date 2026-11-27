@@ -129,7 +129,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -193,21 +193,20 @@ template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {
   // cell fills.
   std::optional<List<T1>> _root{};
   std::shared_ptr<List<T1>> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = List<T1>::nil();
       (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t k = _loop_n - 1;
+      uint64_t k = n - 1;
       auto _cell = typename List<T1>::Cons(x, nullptr);
       List<T1> &_node =
           (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
-      _loop_n = k;
+      n = k;
       continue;
     }
   }

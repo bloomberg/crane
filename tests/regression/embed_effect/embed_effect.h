@@ -6,8 +6,6 @@
 #include <string_view>
 #include <variant>
 
-template <typename T1 = void> void bug_create(const std::string &title);
-
-template <typename T1 = void> int64_t bug_read() { return bug_read_impl(); }
-
+void bug_create(const std::string &title);
+int64_t bug_read();
 int64_t bug_main();

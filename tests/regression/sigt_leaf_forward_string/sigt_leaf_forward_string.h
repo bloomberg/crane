@@ -169,12 +169,12 @@ template <SEM S> struct Make {
         std::make_pair(std::move(a), List<typename S::idx>::nil()),
         std::make_pair(
             crane::obj(crane_erase_fn([=](const auto &tup) {
-              const auto &[v, _x] =
+              const auto &[v, _] =
                   crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
               return crane_call_erased(eq, v, v);
             })),
             crane::obj(crane_erase_fn([=](const auto &tup) {
-              const auto &[v, _x] =
+              const auto &[v, _] =
                   crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
               return crane_call_erased(eq, v, v);
             }))));
@@ -185,8 +185,8 @@ template <SEM S> struct Make {
                              std::pair<crane::obj, crane::obj>> &e,
                   F1 &&arg) {
     const auto &[x0, a1] = e;
-    const auto &[a, _x] = x0;
-    const auto &[f, _x0] = a1;
+    const auto &[a, _] = x0;
+    const auto &[f, _] = a1;
     if (crane::any_cast<bool>(
             crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(
                 std::make_pair(crane::obj(arg(a)),

@@ -34,7 +34,7 @@ uint64_t LoopifyReuseCursorTurns::sum(const LoopifyReuseCursorTurns::lst &l) {
       auto _f = std::move(std::get<_after_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -93,7 +93,6 @@ LoopifyReuseCursorTurns::skip_sums(uint64_t seen,
       crane::rc<LoopifyReuseCursorTurns::lst>();
   bool _uniq = true;
   const LoopifyReuseCursorTurns::lst *_loop_l = &l;
-  uint64_t _loop_seen = seen;
   while (true) {
     if (std::holds_alternative<typename LoopifyReuseCursorTurns::lst::Nil>(
             _loop_l->v())) {
@@ -105,8 +104,8 @@ LoopifyReuseCursorTurns::skip_sums(uint64_t seen,
       if (Nat::even(a0)) {
         auto _rs = crane::reuse_step(_own, _uniq, a1);
         auto _cell = crane::make_rc_reusing_unchecked(
-            std::move(_rs.token), typename LoopifyReuseCursorTurns::lst::Cons(
-                                      (a0 + _loop_seen), nullptr));
+            std::move(_rs.token),
+            typename LoopifyReuseCursorTurns::lst::Cons((a0 + seen), nullptr));
         *_write = std::move(_cell);
         _write =
             &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
@@ -116,9 +115,9 @@ LoopifyReuseCursorTurns::skip_sums(uint64_t seen,
         _loop_l = _own.get();
         continue;
       } else {
-        auto _read = (_loop_seen + sum(*a1));
+        auto _read = (seen + sum(*a1));
         auto _rs = crane::reuse_step(_own, _uniq, a1);
-        _loop_seen = std::move(_read);
+        seen = _read;
         _own = std::move(_rs.next);
         _loop_l = _own.get();
         continue;
@@ -232,7 +231,6 @@ LoopifyReuseCursorTurns::scale(uint64_t acc, LoopifyReuseCursorTurns::lst l) {
       crane::rc<LoopifyReuseCursorTurns::lst>();
   bool _uniq = true;
   const LoopifyReuseCursorTurns::lst *_loop_l = &l;
-  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename LoopifyReuseCursorTurns::lst::Nil>(
             _loop_l->v())) {
@@ -241,17 +239,17 @@ LoopifyReuseCursorTurns::scale(uint64_t acc, LoopifyReuseCursorTurns::lst l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_loop_l->v());
-      auto _read = (_loop_acc + a0);
+      auto _read = (acc + a0);
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       auto _cell = crane::make_rc_reusing_unchecked(
-          std::move(_rs.token), typename LoopifyReuseCursorTurns::lst::Cons(
-                                    (a0 * _loop_acc), nullptr));
+          std::move(_rs.token),
+          typename LoopifyReuseCursorTurns::lst::Cons((a0 * acc), nullptr));
       *_write = std::move(_cell);
       _write =
           &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
               (*_write)->v_mut())
               .a1;
-      _loop_acc = std::move(_read);
+      acc = _read;
       _own = std::move(_rs.next);
       _loop_l = _own.get();
       continue;
@@ -281,8 +279,8 @@ LoopifyReuseCursorTurns::suffix_sums(LoopifyReuseCursorTurns::lst l) {
       auto _read = sum(*_loop_l);
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       auto _cell = crane::make_rc_reusing_unchecked(
-          std::move(_rs.token), typename LoopifyReuseCursorTurns::lst::Cons(
-                                    std::move(_read), nullptr));
+          std::move(_rs.token),
+          typename LoopifyReuseCursorTurns::lst::Cons(_read, nullptr));
       *_write = std::move(_cell);
       _write =
           &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
@@ -299,17 +297,16 @@ LoopifyReuseCursorTurns::suffix_sums(LoopifyReuseCursorTurns::lst l) {
 bool Nat::even(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return true;
     } else {
-      uint64_t n0 = _loop_n - 1;
+      uint64_t n0 = n - 1;
       if (n0 <= 0) {
         return false;
       } else {
         uint64_t n_ = n0 - 1;
-        _loop_n = n_;
+        n = n_;
       }
     }
   }

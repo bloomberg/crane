@@ -13,8 +13,7 @@ ReusePerFunctionOn::incr_reused(ReusePerFunctionOn::lst l) {
           *std::get<typename ReusePerFunctionOn::lst::Cons>(l.v_mut()).a1);
       return lst::cons_crane_reuse(std::move(
           std::get<typename ReusePerFunctionOn::lst::Cons>(l.v_mut()).a1),
-                                   (std::move(x) + 1),
-                                   incr_reused(std::move(xs)));
+                                   (x + 1), incr_reused(std::move(xs)));
     } else {
       if (std::holds_alternative<typename ReusePerFunctionOn::lst::Nil>(
               l.v_mut())) {

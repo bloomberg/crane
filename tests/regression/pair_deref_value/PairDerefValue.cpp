@@ -43,7 +43,7 @@ bool NatKey::key_eq_dec(const Datatypes::Nat &n, const Datatypes::Nat &x0) {
     } else {
       auto _f = std::move(std::get<_after_key_eq_dec_in_S>(_popped));
       _stack.pop_back();
-      if (std::move(_result)) {
+      if (_result) {
         _result = true;
       } else {
         _result = false;

@@ -120,7 +120,7 @@ inline uint64_t T::to_nat(uint64_t _x) const {
     } else {
       auto _f = std::move(std::get<_after_to_nat_in_FS>(_popped));
       _stack.pop_back();
-      uint64_t _tmp1 = std::move(_result);
+      uint64_t _tmp1 = _result;
       const uint64_t &i = _tmp1;
       _result = (i + 1);
     }

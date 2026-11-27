@@ -126,7 +126,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -229,7 +229,7 @@ struct DisassembleOps {
             UINT64_C(1));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
-      const auto &[_x, next] = p;
+      const auto &[_, next] = p;
       return next;
     } else {
       return UINT64_C(0);
@@ -266,7 +266,7 @@ struct DisassembleOps {
                          UINT64_C(0));
         if (_cs.has_value()) {
           const std::pair<instruction, uint64_t> &p = *_cs;
-          const auto &[_x, next] = p;
+          const auto &[_, next] = p;
           return next;
         } else {
           return UINT64_C(0);
@@ -314,7 +314,7 @@ struct DisassembleOps {
             UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
-      const auto &[_x, next] = p;
+      const auto &[_, next] = p;
       return next;
     } else {
       return UINT64_C(0);
@@ -333,7 +333,7 @@ struct DisassembleOps {
             UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
-      const auto &[_x, next] = p;
+      const auto &[_, next] = p;
       return next;
     } else {
       return UINT64_C(0);

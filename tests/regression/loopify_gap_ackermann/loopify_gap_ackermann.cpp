@@ -50,7 +50,7 @@ uint64_t LoopifyGapAckermann::ack(uint64_t m, uint64_t x0_) {
       auto _f = std::move(std::get<_after_ack_n_in_S>(_popped));
       _stack.pop_back();
       uint64_t m_ = _f.m_;
-      _stack.emplace_back(_call{std::move(_result), m_});
+      _stack.emplace_back(_call{_result, m_});
     }
   }
   return _result;

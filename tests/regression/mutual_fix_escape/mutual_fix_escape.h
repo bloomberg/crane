@@ -29,7 +29,7 @@ struct MutualFixEscape {
   /// = 1+(1+(1+count_odd(0))) = 1+1+1+20 = 23.
   /// Total = 10 + 23 = 33.
   static inline const uint64_t test3 = []() -> uint64_t {
-    auto [ce, _x] = make_count_pair(UINT64_C(10));
+    auto [ce, _] = make_count_pair(UINT64_C(10));
     return (ce(UINT64_C(0)) + ce(UINT64_C(3)));
   }();
   /// test4: with noise. count_odd(1) = 1+count_even(0) = 1+5 = 6.

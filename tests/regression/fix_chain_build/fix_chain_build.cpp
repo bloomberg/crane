@@ -16,7 +16,7 @@ FixChainBuild::build_chain(uint64_t n) {
                                            [](uint64_t x) { return x; }));
   } else {
     uint64_t n_ = n - 1;
-    auto [_x, prev] = build_chain(n_);
+    auto [_, prev] = build_chain(n_);
     auto step_impl =
         [=, prev = std::move(prev)](auto &_self_step, uint64_t x) -> uint64_t {
           if (x <= 0) {

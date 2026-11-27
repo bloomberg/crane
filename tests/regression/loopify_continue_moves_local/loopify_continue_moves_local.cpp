@@ -11,15 +11,14 @@ List<uint64_t> LoopifyContinueMovesLocal::count_down(uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<uint64_t> _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       List<uint64_t> next = List<uint64_t>::cons(m, std::move(_loop_acc));
       _loop_acc = std::move(next);
-      _loop_n = m;
+      n = m;
     }
   }
 }
@@ -30,18 +29,16 @@ LoopifyContinueMovesLocal::count_both(uint64_t n, const List<uint64_t> &acc,
                                       uint64_t k) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_k = k;
   List<uint64_t> _loop_acc = acc;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
-      return std::make_pair(_loop_acc, _loop_k);
+    if (n <= 0) {
+      return std::make_pair(_loop_acc, k);
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       List<uint64_t> next = List<uint64_t>::cons(m, _loop_acc);
-      _loop_k = (_loop_k + next.length());
+      k = (k + next.length());
       _loop_acc = std::move(next);
-      _loop_n = m;
+      n = m;
     }
   }
 }
@@ -55,16 +52,15 @@ LoopifyContinueMovesLocal::split_off(uint64_t n, const List<uint64_t> &acc,
   // variables.
   List<uint64_t> _loop_rest = rest;
   List<uint64_t> _loop_acc = acc;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return std::make_pair(_loop_acc, _loop_rest);
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       List<uint64_t> next = List<uint64_t>::cons(m, _loop_acc);
       _loop_rest = next.tl();
       _loop_acc = std::move(next);
-      _loop_n = m;
+      n = m;
     }
   }
 }
@@ -78,12 +74,11 @@ LoopifyContinueMovesLocal::peel(uint64_t n, const List<uint64_t> &acc,
   // variables.
   List<uint64_t> _loop_rest = rest;
   List<uint64_t> _loop_acc = acc;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return std::make_pair(_loop_acc, _loop_rest);
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       List<uint64_t> next = List<uint64_t>::cons(m, _loop_acc);
       if (std::holds_alternative<typename List<uint64_t>::Nil>(next.v())) {
         return std::make_pair(_loop_acc, _loop_rest);
@@ -91,7 +86,7 @@ LoopifyContinueMovesLocal::peel(uint64_t n, const List<uint64_t> &acc,
         const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(next.v());
         _loop_rest = List<uint64_t>(*a1);
         _loop_acc = next;
-        _loop_n = m;
+        n = m;
       }
     }
   }

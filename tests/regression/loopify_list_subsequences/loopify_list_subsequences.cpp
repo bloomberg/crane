@@ -209,19 +209,17 @@ uint64_t LoopifyListSubsequences::nth_elem(uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_n == UINT64_C(0)) {
+      if (n == UINT64_C(0)) {
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
       }
     }
   }

@@ -10,7 +10,7 @@
 /// its value's statements declare in the shared scope.
 uint64_t UnusedPairBindingRedefinition::f(uint64_t a) {
   uint64_t x;
-  auto [_x, _x0] = [&]() {
+  auto [_, _] = [&]() {
     List<uint64_t> l = List<uint64_t>::cons(
         UINT64_C(0), List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil()));
     std::pair<uint64_t, uint64_t> acc = std::make_pair(a, a);
@@ -21,7 +21,7 @@ uint64_t UnusedPairBindingRedefinition::f(uint64_t a) {
     }
   }();
   x = UINT64_C(0);
-  auto [_x1, _x2] = [&]() {
+  auto [_, _] = [&]() {
     List<uint64_t> l =
         List<uint64_t>::cons(a, List<uint64_t>::cons(a, List<uint64_t>::nil()));
     std::pair<bool, bool> acc = std::make_pair(true, true);
@@ -36,7 +36,7 @@ uint64_t UnusedPairBindingRedefinition::f(uint64_t a) {
 
 uint64_t UnusedPairBindingRedefinition::g(uint64_t a) {
   uint64_t x;
-  auto [p, _x] = [&]() {
+  auto [p, _] = [&]() {
     List<uint64_t> l = List<uint64_t>::cons(
         UINT64_C(0), List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil()));
     std::pair<uint64_t, uint64_t> acc = std::make_pair(a, a);

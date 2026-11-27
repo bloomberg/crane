@@ -84,9 +84,22 @@ let plan_view g k =
   | Some v -> v
   | None -> CErrors.anomaly Pp.(str "View_args: a view the typed mapping does not declare.")
 
-(* The positions a call of [f] with [n] arguments takes views at. *)
-let targets (u : Unit_plan.Context.t) (f : expr) n : int -> target option =
+(** The parameter modes of the local lambdas a body binds, by the variable
+    each is bound to: what a direct call of one takes, as {!targets} reads
+    it.  A name bound to more than one lambda is left out. *)
+type locals = (Id.t * Cpp_ir.Param_mode.t) list option Id.Map.t
+
+(* The positions a call of [f] with [n] arguments takes views at; a call of
+   a local lambda, as [locals] records its parameters. *)
+let targets ?(locals : locals = Id.Map.empty) (u : Unit_plan.Context.t) (f : expr) n : int -> target option =
   match f with
+  | Local x -> (
+    match Id.Map.find_opt x locals with
+    | Some (Some modes) when List.length modes = n ->
+      fun i ->
+        Option.bind (List.nth_opt modes i) (fun ((_, m) : _ * Cpp_ir.Param_mode.t) ->
+            match m.form with By_view (k, g) -> Some (Plan_view (view_kind k, g)) | _ -> None)
+    | _ -> fun _ -> None )
   | Entity (r, tys, Some {inline = Some _; _}) when Base.Table.is_mapped_operation r ->
     let op = Op.find r in
     fun i ->
@@ -169,7 +182,22 @@ let declared_holdings params modes body =
     Cpp_ir.Map.stmt (rw ()) s
   and fe (e : expr) =
     ( match e with
-    | Lambda l -> List.iter (fun (_, x) -> Option.iter (fun x -> note x Unknown) x) l.params
+    | Lambda l ->
+      (* A local lambda's parameter {!local_view_params} made a view holds
+         the view; any other holds what nothing here says. *)
+      List.iter
+        (fun (t, x) ->
+          Option.iter
+            (fun x ->
+              match List.assoc_opt x l.modes with
+              | Some ({form = By_view (k, g); _} : Cpp_ir.Param_mode.t) -> (
+                let k = view_kind k in
+                match Plan.view_arguments (Plan.find g) k t with
+                | Some tys -> note x (View (k, g, tys))
+                | None -> note x Unknown )
+              | _ -> note x Unknown)
+            x)
+        l.params
     | _ -> () );
     Cpp_ir.Map.expr (rw ()) e
   and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id () in
@@ -242,7 +270,165 @@ let repeats_argument text = Cpp_ir.Foreign_template.arg_mentions text 0 > 1
 (* Whether evaluating [e] again costs nothing and changes nothing. *)
 let free_to_repeat (e : expr) = match e with Local _ | Entity (_, _, None) -> true | _ -> false
 
+(** {1 Views at local lambdas}
+
+    A local lambda -- [auto f = [..](params) { body };] -- only ever called
+    directly, outside every lambda, takes a parameter of a mapped type that
+    declares views by the view, when [body] uses the parameter only as an
+    argument taken by a view: of the writable kind where one such use
+    writes, of the read kind otherwise.  Its calls then pass the view of
+    what they pass, converted as at any call taking one ({!targets} reads
+    the lambda's modes), and a mapped identity passed so is used only
+    through its views, where it was created: {!Local_storage} may keep it
+    in a local.  A lambda named as a value, or a parameter used any other
+    way -- returned, stored, captured, passed as the canonical value -- is
+    left as it is: the view is borrow-only and would outlive its owner. *)
+
+(* The argument lists of the calls [stmts] make of [f], when every
+   occurrence of [f] in them is the callee of a call, outside every lambda,
+   whose arguments do not name [f]; [None] otherwise. *)
+let direct_calls f (stmts : stmt list) =
+  let mentions (e : expr) = Cpp_ir.Variables.mem f (Cpp_ir.Variables.free_in_expr e) in
+  let ok = ref true and found = ref false in
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> fe e); stmt = (fun s -> Cpp_ir.Children.stmt v s); type_ = ignore}
+  and fe (e : expr) =
+    match e with
+    | Call (_, Local f', args) when Id.equal f f' ->
+      found := true;
+      if List.exists mentions args then ok := false
+    | Local f' when Id.equal f f' -> ok := false
+    | Lambda _ -> if mentions e then ok := false
+    | _ -> Cpp_ir.Children.expr v e
+  in
+  List.iter (Cpp_ir.Children.stmt v) stmts;
+  !ok && !found
+
+(* The kinds of view the uses of [p] in [body] take, each an argument
+   [targets] finds taken by a view of [g]; [None] when some use is not. *)
+let view_uses u g p (body : stmt list) =
+  let kinds = ref [] and ok = ref true in
+  let is_p (a : expr) = match a with Local x | Move (Local x) -> Id.equal x p | _ -> false in
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> fe e); stmt = (fun s -> Cpp_ir.Children.stmt v s); type_ = ignore}
+  and fe (e : expr) =
+    match e with
+    | Call (_, f, args) ->
+      let target = targets u f (List.length args) in
+      List.iteri
+        (fun i a ->
+          if is_p a then
+            match target i with
+            | Some t when GlobRef.CanOrd.equal (target_mapped t) g -> kinds := target_kind t :: !kinds
+            | _ -> ok := false
+          else fe a)
+        args;
+      fe f
+    | Local x when Id.equal x p -> ok := false
+    | Lambda _ when Cpp_ir.Variables.mem p (Cpp_ir.Variables.free_in_expr e) -> ok := false
+    | _ -> Cpp_ir.Children.expr v e
+  in
+  List.iter (Cpp_ir.Children.stmt v) body;
+  if !ok then Some !kinds else None
+
+(* [l] with each parameter the section above admits taken by its view.
+   What a variable holds is read by its name ({!declared_holdings}), so a
+   parameter made a view is renamed to a name [taken] does not hold -- a
+   variable of the enclosing body of the same name holds the canonical
+   value. *)
+let view_params u taken (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) =
+  let taken = ref taken in
+  let fresh p =
+    let rec go i =
+      let x = Id.of_string (Printf.sprintf "%s_view%s" (Id.to_string p) (if i = 0 then "" else string_of_int i)) in
+      if Cpp_ir.Variables.mem x !taken then go (i + 1) else x
+    in
+    let x = go 0 in
+    taken := x :: !taken;
+    x
+  in
+  let declared = Cpp_ir.Variables.declared l.body in
+  let param (t, x) =
+    match (x, mapped_type t) with
+    | Some p, Some (g, tys)
+      when (not (List.mem_assoc p l.modes && Option.has_some (Cpp_ir.Param_mode.view (List.assoc p l.modes))))
+           && not (Cpp_ir.Variables.mem p declared) -> (
+      let plan = Plan.find g in
+      match view_uses u g p l.body with
+      | Some (_ :: _ as kinds) ->
+        let k = if List.mem Plan.Write_view kinds then Plan.Write_view else Plan.Read_view in
+        if Plan.has_view plan k then
+          let mode : Cpp_ir.Param_mode.view = match k with Plan.Read_view -> Read_view | Plan.Write_view -> Write_view in
+          let p' = fresh p in
+          Some (p, ((Plan.view_type plan k tys, Some p'), (p', Cpp_ir.Param_mode.make Borrowed (By_view (mode, g)))))
+        else None
+      | _ -> None )
+    | _ -> None
+  in
+  let changed = List.map param l.params in
+  if List.for_all (fun c -> c = None) changed then l
+  else
+    let renamed = List.filter_map (Option.map (fun (p, (_, (p', _))) -> (p, p'))) changed in
+    let rename x = match List.assoc_opt x renamed with Some y -> y | None -> x in
+    let rec fe (e : expr) : expr =
+      match e with Local x -> Local (rename x) | _ -> Cpp_ir.Map.expr (rw ()) e
+    and fs (s : stmt) : stmt = Cpp_ir.Map.stmt (rw ()) s
+    and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id () in
+    let params = List.map2 (fun c p -> match c with Some (_, (p', _)) -> p' | None -> p) changed l.params in
+    let modes =
+      List.fold_left
+        (fun ms c -> match c with Some (p, (_, (p', m))) -> (p', m) :: List.remove_assoc p ms | None -> ms)
+        l.modes changed
+    in
+    let binders = List.map (fun (x, b) -> (rename x, b)) l.binders in
+    {l with params; modes; binders; body = List.map fs l.body}
+
+(* [body] with every local lambda only called directly taking its
+   parameters by view where {!view_params} admits them. *)
+let local_view_params u params (body : stmt list) : stmt list =
+  let taken = List.map fst params @ Cpp_ir.Variables.declared body @ Cpp_ir.Variables.free_in_body body in
+  let rec stmts (ss : stmt list) : stmt list =
+    match ss with
+    | [] -> []
+    | Bind_variable (f, tgt, Lambda l) :: rest when l.type_params = [] && direct_calls f rest ->
+      let rest = stmts rest in
+      Bind_variable (f, tgt, Cpp_ir.Map.expr (rw ()) (Lambda (view_params u taken l))) :: rest
+    | s :: rest ->
+      let s = fs s in
+      s :: stmts rest
+  and fs (s : stmt) : stmt = Cpp_ir.Map.stmt (rw ()) s
+  and fe (e : expr) : expr = Cpp_ir.Map.expr (rw ()) e
+  and rw () = Cpp_ir.Map.make ~stmts ~expr:fe ~stmt:fs ~type_:Fun.id () in
+  stmts body
+
+(* The modes of the parameters of each local lambda [body] binds
+   ({!locals}). *)
+let local_lambdas (body : stmt list) : locals =
+  let table = ref Id.Map.empty in
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> Cpp_ir.Children.expr v e); stmt = (fun s -> fs s); type_ = ignore}
+  and fs (s : stmt) =
+    ( match s with
+    | Bind_variable (f, _, Lambda l) ->
+      let modes =
+        List.map
+          (fun (_, x) ->
+            match x with
+            | Some x -> (x, Option.default Cpp_ir.Param_mode.copied (List.assoc_opt x l.modes))
+            | None -> (Id.of_string "_", Cpp_ir.Param_mode.copied))
+          l.params
+      in
+      table := Id.Map.update f (function None -> Some (Some modes) | Some _ -> Some None) !table
+    | _ -> () );
+    Cpp_ir.Children.stmt v s
+  in
+  List.iter fs body;
+  !table
+
 let transform_body u params modes (body : stmt list) : stmt list =
+  let body = local_view_params u params body in
+  let locals = local_lambdas body in
+  let targets = targets ~locals in
   let held = declared_holdings params modes body in
   (* What a statement needs bound ahead of it, innermost statement first:
      a value a conversion places more than once, or a copy a view is taken
@@ -308,11 +494,18 @@ let transform_body u params modes (body : stmt list) : stmt list =
       | Borrow_only -> refuse g )
     | Canonical _ | Unknown -> e
   in
-  (* [e], which holds [h], narrowed to a view of kind [k], or [None] when it
-     is no view. *)
-  let as_view f k (h : held) (e : expr) : expr option =
+  (* [e], which holds [h], narrowed to a view of kind [k] the target [t]
+     takes, or [None] when it is no view.  A writable view is an operation's
+     read view as it is: the operation's text reads through it, and C++
+     converts it wherever the text spells the read view's type
+     ([std::span<T>] to [std::span<const T>]).  A generated function's
+     parameter is narrowed to: its element type may be deduced from the read
+     view's own. *)
+  let as_view f t (h : held) (e : expr) : expr option =
+    let k = target_kind t in
     let narrowed have conv =
       if have = k then Some e
+      else if have = Plan.Write_view && (match t with Op_view _ -> true | Plan_view _ -> false) then Some e
       else
         match (have, conv) with
         | Plan.Write_view, Some c -> Some (apply c e)
@@ -409,7 +602,7 @@ let transform_body u params modes (body : stmt list) : stmt list =
               | None ->
               let h = holding_of a in
               let inner () = match a with Local _ -> a | Call _ -> call ~escapes:false ~bound a | _ -> fe a in
-              match as_view f (target_kind t) h (inner ()) with
+              match as_view f t h (inner ()) with
               | Some v -> v
               | None ->
                 let aliased =

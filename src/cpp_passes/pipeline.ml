@@ -89,9 +89,25 @@ let conditionals = Base.Pipeline_trace.pass "conditionals" Erasure.lower_conditi
 let access_moves = Base.Pipeline_trace.pass "access_moves" Erasure.lower_access_moves
 let constexpr = Base.Pipeline_trace.pass "constexpr" Erasure.decide_constexpr
 let immortal_globals = Base.Pipeline_trace.pass "immortal_globals" Erasure.immortal_globals
+
+(** A value bound only to be taken apart is taken apart where it is
+    computed ({!Erasure.bind_scrutinees_in_place}). *)
+let scrutinee_bindings = Base.Pipeline_trace.pass "scrutinee_bindings" Erasure.bind_scrutinees_in_place
+
 let foreign = Base.Pipeline_trace.pass "foreign" Erasure.instantiate_foreign
-(* A variable only ever assigned is not kept ({!Erasure.drop_dead_stores}). *)
+
+(** A local's address dereferenced, written once the mappings' texts are,
+    is the local itself ({!Erasure.drop_local_derefs}). *)
+let local_derefs = Base.Pipeline_trace.pass "local_derefs" Erasure.drop_local_derefs
+
+(** A variable only ever assigned, which scalar replacement leaves, is not
+    kept ({!Erasure.drop_dead_stores}). *)
 let dead_stores = Base.Pipeline_trace.pass "dead_stores" Erasure.drop_dead_stores
+
+(** A copy of a local copied as its bits is the local
+    ({!Erasure.propagate_copies}). *)
+let copies = Base.Pipeline_trace.pass "copies" Erasure.propagate_copies
+
 let qualifiers = Base.Pipeline_trace.pass "qualifiers" Erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
 let pointer_slots u = Base.Pipeline_trace.pass "pointer_slots" (Erasure.lower_pointer_slots u)
@@ -149,6 +165,9 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
     (* A fresh identity used only through its views, and only where it is
        created, is held in a local instead of its canonical owner. *)
     on_decl "local_storage" Local_storage.transform_decl;
+    (* A copy of a by-value parameter that is its last use -- a loop's
+       variable -- is the parameter itself. *)
+    on_decl "param_copies" Param_copies.transform_decl;
     (* A string literal where C++ deduces the type is the string object, not
        the character array. *)
     on_decl "deduced_literals" Deduced_literals.transform_decl;
@@ -160,6 +179,8 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
     (* A returned value is moved by the language; writing the move there
        only suppresses copy elision. *)
     on_decl "return_moves" Return_moves.drop_return_moves;
+    (* So is a move of a local copied as its bits: it is a copy. *)
+    on_decl "plain_moves" Plain_moves.transform_decl;
     (* Which callable parameters keep a constraint is decided here, with the
        body that decides it in hand; the printer writes what it is given. *)
     constraints ]
@@ -211,7 +232,7 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     initialiser holding a lambda that captures is invoked in place.  [u] is
     the unit the declaration is of. *)
 let instantiation_passes u =
-  [foreign; dead_stores; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
+  [scrutinee_bindings; foreign; local_derefs; dead_stores; copies; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
 
 let pass_names =
   Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_plan.Context.detached)

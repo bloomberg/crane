@@ -29,7 +29,7 @@ uint64_t LoopifyGapIfCondition::parity(uint64_t n) {
     } else {
       auto _f = std::move(std::get<_after_parity_in_S>(_popped));
       _stack.pop_back();
-      if (std::move(_result) == UINT64_C(0)) {
+      if (_result == UINT64_C(0)) {
         _result = UINT64_C(1);
       } else {
         _result = UINT64_C(0);

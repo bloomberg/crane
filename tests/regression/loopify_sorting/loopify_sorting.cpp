@@ -84,15 +84,14 @@ LoopifySorting::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t f = _loop_fuel - 1;
+      uint64_t f = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
         auto _value = *_loop_l2;
         (_write ? *(*_write =
@@ -120,7 +119,7 @@ LoopifySorting::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_l2 = &*_loop_l2;
             _loop_l1 = crane_raw(a1);
-            _loop_fuel = f;
+            fuel = f;
             continue;
           } else {
             auto _cell = typename List<uint64_t>::Cons(a00, nullptr);
@@ -131,7 +130,7 @@ LoopifySorting::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
             _loop_l2 = crane_raw(a10);
             _loop_l1 = &*_loop_l1;
-            _loop_fuel = f;
+            fuel = f;
             continue;
           }
         }
@@ -320,8 +319,7 @@ List<uint64_t> LoopifySorting::quicksort_fuel(uint64_t fuel,
       auto _f = std::move(std::get<_after_quicksort_fuel_in_pair_2>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result =
-          _f._tmp2.app(List<uint64_t>::cons(std::move(a0), std::move(_result)));
+      _result = _f._tmp2.app(List<uint64_t>::cons(a0, std::move(_result)));
     }
   }
   return _result;
@@ -335,16 +333,15 @@ bool LoopifySorting::is_sorted_aux(uint64_t prev, const List<uint64_t> &l) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_prev = prev;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       return true;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_prev <= a0) {
+      if (prev <= a0) {
         _loop_l = crane_raw(a1);
-        _loop_prev = a0;
+        prev = a0;
       } else {
         return false;
       }
@@ -414,8 +411,6 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  bool _loop_seen = seen;
-  uint64_t _loop_prev = prev;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();
@@ -425,11 +420,11 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_seen) {
-        if (_loop_prev == a0) {
+      if (seen) {
+        if (prev == a0) {
           _loop_l = crane_raw(a1);
-          _loop_seen = true;
-          _loop_prev = a0;
+          seen = true;
+          prev = a0;
           continue;
         } else {
           auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -439,8 +434,8 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
-          _loop_seen = true;
-          _loop_prev = a0;
+          seen = true;
+          prev = a0;
           continue;
         }
       } else {
@@ -451,8 +446,8 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_seen = true;
-        _loop_prev = a0;
+        seen = true;
+        prev = a0;
         continue;
       }
     }

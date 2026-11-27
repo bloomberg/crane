@@ -32,15 +32,7 @@ struct TranslateAppliesHandler {
     }
   }
 
-  template <typename T1 = void>
-  static uint64_t which_side(const Sum1<AE, AE, crane::obj> &e) {
-    if (std::holds_alternative<typename Sum1<AE, AE, crane::obj>::Inl1>(e.v())) {
-      return UINT64_C(1);
-    } else {
-      return UINT64_C(2);
-    }
-  }
-
+  static uint64_t which_side(const Sum1<AE, AE, crane::obj> &e);
   static uint64_t b_of(const std::shared_ptr<ITree<uint64_t>> &t);
   static uint64_t side_of(const std::shared_ptr<ITree<uint64_t>> &t);
   static inline const uint64_t relabelled_event = b_of(relabelled());

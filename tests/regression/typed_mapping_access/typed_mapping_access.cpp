@@ -65,17 +65,16 @@ uint64_t TypedMappingAccess::push_outer(access_support::buf &b) {
 uint64_t TypedMappingAccess::pong(access_support::handle &h, uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return access_support::get(h);
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (m <= 0) {
         return access_support::get(access_support::reseat(h, UINT64_C(9)));
       } else {
         uint64_t m0 = m - 1;
-        _loop_n = m0;
+        n = m0;
       }
     }
   }
@@ -84,17 +83,16 @@ uint64_t TypedMappingAccess::pong(access_support::handle &h, uint64_t n) {
 uint64_t TypedMappingAccess::ping(access_support::handle &h, uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return access_support::get(access_support::reseat(h, UINT64_C(9)));
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (m <= 0) {
         return access_support::get(h);
       } else {
         uint64_t m0 = m - 1;
-        _loop_n = m0;
+        n = m0;
       }
     }
   }
@@ -129,16 +127,15 @@ uint64_t TypedMappingAccess::reseat_loop(access_support::handle &h,
                                          uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   access_support::handle &_loop_h = h;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return access_support::get(_loop_h);
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       uint64_t _next_n = m;
-      _loop_h = access_support::reseat(_loop_h, _loop_n);
-      _loop_n = _next_n;
+      _loop_h = access_support::reseat(_loop_h, n);
+      n = _next_n;
     }
   }
 }
@@ -146,16 +143,15 @@ uint64_t TypedMappingAccess::reseat_loop(access_support::handle &h,
 uint64_t TypedMappingAccess::push_loop(access_support::buf &b, uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   access_support::buf &_loop_b = b;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return access_support::buf_len(_loop_b);
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       uint64_t _next_n = m;
-      _loop_b = access_support::buf_push(_loop_b, _loop_n);
-      _loop_n = _next_n;
+      _loop_b = access_support::buf_push(_loop_b, n);
+      n = _next_n;
     }
   }
 }
@@ -193,8 +189,8 @@ uint64_t TypedMappingAccess::reseat_sum(access_support::handle &h, uint64_t n) {
       _stack.pop_back();
       uint64_t n = _f.n;
       auto _once1 = access_support::get(access_support::reseat(h, n));
-      auto _once2 = std::move(_result);
-      _result = (std::move(_once1) + std::move(_once2));
+      auto _once2 = _result;
+      _result = (_once1 + std::move(_once2));
     }
   }
   return _result;
@@ -299,7 +295,7 @@ uint64_t TypedMappingAccess::reseat_down(access_support::handle &h,
     } else {
       auto _f = std::move(std::get<_after_reseat_down_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;

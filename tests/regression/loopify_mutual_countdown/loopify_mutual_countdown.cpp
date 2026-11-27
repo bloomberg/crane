@@ -9,17 +9,16 @@
 bool LoopifyMutualCountdown::even_countdown(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return true;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       if (n_ <= 0) {
         return false;
       } else {
         uint64_t n_0 = n_ - 1;
-        _loop_n = n_0;
+        n = n_0;
       }
     }
   }
@@ -28,17 +27,16 @@ bool LoopifyMutualCountdown::even_countdown(uint64_t n) {
 bool LoopifyMutualCountdown::odd_countdown(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return false;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       if (n_ <= 0) {
         return true;
       } else {
         uint64_t n_0 = n_ - 1;
-        _loop_n = n_0;
+        n = n_0;
       }
     }
   }

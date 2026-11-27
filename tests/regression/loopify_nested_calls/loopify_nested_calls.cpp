@@ -36,14 +36,13 @@ uint64_t sum_signum(uint64_t n) {
       auto _f = std::move(std::get<_after_sum_signum_in_S>(_popped));
       _stack.pop_back();
       uint64_t n_ = _f.n_;
-      uint64_t rest = std::move(_result);
       uint64_t here;
       if (n_ == UINT64_C(0)) {
         here = UINT64_C(0);
       } else {
         here = UINT64_C(1);
       }
-      _result = (rest + here);
+      _result = (_result + here);
     }
   }
   return _result;

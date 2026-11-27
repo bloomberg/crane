@@ -489,22 +489,11 @@ struct AccumClosureEscape {
                      mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return apply_all_sum(std::move(fns), UINT64_C(5));
   }();
-
   /// COMPOSE CLOSURES: Each step builds a composed function.
   /// This creates closures that capture OTHER closures.
   static uint64_t compose_from_list(const mylist<uint64_t> &l,
                                     const crane::fn<uint64_t(uint64_t)> &acc,
-                                    uint64_t x0_) {
-    if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
-      return acc(x0_);
-    } else {
-      const auto &[a0, a1] = std::get<typename mylist<uint64_t>::Mycons>(l.v());
-      const mylist<uint64_t> &a1_value = *a1;
-      return compose_from_list(
-          a1_value, [=, acc = acc](uint64_t x) { return acc((a0 + x)); }, x0_);
-    }
-  }
-
+                                    uint64_t x0_);
   /// test3: compose_from_list 10, 20, 30 id
   /// = fun x => id (10 + (20 + (30 + x)))
   /// = fun x => 60 + x

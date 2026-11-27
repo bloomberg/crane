@@ -5,7 +5,6 @@ void LoopifyUnitVoidRepro::loop(uint64_t x, uint64_t y,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<bool> *_loop_cells = &cells;
-  uint64_t _loop_x = x;
   while (true) {
     if (std::holds_alternative<typename List<bool>::Nil>(_loop_cells->v())) {
       return;
@@ -14,15 +13,15 @@ void LoopifyUnitVoidRepro::loop(uint64_t x, uint64_t y,
           std::get<typename List<bool>::Cons>(_loop_cells->v());
       [&]() -> void {
         if (a0) {
-          ((void)_loop_x, (void)y);
+          ((void)x, (void)y);
           return;
         } else {
-          ((void)_loop_x, (void)y);
+          ((void)x, (void)y);
           return;
         }
       }();
       _loop_cells = crane_raw(a1);
-      _loop_x = (_loop_x + cell_size);
+      x = (x + cell_size);
     }
   }
   return;

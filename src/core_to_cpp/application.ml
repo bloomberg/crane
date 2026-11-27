@@ -764,8 +764,13 @@ let eta_fun cx (slot : Slot.slot) env f args :
        its codomain mentions is written or deduced.  Only typing reads it. *)
     let deduced_fn_ty =
       match Lazy.force live_fn_ty with
-      | Some (Cpp_ir.Type.Function (doms, cod) as live)
+      | Some (Cpp_ir.Type.Function (doms, cod))
         when (not (is_inline_custom id)) && List.compare_lengths doms typed_args = 0 ->
+        (* A variable in a position no spelling writes -- the event family
+           of an erased tree -- is nothing to deduce: the callee declares no
+           parameter for it. *)
+        let cod = Base.Type_util.prune_unwritten_args cod in
+        let live : Cpp_ir.Lowered.Type.t = Function (doms, cod) in
         let written i = Core.Scheme.Var.assoc_tvar i written_tvar_args in
         let unknown i = written i = None in
         let deduced =

@@ -81,20 +81,14 @@ uint64_t HistoricalEventSafetyTraceCase::hoover_controller(
     const HistoricalEventSafetyTraceCase::State &s, uint64_t) {
   if (UINT64_C(2000) <= s.reservoir_level_cm) {
     return UINT64_C(100);
+  } else if (UINT64_C(1900) <= s.reservoir_level_cm) {
+    return UINT64_C(75);
+  } else if (UINT64_C(1800) <= s.reservoir_level_cm) {
+    return UINT64_C(50);
+  } else if (UINT64_C(1700) <= s.reservoir_level_cm) {
+    return UINT64_C(25);
   } else {
-    if (UINT64_C(1900) <= s.reservoir_level_cm) {
-      return UINT64_C(75);
-    } else {
-      if (UINT64_C(1800) <= s.reservoir_level_cm) {
-        return UINT64_C(50);
-      } else {
-        if (UINT64_C(1700) <= s.reservoir_level_cm) {
-          return UINT64_C(25);
-        } else {
-          return UINT64_C(0);
-        }
-      }
-    }
+    return UINT64_C(0);
   }
 }
 

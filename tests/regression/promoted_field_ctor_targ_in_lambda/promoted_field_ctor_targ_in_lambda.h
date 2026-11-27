@@ -303,17 +303,16 @@ struct PromotedFieldCtorTargInLambda {
                                          "field at this instantiation");
                 }
               }()};
+            } else if (
+                std::holds_alternative<typename memS<CraneU0, CraneU1>::Mub>(
+                    _other.v())) {
+              const auto &[a0] =
+                  std::get<typename memS<CraneU0, CraneU1>::Mub>(_other.v());
+              return Mub{a0};
             } else {
-              if (std::holds_alternative<typename memS<CraneU0, CraneU1>::Mub>(
-                      _other.v())) {
-                const auto &[a0] =
-                    std::get<typename memS<CraneU0, CraneU1>::Mub>(_other.v());
-                return Mub{a0};
-              } else {
-                const auto &[a0] =
-                    std::get<typename memS<CraneU0, CraneU1>::Mget>(_other.v());
-                return Mget{crane_convert<crane::fn<memS<S, X>(S)>>(a0)};
-              }
+              const auto &[a0] =
+                  std::get<typename memS<CraneU0, CraneU1>::Mget>(_other.v());
+              return Mget{crane_convert<crane::fn<memS<S, X>(S)>>(a0)};
             }
           }()) {}
 

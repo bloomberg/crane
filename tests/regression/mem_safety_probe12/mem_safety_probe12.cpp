@@ -17,3 +17,12 @@ MemSafetyProbe12::wrap MemSafetyProbe12::pack_fn_direct(uint64_t base) {
   return wrap::wrap0(
       crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return (x + base); }));
 }
+
+/// TEST 5: Pack a composed closure (let-bound, safe path).
+MemSafetyProbe12::wrap
+MemSafetyProbe12::pack_composed(crane::fn<uint64_t(uint64_t)> f,
+                                uint64_t base) {
+  crane::fn<uint64_t(uint64_t)> g =
+      [=, f = std::move(f)](uint64_t x) { return (f(x) + base); };
+  return wrap::wrap0(std::move(g));
+}

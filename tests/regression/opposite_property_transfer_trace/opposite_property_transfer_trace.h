@@ -74,9 +74,7 @@ struct OppositePropertyTransferTraceCase {
   static T2 theorem_doubling_principle_correct(
       F0 &&h_dual, F1 &&h_theorem, const PreStableCategory &pS,
       const LeftStableWitness &h_left_op, const Triangle1Witness &h_tri1_op) {
-    std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>> e =
-        h_dual(opposite_prestable_category(pS));
-    auto [q, _x] = std::move(e);
+    auto [q, _] = h_dual(opposite_prestable_category(pS));
     return q(h_theorem(opposite_prestable_category(pS), h_left_op, h_tri1_op));
   }
 
@@ -87,10 +85,8 @@ struct OppositePropertyTransferTraceCase {
     return theorem_doubling_principle_correct<T1, T2>(
         h_dual, h_theorem, pS, right_stable_gives_opposite_left(pS, h_right),
         [&]() {
-          std::pair<crane::fn<satisfies_triangle_2(satisfies_triangle_1)>,
-                    crane::fn<satisfies_triangle_1(satisfies_triangle_2)>> e =
+          auto [_, s] =
               triangle_identity_duality(opposite_prestable_category(pS));
-          auto [_x, s] = std::move(e);
           satisfies_triangle_2 h_tri2_ = h_tri2;
           return s(std::move(h_tri2_));
         }());

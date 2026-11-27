@@ -172,13 +172,9 @@ struct WfFixSigmaDomain {
             return f0(a1, b1, _self_f1(_self_f1, b1, a1, sw(b1, a1), *hind0));
           }
         };
-    {
-      uint64_t _lc1_x = a;
-      uint64_t _lc1_x0 = b;
-      uint64_t _lc1_x1 = sw(a, b);
-      const sw_graph &_lc1_s = sw_graph_correct(a, b);
-      return f1_impl(f1_impl, _lc1_x, _lc1_x0, _lc1_x1, _lc1_s);
-    }
+    uint64_t _lc1_x1 = sw(a, b);
+    const sw_graph &_lc1_s = sw_graph_correct(a, b);
+    return f1_impl(f1_impl, a, b, _lc1_x1, _lc1_s);
   }
 
   template <typename F0, typename F1>

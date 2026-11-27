@@ -35,7 +35,7 @@ MemSafetyProbe18::sum_list(const MemSafetyProbe18::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -72,9 +72,8 @@ MemSafetyProbe18::build_tree_list(const MemSafetyProbe18::tree &t, uint64_t n) {
   std::optional<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> _root{};
   std::shared_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> *_write =
       nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = mylist<MemSafetyProbe18::tree>::mynil();
       (_write ? *(*_write = std::make_shared<
                       MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
@@ -82,10 +81,10 @@ MemSafetyProbe18::build_tree_list(const MemSafetyProbe18::tree &t, uint64_t n) {
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       auto _cell =
           typename MemSafetyProbe18::mylist<MemSafetyProbe18::tree>::Mycons(
-              tree::node(t, _loop_n, tree::leaf()), nullptr);
+              tree::node(t, n, tree::leaf()), nullptr);
       MemSafetyProbe18::mylist<MemSafetyProbe18::tree> &_node =
           (_write ? *(*_write = std::make_shared<
                           MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
@@ -96,7 +95,7 @@ MemSafetyProbe18::build_tree_list(const MemSafetyProbe18::tree &t, uint64_t n) {
               typename MemSafetyProbe18::mylist<MemSafetyProbe18::tree>::Mycons>(
               _node.v_mut())
               .a1;
-      _loop_n = n_;
+      n = n_;
       continue;
     }
   }
@@ -140,7 +139,7 @@ uint64_t MemSafetyProbe18::sum_tree_list(
       auto _f = std::move(std::get<_after_sum_tree_list_in_Mycons>(_popped));
       _stack.pop_back();
       MemSafetyProbe18::tree a0 = std::move(_f.a0);
-      _result = (a0.tree_sum() + std::move(_result));
+      _result = (a0.tree_sum() + _result);
     }
   }
   return _result;

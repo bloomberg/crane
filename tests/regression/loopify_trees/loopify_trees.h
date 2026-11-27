@@ -342,12 +342,12 @@ struct LoopifyTrees {
           _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
           const tree<A> &a00 = *_f.a00;
-          _stack.emplace_back(_after_mirror_equal_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_after_mirror_equal_in_Node_2{_result});
           _stack.emplace_back(_call{_f.a2, &a00});
         } else {
           auto _f = std::move(std::get<_after_mirror_equal_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = ((_f._tmp2 && std::move(_result)) && true);
+          _result = ((_f._tmp2 && _result) && true);
         }
       }
       return _result;
@@ -453,12 +453,12 @@ struct LoopifyTrees {
           auto _f = std::move(std::get<_after_count_leaves_in_Node>(_popped));
           _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
-          _stack.emplace_back(_after_count_leaves_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_after_count_leaves_in_Node_2{_result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_count_leaves_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         }
       }
       return _result;
@@ -556,7 +556,7 @@ struct LoopifyTrees {
           _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
           const tree<T1> &a20 = *_f.a20;
-          if (std::move(_result)) {
+          if (_result) {
             _stack.emplace_back(_call{_f.a2, &a20});
           } else {
             _result = false;
@@ -664,12 +664,12 @@ struct LoopifyTrees {
           auto _f = std::move(std::get<_after_tree_size_in_Node>(_popped));
           _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
-          _stack.emplace_back(_after_tree_size_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_after_tree_size_in_Node_2{_result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_size_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = ((_f._tmp2 + std::move(_result)) + 1);
+          _result = ((_f._tmp2 + _result) + 1);
         }
       }
       return _result;
@@ -715,15 +715,14 @@ struct LoopifyTrees {
           auto _f = std::move(std::get<_after_tree_height_in_Node>(_popped));
           _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
-          uint64_t lh = std::move(_result);
+          uint64_t lh = _result;
           _stack.emplace_back(_after_tree_height_in_Node_2{lh});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_height_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t lh = _f.lh;
-          uint64_t rh = std::move(_result);
-          _result = ((lh <= rh ? rh : lh) + 1);
+          _result = ((lh <= _result ? _result : lh) + 1);
         }
       }
       return _result;
@@ -942,7 +941,7 @@ struct LoopifyTrees {
           _stack.pop_back();
           const ternary &a1 = *_f.a1;
           const ternary &a2 = *_f.a2;
-          uint64_t d1 = std::move(_result);
+          uint64_t d1 = _result;
           _stack.emplace_back(_after_ternary_depth_in_TNode_2{&a2, d1});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_ternary_depth_in_TNode_2>(
@@ -952,7 +951,7 @@ struct LoopifyTrees {
           _stack.pop_back();
           const ternary &a2 = *_f.a2;
           uint64_t d1 = _f.d1;
-          uint64_t d2 = std::move(_result);
+          uint64_t d2 = _result;
           _stack.emplace_back(_after_ternary_depth_in_TNode_3{d1, d2});
           _stack.emplace_back(_call{_f.a2});
         } else {
@@ -961,16 +960,13 @@ struct LoopifyTrees {
           _stack.pop_back();
           uint64_t d1 = _f.d1;
           uint64_t d2 = _f.d2;
-          uint64_t d3 = std::move(_result);
           _result = ([&]() -> uint64_t {
-            if ((d1 <= d2 ? d2 : d1) <= d3) {
-              return d3;
+            if ((d1 <= d2 ? d2 : d1) <= _result) {
+              return _result;
+            } else if (d1 <= d2) {
+              return d2;
             } else {
-              if (d1 <= d2) {
-                return d2;
-              } else {
-                return d1;
-              }
+              return d1;
             }
           }() + 1);
         }
@@ -1033,8 +1029,7 @@ struct LoopifyTrees {
           const ternary &a1 = *_f.a1;
           const ternary &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
-          _stack.emplace_back(
-              _after_ternary_sum_in_TNode_2{&a2, a3, std::move(_result)});
+          _stack.emplace_back(_after_ternary_sum_in_TNode_2{&a2, a3, _result});
           _stack.emplace_back(_call{_f.a1});
         } else if (
                 std::holds_alternative<_after_ternary_sum_in_TNode_2>(_popped)) {
@@ -1043,13 +1038,13 @@ struct LoopifyTrees {
           const ternary &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
           _stack.emplace_back(
-              _after_ternary_sum_in_TNode_3{a3, _f._tmp3, std::move(_result)});
+              _after_ternary_sum_in_TNode_3{a3, _f._tmp3, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_ternary_sum_in_TNode_3>(_popped));
           _stack.pop_back();
           uint64_t a3 = _f.a3;
-          _result = (a3 + (_f._tmp3 + (_f._tmp2 + std::move(_result))));
+          _result = (a3 + (_f._tmp3 + (_f._tmp2 + _result)));
         }
       }
       return _result;
@@ -1415,12 +1410,12 @@ struct LoopifyTrees {
         auto _f = std::move(std::get<_after_or_search_in_false>(_popped));
         _stack.pop_back();
         const tree<uint64_t> &a2 = *_f.a2;
-        _stack.emplace_back(_after_or_search_in_false_2{std::move(_result)});
+        _stack.emplace_back(_after_or_search_in_false_2{_result});
         _stack.emplace_back(_call{&a2});
       } else {
         auto _f = std::move(std::get<_after_or_search_in_false_2>(_popped));
         _stack.pop_back();
-        _result = (_f._tmp2 || std::move(_result));
+        _result = (_f._tmp2 || _result);
       }
     }
     return _result;
@@ -1577,8 +1572,7 @@ struct LoopifyTrees {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(
-              _after_quad_depth_in_Quad_2{&a2, &a3, std::move(_result)});
+          _stack.emplace_back(_after_quad_depth_in_Quad_2{&a2, &a3, _result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_quad_depth_in_Quad_2>(_popped)) {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad_2>(_popped));
@@ -1586,20 +1580,19 @@ struct LoopifyTrees {
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(
-              _after_quad_depth_in_Quad_3{&a3, _f._tmp4, std::move(_result)});
+              _after_quad_depth_in_Quad_3{&a3, _f._tmp4, _result});
           _stack.emplace_back(_call{_f.a2});
         } else if (std::holds_alternative<_after_quad_depth_in_Quad_3>(_popped)) {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad_3>(_popped));
           _stack.pop_back();
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(_after_quad_depth_in_Quad_4{_f._tmp4, _f._tmp3,
-                                                          std::move(_result)});
+          _stack.emplace_back(
+              _after_quad_depth_in_Quad_4{_f._tmp4, _f._tmp3, _result});
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad_4>(_popped));
           _stack.pop_back();
-          _result =
-              (max4_impl(_f._tmp4, _f._tmp3, _f._tmp2, std::move(_result)) + 1);
+          _result = (max4_impl(_f._tmp4, _f._tmp3, _f._tmp2, _result) + 1);
         }
       }
       return _result;
@@ -1668,29 +1661,27 @@ struct LoopifyTrees {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(
-              _after_quad_sum_in_Quad_2{&a2, &a3, std::move(_result)});
+          _stack.emplace_back(_after_quad_sum_in_Quad_2{&a2, &a3, _result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_quad_sum_in_Quad_2>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_2>(_popped));
           _stack.pop_back();
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(
-              _after_quad_sum_in_Quad_3{&a3, _f._tmp4, std::move(_result)});
+          _stack.emplace_back(_after_quad_sum_in_Quad_3{&a3, _f._tmp4,
+                                                        _result});
           _stack.emplace_back(_call{_f.a2});
         } else if (std::holds_alternative<_after_quad_sum_in_Quad_3>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_3>(_popped));
           _stack.pop_back();
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(
-              _after_quad_sum_in_Quad_4{_f._tmp4, _f._tmp3,
-                                        std::move(_result)});
+              _after_quad_sum_in_Quad_4{_f._tmp4, _f._tmp3, _result});
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_4>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 + (_f._tmp3 + (_f._tmp2 + std::move(_result))));
+          _result = (_f._tmp4 + (_f._tmp3 + (_f._tmp2 + _result)));
         }
       }
       return _result;
@@ -1963,15 +1954,14 @@ struct LoopifyTrees {
           _stack.pop_back();
           uint64_t n = _f.n;
           const simple_tree &a1 = *_f.a1;
-          _stack.emplace_back(
-              _after_count_paths_simple_in_false_2{std::move(_result)});
+          _stack.emplace_back(_after_count_paths_simple_in_false_2{_result});
           _stack.emplace_back(
               _call{_f.a1, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
         } else {
           auto _f = std::move(
               std::get<_after_count_paths_simple_in_false_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         }
       }
       return _result;
@@ -2022,14 +2012,13 @@ struct LoopifyTrees {
               std::move(std::get<_after_simple_tree_sum_in_SNode>(_popped));
           _stack.pop_back();
           const simple_tree &a1 = *_f.a1;
-          _stack.emplace_back(
-              _after_simple_tree_sum_in_SNode_2{std::move(_result)});
+          _stack.emplace_back(_after_simple_tree_sum_in_SNode_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f =
               std::move(std::get<_after_simple_tree_sum_in_SNode_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         }
       }
       return _result;

@@ -90,12 +90,12 @@ uint64_t ImmortalGlobalConstant::size(const ImmortalGlobalConstant::tree &t) {
       auto _f = std::move(crane::get<_after_size_in_Node>(_popped));
       _stack.pop_back();
       const ImmortalGlobalConstant::tree &a2 = *_f.a2;
-      _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_after_size_in_Node_2{_result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(crane::get<_after_size_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = ((_f._tmp2 + std::move(_result)) + 1);
+      _result = ((_f._tmp2 + _result) + 1);
     }
   }
   return _result;
@@ -105,15 +105,14 @@ List<uint64_t> ImmortalGlobalConstant::upto(uint64_t n, List<uint64_t> acc) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<uint64_t> _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t k = _loop_n - 1;
+      uint64_t k = n - 1;
       uint64_t _next_n = k;
-      _loop_acc = List<uint64_t>::cons(_loop_n, std::move(_loop_acc));
-      _loop_n = _next_n;
+      _loop_acc = List<uint64_t>::cons(n, std::move(_loop_acc));
+      n = _next_n;
     }
   }
 }

@@ -32,7 +32,7 @@ uint64_t LoopifyNumericMisc::sum_abs(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_abs_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -80,12 +80,12 @@ uint64_t LoopifyNumericMisc::alternating_ops(uint64_t n) {
       auto _f = std::move(std::get<_after_alternating_ops_in_false>(_popped));
       _stack.pop_back();
       uint64_t n_ = _f.n_;
-      _result = (((n_ + 1) * UINT64_C(2)) + std::move(_result));
+      _result = (((n_ + 1) * UINT64_C(2)) + _result);
     } else {
       auto _f = std::move(std::get<_after_alternating_ops_in_true>(_popped));
       _stack.pop_back();
       uint64_t n_ = _f.n_;
-      _result = ((n_ + 1) + std::move(_result));
+      _result = ((n_ + 1) + _result);
     }
   }
   return _result;
@@ -124,7 +124,7 @@ uint64_t LoopifyNumericMisc::count_even(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_count_even_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     }
   }
   return _result;
@@ -163,7 +163,7 @@ uint64_t LoopifyNumericMisc::count_odd(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_count_odd_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     }
   }
   return _result;
@@ -201,7 +201,7 @@ uint64_t LoopifyNumericMisc::product(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_product_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 * std::move(_result));
+      _result = (a0 * _result);
     }
   }
   return _result;
@@ -239,7 +239,7 @@ uint64_t LoopifyNumericMisc::sum_of_squares(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_of_squares_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = ((a0 * a0) + std::move(_result));
+      _result = ((a0 * a0) + _result);
     }
   }
   return _result;
@@ -290,7 +290,7 @@ uint64_t LoopifyNumericMisc::list_max(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_list_max_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = max_two(a0, std::move(_result));
+      _result = max_two(a0, _result);
     }
   }
   return _result;
@@ -333,11 +333,11 @@ uint64_t LoopifyNumericMisc::list_min(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_list_min_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      uint64_t min_rest = std::move(_result);
+      uint64_t min_rest = _result;
       if (a0 < min_rest) {
-        _result = std::move(a0);
+        _result = a0;
       } else {
-        _result = std::move(min_rest);
+        _result = min_rest;
       }
     }
   }

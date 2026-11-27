@@ -97,19 +97,18 @@ public:
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     const List<A> *_loop_self = this;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         return *_loop_self;
       } else {
-        uint64_t n0 = _loop_n - 1;
+        uint64_t n0 = n - 1;
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           return List<A>::nil();
         } else {
           const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _loop_self = crane_raw(a1);
-          _loop_n = n0;
+          n = n0;
         }
       }
     }
@@ -121,15 +120,14 @@ public:
     std::optional<List<A>> _root{};
     std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = List<A>::nil();
         (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t n0 = _loop_n - 1;
+        uint64_t n0 = n - 1;
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           auto _value = List<A>::nil();
@@ -144,7 +142,7 @@ public:
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
           _loop_self = crane_raw(a1);
-          _loop_n = n0;
+          n = n0;
           continue;
         }
       }

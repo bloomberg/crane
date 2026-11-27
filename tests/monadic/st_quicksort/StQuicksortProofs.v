@@ -36,7 +36,6 @@ From ITree Require Import
 From Crane Require Import
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.MonadFacts
   Monads.STMonad
   Monads.STMonadArrayFacts
@@ -127,23 +126,18 @@ Qed.
 
 Section QuicksortProofs.
 
-  Let T := nat.
-  Let ltu := Nat.le.
-  Existing Instance nat_ix_correct.
-  Existing Instance nat_ix_stref.
-  Context {S : Type}.
-  Let V : T -> Type := fun _ => nat.
-  Let E0 := (STEvent T S V) +' exceptE Err.
+  Notation V := (fun _ : nat => nat).
+  Notation E0 := (STEvent model_refs V +' exceptE Err).
 
   Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.HMapOk_halist.
 
   Lemma quicksort_ST_list2154 :
-    burn 100 (runST (S := S) (fun S0 => quicksort_ST_list (S := S0) [2; 1; 5; 4]))
+    burn 100 (runST (fun R => quicksort_ST_list (R := R) [2; 1; 5; 4]))
     = Ret [1; 2; 4; 5].
   Proof using Type. lazy. reflexivity. Qed.
 
   Lemma sort_list__long :
-    burn 300 (runST (S := S) (fun S0 => quicksort_ST_list (S := S0) [8; 4; 6; 9; 7; 3; 1; 2; 5]))
+    burn 300 (runST (fun R => quicksort_ST_list (R := R) [8; 4; 6; 9; 7; 3; 1; 2; 5]))
     = Ret [1; 2; 3; 4; 5; 6; 7; 8; 9].
   Proof using Type. lazy. reflexivity. Qed.
 
@@ -151,9 +145,9 @@ Section QuicksortProofs.
   (** The scan loop matches [lomuto] on the list model, over the
       [n = hi - i] positions it has left. *)
   Lemma lomuto_scan_spec :
-    forall n base hi_arr pv lo hi i s Hs Hi (acc : Acc lt (hi - i)) full (m : @mem nat V),
-      hi - i = n -> arr_rep m base full -> hi_arr < length full -> hi <= hi_arr ->
-      st_spec (lomuto_scan (E' := E0) (MkSTArray nat S nat base 0 hi_arr) pv lo hi i s Hs Hi acc) m
+    forall n base hi_arr pv lo hi i s Hs Hi (acc : Acc lt (hi - i)) full (m : mem V),
+      hi - i = n -> arr_rep m base full -> length full = Datatypes.S hi_arr -> hi <= hi_arr ->
+      st_spec (lomuto_scan (R := model_refs) (E' := E0) (MkArrLoc base (Datatypes.S hi_arr)) pv lo hi i s Hs Hi acc) m
         (fun m' p => proj1_sig p = snd (lomuto full pv (seq i n) s)
                      /\ arr_rep m' base (fst (lomuto full pv (seq i n) s))).
   Proof.
@@ -177,11 +171,11 @@ Section QuicksortProofs.
       leaves everything outside untouched, and returns a pivot position [p] with
       the standard partition invariant. *)
   Lemma partition_spec :
-    forall (base hi_arr lo hi pividx : nat) Hlo (full : list nat) (m : @mem nat V),
+    forall (base hi_arr lo hi pividx : nat) Hlo (full : list nat) (m : mem V),
       arr_rep m base full ->
-      lo < hi -> hi <= hi_arr -> hi_arr < length full ->
+      lo < hi -> hi <= hi_arr -> length full = Datatypes.S hi_arr ->
       lo <= pividx -> pividx <= hi ->
-      st_spec (partition (E' := E0) (MkSTArray nat S nat base 0 hi_arr) lo hi pividx Hlo) m
+      st_spec (partition (R := model_refs) (E' := E0) (MkArrLoc base (Datatypes.S hi_arr)) lo hi pividx Hlo) m
         (fun m' p0 => exists full',
            arr_rep m' base full'
            /\ length full' = length full
@@ -321,7 +315,7 @@ Section QuicksortProofs.
       accessibility proof. *)
   Lemma quicksort_ST_segment : forall base hi_arr d lo hi full m (acc : Acc lt (hi - lo)),
     arr_rep m base full -> length full = Datatypes.S hi_arr -> hi <= hi_arr -> hi - lo <= d ->
-    st_spec (quicksort_ST (E' := E0) (MkSTArray nat S nat base 0 hi_arr) lo hi acc) m
+    st_spec (quicksort_ST (R := model_refs) (E' := E0) (MkArrLoc base (Datatypes.S hi_arr)) lo hi acc) m
       (fun m' _ => exists full',
          arr_rep m' base full'
          /\ length full' = length full
@@ -457,18 +451,19 @@ Proof.
     f_equal. apply IH; auto. eapply Permutation_cons_inv. exact Hp.
 Qed.
 
-Lemma qsort_fun_eq_qsort_ST : forall {S : Type} (l : list nat),
-    Ret (quicksort_fun l) ≈ runST (S := S) (fun S0 => quicksort_ST_list l).
+Lemma qsort_fun_eq_qsort_ST : forall (l : list nat),
+    Ret (quicksort_fun l) ≈ runST (fun R => quicksort_ST_list (R := R) l).
 Proof.
-  intros S l.
-  destruct (st_spec_runST (S := S) (fun S0 => quicksort_ST_list (S := S0) l)
+  intros l.
+  destruct (st_spec_runST (fun R => quicksort_ST_list (R := R) l)
               (fun out => out = quicksort_fun l)) as (out & Hrun & ->).
   2: { symmetry. exact Hrun. }
   destruct l as [| x l']; unfold quicksort_ST_list; cbv beta iota zeta.
   - apply st_spec_ret. reflexivity.
-  - apply st_spec_bind, st_spec_newListArray_rep. intros m0 Hrep0.
+  - apply st_spec_bind, st_spec_newListArray_rep. intros base m0 Hrep0.
     apply st_spec_bind. eapply st_spec_weaken;
-      [| apply (quicksort_ST_segment 1 _ (length (x :: l') - 1)); [ exact Hrep0 | cbn; lia | lia | lia ] ].
+      [| apply (quicksort_ST_segment base (length l') (length (x :: l') - 1));
+         [ exact Hrep0 | reflexivity | cbn; lia | lia ] ].
     intros m1 _ (full1 & Hrep1 & Hlenf1 & Hperm1 & Hunch1 & Hsort1 & _).
     eapply st_spec_getElems_rep; [ exact Hrep1 | cbn in *; lia |].
     (* a sorted permutation is unique *)

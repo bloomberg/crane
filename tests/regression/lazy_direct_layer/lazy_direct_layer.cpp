@@ -15,6 +15,12 @@ LazyDirectLayer::tree LazyDirectLayer::Tau(const LazyDirectLayer::tree &t) {
   return tree::go(treeF<LazyDirectLayer::tree>::tauf(t));
 }
 
+LazyDirectLayer::tree
+LazyDirectLayer::Vis(uint64_t e,
+                     const crane::fn<LazyDirectLayer::tree(uint64_t)> &k) {
+  return tree::go(treeF<LazyDirectLayer::tree>::visf(e, k));
+}
+
 LazyDirectLayer::tree LazyDirectLayer::taus(uint64_t n, uint64_t r) {
   if (n <= 0) {
     return tree::lazy_(

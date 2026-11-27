@@ -114,7 +114,6 @@ MutualStFramePlanBinder::h4b(const List<MutualStFramePlanBinder::tree> &n76) {
                    -> uint64_t {
                 // Loop replaces the tail recursion: each recursive call updates
                 // the loop variables.
-                uint64_t _loop_acc91 = acc91;
                 const List<Sum<uint64_t, uint64_t>> *_loop_l90 = &l90;
                 while (true) {
                   if (std::holds_alternative<
@@ -141,12 +140,12 @@ MutualStFramePlanBinder::h4b(const List<MutualStFramePlanBinder::tree> &n76) {
                         true,
                         List<bool>::cons(
                             true, List<bool>::cons(false, List<bool>::nil()))),
-                                _loop_acc91);
+                                acc91);
                   } else {
                     const auto &[_, a3] =
                         std::get<typename List<Sum<uint64_t, uint64_t>>::Cons>(
                             _loop_l90->v());
-                    _loop_acc91 = UINT64_C(232);
+                    acc91 = UINT64_C(232);
                     _loop_l90 = crane_raw(a3);
                   }
                 }

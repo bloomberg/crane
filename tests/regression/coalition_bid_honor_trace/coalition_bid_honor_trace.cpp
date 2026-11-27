@@ -368,16 +368,12 @@ uint64_t CoalitionBidHonorTraceCase::unit_skill(
 uint64_t CoalitionBidHonorTraceCase::skill_bv_multiplier_num(uint64_t skill) {
   if (skill <= UINT64_C(4)) {
     return UINT64_C(6);
+  } else if (skill <= UINT64_C(6)) {
+    return UINT64_C(5);
+  } else if (skill <= UINT64_C(8)) {
+    return UINT64_C(4);
   } else {
-    if (skill <= UINT64_C(6)) {
-      return UINT64_C(5);
-    } else {
-      if (skill <= UINT64_C(8)) {
-        return UINT64_C(4);
-      } else {
-        return UINT64_C(3);
-      }
-    }
+    return UINT64_C(3);
   }
 }
 

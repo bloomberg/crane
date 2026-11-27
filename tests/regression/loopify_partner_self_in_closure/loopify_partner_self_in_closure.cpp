@@ -62,7 +62,7 @@ LoopifyPartnerSelfInClosure::sum_e(const LoopifyPartnerSelfInClosure::e &x) {
     } else {
       auto _f = std::move(std::get<_after_sum_e_in_MConst>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     }
   }
   return _result;
@@ -121,7 +121,7 @@ LoopifyPartnerSelfInClosure::sum_md(const LoopifyPartnerSelfInClosure::md &m) {
     } else {
       auto _f = std::move(std::get<_after_sum_md_in_Meta>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::move(_result));
+      _result = (UINT64_C(1) + _result);
     }
   }
   return _result;

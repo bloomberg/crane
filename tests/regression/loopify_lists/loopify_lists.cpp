@@ -9,27 +9,24 @@ LoopifyLists::list<uint64_t> LoopifyLists::range(uint64_t start,
   // cell fills.
   std::optional<LoopifyLists::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
-  uint64_t _loop_count0 = count0;
-  uint64_t _loop_start = start;
   while (true) {
-    if (_loop_count0 <= 0) {
+    if (count0 <= 0) {
       auto _value = list<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t c = _loop_count0 - 1;
-      auto _cell =
-          typename LoopifyLists::list<uint64_t>::Cons(_loop_start, nullptr);
+      uint64_t c = count0 - 1;
+      auto _cell = typename LoopifyLists::list<uint64_t>::Cons(start, nullptr);
       LoopifyLists::list<uint64_t> &_node =
           (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                           std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename LoopifyLists::list<uint64_t>::Cons>(_node.v_mut()).l;
-      _loop_count0 = c;
-      _loop_start = (_loop_start + 1);
+      count0 = c;
+      start = (start + 1);
       continue;
     }
   }
@@ -78,7 +75,7 @@ uint64_t LoopifyLists::step_sum(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_step_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t contribution = _f.contribution;
-      _result = (contribution + std::move(_result));
+      _result = (contribution + _result);
     }
   }
   return _result;
@@ -126,7 +123,7 @@ uint64_t LoopifyLists::sum_abs(const LoopifyLists::list<uint64_t> &l,
       auto _f = std::move(std::get<_after_sum_abs_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t abs_val = _f.abs_val;
-      _result = (abs_val + std::move(_result));
+      _result = (abs_val + _result);
     }
   }
   return _result;
@@ -198,7 +195,7 @@ uint64_t LoopifyLists::four_elem(const LoopifyLists::list<uint64_t> &l) {
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
       uint64_t a02 = _f.a02;
-      _result = ((a0 + a00) + ((a01 + a02) + std::move(_result)));
+      _result = ((a0 + a00) + ((a01 + a02) + _result));
     }
   }
   return _result;
@@ -277,12 +274,10 @@ uint64_t LoopifyLists::categorize(uint64_t k,
         uint64_t score;
         if (k < a0) {
           score = UINT64_C(3);
+        } else if (a0 == k) {
+          score = UINT64_C(2);
         } else {
-          if (a0 == k) {
-            score = UINT64_C(2);
-          } else {
-            score = UINT64_C(1);
-          }
+          score = UINT64_C(1);
         }
         _stack.emplace_back(_after_categorize_in_Cons{score});
         _stack.emplace_back(_call{crane_raw(a1)});
@@ -291,7 +286,7 @@ uint64_t LoopifyLists::categorize(uint64_t k,
       auto _f = std::move(std::get<_after_categorize_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t score = _f.score;
-      _result = (score + std::move(_result));
+      _result = (score + _result);
     }
   }
   return _result;
@@ -332,10 +327,10 @@ uint64_t LoopifyLists::max_prefix_sum(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_max_prefix_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      uint64_t rest = std::move(_result);
+      uint64_t rest = _result;
       uint64_t sum = (a0 + rest);
       if (UINT64_C(0) <= sum) {
-        _result = std::move(sum);
+        _result = sum;
       } else {
         _result = UINT64_C(0);
       }
@@ -432,7 +427,7 @@ uint64_t LoopifyLists::weighted_sum(uint64_t i,
       _stack.pop_back();
       uint64_t i = _f.i;
       uint64_t a0 = _f.a0;
-      _result = ((i * a0) + std::move(_result));
+      _result = ((i * a0) + _result);
     }
   }
   return _result;
@@ -446,11 +441,10 @@ LoopifyLists::prefix_sums(uint64_t acc, const LoopifyLists::list<uint64_t> &l) {
   std::optional<LoopifyLists::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      auto _value = list<uint64_t>::cons(_loop_acc, list<uint64_t>::nil());
+      auto _value = list<uint64_t>::cons(acc, list<uint64_t>::nil());
       (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
@@ -458,8 +452,7 @@ LoopifyLists::prefix_sums(uint64_t acc, const LoopifyLists::list<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
-      auto _cell =
-          typename LoopifyLists::list<uint64_t>::Cons(_loop_acc, nullptr);
+      auto _cell = typename LoopifyLists::list<uint64_t>::Cons(acc, nullptr);
       LoopifyLists::list<uint64_t> &_node =
           (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                           std::move(_cell)))
@@ -467,7 +460,7 @@ LoopifyLists::prefix_sums(uint64_t acc, const LoopifyLists::list<uint64_t> &l) {
       _write =
           &std::get<typename LoopifyLists::list<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      _loop_acc = (_loop_acc + a0);
+      acc = (acc + a0);
       continue;
     }
   }
@@ -535,16 +528,15 @@ LoopifyLists::take_n(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
   std::optional<LoopifyLists::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = list<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _loop_l->v())) {
         auto _value = list<uint64_t>::nil();
@@ -565,7 +557,7 @@ LoopifyLists::take_n(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
                 _node.v_mut())
                 .l;
         _loop_l = crane_raw(a1);
-        _loop_n = m;
+        n = m;
         continue;
       }
     }
@@ -605,7 +597,7 @@ uint64_t LoopifyLists::len_list(const LoopifyLists::list<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_len_list_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;
@@ -621,9 +613,8 @@ LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
   std::shared_ptr<LoopifyLists::list<LoopifyLists::list<uint64_t>>> *_write =
       nullptr;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = list<LoopifyLists::list<uint64_t>>::nil();
       (_write ? *(*_write = std::make_shared<
                       LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
@@ -631,7 +622,7 @@ LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t f = _loop_fuel - 1;
+      uint64_t f = fuel - 1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _loop_l->v())) {
         auto _value = list<LoopifyLists::list<uint64_t>>::nil();
@@ -674,7 +665,7 @@ LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
                 &std::get<typename LoopifyLists::list<
                     LoopifyLists::list<uint64_t>>::Cons>(_node.v_mut()).l;
             _loop_l = crane_raw(a1);
-            _loop_fuel = f;
+            fuel = f;
             continue;
           }
         }
@@ -819,7 +810,7 @@ uint64_t LoopifyLists::product(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_product_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 * std::move(_result));
+      _result = (a0 * _result);
     }
   }
   return _result;
@@ -860,7 +851,7 @@ uint64_t LoopifyLists::sum_list(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -877,16 +868,15 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
   std::optional<LoopifyLists::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = nullptr;
   LoopifyLists::list<LoopifyLists::list<uint64_t>> _loop_l = l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = list<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t f = _loop_fuel - 1;
+      uint64_t f = fuel - 1;
       if (std::holds_alternative<
               typename LoopifyLists::list<LoopifyLists::list<uint64_t>>::Nil>(
               _loop_l.v())) {
@@ -902,7 +892,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
         if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
                 a0.v())) {
           _loop_l = LoopifyLists::list<LoopifyLists::list<uint64_t>>(*a1);
-          _loop_fuel = f;
+          fuel = f;
           continue;
         } else {
           const auto &[a00, a10] =
@@ -920,7 +910,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
                   .l;
           _loop_l = list<LoopifyLists::list<uint64_t>>::cons(
               *a10, crane::shared_child(a1));
-          _loop_fuel = f;
+          fuel = f;
           continue;
         }
       }
@@ -966,7 +956,7 @@ uint64_t LoopifyLists::sum_list_lengths(
       auto _f = std::move(std::get<_after_sum_list_lengths_in_Cons>(_popped));
       _stack.pop_back();
       LoopifyLists::list<uint64_t> a0 = std::move(_f.a0);
-      _result = (len_list(std::move(a0)) + std::move(_result));
+      _result = (len_list(std::move(a0)) + _result);
     }
   }
   return _result;
@@ -1089,7 +1079,6 @@ LoopifyLists::index_of_aux(uint64_t x, const LoopifyLists::list<uint64_t> &l,
                            uint64_t i) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_i = i;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
@@ -1099,9 +1088,9 @@ LoopifyLists::index_of_aux(uint64_t x, const LoopifyLists::list<uint64_t> &l,
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        return _loop_i;
+        return i;
       } else {
-        _loop_i = (_loop_i + 1);
+        i = (i + 1);
         _loop_l = crane_raw(a1);
       }
     }
@@ -1593,7 +1582,6 @@ uint64_t LoopifyLists::nth(uint64_t n, const LoopifyLists::list<uint64_t> &l,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
@@ -1601,12 +1589,11 @@ uint64_t LoopifyLists::nth(uint64_t n, const LoopifyLists::list<uint64_t> &l,
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_n == UINT64_C(0)) {
+      if (n == UINT64_C(0)) {
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
       }
     }
   }
@@ -1642,7 +1629,6 @@ LoopifyLists::drop(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
@@ -1650,12 +1636,11 @@ LoopifyLists::drop(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
     } else {
       const auto &[_, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_n == UINT64_C(0)) {
+      if (n == UINT64_C(0)) {
         return *_loop_l;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
       }
     }
   }
@@ -1743,7 +1728,7 @@ uint64_t LoopifyLists::count(uint64_t x,
     } else {
       auto _f = std::move(std::get<_after_count_in_true>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;
@@ -1790,11 +1775,11 @@ uint64_t LoopifyLists::maximum(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_maximum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      uint64_t max_rest = std::move(_result);
+      uint64_t max_rest = _result;
       if (max_rest <= a0) {
-        _result = std::move(a0);
+        _result = a0;
       } else {
-        _result = std::move(max_rest);
+        _result = max_rest;
       }
     }
   }
@@ -1843,8 +1828,7 @@ LoopifyLists::minmax(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_minmax_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[lo, hi] = _tmp1;
+      auto [lo, hi] = std::move(_result);
       _result = std::make_pair((a0 <= lo ? a0 : lo), (hi <= a0 ? a0 : hi));
     }
   }
@@ -1858,14 +1842,12 @@ LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   LoopifyLists::list<uint64_t> _loop_l = l;
-  uint64_t _loop_n = n;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       return _loop_l;
     } else {
-      uint64_t f = _loop_fuel - 1;
-      if (_loop_n == UINT64_C(0)) {
+      uint64_t f = fuel - 1;
+      if (n == UINT64_C(0)) {
         return _loop_l;
       } else {
         if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
@@ -1876,10 +1858,8 @@ LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
               typename LoopifyLists::list<uint64_t>::Cons>(_loop_l.v());
           _loop_l =
               app_helper(*a1, list<uint64_t>::cons(a0, list<uint64_t>::nil()));
-          _loop_n =
-              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
-                                                  : (_loop_n - UINT64_C(1))));
-          _loop_fuel = f;
+          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          fuel = f;
         }
       }
     }
@@ -1989,17 +1969,14 @@ LoopifyLists::majority(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_majority_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[cand, cnt] = _tmp1;
+      auto [cand, cnt] = std::move(_result);
       if (a0 == cand) {
         _result = std::make_pair(cand, (cnt + 1));
+      } else if (cnt == UINT64_C(0)) {
+        _result = std::make_pair(a0, UINT64_C(1));
       } else {
-        if (cnt == UINT64_C(0)) {
-          _result = std::make_pair(a0, UINT64_C(1));
-        } else {
-          _result = std::make_pair(
-              cand, (((cnt - UINT64_C(1)) > cnt ? 0 : (cnt - UINT64_C(1)))));
-        }
+        _result = std::make_pair(
+            cand, (((cnt - UINT64_C(1)) > cnt ? 0 : (cnt - UINT64_C(1)))));
       }
     }
   }
@@ -2122,8 +2099,7 @@ LoopifyLists::sum_and_count(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_and_count_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
-      const auto &[s, c] = _tmp1;
+      auto [s, c] = std::move(_result);
       _result = std::make_pair((a0 + s), (c + 1));
     }
   }
@@ -2136,7 +2112,6 @@ LoopifyLists::elem_at(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
@@ -2144,12 +2119,11 @@ LoopifyLists::elem_at(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_n == UINT64_C(0)) {
+      if (n == UINT64_C(0)) {
         return std::make_optional<uint64_t>(a0);
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
       }
     }
   }

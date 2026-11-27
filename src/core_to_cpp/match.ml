@@ -1065,6 +1065,7 @@ let gen_cpp_custom_body cx (slot : Slot.slot) env (k : Destination.t) rty ids bo
         in
         ( { name = x;
             type_ = Types.cpp_ir_of_core_type cx env ~ns tvars ty;
+            used = true;
             binder = core_binder cx ~site env (n_pat_vars - j) }
           : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Custom_match.param ) )
       (List.rev ids)

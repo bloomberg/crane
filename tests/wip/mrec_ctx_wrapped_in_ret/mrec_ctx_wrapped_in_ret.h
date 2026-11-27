@@ -156,12 +156,12 @@ public:
 };
 
 struct Recursion {
-  template <typename T1, typename T2 = void, typename T3>
+  template <typename T1, typename T3>
   static std::shared_ptr<ITree<T3>>
   interp_mrec(const std::type_identity_t<
       crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
               const std::shared_ptr<ITree<T3>> &x0_);
-  template <typename T1, typename T2 = void, typename T3, typename F0>
+  template <typename T1, typename T3, typename F0>
   static std::shared_ptr<ITree<T3>> mrec(F0 &&ctx0, crane::rebind_t<T1, T3> d);
 };
 
@@ -191,7 +191,7 @@ template <typename ptr> struct CountE {
 };
 
 template <Params _tcI0> std::shared_ptr<ITree<Nat>> run_mrec() {
-  return Recursion::template mrec<CountE<typename _tcI0::ptr>, crane::obj, Nat>(
+  return Recursion::template mrec<CountE<typename _tcI0::ptr>, Nat>(
       []() {
         return [](CountE<typename _tcI0::ptr> _x0) -> std::shared_ptr<
             ITree<crane::obj>> {
@@ -210,7 +210,7 @@ struct natParams {
 
 static_assert(Params<natParams>);
 
-template <typename T1, typename T2, typename T3>
+template <typename T1, typename T3>
 std::shared_ptr<ITree<T3>>
 Recursion::interp_mrec(const std::type_identity_t<
     crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
@@ -253,10 +253,10 @@ Recursion::interp_mrec(const std::type_identity_t<
       x0_);
 }
 
-template <typename T1, typename T2, typename T3, typename F0>
+template <typename T1, typename T3, typename F0>
 std::shared_ptr<ITree<T3>> Recursion::mrec(F0 &&ctx0,
                                            crane::rebind_t<T1, T3> d) {
-  return Recursion::template interp_mrec<T1, T2, T3>(ctx0, ctx0(std::move(d)));
+  return Recursion::template interp_mrec<T1, T3>(ctx0, ctx0(std::move(d)));
 } /// Takes a bool first; it is still made a member template of
 
 /// CountE, its receiver the event after the bool.

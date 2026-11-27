@@ -141,7 +141,7 @@ public:
         auto _f = std::move(std::get<_after_forallb_in_Cons>(_popped));
         _stack.pop_back();
         auto a0 = std::move(_f.a0);
-        _result = (f(a0) && std::move(_result));
+        _result = (f(a0) && _result);
       }
     }
     return _result;
@@ -293,7 +293,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -830,13 +830,8 @@ template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
                                                         n1, *a2, std::move(b)));
         }
       };
-  {
-    uint64_t _lc1_x = n;
-    const T0<T1> &_lc1_v0 = v;
-    List<T1> _lc1_b = List<T1>::nil();
-    return fold_right_fix_impl(fold_right_fix_impl, _lc1_x, _lc1_v0,
-                               std::move(_lc1_b));
-  }
+  List<T1> _lc1_b = List<T1>::nil();
+  return fold_right_fix_impl(fold_right_fix_impl, n, v, std::move(_lc1_b));
 }
 
 inline uint64_t T::to_nat(uint64_t _x) const {
@@ -873,7 +868,7 @@ inline uint64_t T::to_nat(uint64_t _x) const {
     } else {
       auto _f = std::move(std::get<_after_to_nat_in_FS>(_popped));
       _stack.pop_back();
-      uint64_t _tmp1 = std::move(_result);
+      uint64_t _tmp1 = _result;
       const uint64_t &i = _tmp1;
       _result = (i + 1);
     }

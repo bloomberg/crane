@@ -87,22 +87,13 @@ struct AE {
   }
 };
 
-template <typename T1, typename T2 = void>
-std::shared_ptr<ITree<crane::obj>> E_trigger(T1 e) {
+template <typename T1> std::shared_ptr<ITree<crane::obj>> E_trigger(T1 e) {
   return itree_trigger(std::move(e));
 }
 
-template <typename T1 = void, typename T2>
-std::shared_ptr<ITree<crane::obj>> F_trigger(T2 e) {
+template <typename T2> std::shared_ptr<ITree<crane::obj>> F_trigger(T2 e) {
   return itree_trigger(std::move(e));
 }
 
-template <typename T1 = void, typename T2 = void>
 std::shared_ptr<ITree<crane::obj>>
-h(Sum1<crane::obj, Sum1<AE, crane::obj, crane::obj>, crane::obj> x) {
-  return itree_case(
-      E_trigger<crane::obj, crane::obj>,
-      itree_case(
-          [](const auto &_x) { return _x.template handle<crane::obj>(); },
-          F_trigger<crane::obj, crane::obj>))(std::move(x));
-}
+h(Sum1<crane::obj, Sum1<AE, crane::obj, crane::obj>, crane::obj> x);

@@ -15,16 +15,15 @@ LoopifyCoercedScrutinee::expr LoopifyCoercedScrutinee::nest(uint64_t n) {
   // cell fills.
   std::optional<LoopifyCoercedScrutinee::expr> _root{};
   std::shared_ptr<LoopifyCoercedScrutinee::expr> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = expr::lit(UINT64_C(7));
       (_write ? *(*_write = std::make_shared<LoopifyCoercedScrutinee::expr>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell = typename LoopifyCoercedScrutinee::expr::Ite(
           std::make_shared<LoopifyCoercedScrutinee::expr>(
               expr::iszero(expr::lit((m + 1)))),
@@ -37,7 +36,7 @@ LoopifyCoercedScrutinee::expr LoopifyCoercedScrutinee::nest(uint64_t n) {
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename LoopifyCoercedScrutinee::expr::Ite>(_node.v_mut()).a2;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }

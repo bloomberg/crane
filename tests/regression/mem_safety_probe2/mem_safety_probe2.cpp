@@ -72,7 +72,7 @@ uint64_t MemSafetyProbe2::mysum(const MemSafetyProbe2::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_mysum_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -86,7 +86,6 @@ MemSafetyProbe2::tree MemSafetyProbe2::fold_tree_build(
   // cell fills.
   std::optional<MemSafetyProbe2::tree> _root{};
   std::shared_ptr<MemSafetyProbe2::tree> *_write = nullptr;
-  uint64_t _loop_acc = acc;
   const MemSafetyProbe2::mylist<crane::fn<uint64_t(uint64_t)>> *_loop_fs = &fs;
   while (true) {
     if (std::holds_alternative<typename MemSafetyProbe2::mylist<
@@ -100,7 +99,7 @@ MemSafetyProbe2::tree MemSafetyProbe2::fold_tree_build(
       const auto &[a0, a1] = std::get<typename MemSafetyProbe2::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_loop_fs->v());
       auto _cell = typename MemSafetyProbe2::tree::Node(
-          nullptr, a0(_loop_acc),
+          nullptr, a0(acc),
           std::make_shared<MemSafetyProbe2::tree>(tree::leaf()));
       MemSafetyProbe2::tree &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe2::tree>(
@@ -108,7 +107,7 @@ MemSafetyProbe2::tree MemSafetyProbe2::fold_tree_build(
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe2::tree::Node>(_node.v_mut()).a0;
-      _loop_acc = a0(_loop_acc);
+      acc = a0(acc);
       _loop_fs = crane_raw(a1);
       continue;
     }
@@ -152,7 +151,7 @@ uint64_t MemSafetyProbe2::apply_all(
       auto _f = std::move(std::get<_after_apply_all_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(x) + std::move(_result));
+      _result = (a0(x) + _result);
     }
   }
   return _result;

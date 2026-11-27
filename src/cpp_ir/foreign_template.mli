@@ -115,3 +115,11 @@ val bound_by_value : string -> string
     binder holds a copy, not a part of the scrutinee, and is the branch's to
     move. *)
 val declared_by_value : string -> int -> int -> bool
+
+(** [Some (tests, final)] when the match template [s] is a chain of
+    conditionals on its scrutinee, binding nothing:
+    [if (T0) { %br{i0} } else if (T1) { %br{i1} } ... else { %br{k} }],
+    each test [T] the tokens of its literal text and [%scrut], paired with
+    the branch it runs; [final] the branch of the closing [else], if there
+    is one. *)
+val conditional_chain : string -> ((custom_case list * int) list * int option) option

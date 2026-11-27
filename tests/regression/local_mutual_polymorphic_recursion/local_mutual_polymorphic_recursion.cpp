@@ -44,9 +44,9 @@ uint64_t LocalMutualPolymorphicRecursion::run(uint64_t n) {
         }
       };
   auto f =
-      [&](const crane::fn<uint64_t(crane::obj)> &h, crane::obj y,
-          uint64_t n0)
-           -> uint64_t { return f_impl(f_impl, g_impl, h, y, n0); };
+      [&](const crane::fn<uint64_t(crane::obj)> &h,
+          crane::obj y)
+           -> uint64_t { return f_impl(f_impl, g_impl, h, y, n); };
   auto g =
       [&](const crane::fn<uint64_t(crane::obj)> &h, crane::obj x,
           uint64_t n0)
@@ -58,6 +58,5 @@ uint64_t LocalMutualPolymorphicRecursion::run(uint64_t n) {
           UINT64_C(1),
           List<crane::obj>::cons(
               UINT64_C(2),
-              List<crane::obj>::cons(UINT64_C(3), List<crane::obj>::nil()))),
-      n);
+              List<crane::obj>::cons(UINT64_C(3), List<crane::obj>::nil()))));
 }

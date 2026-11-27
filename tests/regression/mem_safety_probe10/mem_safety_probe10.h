@@ -175,14 +175,13 @@ struct MemSafetyProbe10 {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_tree_sum_in_Node_2{a1,
-                                                        std::move(_result)});
+          _stack.emplace_back(_after_tree_sum_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + a1) + _result);
         }
       }
       return _result;
@@ -395,30 +394,12 @@ struct MemSafetyProbe10 {
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     return t.tree_to_adder(UINT64_C(5));
   }();
-
   /// TEST 2: Build closures during list traversal,
   /// where each closure captures the HEAD of the list
   /// and the closure from the previous step.
   static uint64_t chain_adders(const mylist<uint64_t> &l,
                                const crane::fn<uint64_t(uint64_t)> &acc,
-                               uint64_t x0_) {
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
-    const mylist<uint64_t> *_loop_l = &l;
-    while (true) {
-      if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(_loop_l->v())) {
-        return _loop_acc(x0_);
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<uint64_t>::Mycons>(_loop_l->v());
-        const mylist<uint64_t> &a1_value = *a1;
-        _loop_acc = [=](uint64_t n) { return _loop_acc((a0 + n)); };
-        _loop_l = &a1_value;
-      }
-    }
-  }
-
+                               uint64_t x0_);
   static inline const uint64_t test_chain = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
         UINT64_C(10),

@@ -32,7 +32,7 @@ LoopifyReuseCursorReadsField::len(const LoopifyReuseCursorReadsField::lst &l) {
     } else {
       auto _f = std::move(std::get<_after_len_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;
@@ -73,7 +73,7 @@ LoopifyReuseCursorReadsField::sum(const LoopifyReuseCursorReadsField::lst &l) {
       auto _f = std::move(std::get<_after_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -102,8 +102,7 @@ LoopifyReuseCursorReadsField::pairs(LoopifyReuseCursorReadsField::lst l) {
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       auto _cell = crane::make_rc_reusing_unchecked(
           std::move(_rs.token),
-          typename LoopifyReuseCursorReadsField::lst::Cons(std::move(_read),
-                                                           nullptr));
+          typename LoopifyReuseCursorReadsField::lst::Cons(_read, nullptr));
       *_write = std::move(_cell);
       _write =
           &std::get<typename LoopifyReuseCursorReadsField::lst::Cons>(
@@ -128,7 +127,6 @@ LoopifyReuseCursorReadsField::weigh(uint64_t acc,
       crane::rc<LoopifyReuseCursorReadsField::lst>();
   bool _uniq = true;
   const LoopifyReuseCursorReadsField::lst *_loop_l = &l;
-  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename LoopifyReuseCursorReadsField::lst::Nil>(
             _loop_l->v())) {
@@ -142,14 +140,14 @@ LoopifyReuseCursorReadsField::weigh(uint64_t acc,
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       auto _cell = crane::make_rc_reusing_unchecked(
           std::move(_rs.token),
-          typename LoopifyReuseCursorReadsField::lst::Cons((a0 * _loop_acc),
+          typename LoopifyReuseCursorReadsField::lst::Cons((a0 * acc),
                                                            nullptr));
       *_write = std::move(_cell);
       _write =
           &std::get<typename LoopifyReuseCursorReadsField::lst::Cons>(
               (*_write)->v_mut())
               .a1;
-      _loop_acc = std::move(_read);
+      acc = _read;
       _own = std::move(_rs.next);
       _loop_l = _own.get();
       continue;

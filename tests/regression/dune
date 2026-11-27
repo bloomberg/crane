@@ -16585,3 +16585,35 @@
   (alias runtest)
   (deps mapped_component_alias_flat.t.exe)
   (action (run ./mapped_component_alias_flat.t.exe))))
+(subdir local_lambda_refs
+ (rule
+  (targets local_lambda_refs.t.exe)
+  (deps LocalLambdaRefs.vo local_lambda_refs.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_lambda_refs.t.exe local_lambda_refs.t.cpp local_lambda_refs.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_lambda_refs.t.exe)
+  (action (run ./local_lambda_refs.t.exe))))
+
+(subdir st_dead_stores
+ (rule
+  (targets st_dead_stores.t.exe)
+  (deps StDeadStores.vo st_dead_stores.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_dead_stores.t.exe st_dead_stores.t.cpp st_dead_stores.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_dead_stores.t.exe)
+  (action (run ./st_dead_stores.t.exe))))
+
+(subdir st_readable_forms
+ (rule
+  (targets st_readable_forms.t.exe)
+  (deps StReadableForms.vo st_readable_forms.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_readable_forms.t.exe st_readable_forms.t.cpp st_readable_forms.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_readable_forms.t.exe)
+  (action (run ./st_readable_forms.t.exe))))

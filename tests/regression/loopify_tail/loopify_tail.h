@@ -163,14 +163,13 @@ struct LoopifyTail {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     const list<T1> *_loop_l = &l;
-    uint64_t _loop_acc = acc;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        return _loop_acc;
+        return acc;
       } else {
         const auto &[_, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a1);
-        _loop_acc = (_loop_acc + 1);
+        acc = (acc + 1);
       }
     }
   }

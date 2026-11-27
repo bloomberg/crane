@@ -35,7 +35,7 @@ MemSafetyProbe16::sum_list(const MemSafetyProbe16::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + std::move(_result));
+      _result = (a0 + _result);
     }
   }
   return _result;
@@ -122,10 +122,36 @@ uint64_t MemSafetyProbe16::apply_fns(
       auto _f = std::move(std::get<_after_apply_fns_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(x) + std::move(_result));
+      _result = (a0(x) + _result);
     }
   }
   return _result;
+}
+
+/// TEST 2: Fold that accumulates a function by composing closures.
+/// Each step captures the tree from the current list element.
+uint64_t MemSafetyProbe16::compose_summers(
+    const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> &trees,
+    const crane::fn<uint64_t(uint64_t)> &acc, uint64_t x0_) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
+  const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> *_loop_trees = &trees;
+  while (true) {
+    if (std::holds_alternative<
+            typename MemSafetyProbe16::mylist<MemSafetyProbe16::tree>::Mynil>(
+            _loop_trees->v())) {
+      return _loop_acc(x0_);
+    } else {
+      const auto &[a0, a1] = std::get<
+          typename MemSafetyProbe16::mylist<MemSafetyProbe16::tree>::Mycons>(
+          _loop_trees->v());
+      const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> &a1_value = *a1;
+      _loop_acc =
+          [=, a0 = a0](uint64_t n) { return _loop_acc((a0.tree_sum() + n)); };
+      _loop_trees = &a1_value;
+    }
+  }
 }
 
 /// TEST 3: Build a list of closures where each closure captures
@@ -138,9 +164,8 @@ MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t, uint64_t n) {
   std::optional<MemSafetyProbe16::mylist<crane::fn<uint64_t(uint64_t)>>> _root{};
   std::shared_ptr<MemSafetyProbe16::mylist<crane::fn<uint64_t(uint64_t)>>> *_write =
       nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
       (_write ? *(*_write = std::make_shared<
                       MemSafetyProbe16::mylist<crane::fn<uint64_t(uint64_t)>>>(
@@ -148,10 +173,10 @@ MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t, uint64_t n) {
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t n_ = _loop_n - 1;
+      uint64_t n_ = n - 1;
       auto _cell = typename MemSafetyProbe16::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t x) { return ((t.tree_sum() + x) + _loop_n); }, nullptr);
+          [=](uint64_t x) { return ((t.tree_sum() + x) + n); }, nullptr);
       MemSafetyProbe16::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe16::mylist<
                           crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))
@@ -159,7 +184,7 @@ MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t, uint64_t n) {
       _write =
           &std::get<typename MemSafetyProbe16::mylist<
               crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
-      _loop_n = n_;
+      n = n_;
       continue;
     }
   }
@@ -243,6 +268,41 @@ MemSafetyProbe16::mylist<uint64_t> MemSafetyProbe16::zip_apply(
     }
   }
   return std::move(*_root);
+}
+
+/// TEST 9: CPS-style flattening where each step builds a continuation
+/// that captures tree structure.
+MemSafetyProbe16::mylist<uint64_t> MemSafetyProbe16::flatten_cps_aux(
+    const MemSafetyProbe16::tree &t, const crane::fn<MemSafetyProbe16::mylist<
+                                         uint64_t>(
+                                         MemSafetyProbe16::mylist<uint64_t>)> &k) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  crane::fn<
+      MemSafetyProbe16::mylist<uint64_t>(MemSafetyProbe16::mylist<uint64_t>)> _loop_k =
+      k;
+  const MemSafetyProbe16::tree *_loop_t = &t;
+  while (true) {
+    if (std::holds_alternative<typename MemSafetyProbe16::tree::Leaf>(
+            _loop_t->v())) {
+      return _loop_k(mylist<uint64_t>::mynil());
+    } else {
+      const auto &[a0, a1, a2] =
+          std::get<typename MemSafetyProbe16::tree::Node>(_loop_t->v());
+      const MemSafetyProbe16::tree &a0_value = *a0;
+      const MemSafetyProbe16::tree &a2_value = *a2;
+      _loop_k = [=, a2_value = a2_value](
+          const MemSafetyProbe16::mylist<uint64_t> &ll) {
+        return flatten_cps_aux(
+            a2_value,
+            [=, _loop_k = _loop_k, ll = ll](
+                const MemSafetyProbe16::mylist<uint64_t> &rl) {
+              return _loop_k(ll.myapp(mylist<uint64_t>::mycons(a1, rl)));
+            });
+      };
+      _loop_t = &a0_value;
+    }
+  }
 }
 
 MemSafetyProbe16::mylist<uint64_t>

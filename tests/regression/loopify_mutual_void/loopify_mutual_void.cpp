@@ -11,17 +11,16 @@
 void LoopifyMutualVoid::even_void(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (m <= 0) {
         return;
       } else {
         uint64_t m0 = m - 1;
-        _loop_n = m0;
+        n = m0;
       }
     }
   }
@@ -31,17 +30,16 @@ void LoopifyMutualVoid::even_void(uint64_t n) {
 void LoopifyMutualVoid::odd_void(uint64_t n) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (m <= 0) {
         return;
       } else {
         uint64_t m0 = m - 1;
-        _loop_n = m0;
+        n = m0;
       }
     }
   }

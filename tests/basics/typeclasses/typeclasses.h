@@ -151,10 +151,7 @@ struct Typeclasses {
           return (_tcI0::to_nat(a1) + _self_sum(_self_sum, *a2));
         }
       };
-      {
-        const List<T1> &_lc1_l = std::move(a0);
-        return sum_impl(sum_impl, _lc1_l);
-      }
+      return sum_impl(sum_impl, a0);
     }
   };
 

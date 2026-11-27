@@ -1454,6 +1454,9 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
     ++ fnl ()
     ++ ( match else_stmts with
        | [] -> str "}"
+       | [(If _ as inner)] ->
+         (* an else branch that is one conditional continues the chain *)
+         str "} else " ++ pp_cpp_stmt ctx env args inner
        | _ ->
          str "} else {"
          ++ fnl ()
@@ -1564,7 +1567,9 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
         match List.nth_opt tyargs i with Some ty -> pp_cpp_type ctx false [] ty | None -> unbound "type argument" )
       | Branch i ->
         pp_list_stmt (pp_cpp_stmt ctx env []) (branch i).body
-      | Binder (i, j) -> Id.print (binder i j).name
+      | Binder (i, j) ->
+        let p = binder i j in
+        if p.used || not (sn ctx.unit).placeholder then Id.print p.name else str "_"
       (* Spellable: one that is not was materialised at the seam
          ({!Cpp_passes.Erasure.materialise}). *)
       | Binder_type (i, j) -> pp_cpp_type ctx false [] (binder i j).type_

@@ -850,6 +850,10 @@ and Custom_match : sig
   type 'p param = {
     name : Id.t;
     type_ : 'p Type.t;
+    used : bool;
+        (** whether the branch body reads it; one it does not, in a
+            structured binding, is written as the placeholder [_] where the
+            target standard has one *)
     binder : Core.Binder.t option;
   }
 

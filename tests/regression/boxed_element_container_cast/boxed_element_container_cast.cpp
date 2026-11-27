@@ -72,8 +72,8 @@ bool BoxedElementContainerCast::run_entry(
                          crane::list<BoxedElementContainerCast::symbol>>,
                std::pair<crane::obj, crane::obj>> &e) {
   const auto &[x0, a1] = e;
-  const auto &[_x, ys] = x0;
-  const auto &[pr, _x0] = a1;
+  const auto &[_, ys] = x0;
+  const auto &[pr, _] = a1;
   return crane::any_cast<bool>(crane::any_cast<
       crane::fn<crane::obj(crane::obj)>>(pr)(sample_symbols(ys)));
 }
@@ -118,7 +118,7 @@ uint64_t BoxedElementContainerCast::action_size(
                std::pair<crane::obj, crane::obj>> &e) {
   const auto &[x, a1] = e;
   const auto &[x1, ys] = x;
-  const auto &[_x, act] = a1;
+  const auto &[_, act] = a1;
   return size_of(x1, crane::any_cast<crane::fn<crane::obj(crane::obj)>>(act)(
                          sample_symbols(ys)));
 }

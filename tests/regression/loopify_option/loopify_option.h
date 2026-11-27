@@ -187,19 +187,16 @@ struct LoopifyOption {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     const list<T1> *_loop_l = &l;
-    uint64_t _loop_n = n;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         return std::optional<T1>();
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
-        if (_loop_n == UINT64_C(0)) {
+        if (n == UINT64_C(0)) {
           return std::make_optional<T1>(a0);
         } else {
           _loop_l = crane_raw(a1);
-          _loop_n =
-              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
-                                                  : (_loop_n - UINT64_C(1))));
+          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
         }
       }
     }
@@ -251,7 +248,6 @@ struct LoopifyOption {
                                                 uint64_t i) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    uint64_t _loop_i = i;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
@@ -259,9 +255,9 @@ struct LoopifyOption {
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
-          return std::make_optional<uint64_t>(_loop_i);
+          return std::make_optional<uint64_t>(i);
         } else {
-          _loop_i = (_loop_i + 1);
+          i = (i + 1);
           _loop_l = crane_raw(a1);
         }
       }

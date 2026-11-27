@@ -609,8 +609,10 @@ let constraint_is_vacuous (dom : head_type list) (cod : head_type) =
     is the variable itself: declared, mentioned nowhere, and so neither
     deducible nor, for a [template <typename> class], writable at all.  Given
     a [void] default it costs the call site nothing.  It is defaulted rather
-    than dropped because a call site that spells template arguments spells
-    them by position.
+    than dropped because a call of a callee generated elsewhere is planned
+    from the callee's type alone ({!Callable_abi.foreign}), which spells the
+    variable: such a call may write it.  A variable the type itself spells
+    nowhere is no parameter in the first place ({!phantom_aware_temps}).
 
     A constraint counts as a mention, including a callback's.  It is not a use
     the compiler can deduce from, but it is what states the arity and result a
@@ -722,26 +724,25 @@ let relax_function_head (temps : head_params) (signature : Callable_abi.signatur
 
 (** Build template parameter list with phantom detection.
 
-    Type variables represented concretely in the generated signature (i.e.
-    {!Base.Type_util.primary_tvar_indices}) are emitted as plain [typename T].
-    All others (phantom tvars from erased HKT positions or custom-template
-    positions that the C++ compiler cannot deduce) are emitted with a [void]
-    default ([typename T = void]), except the leading run every call site
-    spells out ({!Base.Type_util.explicit_tvar_prefix}), which stays required.
-    Applied variables then become template template parameters
-    ({!with_applied_tvars}).
+    Only the type variables the generated signature spells
+    ({!Base.Type_util.spelled_tvars_indexed}) are parameters.  Those it
+    represents concretely (i.e. {!Base.Type_util.primary_tvar_indices}) are
+    emitted as plain [typename T]; the others, spelled where the C++ compiler
+    cannot deduce them, with a [void] default ([typename T = void]), except
+    the leading run every call site spells out
+    ({!Base.Type_util.explicit_tvar_prefix}), which stays required.  Applied
+    variables then become template template parameters
+    ({!with_applied_tvars}).  A parameter keeps the name its variable's index
+    gives it, so leaving one out renumbers nothing.
 
-    We never {i remove} tvars from the list: only default them.  Removing
-    would shift the de Bruijn index-to-name mapping used throughout the
-    pipeline (see {!Core_to_cpp.Types.cpp_ir_of_core_type}).
+    @param also_declared  Set of tvar indices the Core type has but the C++
+      type may not spell; each is declared, as a defaulted phantom unless
+      it is primary, for the relaxations to see.
 
     @param force_required  Set of tvar indices that must be required (plain
       [typename T]) even if they don't appear in the C++ function type.
       Used for type INDEX tvars that are stripped from the C++ type but needed
       for [any_cast] in function bodies.
-    @param also_declared  Set of tvar indices the Core type has but the C++
-      type may not spell; each is declared, as a defaulted phantom unless
-      it is primary.
     @param core_ty  The Core type of the declaration, passed to
       {!with_applied_tvars} to veto higher kinds it does not demand. *)
 let phantom_aware_temps
@@ -768,10 +769,11 @@ let phantom_aware_temps
     let primary = primary_tvar_indices dom cod in
     let primary = IntSet.union primary force_required in
     (* [also_declared] is every variable the Core type has, which is not every
-       variable the C++ type spells: an erased one is written nowhere in the
-       signature, yet the body and the call sites still number their arguments
-       by the Core type.  Declared as a defaulted phantom, the numbering lines up
-       and nothing is demanded of a use site that supplies nothing. *)
+       variable the C++ type spells.  One C++ spells nowhere -- the event
+       family of an erased [itree E A] -- is declared here, a defaulted
+       phantom, so that the relaxations erase what still names it
+       ({!default_unmentioned_temps}); the callable plan then leaves it out
+       ({!Core_to_cpp.Functions.plan_function_head}). *)
     let extra =
       IntSet.fold (fun i acc ->
         if List.exists (fun (j, _) -> j = i) tvars_indexed then acc

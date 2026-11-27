@@ -203,12 +203,10 @@ bool Matcher::NullEpsOrZero(const Matcher::regexp &r) {
       } else {
         return false;
       }
+    } else if (NullEpsOrZero(*r5)) {
+      return false;
     } else {
-      if (NullEpsOrZero(*r5)) {
-        return false;
-      } else {
-        return false;
-      }
+      return false;
     }
   } else if (std::holds_alternative<typename Matcher::regexp::Alt>(r.v())) {
     const auto &[r4, r5] = std::get<typename Matcher::regexp::Alt>(r.v());
@@ -218,12 +216,10 @@ bool Matcher::NullEpsOrZero(const Matcher::regexp &r) {
       } else {
         return true;
       }
+    } else if (NullEpsOrZero(*r5)) {
+      return true;
     } else {
-      if (NullEpsOrZero(*r5)) {
-        return true;
-      } else {
-        return false;
-      }
+      return false;
     }
   } else if (std::holds_alternative<typename Matcher::regexp::Star>(r.v())) {
     return true;

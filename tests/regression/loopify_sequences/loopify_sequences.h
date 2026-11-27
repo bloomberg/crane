@@ -126,7 +126,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -270,16 +270,15 @@ struct LoopifySequences {
     std::optional<List<List<T1>>> _root{};
     std::shared_ptr<List<List<T1>>> *_write = nullptr;
     List<List<T1>> _loop_ll = ll;
-    uint64_t _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         auto _value = List<List<T1>>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<List<T1>>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t f = _loop_fuel - 1;
+        uint64_t f = fuel - 1;
         auto all_nil = [](const List<List<T1>> &l) -> bool {
           // Loop replaces the tail recursion: each recursive call updates the
           // loop variables.
@@ -401,7 +400,7 @@ struct LoopifySequences {
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<List<T1>>::Cons>(_node.v_mut()).l;
           _loop_ll = tails(_loop_ll);
-          _loop_fuel = f;
+          fuel = f;
           continue;
         }
       }
@@ -432,25 +431,23 @@ struct LoopifySequences {
     // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_x = x;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t m = _loop_n - 1;
-        auto _cell = typename List<uint64_t>::Cons(_loop_x, nullptr);
+        uint64_t m = n - 1;
+        auto _cell = typename List<uint64_t>::Cons(x, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_x = f(_loop_x);
-        _loop_n = m;
+        x = f(x);
+        n = m;
         continue;
       }
     }
@@ -615,7 +612,7 @@ struct LoopifySequences {
         auto _f = std::move(std::get<_after_bool_all_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        _result = (p(a0) && std::move(_result));
+        _result = (p(a0) && _result);
       }
     }
     return _result;

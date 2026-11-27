@@ -777,12 +777,12 @@ struct TmcAmbiguousCalls {
           auto _f = std::move(std::get<_after_eval_in_Add>(_popped));
           _stack.pop_back();
           const term &b0 = *_f.b0;
-          _stack.emplace_back(_after_eval_in_Add_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_in_Add_2{_result});
           _stack.emplace_back(_call{_f.b0});
         } else {
           auto _f = std::move(std::get<_after_eval_in_Add_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         }
       }
       return _result;

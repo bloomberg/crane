@@ -3,7 +3,7 @@
 uint64_t AnyCastNestedPair::apply_pred(AnyCastNestedPair::symbols_semty input) {
   auto [v1, rest] =
       crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(input));
-  auto [v2, _x] =
+  auto [v2, _] =
       crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(rest));
   return (crane::any_cast<uint64_t>(std::move(v1)) +
           crane::any_cast<uint64_t>(std::move(v2)));

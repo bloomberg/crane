@@ -23,12 +23,9 @@ void aSsErT(bool condition, const char *message, int line) {
 
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using nat_idx = StRefs::nat_idx;
-using nat_stref = StRefs::nat_stref;
-
 int main() {
   {
-    auto result = StRefs::new_and_read_both_nat<nat_stref, nat_idx>();
+    auto result = StRefs::new_and_read_both_nat;
     ASSERT(result.first == 5);
     ASSERT(result.second == 6);
     std::cout << "new_and_read_both_nat: (" << result.first << ", "
@@ -36,19 +33,19 @@ int main() {
   }
 
   {
-    auto result = StRefs::tree_simp_nat<nat_stref, nat_idx>();
+    auto result = StRefs::tree_simp_nat;
     ASSERT(result == 5);
     std::cout << "tree_simp_nat: " << result << std::endl;
   }
 
   {
-    auto result = StRefs::tree_simp_another_nat<nat_stref, nat_idx>();
+    auto result = StRefs::tree_simp_another_nat;
     ASSERT(result == 6);
     std::cout << "tree_simp_another_nat: " << result << std::endl;
   }
 
   {
-    auto result = StRefs::new_and_read_both_bool<nat_stref, nat_idx>();
+    auto result = StRefs::new_and_read_both_bool;
     ASSERT(result.first == false);
     ASSERT(result.second == true);
     std::cout << "new_and_read_both_bool: (" << result.first << ", "
@@ -56,9 +53,17 @@ int main() {
   }
 
   {
-    auto result = StRefs::tree_simp_bool<nat_stref, nat_idx>();
+    auto result = StRefs::tree_simp_bool;
     ASSERT(result == true);
     std::cout << "tree_simp_bool: " << result << std::endl;
+  }
+
+  {
+    auto result = StRefs::swapped;
+    ASSERT(result.first == 2);
+    ASSERT(result.second == 1);
+    std::cout << "swapped: (" << result.first << ", " << result.second << ")"
+              << std::endl;
   }
 
   if (testStatus == 0) {

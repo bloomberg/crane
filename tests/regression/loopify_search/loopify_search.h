@@ -154,7 +154,7 @@ struct LoopifySearch {
       } else {
         auto _f = std::move(std::get<_after_len_impl_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -214,11 +214,11 @@ struct LoopifySearch {
         auto _f = std::move(std::get<_after_maximum_by_in_Cons>(_popped));
         _stack.pop_back();
         uint64_t a0 = _f.a0;
-        uint64_t m = std::move(_result);
+        uint64_t m = _result;
         if (cmp(a0, m) == UINT64_C(1)) {
-          _result = std::move(a0);
+          _result = a0;
         } else {
-          _result = std::move(m);
+          _result = m;
         }
       }
     }
@@ -565,12 +565,12 @@ struct LoopifySearch {
         auto _f = std::move(std::get<_after_or_search_in_BNode>(_popped));
         _stack.pop_back();
         const btree &a1 = *_f.a1;
-        _stack.emplace_back(_after_or_search_in_BNode_2{std::move(_result)});
+        _stack.emplace_back(_after_or_search_in_BNode_2{_result});
         _stack.emplace_back(_call{&a1});
       } else {
         auto _f = std::move(std::get<_after_or_search_in_BNode_2>(_popped));
         _stack.pop_back();
-        _result = (_f._tmp2 || std::move(_result));
+        _result = (_f._tmp2 || _result);
       }
     }
     return _result;
@@ -584,7 +584,6 @@ struct LoopifySearch {
     // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
-    uint64_t _loop_idx = idx;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -597,17 +596,17 @@ struct LoopifySearch {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          auto _cell = typename List<uint64_t>::Cons(_loop_idx, nullptr);
+          auto _cell = typename List<uint64_t>::Cons(idx, nullptr);
           List<uint64_t> &_node =
               (_write ? *(*_write = std::make_shared<List<uint64_t>>(
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-          _loop_idx = (_loop_idx + 1);
+          idx = (idx + 1);
           _loop_l = crane_raw(a1);
           continue;
         } else {
-          _loop_idx = (_loop_idx + 1);
+          idx = (idx + 1);
           _loop_l = crane_raw(a1);
           continue;
         }

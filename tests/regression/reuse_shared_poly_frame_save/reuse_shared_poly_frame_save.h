@@ -113,7 +113,7 @@ public:
       } else {
         auto _f = std::move(crane::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -172,11 +172,9 @@ struct ReuseSharedPolyFrameSave {
             }
           }
         };
-    {
-      List<List<T1>> _lc1_l = k;
-      List<List<T1>> _lc1_acc = k;
-      return go_impl(go_impl, std::move(_lc1_l), std::move(_lc1_acc));
-    }
+    List<List<T1>> _lc1_l = k;
+    List<List<T1>> _lc1_acc = k;
+    return go_impl(go_impl, std::move(_lc1_l), std::move(_lc1_acc));
   }
 
   static inline const uint64_t t = f<uint64_t>(UINT64_C(1)).length();

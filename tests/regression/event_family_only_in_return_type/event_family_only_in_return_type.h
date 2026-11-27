@@ -129,8 +129,7 @@ std::shared_ptr<ITree<T2>> trigger_cast_(crane::rebind_t<T1, Vd> e) {
 }
 
 struct EventFamilyOnlyInReturnType {
-  template <typename T1 = void, typename T2>
-  static std::shared_ptr<ITree<T2>> raiseUB() {
+  template <typename T2> static std::shared_ptr<ITree<T2>> raiseUB() {
     return trigger_cast_<crane::obj, T2>(UBE::throwub(std::monostate{}));
   }
 

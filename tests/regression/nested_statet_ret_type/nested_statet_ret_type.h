@@ -146,37 +146,34 @@ public:
                                        "field at this instantiation");
               }
             }()};
+          } else if (
+              std::holds_alternative<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(_other.v())) {
+            const auto &[t] =
+                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                    _other.v());
+            return TauF{[&]() -> itree {
+              if constexpr (crane_convertible<itree, const CraneU2 &>) {
+                return crane_convert<itree>(t);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
           } else {
-            if (std::holds_alternative<
-                    typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
-                    _other.v())) {
-              const auto &[t] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
-                      _other.v());
-              return TauF{[&]() -> itree {
-                if constexpr (crane_convertible<itree, const CraneU2 &>) {
-                  return crane_convert<itree>(t);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }()};
-            } else {
-              const auto &[x, e] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
-                      _other.v());
-              return VisF{
-                  [&]() -> E {
-                    if constexpr (crane_convertible<E, const CraneU0 &>) {
-                      return crane_convert<E>(x);
-                    } else {
-                      throw std::logic_error("unreachable: inactive "
-                                             "constructor field at this "
-                                             "instantiation");
-                    }
-                  }(),
-                  crane_convert<crane::fn<itree(crane::obj)>>(e)};
-            }
+            const auto &[x, e] =
+                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                    _other.v());
+            return VisF{
+                [&]() -> E {
+                  if constexpr (crane_convertible<E, const CraneU0 &>) {
+                    return crane_convert<E>(x);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                crane_convert<crane::fn<itree(crane::obj)>>(e)};
           }
         }()) {}
 
@@ -293,8 +290,8 @@ struct NestedStatetRetType {
       const auto &[r0] = std::get<typename ItreeF<
           noE, std::pair<bool, std::pair<Nat, Nat>>,
           Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>>::RetF>(_sv.v());
-      const auto &[_x, p] = r0;
-      const auto &[a, _x0] = p;
+      const auto &[_, p] = r0;
+      const auto &[a, _] = p;
       return a;
     } else {
       return Nat::o();

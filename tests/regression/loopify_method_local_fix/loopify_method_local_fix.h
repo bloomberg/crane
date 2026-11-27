@@ -119,30 +119,27 @@ struct LoopifyMethodLocalFix {
         // Loop replaces the tail recursion: each recursive call updates the
         // loop variables.
         const tree *_loop_self = this;
-        uint64_t _loop_n = n;
         while (true) {
           auto &&_sv = *_loop_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            auto go = [](uint64_t k, uint64_t acc) -> uint64_t {
-              // Loop replaces the tail recursion: each recursive call updates
-              // the loop variables.
-              uint64_t _loop_acc = acc;
-              uint64_t _loop_k = k;
-              while (true) {
-                if (_loop_k <= 0) {
-                  return _loop_acc;
-                } else {
-                  uint64_t k_ = _loop_k - 1;
-                  _loop_acc = (_loop_acc + 1);
-                  _loop_k = k_;
-                }
+            uint64_t _lc1_acc = UINT64_C(0);
+            // Loop replaces the tail recursion: each recursive call updates the
+            // loop variables.
+            uint64_t _lc1_loop_acc = _lc1_acc;
+            uint64_t _lc1_loop_k = n;
+            while (true) {
+              if (_lc1_loop_k <= 0) {
+                return _lc1_loop_acc;
+              } else {
+                uint64_t k_ = _lc1_loop_k - 1;
+                _lc1_loop_acc = (_lc1_loop_acc + 1);
+                _lc1_loop_k = k_;
               }
-            };
-            return go(_loop_n, UINT64_C(0));
+            }
           } else {
             const auto &[a0, a1] = std::get<typename tree::Node>(_sv.v());
             _loop_self = crane_raw(a0);
-            _loop_n = (_loop_n + a1);
+            n = (n + a1);
           }
         }
       }

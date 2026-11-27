@@ -344,7 +344,7 @@ List<uint64_t> ReuseListShapes::take(uint64_t n, List<uint64_t> l) {
         uint64_t m = n - 1;
         return List<uint64_t>::cons_crane_reuse(
             std::move(crane::get<typename List<uint64_t>::Cons>(l.v_mut()).l),
-            std::move(x), take(m, std::move(t)));
+            x, take(m, std::move(t)));
       }
     } else {
       if (crane::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
@@ -381,12 +381,10 @@ List<uint64_t> ReuseListShapes::ins(uint64_t k, List<uint64_t> s) {
     const auto &[a0, a1] = crane::get<typename List<uint64_t>::Cons>(s.v());
     if (k < crane::unbox(a0)) {
       return List<uint64_t>::cons(k, s);
+    } else if (k == crane::unbox(a0)) {
+      return List<uint64_t>::cons(k, crane::child(a1));
     } else {
-      if (k == crane::unbox(a0)) {
-        return List<uint64_t>::cons(k, crane::child(a1));
-      } else {
-        return List<uint64_t>::cons(crane::unbox(a0), ins(k, *a1));
-      }
+      return List<uint64_t>::cons(crane::unbox(a0), ins(k, *a1));
     }
   }
 }

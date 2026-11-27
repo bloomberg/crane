@@ -52,8 +52,17 @@ let converts_view_of g custom =
             match a.view with Some c -> GlobRef.CanOrd.equal c.mapped g | None -> false)
           (Op.find custom).arguments
 
+(** Whether a lambda runs only where it is written, inside the scope that
+    made it, borrowing that scope: what it uses of the scope is used there,
+    so a local it names outlives it. *)
+let borrows_scope (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) =
+  match l.capture with
+  | Runs_in_place | Written (By_reference | Nothing) -> true
+  | Stored | Written (By_copy _) -> false
+
 (* Whether every occurrence of [x] in [ss] is the operand of a view
-   conversion of [g], outside every lambda. *)
+   conversion of [g], outside every lambda that may outlive its scope
+   ({!borrows_scope}). *)
 let only_viewed g x (ss : stmt list) =
   let ok = ref true in
   let in_lambda = ref false in
@@ -65,9 +74,9 @@ let only_viewed g x (ss : stmt list) =
     | Foreign (Call, {custom; values = [Local y]; _}) when Id.equal x y ->
       if !in_lambda || not (converts_view_of g custom) then ok := false;
       e
-    | Lambda _ ->
+    | Lambda l ->
       let saved = !in_lambda in
-      in_lambda := true;
+      in_lambda := saved || not (borrows_scope l);
       let e = Cpp_ir.Map.expr (rw ()) e in
       in_lambda := saved;
       e
@@ -114,15 +123,96 @@ let respell g x view (ss : stmt list) =
 
 let traced = Option.has_some (Sys.getenv_opt "CRANE_TRACE_LOCAL_STORAGE")
 
+(** The position of the argument a mapped operation [r] only writes
+    through: an effectful operation returning a value, whose argument at
+    that position is used to [Write], and none of whose facts reads,
+    retains or releases what that argument holds, or does anything outside
+    the program.  Such a call stores into the identity and nothing else
+    observes it, unless something else reads the identity. *)
+let blind_write_position r =
+  if not (Base.Table.is_mapped_operation r) then None
+  else
+    let op = Op.find r in
+    let names_arg (a : Op.argument) : Base.Mapping_descriptor.operation_fact -> bool = function
+      | Reads_component p | Invalidates_views p -> String.equal p.path_argument a.name
+      | Retains_argument (x, p) -> String.equal x a.name || String.equal p.path_argument a.name
+      | Releases_identity x -> String.equal x a.name
+      | External_effect _ -> true
+      | Writes_component _ | Invalidates_element_borrows _ -> false
+    in
+    match (op.purity, op.result) with
+    | Effectful, Return_value -> (
+      match List.filter (fun (a : Op.argument) -> a.use = Write) op.arguments with
+      | [a] when not (List.exists (names_arg a) op.facts) -> Some a.position
+      | _ -> None )
+    | _ -> None
+
+(** Whether evaluating [e] has no effect but its value: it calls no
+    mapped operation other than a pure one, and runs no lambda.  A value of
+    the program is computed by functions of Gallina, which have no effect;
+    an effect is the event of a mapped operation the value would call. *)
+let rec effect_free (e : expr) =
+  let calls_effect =
+    match e with
+    | Call (_, Entity (r, _, _), _) when Base.Table.is_mapped_operation r -> (Op.find r).purity <> Pure
+    | Call (_, Lambda _, _) | Lambda _ -> true
+    | _ -> false
+  in
+  (not calls_effect)
+  &&
+  let ok = ref true in
+  Cpp_ir.Subterms.expr ~expr:(fun e -> if not (effect_free e) then ok := false) ~stmts:(fun _ -> ok := false) e;
+  !ok
+
+(* Whether [s] is a call of an operation that only writes, through the
+   argument {!blind_write_position} names, a view of [x], its other
+   arguments {!effect_free}. *)
+let blind_write_to x (s : stmt) =
+  match s with
+  | Expression (Call (_, Entity (r, _, Some {inline = Some _; _}), args)) -> (
+    match blind_write_position r with
+    | Some pos -> (
+      match List.nth_opt args pos with
+      | Some (Foreign (Call, {values = [Local y]; _})) when Id.equal x y ->
+        List.for_all effect_free (List.filteri (fun i _ -> i <> pos) args)
+      | _ -> false )
+    | None -> false )
+  | _ -> false
+
+(** [ss] without the blind writes to [x] ({!blind_write_to}), where [x] is
+    a local identity that nothing else in [ss] uses: such a local is only
+    ever set, so it and every store into it are dead.  [None] where
+    something else uses [x]. *)
+let without_blind_writes x (ss : stmt list) =
+  let rec drop (s : stmt) : stmt list =
+    if blind_write_to x s then []
+    else
+      match s with
+      | Block b -> [Block (List.concat_map drop b)]
+      | While (c, b) -> [While (c, List.concat_map drop b)]
+      | If i -> [If {i with then_ = List.concat_map drop i.then_; else_ = List.concat_map drop i.else_}]
+      | Match (scrut, branches, default) ->
+        let branches =
+          List.map (fun (b : _ Cpp_ir.Stmt.Match.branch) -> {b with body = List.concat_map drop b.body}) branches
+        in
+        [Match (scrut, branches, Option.map (List.concat_map drop) default)]
+      | s -> [s]
+  in
+  let ss' = List.concat_map drop ss in
+  if Cpp_ir.Variables.mem x (Cpp_ir.Variables.free_in_body ss') then None else Some ss'
+
 let rec stmts (ss : stmt list) : stmt list =
   match ss with
   | [] -> []
   | (Bind_variable (x, Declare (t, b), init) as s) :: rest -> (
     let rest = stmts rest in
     match (local_form t, initial_argument init) with
-    | Some (g, stored, view), Some arg when only_viewed g x rest ->
+    | Some (g, stored, view), Some arg when only_viewed g x rest -> (
       if traced then Printf.eprintf "local storage: %s\n%!" (Id.to_string x);
-      Bind_variable (x, Declare (stored, b), arg) :: respell g x view rest
+      match without_blind_writes x rest with
+      | Some rest when effect_free arg -> rest
+      | Some rest -> Expression arg :: rest
+      | None -> Bind_variable (x, Declare (stored, b), arg) :: respell g x view rest )
     | _ -> fs s :: rest )
   | s :: rest ->
     let s = fs s in

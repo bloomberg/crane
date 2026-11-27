@@ -46,7 +46,7 @@ std::shared_ptr<ITree<std::monostate>> ITreeReified::greet() {
 
 /// Apply with_logging to greet, producing itree (ioE +' ioE) unit.
 std::shared_ptr<ITree<std::monostate>> ITreeReified::test_logging() {
-  return with_logging<void, std::monostate>(greet());
+  return with_logging<std::monostate>(greet());
 }
 
 /// ---- Main (auto-wrapper) ----

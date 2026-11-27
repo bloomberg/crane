@@ -1,40 +1,18 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** How [interp_st] runs a program: [Ret], [bind] and one event at a time,
+    and what [runST] returns. *)
+
 From Stdlib Require Import
-  Arith.PeanoNat
-  Arith.Peano_dec
-  Classes.EquivDec
-  Init.Peano
-  List
   Morphisms
-  RelationClasses
-  Relation_Definitions
   Setoid
-  Strings.String
 .
 
-From ExtLib Require Import
-  Data.Bool
-  Data.List
-  Data.Monads.EitherMonad
-  Data.Pair
-  Data.String
-  Structures.Functor
-  Structures.Traversable
-  Structures.Reducible
-.
-
-(* NOTE: *must* import this before the ITree Eq.Paco2 import.*)
 From Paco Require Import paco.
 
 From ITree Require Import
-  Basics.HeterogeneousRelations
-  Eq.Paco2
   Events.Exception
-  Events.FailFacts
-  Events.MapDefault
-  Events.MapDefaultFacts
   Events.State
   Events.StateFacts
   ITree
@@ -42,330 +20,61 @@ From ITree Require Import
 .
 
 From Crane Require Import
-  Extraction
   Monads.Error
   Monads.ITree
-  Monads.Indices
   Monads.STMonad
-  Monads.MonadFacts
-  Utils.HAList
-  Utils.HMap
 .
 
-
 Import Monads.
-Import ListNotations.
-Import ProperNotations.
 Local Open Scope monad_scope.
-Local Open Scope string_scope.
 
+Section InterpST.
 
-Section InterpSTTheorems.
+  Context {V : nat -> Type} {E : Type -> Type} `{exceptE Err -< E}.
+  Notation E' := (STEvent model_refs V +' E).
 
-  Context {E : Type -> Type}.
-  Context {T S : Type}.
-  Variable (ltu : T -> T -> Prop).
-  Context `{Ix_Correct T ltu}.
-  Context `{STRefClass T}.
-  Context {V : T -> Type}.
-  Context `{STEvent T S V -< E}. 
-  Context `{exceptE Err -< E}.
+  Lemma interp_st_Ret {R} (r : R) (m : mem V) :
+    interp_st _ (ITreeDefinition.Ret r : itree E' R) m ≅ Ret (m, r).
+  Proof. apply interp_state_ret. Qed.
 
+  Lemma interp_st_Ret_eutt {R} (r : R) (m : mem V) :
+    interp_st _ (ITreeDefinition.Ret r : itree E' R) m ≈ Ret (m, r).
+  Proof. rewrite interp_st_Ret. reflexivity. Qed.
 
-  Definition mem := halist (@idx_key T T) (idx_key_type V).
+  Lemma interp_st_bind {A B} (t : itree E' A) (k : A -> itree E' B) (m : mem V) :
+    interp_st _ (ITree.bind t k) m
+    ≅ ITree.bind (interp_st _ t m) (fun p => interp_st _ (k (snd p)) (fst p)).
+  Proof. apply interp_state_bind. Qed.
 
-  
-  Context `{HMap (@idx_key T T) (idx_key_type V) mem}.
+  Lemma interp_st_trigger {R} (e : E' R) (m : mem V) :
+    interp_st _ (ITree.trigger e) m ≈ handle_STEvent_leave_rest _ e m.
+  Proof. apply interp_state_trigger. Qed.
 
-
-
-  Definition _interp_st {R}
-    (ot : itree' (STEvent T S V +' E) R)
-    (l : mem)
-    : itree E (mem * R) :=
-    match ot with
-    | RetF r => ret (l, r)
-    | TauF t => Tau (interp_st ltu _ t l)
-    | @VisF _ _ _ X e k =>
-        x <- handle_STEvent_leave_rest ltu X e l;;
-        Tau (interp_st _ _ (k (snd x)) (fst x))
-    end.
-
-  Lemma unfold_interp_st {R}
-    (t : itree (STEvent T S V +' E) R)
-    (l : mem) :
-    eq_itree eq
-    (interp_st _ _ t l)
-    (_interp_st (observe t) l).
-  Proof using Type.
-    unfold interp_st, interp_state, interp, Basics.iter, MonadIter_stateT0, Basics.iter.
-    cbn.
-    setoid_rewrite unfold_iter; cbn.
-    destruct observe; cbn.
-    - rewrite 2 bind_ret_l. reflexivity.
-    - rewrite 2 bind_ret_l. cbn. reflexivity.
-    - unfold ITree.map. repeat rewrite bind_bind.
-      repeat setoid_rewrite bind_ret_l.
-      unfold snd at 1.
-      unfold fst at 5.
-      apply eq_itree_clo_bind with (UU := Logic.eq); [reflexivity | intros x ? <-].
-      reflexivity.
+  (** Run the head of a bind whose effect on the store is already known, and
+      continue with the rest of the program in the resulting store. *)
+  Lemma interp_st_bind_Ret_l {A B} (t : itree E' A) (k : A -> itree E' B)
+    (m m' : mem V) (r : A) (rest : itree E (mem V * B)) :
+    interp_st _ t m ≈ Ret (m', r) ->
+    interp_st _ (k r) m' ≈ rest ->
+    interp_st _ (ITree.bind t k) m ≈ rest.
+  Proof.
+    intros Ht Hk. rewrite interp_st_bind, Ht. setoid_rewrite bind_ret_l. exact Hk.
   Qed.
 
-  Lemma interp_st_ret:  forall {R : Type} (val: R) (l : mem),
-      interp_st (E := E) (S := S) _ _ (ret val) l ≅ ret (l, val).
-    Proof using Type.
-      intros. rewrite unfold_interp_st. reflexivity.
-    Qed.
-
-  Lemma interp_st_Ret: forall {R : Type} (val: R) (l : mem),
-      interp_st (E := E) (S := S) _ _ (Ret val) l ≅ Ret (l, val).
-    Proof using Type.
-      intros. rewrite unfold_interp_st. reflexivity.
-    Qed.
-
-  Lemma interp_st_Ret_eutt: forall {R : Type} (val: R) (l : mem),
-      interp_st (E := E) (S := S) _ _ (Ret val) l ≈ Ret (l, val).
-    Proof using Type.
-      intros. rewrite unfold_interp_st. reflexivity.
-    Qed.
-
-  Lemma interp_st_vis
-    {R U} 
-    (e : (STEvent T S V +' E) R)
-    (k : R -> itree (STEvent T S V +' E) U)
-    (l : mem)
-    : interp_st ltu _ (Vis e k) l
-    ≅ x <- handle_STEvent_leave_rest ltu _ e l;;
-      Tau (interp_st ltu _ (k (snd x)) (fst x)).
-    Proof using Type.
-      intros. rewrite unfold_interp_st. reflexivity.
-    Qed.
-
-    
-  Lemma interp_st_tau {R : Type}
-      (t : itree (STEvent T S V +' E) R)
-      (l : mem)
-      : interp_st ltu _ (Tau t) l ≅ Tau (interp_st ltu _ t l).
-    Proof using Type.
-      intros. rewrite unfold_interp_st. reflexivity.
-    Qed.
-
-
-    
-  Lemma interp_st_trigger
-    {R : Type} 
-    (e : (STEvent T S V +' E) R)
-    (l : mem) :
-    interp_st ltu _ (ITree.trigger e) l ≈ handle_STEvent_leave_rest ltu _ e l.
-    Proof using Type.
-      unfold ITree.trigger.
-      rewrite interp_st_vis.
-      match goal with
-        |- ?y ≈ ?x => remember y; rewrite <- (bind_ret_r x); subst
-      end.
-      eapply eqit_bind; try reflexivity.
-      intros [].
-      - setoid_rewrite tau_eutt.
-        unfold snd, fst.
-        apply interp_st_Ret_eutt.
-    Qed.
-
-    
-Definition eq_itree_eqv_global {R E} (x1 x2 : itree (E) (mem * R)) : Prop :=
-  @eq_itree (E) _ _ eq x1 x2.
-
-
-Global Instance eq_itree_interp_st {R : Type} :
-Proper (@eq_itree (STEvent T S V +' E) R R eq ==> eq ==> eq_itree_eqv_global)
-        (interp_st ltu R).
-Proof using Type.
-  repeat red.
-  ginit. pcofix CIH. intros x y Heq s1 s2 Hseq.
-  rewrite !unfold_interp_st. punfold Heq. red in Heq.
-    destruct Heq; subst; pclearbot; try discriminate; cbn.
-    - gstep; constructor; auto.
-    - gstep; constructor; auto with paco.
-    - guclo eqit_clo_bind. econstructor.
-      + reflexivity.
-      + intros [] ? <-. gstep.
-        constructor; auto with paco itree.
-  Qed.
-
-    
-Lemma interp_st_bind {U R} 
-  (t : itree (STEvent T S V +' E) R)
-  (k : R -> itree (STEvent T S V +' E) U)
-  (mem : mem)
-  : interp_st ltu U (ITree.bind t k) mem
-      ≅ '(new_mem, new_val) <- interp_st ltu R t mem;;
-    interp_st ltu U (k new_val) new_mem.
-  revert t k mem.
-  ginit. pcofix CIH.
-  intros t k mem.
-  assert (unfold_bind' : interp_st ltu U (ITree.bind t k) mem
-                        ≅ interp_st ltu U (bind_ t k) mem).
-  { apply eq_itree_interp_st. apply unfold_bind. reflexivity.  }
-  rewrite unfold_bind'.
-  rewrite (unfold_interp_st t mem).
-  destruct (observe t).
-  - cbn. rewrite !bind_ret_l. cbn. apply reflexivity.
-  - rewrite interp_st_tau. cbn. rewrite bind_tau.
-    gstep. econstructor; eauto with paco.
-  - rewrite interp_st_vis. cbn. rewrite bind_bind.
-    guclo eqit_clo_bind. econstructor.
-    + reflexivity.
-    + intros u2 ? []. destruct u2 eqn:Equ2.
-      rewrite bind_tau.
-      gstep. constructor.
-      auto with paco.
-Qed.
-
-Lemma interp_st_bind_eutt {U R} 
-  (t : itree (STEvent T S V +' E) R)
-  (k : R -> itree (STEvent T S V +' E) U)
-  (mem : mem)
-  : interp_st ltu U (ITree.bind t k) mem
-      ≈ '(new_mem, new_val) <- interp_st ltu R t mem;;
-    interp_st ltu U (k new_val) new_mem.
-  revert t k mem.
-  ginit. pcofix CIH.
-  intros t k mem.
-  assert (unfold_bind' : interp_st ltu U (ITree.bind t k) mem
-                        ≅ interp_st ltu U (bind_ t k) mem).
-  { apply eq_itree_interp_st. apply unfold_bind. reflexivity.  }
-  rewrite unfold_bind'.
-  rewrite (unfold_interp_st t mem).
-  destruct (observe t).
-  - cbn. rewrite !bind_ret_l. cbn. apply reflexivity.
-  - rewrite interp_st_tau. cbn. rewrite bind_tau.
-    gstep. econstructor; eauto with paco.
-  - rewrite interp_st_vis. cbn. rewrite bind_bind.
-    guclo eqit_clo_bind. econstructor.
-    + reflexivity.
-    + intros u2 ? []. destruct u2 eqn:Equ2.
-      rewrite bind_tau.
-      gstep. constructor.
-      auto with paco.
-Qed.
-
-Lemma interp_st_bind_eutt' {U R} 
-  (t : itree (STEvent T S V +' E) R)
-  (k : R -> itree (STEvent T S V +' E) U)
-  (mem : mem)
-  : (interp_st ltu U (ITree.bind t k) mem)
-      ≈ '(new_mem, new_val) <- interp_st ltu R t mem;;
-    interp_st ltu U (k new_val) new_mem.
-  revert t k mem.
-  ginit. pcofix CIH.
-  intros t k mem.
-  assert (unfold_bind' : interp_st ltu U (ITree.bind t k) mem
-                        ≅ interp_st ltu U (bind_ t k) mem).
-  { apply eq_itree_interp_st. apply unfold_bind. reflexivity.  }
-  rewrite unfold_bind'.
-  rewrite (unfold_interp_st t mem).
-  destruct (observe t).
-  - cbn. rewrite !bind_ret_l. cbn. apply reflexivity.
-  - rewrite interp_st_tau. cbn. rewrite bind_tau.
-    gstep. econstructor; eauto with paco.
-  - rewrite interp_st_vis. cbn. rewrite bind_bind.
-    guclo eqit_clo_bind. econstructor.
-    + reflexivity.
-    + intros u2 ? []. destruct u2 eqn:Equ2.
-      rewrite bind_tau.
-      gstep. constructor.
-      auto with paco.
-Qed.
-
-
-Lemma eutt_eq_bind_interp_st {U R}
-  (k2 : (mem * R) -> itree E (mem * U))
-  (lmem : mem)
-  (t1 : itree (STEvent T S V +' E) R)
-  (t2 : itree E (mem * R))
-  (k1: R -> itree (STEvent T S V +' E) U)
-  :
-  interp_st ltu R t1 lmem ≈ t2 ->
-  (forall u lmem', interp_st ltu U (k1 u) lmem' ≈ (k2 (lmem', u))) ->
-  interp_st ltu U (ITree.bind t1 k1) lmem
-  ≈
-  ITree.bind t2 k2.
-Proof.
-  intros t1_eq keq.
-  rewrite (interp_st_bind_eutt t1 k1).                                                                                
-  apply eutt_eq_bind'; [assumption | intuition].
-Qed.
-
-(** Run the head of a bind whose effect on the store is already known, and
-    continue with the rest of the program in the resulting store. *)
-Lemma interp_st_bind_Ret_l {U R}
-  (t : itree (STEvent T S V +' E) R)
-  (k : R -> itree (STEvent T S V +' E) U)
-  (lmem lmem' : mem) (r : R) (rest : itree E (mem * U)) :
-  interp_st ltu R t lmem ≈ Ret (lmem', r) ->
-  interp_st ltu U (k r) lmem' ≈ rest ->
-  interp_st ltu U (ITree.bind t k) lmem ≈ rest.
-Proof.
-  intros Ht Hk. rewrite interp_st_bind_eutt, Ht. setoid_rewrite bind_Ret_l. exact Hk.
-Qed.
-
-End InterpSTTheorems.
+End InterpST.
 
 Section RunST.
 
-  Context {T S : Type} {ltu : T -> T -> Prop}.
-  Context `{Ix_Correct T ltu} `{STRefClass T}.
-  Context {E : Type -> Type} {V : T -> Type} `{exceptE Err -< E}.
+  Context {V : nat -> Type} {E : Type -> Type} `{exceptE Err -< E}.
 
-  (** [runST] returns what the interpreted program returns from the empty store. *)
-  Lemma runST_Ret {A : Type} (f : forall (S : Type), itree ((STEvent T S V) +' E) A)
-    (m : mem) (r : A) :
-    interp_st ltu A (f unit) HMap.empty ≈ Ret (m, r) ->
-    runST (ltu := ltu) (S := S) f ≈ Ret r.
+  (** [runST] returns what the program returns, interpreted in the model
+      from the empty store. *)
+  Lemma runST_Ret {A} (f : forall R : STRefs, itree (STEvent R V +' E) A) (m : mem V) (r : A) :
+    interp_st _ (f model_refs) (@HMap.empty _ _ _ (st_hmap V)) ≈ Ret (m, r) ->
+    runST f ≈ Ret r.
   Proof.
     intros Hf. unfold runST.
-    etransitivity; [ eapply eutt_fmap; exact Hf |].
-    setoid_rewrite map_ret. reflexivity.
+    rewrite Hf. setoid_rewrite map_ret. reflexivity.
   Qed.
 
 End RunST.
-
-Lemma IdxRefSameIdx : forall (n : nat) S A,
-  STRefToIx S A (mkSTRef S A n) = n.
-Proof. reflexivity. Qed.
-
-Section STLookupErr.
-
-  Context {E : Type -> Type}.
-  Context {S T : Type}.
-  Context `{exceptE Err -< E}.
-  Context {R : Type}.
-  Context {map : Type}.
-  Context {V : T -> Type}.
-
-  Context {hmap : HMap T V map}.
-  Context {MOK : HMapOk hmap}.
-
-
-  (* TODO: generalize, move to utils/HMap. *)
-  Lemma st_lookup_add_eq : forall k v s, lookup k (add k v s) = Some v.
-    Proof.
-    intros.
-    rewrite mapsto_lookup; apply mapsto_add_eq. 
-    Unshelve. assumption.
-    Qed.
-
-  Lemma st_lookup_remove_eq :
-    forall k s, lookup k (HMap.remove k s) = None.
-  Proof using MOK.
-    intros.
-    destruct (lookup k (HMap.remove k s)) eqn:EQ.
-    - inversion MOK. 
-      rewrite mapsto_lookup in EQ.
-      exfalso.
-      eapply mapsto_remove_eq; eauto.
-    - reflexivity.
-    Qed.
-
-
-End STLookupErr.

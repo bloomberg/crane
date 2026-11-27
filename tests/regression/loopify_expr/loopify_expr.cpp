@@ -53,7 +53,7 @@ uint64_t LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
       auto _f = std::move(std::get<_after_sum_shapes_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t val = _f.val;
-      _result = (val + std::move(_result));
+      _result = (val + _result);
     }
   }
   return _result;
@@ -95,9 +95,7 @@ LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
       auto _f = std::move(std::get<_after_count_by_shape_in_Cons>(_popped));
       _stack.pop_back();
       LoopifyExpr::shape a0 = std::move(_f.a0);
-      std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
-          std::move(_result);
-      const auto &[p, t] = _tmp1;
+      auto [p, t] = std::move(_result);
       const auto &[c, sq] = p;
       if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(
               a0.v_mut())) {

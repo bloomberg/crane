@@ -30,12 +30,12 @@ uint64_t LocalMutualCallableParamCapture::run(uint64_t k, uint64_t n) {
         }
       };
   auto f =
-      [&](const crane::fn<uint64_t(uint64_t)> &h,
-          uint64_t n0)
-           -> uint64_t { return f_impl(f_impl, g_impl, h, n0); };
+      [&](const crane::fn<uint64_t(uint64_t)> &h) -> uint64_t {
+        return f_impl(f_impl, g_impl, h, n);
+      };
   auto g =
       [&](const crane::fn<uint64_t(uint64_t)> &h,
           uint64_t n0)
            -> uint64_t { return g_impl(f_impl, g_impl, h, n0); };
-  return f([](uint64_t x) { return (x + UINT64_C(3)); }, n);
+  return f([](uint64_t x) { return (x + UINT64_C(3)); });
 }

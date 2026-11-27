@@ -113,7 +113,7 @@ std::optional<Nat> InterpChainPerf::drive(
           std::pair<Nat, Nat>,
           Itree<Sum1<InterpChainPerf::outE, InterpChainPerf::noE, crane::obj>,
                 std::pair<Nat, Nat>>>::RetF>(_sv0.v());
-      const auto &[_x, r] = r1;
+      const auto &[_, r] = r1;
       return std::make_optional<Nat>(r);
     } else if (
         std::holds_alternative<typename ItreeF<

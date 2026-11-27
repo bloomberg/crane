@@ -50,10 +50,7 @@ List<uint64_t> Sort::merge(List<uint64_t> l1, const List<uint64_t> &l2) {
           }
         }
       };
-  {
-    const List<uint64_t> &_lc1_l3 = l2;
-    return merge_aux_impl(merge_aux_impl, _lc1_l3);
-  }
+  return merge_aux_impl(merge_aux_impl, l2);
 }
 
 List<uint64_t> Sort::merge_prog(const List<uint64_t> &, List<uint64_t> l1,

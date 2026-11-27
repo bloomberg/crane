@@ -145,20 +145,19 @@ public:
                                        "field at this instantiation");
               }
             }()};
+          } else if (std::holds_alternative<typename Exp0<CraneU>::ESELF>(
+                         _other.v())) {
+            const auto &[a0] =
+                std::get<typename Exp0<CraneU>::ESELF>(_other.v());
+            return ESELF{
+                (a0 ? std::make_shared<Exp0<T>>(crane_convert<Exp0<T>>(*a0))
+                    : nullptr)};
           } else {
-            if (std::holds_alternative<typename Exp0<CraneU>::ESELF>(_other.v())) {
-              const auto &[a0] =
-                  std::get<typename Exp0<CraneU>::ESELF>(_other.v());
-              return ESELF{
-                  (a0 ? std::make_shared<Exp0<T>>(crane_convert<Exp0<T>>(*a0))
-                      : nullptr)};
-            } else {
-              const auto &[a0] =
-                  std::get<typename Exp0<CraneU>::ENEG>(_other.v());
-              return ENEG{(a0 ? std::make_shared<std::pair<T, Exp0<T>>>(
-                                    crane_convert<std::pair<T, Exp0<T>>>(*a0))
-                              : nullptr)};
-            }
+            const auto &[a0] =
+                std::get<typename Exp0<CraneU>::ENEG>(_other.v());
+            return ENEG{(a0 ? std::make_shared<std::pair<T, Exp0<T>>>(
+                                  crane_convert<std::pair<T, Exp0<T>>>(*a0))
+                            : nullptr)};
           }
         }()) {}
 

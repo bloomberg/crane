@@ -188,8 +188,8 @@ template <SEM S> struct Make {
                              std::pair<crane::obj, crane::obj>> &e,
                   F1 &&arg) {
     const auto &[x0, a1] = e;
-    const auto &[a, _x] = x0;
-    const auto &[f, _x0] = a1;
+    const auto &[a, _] = x0;
+    const auto &[f, _] = a1;
     if (crane::any_cast<bool>(
             crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(arg(a)))) {
       return true;

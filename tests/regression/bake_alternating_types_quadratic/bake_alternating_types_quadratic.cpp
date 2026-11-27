@@ -6,9 +6,8 @@ BakeAlternatingTypesQuadratic::alt(uint64_t n) {
   // cell fills.
   std::optional<BakeAlternatingTypesQuadratic::mterm> _root{};
   std::shared_ptr<BakeAlternatingTypesQuadratic::mterm> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = mterm::mlit(UINT64_C(0));
       (_write ? *(*_write =
                       std::make_shared<BakeAlternatingTypesQuadratic::mterm>(
@@ -16,15 +15,16 @@ BakeAlternatingTypesQuadratic::alt(uint64_t n) {
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t k = _loop_n - 1;
+      uint64_t k = n - 1;
       auto _cell1 = std::make_shared<BakeAlternatingTypesQuadratic::mlist>(
           typename BakeAlternatingTypesQuadratic::mlist::MCons(
               nullptr, std::make_shared<BakeAlternatingTypesQuadratic::mlist>(
                            mlist::mnil())));
-      auto _cell = typename BakeAlternatingTypesQuadratic::mterm::MAdd(
-          std::make_shared<BakeAlternatingTypesQuadratic::mterm>(
-              mterm::mlit(_loop_n)),
-          std::move(_cell1));
+      auto _cell =
+          typename BakeAlternatingTypesQuadratic::mterm::MAdd(
+              std::make_shared<BakeAlternatingTypesQuadratic::mterm>(
+                  mterm::mlit(n)),
+              std::move(_cell1));
       BakeAlternatingTypesQuadratic::mterm &_node =
           (_write ? *(*_write = std::make_shared<
                           BakeAlternatingTypesQuadratic::mterm>(
@@ -36,7 +36,7 @@ BakeAlternatingTypesQuadratic::alt(uint64_t n) {
                   _node.v_mut())
                   .a1->v_mut())
               .a0;
-      _loop_n = k;
+      n = k;
       continue;
     }
   }

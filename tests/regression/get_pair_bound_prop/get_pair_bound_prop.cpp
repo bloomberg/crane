@@ -205,24 +205,16 @@ GetPairBoundProp::execute(const GetPairBoundProp::state &s,
     uint64_t out;
     if (a == UINT64_C(0)) {
       out = UINT64_C(0);
+    } else if (a == UINT64_C(1)) {
+      out = UINT64_C(0);
+    } else if (a == UINT64_C(2)) {
+      out = UINT64_C(1);
+    } else if (a == UINT64_C(4)) {
+      out = UINT64_C(2);
+    } else if (a == UINT64_C(8)) {
+      out = UINT64_C(3);
     } else {
-      if (a == UINT64_C(1)) {
-        out = UINT64_C(0);
-      } else {
-        if (a == UINT64_C(2)) {
-          out = UINT64_C(1);
-        } else {
-          if (a == UINT64_C(4)) {
-            out = UINT64_C(2);
-          } else {
-            if (a == UINT64_C(8)) {
-              out = UINT64_C(3);
-            } else {
-              out = UINT64_C(15);
-            }
-          }
-        }
-      }
+      out = UINT64_C(15);
     }
     auto _once26 = (s.ex_pc + UINT64_C(1));
     return state{out, s.ex_regs, s.ex_carry,

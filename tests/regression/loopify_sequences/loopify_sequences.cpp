@@ -6,29 +6,27 @@ uint64_t LoopifySequences::alternate_sum(uint64_t sign, uint64_t acc,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = acc;
-  uint64_t _loop_sign = sign;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      return _loop_acc;
+      return acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t new_acc;
-      if (_loop_sign == UINT64_C(1)) {
-        new_acc = (_loop_acc + a0);
+      if (sign == UINT64_C(1)) {
+        new_acc = (acc + a0);
       } else {
-        new_acc = (((_loop_acc - a0) > _loop_acc ? 0 : (_loop_acc - a0)));
+        new_acc = (((acc - a0) > acc ? 0 : (acc - a0)));
       }
       uint64_t new_sign;
-      if (_loop_sign == UINT64_C(1)) {
+      if (sign == UINT64_C(1)) {
         new_sign = UINT64_C(0);
       } else {
         new_sign = UINT64_C(1);
       }
       _loop_l = crane_raw(a1);
-      _loop_acc = new_acc;
-      _loop_sign = new_sign;
+      acc = new_acc;
+      sign = new_sign;
     }
   }
 }
@@ -68,14 +66,12 @@ List<uint64_t> LoopifySequences::collatz_list_fuel(uint64_t fuel, uint64_t n) {
         uint64_t f = fuel - 1;
         if (n == UINT64_C(1)) {
           _result = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
+        } else if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
+          _stack.emplace_back(_after_collatz_list_fuel_in_true{n});
+          _stack.emplace_back(_call{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
         } else {
-          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
-            _stack.emplace_back(_after_collatz_list_fuel_in_true{n});
-            _stack.emplace_back(_call{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
-          } else {
-            _stack.emplace_back(_after_collatz_list_fuel_in_false{n});
-            _stack.emplace_back(_call{((UINT64_C(3) * n) + UINT64_C(1)), f});
-          }
+          _stack.emplace_back(_after_collatz_list_fuel_in_false{n});
+          _stack.emplace_back(_call{((UINT64_C(3) * n) + UINT64_C(1)), f});
         }
       }
     } else if (
@@ -106,7 +102,6 @@ List<uint64_t> LoopifySequences::run_sum_aux(uint64_t acc,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();
@@ -116,7 +111,7 @@ List<uint64_t> LoopifySequences::run_sum_aux(uint64_t acc,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      uint64_t new_acc = (_loop_acc + a0);
+      uint64_t new_acc = (acc + a0);
       auto _cell = typename List<uint64_t>::Cons(new_acc, nullptr);
       List<uint64_t> &_node =
           (_write ? *(*_write =
@@ -124,7 +119,7 @@ List<uint64_t> LoopifySequences::run_sum_aux(uint64_t acc,
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      _loop_acc = new_acc;
+      acc = new_acc;
       continue;
     }
   }
@@ -141,14 +136,12 @@ List<uint64_t> LoopifySequences::rotate_left_fuel(uint64_t fuel, uint64_t n,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_n = n;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       return _loop_l;
     } else {
-      uint64_t f = _loop_fuel - 1;
-      if (_loop_n == UINT64_C(0)) {
+      uint64_t f = fuel - 1;
+      if (n == UINT64_C(0)) {
         return _loop_l;
       } else {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
@@ -157,10 +150,8 @@ List<uint64_t> LoopifySequences::rotate_left_fuel(uint64_t fuel, uint64_t n,
           const auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l.v());
           _loop_l = a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
-          _loop_n =
-              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
-                                                  : (_loop_n - UINT64_C(1))));
-          _loop_fuel = f;
+          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          fuel = f;
         }
       }
     }
@@ -177,15 +168,14 @@ uint64_t LoopifySequences::sum_acc(uint64_t acc, const List<uint64_t> &l) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_acc = acc;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      return _loop_acc;
+      return acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       _loop_l = crane_raw(a1);
-      _loop_acc = (_loop_acc + a0);
+      acc = (acc + a0);
     }
   }
 }
@@ -399,7 +389,6 @@ List<uint64_t> LoopifySequences::replace_at(uint64_t idx, uint64_t value,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_idx = idx;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<uint64_t>::nil();
@@ -409,7 +398,7 @@ List<uint64_t> LoopifySequences::replace_at(uint64_t idx, uint64_t value,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_idx == UINT64_C(0)) {
+      if (idx == UINT64_C(0)) {
         auto _value = List<uint64_t>::cons(value, crane::shared_child(a1));
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
@@ -423,10 +412,7 @@ List<uint64_t> LoopifySequences::replace_at(uint64_t idx, uint64_t value,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_idx =
-            (((_loop_idx - UINT64_C(1)) > _loop_idx ? 0
-                                                    : (_loop_idx -
-                                                       UINT64_C(1))));
+        idx = (((idx - UINT64_C(1)) > idx ? 0 : (idx - UINT64_C(1))));
         continue;
       }
     }
@@ -559,12 +545,11 @@ bool LoopifySequences::is_palindrome_fuel(uint64_t fuel,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<uint64_t> _loop_s = s;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       return true;
     } else {
-      uint64_t f = _loop_fuel - 1;
+      uint64_t f = fuel - 1;
       uint64_t n = _loop_s.length();
       if (n <= 0) {
         return true;
@@ -576,7 +561,7 @@ bool LoopifySequences::is_palindrome_fuel(uint64_t fuel,
           uint64_t _x = n0 - 1;
           if (first_elem(_loop_s) == last_elem(_loop_s)) {
             _loop_s = init_list(tail_list(std::move(_loop_s)));
-            _loop_fuel = f;
+            fuel = f;
           } else {
             return false;
           }
@@ -685,18 +670,16 @@ LoopifySequences::run_length_groups_aux(uint64_t prev, uint64_t count,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_count = count;
-  uint64_t _loop_prev = prev;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      if (_loop_count == UINT64_C(0)) {
+      if (count == UINT64_C(0)) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto _value = List<uint64_t>::cons(_loop_count, List<uint64_t>::nil());
+        auto _value = List<uint64_t>::cons(count, List<uint64_t>::nil());
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
@@ -705,29 +688,27 @@ LoopifySequences::run_length_groups_aux(uint64_t prev, uint64_t count,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_prev == a0) {
+      if (prev == a0) {
         _loop_l = crane_raw(a1);
-        _loop_count = (_loop_count + 1);
-        _loop_prev = a0;
+        count = (count + 1);
+        prev = a0;
+        continue;
+      } else if (count == UINT64_C(0)) {
+        _loop_l = crane_raw(a1);
+        count = UINT64_C(1);
+        prev = a0;
         continue;
       } else {
-        if (_loop_count == UINT64_C(0)) {
-          _loop_l = crane_raw(a1);
-          _loop_count = UINT64_C(1);
-          _loop_prev = a0;
-          continue;
-        } else {
-          auto _cell = typename List<uint64_t>::Cons(_loop_count, nullptr);
-          List<uint64_t> &_node =
-              (_write ? *(*_write = std::make_shared<List<uint64_t>>(
-                              std::move(_cell)))
-                      : _root.emplace(std::move(_cell)));
-          _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-          _loop_l = crane_raw(a1);
-          _loop_count = UINT64_C(1);
-          _loop_prev = a0;
-          continue;
-        }
+        auto _cell = typename List<uint64_t>::Cons(count, nullptr);
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
+        _loop_l = crane_raw(a1);
+        count = UINT64_C(1);
+        prev = a0;
+        continue;
       }
     }
   }
@@ -850,7 +831,7 @@ bool LoopifySequences::elem(uint64_t x, const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_elem_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (x == a0 || std::move(_result));
+      _result = (x == a0 || _result);
     }
   }
   return _result;
@@ -899,15 +880,14 @@ List<uint64_t> LoopifySequences::nub_fuel(uint64_t fuel,
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l = l;
-  uint64_t _loop_fuel = fuel;
   while (true) {
-    if (_loop_fuel <= 0) {
+    if (fuel <= 0) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t f = _loop_fuel - 1;
+      uint64_t f = fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
@@ -924,7 +904,7 @@ List<uint64_t> LoopifySequences::nub_fuel(uint64_t fuel,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = filter_ne(a0, *a1);
-        _loop_fuel = f;
+        fuel = f;
         continue;
       }
     }

@@ -62,20 +62,15 @@ List<LocalFixNontailFunctionResult::pt> LocalFixNontailFunctionResult::h6a(
                 std::move(rv), std::move(x0_0));
           }
         };
-    auto go =
-        [=, go_impl = std::move(go_impl)](
-            List<uint64_t> l, crane::fn<List<LocalFixNontailFunctionResult::pt>(
-                                  LocalFixNontailFunctionResult::tree)> acc,
-            LocalFixNontailFunctionResult::tree x0_0)
-             -> List<LocalFixNontailFunctionResult::pt> {
-          return go_impl(go_impl, std::move(l), std::move(acc),
-                         std::move(x0_0));
-        };
-    return go(List<uint64_t>::cons(
-        UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-              [=](LocalFixNontailFunctionResult::tree _x0) -> List<
-                  LocalFixNontailFunctionResult::pt> { return h6b(m, _x0); },
-              x0_);
+    List<uint64_t> _lc1_l = List<uint64_t>::cons(
+        UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()));
+    crane::fn<List<LocalFixNontailFunctionResult::pt>(
+        LocalFixNontailFunctionResult::tree)> _lc1_acc =
+        [=](LocalFixNontailFunctionResult::tree _x0) -> List<
+            LocalFixNontailFunctionResult::pt> { return h6b(m, _x0); };
+    LocalFixNontailFunctionResult::tree _lc1_x0_0 = x0_;
+    return go_impl(go_impl, std::move(_lc1_l), std::move(_lc1_acc),
+                   std::move(_lc1_x0_0));
   }
 }
 
@@ -143,19 +138,14 @@ List<LocalFixNontailFunctionResult::pt> LocalFixNontailFunctionResult::k1(
             }
           }
         };
-    auto go =
-        [=, go_impl = std::move(go_impl)](
-            List<uint64_t> l, crane::fn<List<LocalFixNontailFunctionResult::pt>(
-                                  LocalFixNontailFunctionResult::tree)> acc,
-            LocalFixNontailFunctionResult::tree x0_0)
-             -> List<LocalFixNontailFunctionResult::pt> {
-          return go_impl(go_impl, std::move(l), std::move(acc),
-                         std::move(x0_0));
-        };
-    return go(List<uint64_t>::cons(
-        UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-              [=](LocalFixNontailFunctionResult::tree _x0) -> List<
-                  LocalFixNontailFunctionResult::pt> { return k1(m, _x0); },
-              x0_);
+    List<uint64_t> _lc1_l = List<uint64_t>::cons(
+        UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()));
+    crane::fn<List<LocalFixNontailFunctionResult::pt>(
+        LocalFixNontailFunctionResult::tree)> _lc1_acc =
+        [=](LocalFixNontailFunctionResult::tree _x0) -> List<
+            LocalFixNontailFunctionResult::pt> { return k1(m, _x0); };
+    LocalFixNontailFunctionResult::tree _lc1_x0_0 = x0_;
+    return go_impl(go_impl, std::move(_lc1_l), std::move(_lc1_acc),
+                   std::move(_lc1_x0_0));
   }
 }

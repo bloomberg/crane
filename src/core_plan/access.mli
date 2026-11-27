@@ -22,7 +22,10 @@
     take canonical value forms: it is {e pinned}, and
     {!physical} never gives one of its parameters a mutable reference.  Its
     callers read its summary capped at [Read_access], since it holds a copy
-    of whatever it writes or replaces. *)
+    of whatever it writes or replaces.  The leading parameters every such
+    occurrence supplies -- a partial application's arguments -- are passed
+    by the call the closure makes, as any call passes them: they keep their
+    views. *)
 
 type access = Unused | Read_access | Write_access | Replace_access
 
@@ -66,7 +69,11 @@ type t = {
   summaries : (Names.GlobRef.t * requirement list) list;
       (** each generated function's, innermost first, for the parameters its
           head declares ({!Base.Type_util.declared_parameters}) *)
-  pinned : Core.Ref.User.Set.t;  (** the functions named as values, and the methods *)
+  pinned : int Core.Ref.User.Map.t;
+      (** the functions named as values, and the methods, each with how many
+          of its leading parameters every occurrence as a value supplies --
+          a partial application's arguments, none for a bare name or a
+          method *)
 }
 
 val empty : t
@@ -78,15 +85,18 @@ val empty : t
 val summarize : ?receiver:(Names.GlobRef.t -> int option) -> Core.Program.t -> t
 
 (** The summary [g]'s callers read: its own, capped at a [Canonical]
-    [Read_access] when [g] is pinned (its parameters take no view). *)
-val exported : pinned:Core.Ref.User.Set.t -> Names.GlobRef.t -> requirement list -> requirement list
+    [Read_access] when [g] is pinned (its parameters take no view) -- but
+    for the leading parameters every occurrence as a value supplies, which
+    keep their views and lose only a replacement. *)
+val exported : pinned:int Core.Ref.User.Map.t -> Names.GlobRef.t -> requirement list -> requirement list
 
 (** The physical form a borrowed parameter of the typed-mapped type [p]
     with requirement [r] takes, when it is not the canonical
     read form.  An owned parameter is taken by value, before this is asked.
     Where [view_allowed] (default false: a pinned function, a lambda, a
-    local function), a [Preferred] read takes [p]'s read view and a
-    [Preferred] write its writable view, where [p] declares one.  Where
+    local function), a [Preferred] read, or no use at all, takes [p]'s read
+    view and a [Preferred] write its writable view, where [p] declares
+    one.  Where
     [reference_allowed] is false, a form that would be a mutable reference
     is a copy by value instead, which the body may write or replace. *)
 val physical :

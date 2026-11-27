@@ -152,7 +152,7 @@ struct LoopifySorting {
       } else {
         auto _f = std::move(std::get<_after_len_impl_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -236,16 +236,15 @@ struct LoopifySorting {
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     const List<uint64_t> *_loop_l2 = &l2;
     const List<uint64_t> *_loop_l1 = &l1;
-    uint64_t _loop_fuel = fuel;
     while (true) {
-      if (_loop_fuel <= 0) {
+      if (fuel <= 0) {
         auto _value = List<uint64_t>::nil();
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        uint64_t f = _loop_fuel - 1;
+        uint64_t f = fuel - 1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
           auto _value = *_loop_l2;
           (_write ? *(*_write =
@@ -275,7 +274,7 @@ struct LoopifySorting {
                   &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
               _loop_l2 = &*_loop_l2;
               _loop_l1 = crane_raw(a1);
-              _loop_fuel = f;
+              fuel = f;
               continue;
             } else {
               auto _cell = typename List<uint64_t>::Cons(a00, nullptr);
@@ -287,7 +286,7 @@ struct LoopifySorting {
                   &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
               _loop_l2 = crane_raw(a10);
               _loop_l1 = &*_loop_l1;
-              _loop_fuel = f;
+              fuel = f;
               continue;
             }
           }

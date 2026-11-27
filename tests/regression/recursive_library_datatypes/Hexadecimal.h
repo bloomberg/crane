@@ -888,67 +888,67 @@ public:
       } else if (std::holds_alternative<_after_nb_digits_in_D0>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D0>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D1>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D1>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D2>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D2>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D3>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D3>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D4>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D4>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D5>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D5>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D6>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D6>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D7>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D7>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D8>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D8>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D9>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D9>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_Da>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_Da>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_Db>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_Db>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_Dc>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_Dc>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_Dd>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_Dd>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_De>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_De>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       } else {
         auto _f = std::move(std::get<_after_nb_digits_in_Df>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -1129,79 +1129,78 @@ public:
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     const Uint *_loop_self = this;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
+      if (n <= 0) {
         return *_loop_self;
       } else {
-        uint64_t n0 = _loop_n - 1;
+        uint64_t n0 = n - 1;
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename Uint::Nil>(_sv.v())) {
           return Uint::d0(Uint::nil());
         } else if (std::holds_alternative<typename Uint::D0>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D0>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::D1>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D1>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::D2>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D2>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::D3>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D3>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::D4>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D4>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::D5>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D5>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::D6>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D6>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::D7>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D7>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::D8>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D8>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::D9>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D9>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::Da>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::Da>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::Db>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::Db>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::Dc>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::Dc>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::Dd>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::Dd>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else if (std::holds_alternative<typename Uint::De>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::De>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         } else {
           const auto &[a0] = std::get<typename Uint::Df>(_sv.v());
           _loop_self = crane_raw(a0);
-          _loop_n = n0;
+          n = n0;
         }
       }
     }

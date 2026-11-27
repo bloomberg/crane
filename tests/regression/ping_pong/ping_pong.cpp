@@ -15,7 +15,6 @@ bool PingPong::string_eq(std::string_view s1, std::string_view s2) {
 void PingPong::run_game(uint64_t round) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  uint64_t _loop_round = round;
   while (true) {
     std::cout << std::string("ping") << '\n';
     std::string response;
@@ -23,10 +22,10 @@ void PingPong::run_game(uint64_t round) {
     if (string_eq(std::string_view{response}, std::string_view("pong"))) {
       std::cout << crane::string_capped(
                        std::string("  (round ") +
-                       crane::string_capped(std::to_string(_loop_round) +
+                       crane::string_capped(std::to_string(round) +
                                             std::string(" complete)"))) <<
       '\n';
-      _loop_round = (_loop_round + 1);
+      round = (round + 1);
     } else {
       std::cout <<
       crane::string_capped(

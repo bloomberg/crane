@@ -241,7 +241,7 @@ struct FramePlanRebind {
           };
           _result = go(List<std::string>::cons(
               "a", List<std::string>::cons("b", List<std::string>::nil())),
-                       std::move(_result));
+                       _result);
         }
       }
       return _result;

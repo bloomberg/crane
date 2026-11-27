@@ -4,15 +4,14 @@ ProdDrain::t ProdDrain::build(uint64_t n, ProdDrain::t acc) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   ProdDrain::t _loop_acc = std::move(acc);
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       return _loop_acc;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       uint64_t _next_n = m;
-      _loop_acc = t::n(std::make_pair(std::move(_loop_acc), _loop_n));
-      _loop_n = _next_n;
+      _loop_acc = t::n(std::make_pair(std::move(_loop_acc), n));
+      n = _next_n;
     }
   }
 }
@@ -40,14 +39,14 @@ uint64_t ProdDrain::depth(const ProdDrain::t &x) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0] = std::get<typename ProdDrain::t::N>(x.v());
-        const auto &[u, _x] = (*a0);
+        const auto &[u, _] = (*a0);
         _stack.emplace_back(_after_depth_in_pair{});
         _stack.emplace_back(_call{u});
       }
     } else {
       auto _f = std::move(std::get<_after_depth_in_pair>(_popped));
       _stack.pop_back();
-      _result = (std::move(_result) + 1);
+      _result = (_result + 1);
     }
   }
   return _result;

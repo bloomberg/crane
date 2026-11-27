@@ -52,15 +52,7 @@ struct Coinductive {
   static stream count_from(uint64_t n);
   static uint64_t hd(const stream &s);
   static stream tl(const stream &s);
-
-  static stream smap(const crane::fn<uint64_t(uint64_t)> &f, const stream &s) {
-    const auto &[a0, a1] = std::get<typename stream::Cons>(s.v());
-    return stream::lazy_([=,
-                          f = f]() mutable -> typename stream::Cons {
-      return {f(a0), smap(f, a1)};
-    });
-  }
-
+  static stream smap(const crane::fn<uint64_t(uint64_t)> &f, const stream &s);
   static stream interleave(const stream &s1, const stream &s2);
   static inline const stream get_zeros = zeros();
   static inline const stream get_count = count_from(UINT64_C(0));

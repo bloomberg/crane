@@ -254,14 +254,14 @@ struct BoxedElementContainerCast {
               crane::cons(symbol::nt(Nonterminal::OBJ), crane::list<symbol>{})),
           std::make_pair(
               crane::obj(crane_erase_fn([](const auto &tup) {
-                const auto &[prs, _x] =
+                const auto &[prs, _] =
                     crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
                 return nodupKeys<val>(crane_container_cast<
                     crane::list<std::pair<std::string, val>>>(
                     crane::any_cast<crane::list<crane::obj>>(prs)));
               })),
               crane::obj(crane_erase_fn([](const auto &tup) {
-                const auto &[prs, _x] =
+                const auto &[prs, _] =
                     crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
                 return val::vassoc(crane_container_cast<
                     crane::list<crane::box<std::pair<std::string, val>>>>(
@@ -275,7 +275,7 @@ struct BoxedElementContainerCast {
               std::make_pair(
                   crane::obj(crane_erase_fn([](const auto &) { return true; })),
                   crane::obj(crane_erase_fn([](const auto &tup) {
-                    const auto &[s, _x] =
+                    const auto &[s, _] =
                         crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
                     return val::vstr(crane::any_cast<std::string>(s));
                   })))),

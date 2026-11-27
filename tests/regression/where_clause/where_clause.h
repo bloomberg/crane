@@ -166,22 +166,22 @@ struct WhereClause {
           auto _f = std::move(std::get<_after_expr_size_in_Plus>(_popped));
           _stack.pop_back();
           const Expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_expr_size_in_Plus_2{std::move(_result)});
+          _stack.emplace_back(_after_expr_size_in_Plus_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_expr_size_in_Plus_2>(_popped)) {
           auto _f = std::move(std::get<_after_expr_size_in_Plus_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
+          _result = ((UINT64_C(1) + _f._tmp2) + _result);
         } else if (std::holds_alternative<_after_expr_size_in_Times>(_popped)) {
           auto _f = std::move(std::get<_after_expr_size_in_Times>(_popped));
           _stack.pop_back();
           const Expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_expr_size_in_Times_2{std::move(_result)});
+          _stack.emplace_back(_after_expr_size_in_Times_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_expr_size_in_Times_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp4) + std::move(_result));
+          _result = ((UINT64_C(1) + _f._tmp4) + _result);
         }
       }
       return _result;
@@ -241,22 +241,22 @@ struct WhereClause {
           auto _f = std::move(std::get<_after_eval_in_Plus>(_popped));
           _stack.pop_back();
           const Expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_eval_in_Plus_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_in_Plus_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_in_Plus_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_in_Plus_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         } else if (std::holds_alternative<_after_eval_in_Times>(_popped)) {
           auto _f = std::move(std::get<_after_eval_in_Times>(_popped));
           _stack.pop_back();
           const Expr &a1 = *_f.a1;
-          _stack.emplace_back(_after_eval_in_Times_2{std::move(_result)});
+          _stack.emplace_back(_after_eval_in_Times_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_eval_in_Times_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 * std::move(_result));
+          _result = (_f._tmp4 * _result);
         }
       }
       return _result;
@@ -550,26 +550,26 @@ struct WhereClause {
           auto _f = std::move(std::get<_after_beval_in_BAnd>(_popped));
           _stack.pop_back();
           const BExpr &a1 = *_f.a1;
-          _stack.emplace_back(_after_beval_in_BAnd_2{std::move(_result)});
+          _stack.emplace_back(_after_beval_in_BAnd_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_beval_in_BAnd_2>(_popped)) {
           auto _f = std::move(std::get<_after_beval_in_BAnd_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 && std::move(_result));
+          _result = (_f._tmp2 && _result);
         } else if (std::holds_alternative<_after_beval_in_BNot>(_popped)) {
           auto _f = std::move(std::get<_after_beval_in_BNot>(_popped));
           _stack.pop_back();
-          _result = !(std::move(_result));
+          _result = !(_result);
         } else if (std::holds_alternative<_after_beval_in_BOr>(_popped)) {
           auto _f = std::move(std::get<_after_beval_in_BOr>(_popped));
           _stack.pop_back();
           const BExpr &a1 = *_f.a1;
-          _stack.emplace_back(_after_beval_in_BOr_2{std::move(_result)});
+          _stack.emplace_back(_after_beval_in_BOr_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_beval_in_BOr_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 || std::move(_result));
+          _result = (_f._tmp4 || _result);
         }
       }
       return _result;
@@ -839,12 +839,12 @@ struct WhereClause {
           auto _f = std::move(std::get<_after_aeval_in_APlus>(_popped));
           _stack.pop_back();
           const AExpr &a1 = *_f.a1;
-          _stack.emplace_back(_after_aeval_in_APlus_2{std::move(_result)});
+          _stack.emplace_back(_after_aeval_in_APlus_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_aeval_in_APlus_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         }
       }
       return _result;

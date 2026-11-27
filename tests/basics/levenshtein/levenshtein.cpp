@@ -19,11 +19,7 @@ Levenshtein::chain Levenshtein::inserts_chain(const String &s1, String s2) {
         return chain::skip(a00, *a10, *a10, Nat::o(), _self_f(_self_f, *a10));
       }
     };
-    auto f =
-        [&](const String &s) -> Levenshtein::chain {
-          return f_impl(f_impl, s);
-        };
-    return f(std::move(s2));
+    return f_impl(f_impl, s2);
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s1.v());
     return inserts_chain(*a1, s2).insert_chain(a0, s2, a1->append(s2),
@@ -128,10 +124,7 @@ Levenshtein::levenshtein_chain(String s, const String &x0_) {
           }
         }
       };
-  {
-    const String &_lc1_t = x0_;
-    return levenshtein_chain1_impl(levenshtein_chain1_impl, _lc1_t);
-  }
+  return levenshtein_chain1_impl(levenshtein_chain1_impl, x0_);
 }
 
 Nat Levenshtein::levenshtein_computed(String s, const String &t) {

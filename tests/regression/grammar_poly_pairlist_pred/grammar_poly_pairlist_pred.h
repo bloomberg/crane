@@ -236,14 +236,14 @@ using grammar_entry = SigT<production, production_semty>;
             }(Symbol::nt(Nonterminal::OBJ), std::deque<Symbol>{})),
             std::make_pair(
                 crane::obj(crane_erase_fn([](const auto &tup) {
-                  const auto &[prs, _x] =
+                  const auto &[prs, _] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
                   return nodupKeys<Val>(crane_container_cast<
                       std::deque<std::pair<std::string, Val>>>(
                       crane::any_cast<std::deque<crane::obj>>(prs)));
                 })),
                 crane::obj(crane_erase_fn([](const auto &tup) {
-                  const auto &[prs, _x] =
+                  const auto &[prs, _] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
                   return Val::vassoc(crane_container_cast<
                       std::deque<std::pair<std::string, Val>>>(
@@ -263,7 +263,7 @@ using grammar_entry = SigT<production, production_semty>;
                     crane::obj(
                         crane_erase_fn([](const auto &) { return true; })),
                     crane::obj(crane_erase_fn([](const auto &tup) {
-                      const auto &[s, _x] =
+                      const auto &[s, _] =
                           crane::any_cast<std::pair<crane::obj, crane::obj>>(
                               tup);
                       return Val::vstr(crane::any_cast<std::string>(s));

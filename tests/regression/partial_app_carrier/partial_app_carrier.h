@@ -156,7 +156,7 @@ struct PartialAppCarrier {
   static inline const bool is_three = []() {
     const auto &_sv = r;
     const auto &[a] = _sv;
-    const auto &[a1, _x] = a;
+    const auto &[a1, _] = a;
     return a1.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
   }();
 };

@@ -222,7 +222,7 @@ public:
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _stack.pop_back();
-        _result = (std::move(_result) + 1);
+        _result = (_result + 1);
       }
     }
     return _result;
@@ -253,7 +253,7 @@ struct CaptureMoveThenAlias {
               std::get<typename Sum<List<uint64_t>, uint64_t>::Inl>(sb.v());
           return a0.length() == UINT64_C(3);
         } else {
-          const auto &[_x1, _x2] = pp;
+          const auto &[_, _] = pp;
           return false;
         }
       })

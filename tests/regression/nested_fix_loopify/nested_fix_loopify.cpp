@@ -40,23 +40,22 @@ uint64_t NestedFixLoopify::outer(const NestedFixLoopify::lst &l) {
             [&](const NestedFixLoopify::lst &m, uint64_t a) -> uint64_t {
               // Loop replaces the tail recursion: each recursive call updates
               // the loop variables.
-              uint64_t _loop_a = a;
               const NestedFixLoopify::lst *_loop_m = &m;
               while (true) {
                 if (std::holds_alternative<typename NestedFixLoopify::lst::Nil>(
                         _loop_m->v())) {
-                  return _loop_a;
+                  return a;
                 } else {
                   const auto &[a2, a3] =
                       std::get<typename NestedFixLoopify::lst::Cons>(
                           _loop_m->v());
-                  _loop_a = (_loop_a + (a2 * a0));
+                  a = (a + (a2 * a0));
                   _loop_m = crane_raw(a3);
                 }
               }
             };
         return inner(*a1, UINT64_C(0));
-      }() + std::move(_result));
+      }() + _result);
     }
   }
   return _result;
@@ -67,16 +66,15 @@ NestedFixLoopify::lst NestedFixLoopify::mk(uint64_t n) {
   // cell fills.
   std::optional<NestedFixLoopify::lst> _root{};
   std::shared_ptr<NestedFixLoopify::lst> *_write = nullptr;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
+    if (n <= 0) {
       auto _value = lst::nil();
       (_write ? *(*_write = std::make_shared<NestedFixLoopify::lst>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       auto _cell = typename NestedFixLoopify::lst::Cons(UINT64_C(2), nullptr);
       NestedFixLoopify::lst &_node =
           (_write ? *(*_write = std::make_shared<NestedFixLoopify::lst>(
@@ -84,7 +82,7 @@ NestedFixLoopify::lst NestedFixLoopify::mk(uint64_t n) {
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename NestedFixLoopify::lst::Cons>(_node.v_mut()).a1;
-      _loop_n = m;
+      n = m;
       continue;
     }
   }

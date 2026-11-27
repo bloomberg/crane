@@ -15,22 +15,7 @@ struct FixCaptureFnArg {
   /// go are all destroyed. The returned closure dereferences a
   /// destroyed std::function when it calls f.
   static std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>
-  make_transform(crane::fn<uint64_t(uint64_t)> f, uint64_t base) {
-    auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
-      if (x <= 0) {
-        return f(base);
-      } else {
-        uint64_t x_ = x - 1;
-        return (_self_go(_self_go, x_) + 1);
-      }
-    };
-    auto go =
-        [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
-          return go_impl(go_impl, x);
-        };
-    return std::make_pair(f(base), std::move(go));
-  }
-
+  make_transform(crane::fn<uint64_t(uint64_t)> f, uint64_t base);
   /// test1: make_transform(x=>x*2, 5) = (10, go).
   /// go(3) = (5*2) + 3 = 13. Total = 10 + 13 = 23.
   static inline const uint64_t test1 = []() -> uint64_t {

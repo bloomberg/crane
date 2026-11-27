@@ -49,9 +49,10 @@ type generated_fun = {
   lifted : Cpp_ir.Lowered.Decl.t list;  (** helpers lifted out of its body *)
 }
 
-(** [defined d tvars] is the definition [d] of a function or constant whose
-    template parameters are [tvars], filed by {!definition_file}'s rule. *)
-val defined : Cpp_ir.Lowered.Decl.t -> variable list -> generated_entity
+(** [defined d] is the definition [d] of a function or constant, filed by
+    {!definition_file}'s rule: in the header where [d] declares template
+    parameters. *)
+val defined : Cpp_ir.Lowered.Decl.t -> generated_entity
 
 (** Generate each function of a mutually recursive group, translating each
     body once. *)

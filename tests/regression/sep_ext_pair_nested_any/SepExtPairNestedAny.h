@@ -16,7 +16,7 @@ using token = Specif::SigT<Datatypes::Nat, sem_ty>;
     std::optional<Datatypes::List<Specif::SigT<Datatypes::Nat, crane::obj>>>(),
     true);
 const bool use_it = []() -> bool {
-  auto [_x, b] = produce;
+  auto [_, b] = produce;
   return b;
 }();
 } // namespace SepExtPairNestedAny

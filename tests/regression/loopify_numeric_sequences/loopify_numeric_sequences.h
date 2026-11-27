@@ -108,15 +108,13 @@ struct LoopifyNumericSequences {
   static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    uint64_t _loop_x = x;
-    uint64_t _loop_n = n;
     while (true) {
-      if (_loop_n <= 0) {
-        return _loop_x;
+      if (n <= 0) {
+        return x;
       } else {
-        uint64_t n_ = _loop_n - 1;
-        _loop_x = f(_loop_x);
-        _loop_n = n_;
+        uint64_t n_ = n - 1;
+        x = f(x);
+        n = n_;
       }
     }
   }

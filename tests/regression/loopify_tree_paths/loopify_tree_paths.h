@@ -302,14 +302,13 @@ struct LoopifyTreePaths {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(
-              _after_max_path_sum_in_Node_2{a1, std::move(_result)});
+          _stack.emplace_back(_after_max_path_sum_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_max_path_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = (a1 + std::max(_f._tmp2, std::move(_result)));
+          _result = (a1 + std::max(_f._tmp2, _result));
         }
       }
       return _result;
@@ -452,14 +451,13 @@ struct LoopifyTreePaths {
           _stack.pop_back();
           const tree &a2 = *_f.a2;
           uint64_t new_acc = _f.new_acc;
-          _stack.emplace_back(
-              _after_count_paths_sum_aux_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_after_count_paths_sum_aux_in_Node_2{_result});
           _stack.emplace_back(_call{_f.a2, new_acc});
         } else {
           auto _f = std::move(
               std::get<_after_count_paths_sum_aux_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + std::move(_result));
+          _result = (_f._tmp2 + _result);
         }
       }
       return _result;
@@ -714,12 +712,12 @@ struct LoopifyTreePaths {
           auto _f = std::move(std::get<_after_and_search_in_BNode>(_popped));
           _stack.pop_back();
           const bool_tree &a1 = *_f.a1;
-          _stack.emplace_back(_after_and_search_in_BNode_2{std::move(_result)});
+          _stack.emplace_back(_after_and_search_in_BNode_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_and_search_in_BNode_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 && std::move(_result));
+          _result = (_f._tmp2 && _result);
         }
       }
       return _result;
@@ -768,12 +766,12 @@ struct LoopifyTreePaths {
           auto _f = std::move(std::get<_after_or_search_in_BNode>(_popped));
           _stack.pop_back();
           const bool_tree &a1 = *_f.a1;
-          _stack.emplace_back(_after_or_search_in_BNode_2{std::move(_result)});
+          _stack.emplace_back(_after_or_search_in_BNode_2{_result});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_or_search_in_BNode_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 || std::move(_result));
+          _result = (_f._tmp2 || _result);
         }
       }
       return _result;

@@ -5,25 +5,23 @@ TmcValueRoot::lst TmcValueRoot::range(uint64_t start, uint64_t count) {
   // cell fills.
   std::optional<TmcValueRoot::lst> _root{};
   std::shared_ptr<TmcValueRoot::lst> *_write = nullptr;
-  uint64_t _loop_count = count;
-  uint64_t _loop_start = start;
   while (true) {
-    if (_loop_count <= 0) {
+    if (count <= 0) {
       auto _value = lst::nil();
       (_write ? *(*_write =
                       std::make_shared<TmcValueRoot::lst>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      uint64_t c = _loop_count - 1;
-      auto _cell = typename TmcValueRoot::lst::Cons(_loop_start, nullptr);
+      uint64_t c = count - 1;
+      auto _cell = typename TmcValueRoot::lst::Cons(start, nullptr);
       TmcValueRoot::lst &_node =
           (_write ? *(*_write =
                           std::make_shared<TmcValueRoot::lst>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename TmcValueRoot::lst::Cons>(_node.v_mut()).l;
-      _loop_count = c;
-      _loop_start = (_loop_start + 1);
+      count = c;
+      start = (start + 1);
       continue;
     }
   }

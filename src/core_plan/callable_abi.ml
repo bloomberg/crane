@@ -387,7 +387,8 @@ let with_dictionaries instances abi =
   {abi with head = dictionaries @ List.map shift abi.head}
 
 let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ -> true)
-    ?(reachable = max_int) ?(relaxed = fun _ -> false) ?(phantom_prefix = 0) ~callee ~scheme () =
+    ?(reachable = max_int) ?(declared = fun _ -> true) ?(relaxed = fun _ -> false) ?(phantom_prefix = 0) ~callee ~scheme
+    () =
   let variables =
     List.map
       (fun v ->
@@ -398,8 +399,9 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
           ( (if higher_kinded v then Template 1 else Typename),
             name,
             From_scheme v ) )
-      (List.filteri (fun k _ -> k < reachable)
-         (List.filter kept (Option.cata Core.Scheme.Var.all [] scheme)) )
+      (List.filter declared
+         (List.filteri (fun k _ -> k < reachable)
+            (List.filter kept (Option.cata Core.Scheme.Var.all [] scheme)) ) )
   in
   let head =
     List.mapi
@@ -438,13 +440,16 @@ let with_foreign d derive callees =
    conventions of a callee generated nowhere, and printed on its receiver
    without the variables the receiver carries or the method dropped
    ({!dropped_positions}). *)
-let plan d ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee
+let plan d ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?declared ?relaxed ?phantom_prefix callee
     ~scheme =
   match lookup d callee with
   | Some ({receiver = None; _} as abi) -> abi
-  | Some {receiver = Some _; _} | None ->
+  | (Some {receiver = Some _; _} | None) as planned ->
+    (* A method declares every variable its receiver does not carry: only
+       a function leaves out the ones its type spells nowhere. *)
+    let declared = match planned with Some _ -> None | None -> declared in
     let derive () =
-      foreign ?omitted ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix ~callee ~scheme ()
+      foreign ?omitted ?higher_kinded ?kept ?reachable ?declared ?relaxed ?phantom_prefix ~callee ~scheme ()
     in
     let emitting = match Base.Common.get_phase () with Base.Common.Emit -> true | Base.Common.Plan -> false in
     let base =

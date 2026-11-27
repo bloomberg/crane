@@ -53,8 +53,8 @@ uint64_t Monadic::fib(uint64_t n) {
   if (n <= UINT64_C(2)) {
     return n;
   } else {
-    auto [_x, p] = fib_state(n)(std::make_pair(UINT64_C(0), UINT64_C(1)));
-    const auto &[a, _x0] = p;
+    auto [_, p] = fib_state(n)(std::make_pair(UINT64_C(0), UINT64_C(1)));
+    const auto &[a, _] = p;
     return a;
   }
 }

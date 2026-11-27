@@ -242,7 +242,7 @@ struct NestedInd {
           auto _f =
               std::move(std::get<_after_custom_list_length_in_Ccons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + std::move(_result));
+          _result = (UINT64_C(1) + _result);
         }
       }
       return _result;
@@ -602,11 +602,8 @@ struct NestedInd {
                 return a00.literals().app(_self_aux(_self_aux, *a10));
               }
             };
-        auto aux =
-            [&](const List<expr> &l) -> List<uint64_t> {
-              return aux_impl(aux_impl, l);
-            };
-        return aux(*a0);
+        const List<expr> &_lc1_l = *a0;
+        return aux_impl(aux_impl, _lc1_l);
       } else {
         const auto &[a0] = std::get<typename expr::Mul>(this->v());
         auto aux_impl =
@@ -619,11 +616,8 @@ struct NestedInd {
                 return a00.literals().app(_self_aux(_self_aux, *a10));
               }
             };
-        auto aux =
-            [&](const List<expr> &l) -> List<uint64_t> {
-              return aux_impl(aux_impl, l);
-            };
-        return aux(*a0);
+        const List<expr> &_lc2_l = *a0;
+        return aux_impl(aux_impl, _lc2_l);
       }
     }
 
@@ -723,11 +717,8 @@ struct NestedInd {
                 return (a00.eval() + _self_sum_all(_self_sum_all, *a10));
               }
             };
-        auto sum_all =
-            [&](const List<expr> &l) -> uint64_t {
-              return sum_all_impl(sum_all_impl, l);
-            };
-        return sum_all(*a0);
+        const List<expr> &_lc1_l = *a0;
+        return sum_all_impl(sum_all_impl, _lc1_l);
       } else {
         const auto &[a0] = std::get<typename expr::Mul>(this->v());
         auto prod_all_impl =
@@ -740,11 +731,8 @@ struct NestedInd {
                 return (a00.eval() * _self_prod_all(_self_prod_all, *a10));
               }
             };
-        auto prod_all =
-            [&](const List<expr> &l) -> uint64_t {
-              return prod_all_impl(prod_all_impl, l);
-            };
-        return prod_all(*a0);
+        const List<expr> &_lc2_l = *a0;
+        return prod_all_impl(prod_all_impl, _lc2_l);
       }
     }
 

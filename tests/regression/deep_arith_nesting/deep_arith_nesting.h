@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <utility>
 
 struct DeepArithNesting {
   /// 1200 additions: deeper than clang's 1024-bracket limit.

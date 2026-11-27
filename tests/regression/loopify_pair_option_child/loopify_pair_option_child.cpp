@@ -41,13 +41,13 @@ uint64_t LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree &t) {
       auto _f = std::move(std::get<_after_sum_in_Some>(_popped));
       _stack.pop_back();
       uint64_t x = _f.x;
-      _result = ((_f._tmp2 + x) + std::move(_result));
+      _result = ((_f._tmp2 + x) + _result);
     } else {
       auto _f = std::move(std::get<_after_sum_in_pair>(_popped));
       _stack.pop_back();
       uint64_t x = _f.x;
       std::optional<LoopifyPairOptionChild::tree> o = std::move(_f.o);
-      uint64_t _tmp2 = std::move(_result);
+      uint64_t _tmp2 = _result;
       uint64_t _tmp1;
       if (o.has_value()) {
         const LoopifyPairOptionChild::tree &u = *o;

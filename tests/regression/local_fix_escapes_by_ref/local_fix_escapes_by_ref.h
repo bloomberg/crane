@@ -258,11 +258,9 @@ struct LocalFixEscapesByRef {
                 });
           }
         };
-    {
-      List<T2> _lc1_acc = List<T2>::nil();
-      List<T1> _lc1_l0 = l;
-      return loop_impl(loop_impl, std::move(_lc1_acc), std::move(_lc1_l0));
-    }
+    List<T2> _lc1_acc = List<T2>::nil();
+    List<T1> _lc1_l0 = l;
+    return loop_impl(loop_impl, std::move(_lc1_acc), std::move(_lc1_l0));
   }
 
   /// Each step doubles the element and counts one state tick.

@@ -49,3 +49,20 @@ uint64_t AccumClosureEscape::apply_all_sum(
     return (a0(x) + apply_all_sum(*a1, x));
   }
 }
+
+/// COMPOSE CLOSURES: Each step builds a composed function.
+/// This creates closures that capture OTHER closures.
+uint64_t AccumClosureEscape::compose_from_list(
+    const AccumClosureEscape::mylist<uint64_t> &l,
+    const crane::fn<uint64_t(uint64_t)> &acc, uint64_t x0_) {
+  if (std::holds_alternative<
+          typename AccumClosureEscape::mylist<uint64_t>::Mynil>(l.v())) {
+    return acc(x0_);
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename AccumClosureEscape::mylist<uint64_t>::Mycons>(l.v());
+    const AccumClosureEscape::mylist<uint64_t> &a1_value = *a1;
+    return compose_from_list(
+        a1_value, [=, acc = acc](uint64_t x) { return acc((a0 + x)); }, x0_);
+  }
+}

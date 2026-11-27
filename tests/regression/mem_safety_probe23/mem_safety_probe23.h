@@ -190,10 +190,9 @@ struct MemSafetyProbe23 {
   static std::pair<std::pair<tree, tree>, uint64_t>
   collect_children(const tree &t);
   static inline const uint64_t test_collect_children = []() {
-    std::pair<std::pair<tree, tree>, uint64_t> r = collect_children(tree::node(
+    auto [p, s] = collect_children(tree::node(
         tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(5),
         tree::node(tree::leaf(), UINT64_C(8), tree::leaf())));
-    auto [p, s] = std::move(r);
     auto [left_child, right_child] = std::move(p);
     return (
         (tree_sum(std::move(left_child)) + tree_sum(std::move(right_child))) +

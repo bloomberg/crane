@@ -398,7 +398,7 @@ struct BoxedFields {
           auto _f = std::move(std::get<_after_total_in_Layer>(_popped));
           _stack.pop_back();
           std::shared_ptr<shape> a0 = std::move(_f.a0);
-          _result = (a0->weight() + std::move(_result));
+          _result = (a0->weight() + _result);
         }
       }
       return _result;

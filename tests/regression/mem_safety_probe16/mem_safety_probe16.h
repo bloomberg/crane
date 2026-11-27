@@ -239,14 +239,13 @@ struct MemSafetyProbe16 {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(_after_tree_sum_in_Node_2{a1,
-                                                        std::move(_result)});
+          _stack.emplace_back(_after_tree_sum_in_Node_2{a1, _result});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + std::move(_result));
+          _result = ((_f._tmp2 + a1) + _result);
         }
       }
       return _result;
@@ -435,7 +434,7 @@ struct MemSafetyProbe16 {
         } else {
           auto _f = std::move(std::get<_after_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + std::move(_result));
+          _result = (UINT64_C(1) + _result);
         }
       }
       return _result;
@@ -534,30 +533,11 @@ struct MemSafetyProbe16 {
     mylist<crane::fn<uint64_t(uint64_t)>> fns = build_summers(std::move(trees));
     return apply_fns(std::move(fns), UINT64_C(0));
   }();
-
   /// TEST 2: Fold that accumulates a function by composing closures.
   /// Each step captures the tree from the current list element.
   static uint64_t compose_summers(const mylist<tree> &trees,
                                   const crane::fn<uint64_t(uint64_t)> &acc,
-                                  uint64_t x0_) {
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
-    const mylist<tree> *_loop_trees = &trees;
-    while (true) {
-      if (std::holds_alternative<typename mylist<tree>::Mynil>(_loop_trees->v())) {
-        return _loop_acc(x0_);
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<tree>::Mycons>(_loop_trees->v());
-        const mylist<tree> &a1_value = *a1;
-        _loop_acc =
-            [=, a0 = a0](uint64_t n) { return _loop_acc((a0.tree_sum() + n)); };
-        _loop_trees = &a1_value;
-      }
-    }
-  }
-
+                                  uint64_t x0_);
   static inline const uint64_t test_compose = []() {
     mylist<tree> trees =
         mylist<tree>::mycons(
@@ -644,35 +624,11 @@ struct MemSafetyProbe16 {
                         tree::node(tree::leaf(), UINT64_C(3), tree::leaf()));
     return t.tree_map_val().tree_sum();
   }();
-
   /// TEST 9: CPS-style flattening where each step builds a continuation
   /// that captures tree structure.
   static mylist<uint64_t>
   flatten_cps_aux(const tree &t,
-                  const crane::fn<mylist<uint64_t>(mylist<uint64_t>)> &k) {
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    crane::fn<mylist<uint64_t>(mylist<uint64_t>)> _loop_k = k;
-    const tree *_loop_t = &t;
-    while (true) {
-      if (std::holds_alternative<typename tree::Leaf>(_loop_t->v())) {
-        return _loop_k(mylist<uint64_t>::mynil());
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(_loop_t->v());
-        const tree &a0_value = *a0;
-        const tree &a2_value = *a2;
-        _loop_k = [=, a2_value = a2_value](const mylist<uint64_t> &ll) {
-          return flatten_cps_aux(
-              a2_value,
-              [=, _loop_k = _loop_k, ll = ll](const mylist<uint64_t> &rl) {
-                return _loop_k(ll.myapp(mylist<uint64_t>::mycons(a1, rl)));
-              });
-        };
-        _loop_t = &a0_value;
-      }
-    }
-  }
-
+                  const crane::fn<mylist<uint64_t>(mylist<uint64_t>)> &k);
   static mylist<uint64_t> flatten_cps(const tree &t);
   static inline const uint64_t test_flatten_cps = []() {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),

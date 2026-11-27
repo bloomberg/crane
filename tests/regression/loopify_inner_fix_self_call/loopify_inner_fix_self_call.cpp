@@ -48,12 +48,12 @@ uint64_t LoopifyInnerFixSelfCall::size(const LoopifyInnerFixSelfCall::tree &t) {
       auto _f = std::move(std::get<_after_size_in_Node>(_popped));
       _stack.pop_back();
       const LoopifyInnerFixSelfCall::tree &a2 = *_f.a2;
-      _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_after_size_in_Node_2{_result});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = ((_f._tmp2 + std::move(_result)) + 1);
+      _result = ((_f._tmp2 + _result) + 1);
     }
   }
   return _result;
@@ -134,15 +134,12 @@ LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
         if (size(*a20) < a1) {
           _stack.emplace_back(_after_join_in_true{std::move(a0), a1});
           _stack.emplace_back(_call{&r, *a2});
+        } else if (a1 < size(*a00)) {
+          _stack.emplace_back(_after_join_aux_in_true{a10, a20});
+          _stack.emplace_back(_call_join_aux{crane_raw(a00), std::move(a0), a1,
+                                             std::move(a2), std::move(l), x0_});
         } else {
-          if (a1 < size(*a00)) {
-            _stack.emplace_back(_after_join_aux_in_true{a10, a20});
-            _stack.emplace_back(
-                _call_join_aux{crane_raw(a00), std::move(a0), a1, std::move(a2),
-                               std::move(l), x0_});
-          } else {
-            _result = node(l, x0_, r);
-          }
+          _result = node(l, x0_, r);
         }
       }
     } else if (std::holds_alternative<_after_join_aux_in_true>(_popped)) {

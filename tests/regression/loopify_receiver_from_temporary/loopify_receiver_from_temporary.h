@@ -127,24 +127,22 @@ struct LoopifyReceiverFromTemporary {
       // Loop replaces the tail recursion: each recursive call updates the loop
       // variables.
       const t *_loop_self = this;
-      uint64_t _loop_n = n;
-      uint64_t _loop_k = k;
       while (true) {
-        if (_loop_n <= 0) {
-          return _loop_k;
+        if (n <= 0) {
+          return k;
         } else {
-          uint64_t m = _loop_n - 1;
+          uint64_t m = n - 1;
           auto &&_sv = _loop_self->wrap();
           if (std::holds_alternative<typename t::L>(_sv.v())) {
-            return _loop_k;
+            return k;
           } else {
             const auto &[a0] = std::get<typename t::N>(_sv.v());
             const auto &_sv0 = *a0;
             const auto &[a00] = _sv0;
             _self_store = a00;
             _loop_self = &_self_store;
-            _loop_n = m;
-            _loop_k = (_loop_k + 1);
+            n = m;
+            k = (k + 1);
           }
         }
       }

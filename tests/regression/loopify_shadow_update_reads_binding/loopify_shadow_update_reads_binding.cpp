@@ -13,25 +13,23 @@ uint64_t LoopifyShadowUpdateReadsBinding::apply_n(
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   List<crane::fn<uint64_t(uint64_t)>> _loop_fs = fs;
-  uint64_t _loop_v = v;
-  uint64_t _loop_n = n;
   while (true) {
-    if (_loop_n <= 0) {
-      return _loop_v;
+    if (n <= 0) {
+      return v;
     } else {
-      uint64_t m = _loop_n - 1;
+      uint64_t m = n - 1;
       if (std::holds_alternative<
               typename List<crane::fn<uint64_t(uint64_t)>>::Nil>(_loop_fs.v())) {
         _loop_fs = List<crane::fn<uint64_t(uint64_t)>>::nil();
-        _loop_n = m;
+        n = m;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<crane::fn<uint64_t(uint64_t)>>::Cons>(
                 _loop_fs.v());
         List<crane::fn<uint64_t(uint64_t)>> _next_fs =
             List<crane::fn<uint64_t(uint64_t)>>(*a1);
-        _loop_v = a0(_loop_v);
-        _loop_n = m;
+        v = a0(v);
+        n = m;
         _loop_fs = std::move(_next_fs);
       }
     }

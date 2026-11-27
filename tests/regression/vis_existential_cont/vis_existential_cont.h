@@ -144,37 +144,35 @@ struct VisExistentialCont {
                                          "field at this instantiation");
                 }
               }()};
+            } else if (std::holds_alternative<
+                           typename treeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                           _other.v())) {
+              const auto &[t] =
+                  std::get<typename treeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                      _other.v());
+              return TauF{[&]() -> T {
+                if constexpr (crane_convertible<T, const CraneU2 &>) {
+                  return crane_convert<T>(t);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
             } else {
-              if (std::holds_alternative<
-                      typename treeF<CraneU0, CraneU1, CraneU2>::TauF>(
-                      _other.v())) {
-                const auto &[t] =
-                    std::get<typename treeF<CraneU0, CraneU1, CraneU2>::TauF>(
-                        _other.v());
-                return TauF{[&]() -> T {
-                  if constexpr (crane_convertible<T, const CraneU2 &>) {
-                    return crane_convert<T>(t);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }()};
-              } else {
-                const auto &[x, e] =
-                    std::get<typename treeF<CraneU0, CraneU1, CraneU2>::VisF>(
-                        _other.v());
-                return VisF{
-                    [&]() -> E {
-                      if constexpr (crane_convertible<E, const CraneU0 &>) {
-                        return crane_convert<E>(x);
-                      } else {
-                        throw std::logic_error("unreachable: inactive "
-                                               "constructor field at this "
-                                               "instantiation");
-                      }
-                    }(),
-                    crane_convert<crane::fn<T(crane::obj)>>(e)};
-              }
+              const auto &[x, e] =
+                  std::get<typename treeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                      _other.v());
+              return VisF{
+                  [&]() -> E {
+                    if constexpr (crane_convertible<E, const CraneU0 &>) {
+                      return crane_convert<E>(x);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  crane_convert<crane::fn<T(crane::obj)>>(e)};
             }
           }()) {}
 

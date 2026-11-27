@@ -19,12 +19,10 @@ uint64_t Comparison::cmp_to_nat(Comparison::Cmp c) {
 Comparison::Cmp Comparison::compare_nats(uint64_t a, uint64_t b) {
   if (a < b) {
     return Cmp::CMPLT;
+  } else if (a == b) {
+    return Cmp::CMPEQ;
   } else {
-    if (a == b) {
-      return Cmp::CMPEQ;
-    } else {
-      return Cmp::CMPGT;
-    }
+    return Cmp::CMPGT;
   }
 }
 

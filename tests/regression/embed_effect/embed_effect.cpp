@@ -1,13 +1,15 @@
 #include "embed_effect.h"
 
-template <typename T1> void bug_create(const std::string &title) {
+void bug_create(const std::string &title) {
   {
     bug_create_impl(title);
     return;
   }
 }
 
+int64_t bug_read() { return bug_read_impl(); }
+
 int64_t bug_main() {
   bug_create("hello");
-  return bug_read<void>();
+  return bug_read();
 }

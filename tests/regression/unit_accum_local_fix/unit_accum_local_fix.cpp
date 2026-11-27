@@ -3,8 +3,7 @@
 /// for_each_with at B := unit, unfolded below into a local fixpoint.
 uint64_t UnitAccumLocalFix::fill(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> a =
-      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(
-          UINT64_C(0), (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))),
+      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(n),
                                                        UINT64_C(0));
   [&]() {
     auto for_each_with =
@@ -39,8 +38,7 @@ uint64_t UnitAccumLocalFix::fill(uint64_t n) {
 
 uint64_t UnitAccumLocalFix::fill_top(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> a =
-      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(
-          UINT64_C(0), (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))),
+      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(n),
                                                        UINT64_C(0));
   each_unit(ListDef::seq(UINT64_C(0), n), [=](std::monostate, uint64_t i) {
     std::span<uint64_t>{*a}[i] = (i * UINT64_C(3));
@@ -137,23 +135,19 @@ UnitAccumLocalFix::walk_twice(const List<uint64_t> &l) {
 
 /// A unit accumulator threaded beside a nat one.
 uint64_t UnitAccumLocalFix::sum_with_unit(const List<uint64_t> &l) {
-  {
-    const List<uint64_t> &_lc1_xs = l;
-    uint64_t _lc1_acc = UINT64_C(0);
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    uint64_t _lc1_loop_acc = _lc1_acc;
-    const List<uint64_t> *_lc1_loop_xs = &_lc1_xs;
-    while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _lc1_loop_xs->v())) {
-        return _lc1_loop_acc;
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
-        _lc1_loop_acc = (_lc1_loop_acc + a0);
-        _lc1_loop_xs = crane_raw(a1);
-      }
+  uint64_t _lc1_acc = UINT64_C(0);
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  uint64_t _lc1_loop_acc = _lc1_acc;
+  const List<uint64_t> *_lc1_loop_xs = &l;
+  while (true) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_lc1_loop_xs->v())) {
+      return _lc1_loop_acc;
+    } else {
+      const auto &[a0, a1] =
+          std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
+      _lc1_loop_acc = (_lc1_loop_acc + a0);
+      _lc1_loop_xs = crane_raw(a1);
     }
   }
 }

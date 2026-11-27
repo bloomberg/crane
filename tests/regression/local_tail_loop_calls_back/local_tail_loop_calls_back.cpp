@@ -4,12 +4,11 @@ std::optional<uint64_t>
 LocalTailLoopCallsBack::find(const LocalTailLoopCallsBack::tree &t,
                              uint64_t k) {
   auto scan =
-      [](const List<LocalTailLoopCallsBack::tree> &ts,
-         uint64_t k0)
-           -> std::optional<uint64_t> {
+      [&](const List<LocalTailLoopCallsBack::tree> &ts) -> std::optional<
+          uint64_t> {
         // Loop replaces the tail recursion: each recursive call updates the
         // loop variables.
-        uint64_t _loop_k0 = k0;
+        uint64_t _loop_k0 = k;
         const List<LocalTailLoopCallsBack::tree> *_loop_ts = &ts;
         while (true) {
           if (std::holds_alternative<
@@ -38,6 +37,6 @@ LocalTailLoopCallsBack::find(const LocalTailLoopCallsBack::tree &t,
   } else {
     const auto &[ts0] =
         std::get<typename LocalTailLoopCallsBack::tree::Node>(t.v());
-    return scan(*ts0, k);
+    return scan(*ts0);
   }
 }

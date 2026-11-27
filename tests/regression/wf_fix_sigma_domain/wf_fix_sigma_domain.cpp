@@ -8,10 +8,8 @@ uint64_t WfFixSigmaDomain::sw(uint64_t a, uint64_t b) {
           return _self_fix_F(_self_fix_F, y);
         });
       };
-  {
-    sigma<uint64_t, uint64_t> _lc1_x = sigma<uint64_t, uint64_t>{a, b};
-    return fix_F_impl(fix_F_impl, std::move(_lc1_x));
-  }
+  sigma<uint64_t, uint64_t> _lc1_x = sigma<uint64_t, uint64_t>{a, b};
+  return fix_F_impl(fix_F_impl, std::move(_lc1_x));
 }
 
 uint64_t WfFixSigmaDomain::sw_unfold(uint64_t a, uint64_t b) {
@@ -42,8 +40,6 @@ WfFixSigmaDomain::sw_graph WfFixSigmaDomain::sw_graph_correct(uint64_t a,
           return sw_graph::sw_graph_equation_2(n, x0, h(x0, n));
         }
       };
-  {
-    sigma<uint64_t, uint64_t> _lc1_x = sigma<uint64_t, uint64_t>{a, b};
-    return fix_F_impl(fix_F_impl, std::move(_lc1_x));
-  }
+  sigma<uint64_t, uint64_t> _lc1_x = sigma<uint64_t, uint64_t>{a, b};
+  return fix_F_impl(fix_F_impl, std::move(_lc1_x));
 }

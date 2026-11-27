@@ -124,24 +124,7 @@ public:
 /// wip until it is decided.
 struct CpsContinuationCopy {
   static uint64_t sumk(const List<uint64_t> &l,
-                       const crane::fn<uint64_t(uint64_t)> &k) {
-    // Loop replaces the tail recursion: each recursive call updates the loop
-    // variables.
-    crane::fn<uint64_t(uint64_t)> _loop_k = k;
-    const List<uint64_t> *_loop_l = &l;
-    while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        return _loop_k(UINT64_C(0));
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-        const List<uint64_t> &a1_value = *a1;
-        _loop_k = [=](uint64_t s) { return _loop_k((a0 + s)); };
-        _loop_l = &a1_value;
-      }
-    }
-  }
-
+                       const crane::fn<uint64_t(uint64_t)> &k);
   static inline const uint64_t run =
       sumk(ListDef::seq(UINT64_C(0), UINT64_C(100000)),
            [](uint64_t x) { return x; });

@@ -27,7 +27,6 @@ uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   const LoopifyTail::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename LoopifyTail::list<uint64_t>::Nil>(
             _loop_l->v())) {
@@ -35,12 +34,11 @@ uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyTail::list<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_n == UINT64_C(0)) {
+      if (n == UINT64_C(0)) {
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
       }
     }
   }

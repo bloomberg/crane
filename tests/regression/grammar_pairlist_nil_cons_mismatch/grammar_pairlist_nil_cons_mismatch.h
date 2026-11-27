@@ -194,7 +194,7 @@ using grammar_entry = SigT<production, production_semty>;
             std::make_pair(
                 crane::obj(crane_erase_fn([](const auto &) { return true; })),
                 crane::obj(crane_erase_fn([](const auto &tup) {
-                  const auto &[prs, _x] =
+                  const auto &[prs, _] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
                   return val{crane_container_cast<
                       std::deque<std::pair<String, uint64_t>>>(
@@ -223,14 +223,14 @@ using grammar_entry = SigT<production, production_semty>;
                     crane::obj(
                         crane_erase_fn([](const auto &) { return true; })),
                     crane::obj(crane_erase_fn([](const auto &tup) {
-                      const auto &[_x, y0] =
+                      const auto &[_, y0] =
                           crane::any_cast<std::pair<crane::obj, crane::obj>>(
                               tup);
                       const auto &[pr, y1] = crane::any_cast<
                           std::pair<crane::obj, crane::obj>>(y0);
                       const auto &[prs, y2] = crane::any_cast<
                           std::pair<crane::obj, crane::obj>>(y1);
-                      const auto &[_x0, _x1] = crane::any_cast<
+                      const auto &[_, _] = crane::any_cast<
                           std::pair<crane::obj, crane::obj>>(y2);
                       return [](auto _a0, auto _a1) {
                         _a1.push_front(_a0);
@@ -280,11 +280,11 @@ using grammar_entry = SigT<production, production_semty>;
                             crane::obj(crane_erase_fn(
                                 [](const auto &) { return true; })),
                             crane::obj(crane_erase_fn([](const auto &tup) {
-                              const auto &[_x, y0] = crane::any_cast<
+                              const auto &[_, y0] = crane::any_cast<
                                   std::pair<crane::obj, crane::obj>>(tup);
                               const auto &[pr, y1] = crane::any_cast<
                                   std::pair<crane::obj, crane::obj>>(y0);
-                              const auto &[prs, _x0] = crane::any_cast<
+                              const auto &[prs, _] = crane::any_cast<
                                   std::pair<crane::obj, crane::obj>>(y1);
                               return [](auto _a0, auto _a1) {
                                 _a1.push_front(_a0);
@@ -335,10 +335,10 @@ using grammar_entry = SigT<production, production_semty>;
                                           const auto &[s, y] =
                                               crane::any_cast<std::pair<
                                                   crane::obj, crane::obj>>(tup);
-                                          const auto &[_x, y1] =
+                                          const auto &[_, y1] =
                                               crane::any_cast<std::pair<
                                                   crane::obj, crane::obj>>(y);
-                                          const auto &[n, _x0] =
+                                          const auto &[n, _] =
                                               crane::any_cast<std::pair<
                                                   crane::obj, crane::obj>>(y1);
                                           return std::make_pair(s, n);
