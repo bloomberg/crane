@@ -269,8 +269,14 @@ let obligations = Cpp_ir.Representation_obligation.all
     shape of its lambda's body, and {!scrutinees} reshapes that body --
     naming a match's computed scrutinee puts a declaration in front of the
     match -- so on the final declaration a second run of {!conditionals}
-    finds nothing to do whether or not the first paid what it owed. *)
-let checked_before_instantiation : obligation -> bool = function Unlowered_conditional -> true | _ -> false
+    finds nothing to do whether or not the first paid what it owed.  A
+    typed mapping's type is instantiated without the type arguments it does
+    not write ([itree E R] as [ITree<R>]), so a variable a signature binds
+    only there is bound before instantiation and not after: {!free_tvars} is
+    checked where it ran. *)
+let checked_before_instantiation : obligation -> bool = function
+  | Unlowered_conditional | Free_type_variable -> true
+  | _ -> false
 
 (** What [o] is and the pass that owes it, as a failed check reports it. *)
 let describe : obligation -> string = function

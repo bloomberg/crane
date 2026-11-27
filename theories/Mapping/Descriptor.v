@@ -54,7 +54,9 @@ Inductive IntType : Type :=
 (** A structured C++ type: pointers and const qualification are nodes, so
     they print with correct declarator binding.  [Int], [Bool] and
     [Float64] are the built-in types; a canonical type written [Int] lets
-    Crane know an operation's argument is that integer type.  [ResultType]
+    Crane know an operation's argument is that integer type.  [SourceType T]
+    is the C++ type Crane chooses for the mapped type's parameter [T] (a
+    type, or a type family such as an event family).  [ResultType]
     is the type a use of an operation yields, and [TypeParameter x] the
     type an operation's type parameter [x] is instantiated at (both only in
     an operation's body).  [BoxedComponent c box], in a canonical type, is
@@ -66,7 +68,7 @@ Inductive IntType : Type :=
 Inductive TypeExpr : Type :=
 | Name (qualified_name : string)
 | Apply (qualified_name : string) (arguments : list TypeArgument)
-| SourceType (T : Type)
+| SourceType {K : Type} (T : K)
 | StoredComponent (name : string)
 | Pointer (pointee : TypeExpr)
 | Const (inner : TypeExpr)

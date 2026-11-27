@@ -122,7 +122,7 @@ let rec type_expr cx c : Cpp.type_expr =
   | 2, [s; args] ->
     let s = string cx s in
     Cpp.Apply (s, list cx type_argument args)
-  | 3, [t] -> Cpp.Source_type (closed cx t)
+  | 3, [_; t] -> Cpp.Source_type (closed cx t)
   | 4, [s] -> Cpp.Stored_component (string cx s)
   | 5, [t] -> Cpp.Pointer (type_expr cx t)
   | 6, [t] -> Cpp.Const (type_expr cx t)

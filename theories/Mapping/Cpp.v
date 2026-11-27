@@ -76,6 +76,14 @@ Definition effect_cpp {d : Declaration} (headers : list string) (args : list str
      operation_cpp := cpp;
      operation_contract := EffectfulOperation (uses ReadCanonical args) ReturnValue [] |}.
 
+(** A pure operation building a value from the arguments named in [args],
+    each taken (moved in at its last use), whose C++ is any construction. *)
+Definition builds {d : Declaration} (headers : list string) (args : list string) (cpp : Construction)
+  : OperationMapping d :=
+  {| operation_headers := headers;
+     operation_cpp := cpp;
+     operation_contract := PureOperation (uses Take args) ReturnValue [] |}.
+
 (** The identity on the argument [x], the arguments [before] and [after] it
     ignored: an injection or coercion that has no C++ of its own. *)
 Definition pass_through {d : Declaration} (before : list string) (x : string) (after : list string)
@@ -85,12 +93,22 @@ Definition pass_through {d : Declaration} (before : list string) (x : string) (a
      operation_contract :=
        PureOperation (uses Ignore before ++ uses ReadCanonical [x] ++ uses Ignore after) ReturnValue [] |}.
 
-(** A value of no argument whose C++ is [cpp], text naming the operation's
-    type arguments [%tN]: a dictionary, which is a C++ type. *)
-Definition dictionary {d : Declaration} (headers : list string) (cpp : string) : OperationMapping d :=
+(** A dictionary, which is a C++ type: text naming the operation's type
+    arguments [%tN].  A class whose one method is its definition has the
+    method's arguments, [args], which the dictionary ignores. *)
+Definition dictionary {d : Declaration} (headers : list string) (args : list string) (cpp : string)
+  : OperationMapping d :=
   {| operation_headers := headers;
      operation_cpp := Expr cpp;
-     operation_contract := PureOperation [] ReturnValue [] |}.
+     operation_contract := PureOperation (uses Ignore args) ReturnValue [] |}.
+
+(** An operation with an effect, its arguments used as [args] says, whose
+    C++ is any construction. *)
+Definition effect_args {d : Declaration} (headers : list string) (args : list ArgumentSpec)
+  (cpp : Construction) : OperationMapping d :=
+  {| operation_headers := headers;
+     operation_cpp := cpp;
+     operation_contract := EffectfulOperation args ReturnValue [] |}.
 
 (** An abstract type mapped to [cpp]: read by value and copied bit by bit
     where [copy] is [BitCopy], else read by [const] reference. *)

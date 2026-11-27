@@ -79,7 +79,7 @@ let splices text i =
    text repeats or drops are), each argument that is not
    free to repeat is bound ahead of the call, in order -- or, where the text
    does not splice it (an [Ignore] argument), evaluated as a statement and
-   discarded.  An argument bound by value and spliced once is moved from its
+   discarded if it may have an effect, and dropped if it is a value.  An argument bound by value and spliced once is moved from its
    temporary, so that a [Take] still receives an rvalue -- unless the text
    writes or replaces it in place ([in_place]), which takes the temporary as
    the lvalue it is. *)
@@ -101,7 +101,7 @@ let prepare_operation_args fresh bind discard {text; in_place; pure} (args : exp
           match splices text i with
           | 1 -> a
           | 0 ->
-            discard a;
+            if may_have_effect a then discard a;
             a
           | _ ->
             let x = fresh () in
@@ -115,7 +115,7 @@ let prepare_operation_args fresh bind discard {text; in_place; pure} (args : exp
         else
           match splices text i with
           | 0 ->
-            discard a;
+            if may_have_effect a then discard a;
             a
           | n ->
             let x = fresh () in
