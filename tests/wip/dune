@@ -162,3 +162,25 @@
   (deps hk_argument_after_phantom.t.exe)
   (action (run ./hk_argument_after_phantom.t.exe))))
 
+
+(subdir id_over_applied_lambda_arg
+ (rule
+  (targets id_over_applied_lambda_arg.t.exe)
+  (deps IdOverAppliedLambdaArg.vo id_over_applied_lambda_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} id_over_applied_lambda_arg.t.exe id_over_applied_lambda_arg.t.cpp id_over_applied_lambda_arg.cpp)))
+ (rule
+  (alias runtest)
+  (deps id_over_applied_lambda_arg.t.exe)
+  (action (run ./id_over_applied_lambda_arg.t.exe))))
+
+(subdir regrouped_recovery_exponential
+ (rule
+  (targets regrouped_recovery_exponential.t.exe)
+  (deps RegroupedRecoveryExponential.vo regrouped_recovery_exponential.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} regrouped_recovery_exponential.t.exe regrouped_recovery_exponential.t.cpp regrouped_recovery_exponential.cpp)))
+ (rule
+  (alias runtest)
+  (deps regrouped_recovery_exponential.t.exe)
+  (action (run ./regrouped_recovery_exponential.t.exe))))
