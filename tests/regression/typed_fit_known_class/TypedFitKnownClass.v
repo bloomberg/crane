@@ -14,7 +14,7 @@
     Expected: extracts under [CRANE_CHECK_IR]; [answered = true],
     [measure_three = 3]. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 From ITree Require Import ITree.
 Import ITreeNotations.
 Local Open Scope itree_scope.

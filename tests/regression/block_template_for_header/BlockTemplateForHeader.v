@@ -9,7 +9,7 @@
     lambda, which has to capture the locals its arguments read -- and only
     then: a lambda at namespace scope may not have a capture default. *)
 
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Axiom first_at_least : nat -> nat.
 Crane Extract Inlined Constant first_at_least =>

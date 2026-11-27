@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A definition whose return type is a dependent [if] computing [nat] in one
     branch and [nat -> nat] in the other erases to [std::any]: the returned
     closure is stored through the canonical adapter and the application site

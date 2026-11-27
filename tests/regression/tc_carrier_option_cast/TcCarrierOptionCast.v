@@ -7,7 +7,7 @@
     v} *)
 
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 Module TcCarrierOptionCast.
 

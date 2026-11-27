@@ -21,7 +21,7 @@ From CraneTestsMonadic.st_refs Require Import STRefs.
 
 Section STRefsProofs.
 
-  Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.HMapOk_halist.
+  Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.hmap_ok_halist.
 
   (** Each program runs from the empty store, so every lookup is a closed
       computation. *)

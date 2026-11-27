@@ -12,7 +12,7 @@
      alignment: the per-type free list's [operator new] ignored alignment.
    Before: a null dereference, a second run, and a misaligned capture. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Module RuntimeBlockInvariants.
   CoInductive stream : Type := SCons : nat -> stream -> stream.

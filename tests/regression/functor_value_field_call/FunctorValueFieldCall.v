@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** Nested functor application: a field a functor reads through its module
     parameter may be extracted as a static data member in one argument module
     and as a nullary accessor in another, so the use site must accept both

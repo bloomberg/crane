@@ -5,7 +5,7 @@
     from one thread at a time.  A unit using [Monads.STM] breaks it even
     though it starts no thread itself: transactional memory exists to be
     shared by the threads its caller starts.  The driver pushes onto one
-    TVar-held list from several [std::thread]s, so every [readTVar] copies a
+    TVar-held list from several [std::thread]s, so every [read_tvar] copies a
     count another thread is updating -- with a non-atomic count, cells are
     freed while still reachable.
 
@@ -14,7 +14,7 @@
     header checks [crane::rc_is_atomic] after its includes. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Corelib Require Import PrimString PrimInt63.
 From Crane Require Import Mapping.Std Monads.ITree Monads.IO Monads.STM.
 Set Crane NonAtomicRc.
@@ -28,13 +28,13 @@ Inductive lst : Set := Nil : lst | Cons : nat -> lst -> lst.
 Fixpoint len (l : lst) : nat :=
   match l with Nil => 0 | Cons _ r => S (len r) end.
 
-Definition make : itree ioE (TVar lst) := atomically (newTVar Nil).
+Definition make : itree ioE (TVar lst) := atomically (new_tvar Nil).
 
 Definition push (t : TVar lst) (n : nat) : itree ioE unit :=
-  atomically (l <- readTVar t ;; writeTVar t (Cons n l)).
+  atomically (l <- read_tvar t ;; write_tvar t (Cons n l)).
 
 Definition size (t : TVar lst) : itree ioE nat :=
-  atomically (l <- readTVar t ;; Ret (len l)).
+  atomically (l <- read_tvar t ;; Ret (len l)).
 
 End NonatomicRcStmShared.
 

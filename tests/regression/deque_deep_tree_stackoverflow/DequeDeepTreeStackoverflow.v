@@ -14,7 +14,7 @@
    The recursion depth equals the tree depth. For a tree of depth 100K+,
    this overflows the C++ call stack.
 *)
-From Crane Require Import Mapping.NatIntStd Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.DequeList.
 From Stdlib Require Import List.
 Import ListNotations.
 Require Crane.Extraction.

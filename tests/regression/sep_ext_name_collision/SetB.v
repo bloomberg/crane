@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 (* Both SetA and SetB define a function called 'make'.
    Without namespaces these would collide in C++.

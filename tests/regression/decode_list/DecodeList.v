@@ -36,5 +36,5 @@ Definition t_single_pair : nat := length (decode_list [0; 7]).
 End DecodeList.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "decode_list" DecodeList.

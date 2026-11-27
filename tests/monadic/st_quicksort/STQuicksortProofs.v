@@ -129,7 +129,7 @@ Section QuicksortProofs.
   Notation V := (fun _ : nat => nat).
   Notation E0 := (ST.Event ST.model_refs V +' exceptE Err).
 
-  Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.HMapOk_halist.
+  Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.hmap_ok_halist.
 
   Lemma quicksort_ST_list2154 :
     burn 100 (ST.run (fun R => quicksort_ST_list (R := R) [2; 1; 5; 4]))

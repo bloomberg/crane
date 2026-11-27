@@ -1,4 +1,4 @@
-From Crane Require Import Mapping.NatIntStd Mapping.NInt.
+From Crane Require Import Mapping.NatInt Mapping.NInt.
 From Crane Require Extraction.
 From Stdlib Require Import List NArith.
 Import ListNotations.

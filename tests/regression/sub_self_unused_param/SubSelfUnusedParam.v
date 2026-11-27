@@ -15,7 +15,7 @@
 
     Expected: compiles with [-Werror]; [on_box (Box 5) = 0],
     [in_branch true (Box 5) = 0], [in_branch false (Box 5) = 7]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 
 Module SubSelfUnusedParam.

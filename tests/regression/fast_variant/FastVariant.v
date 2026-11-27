@@ -64,7 +64,7 @@ Definition first_three : list nat := take 3 (from 10).
 End FastVariant.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 Set Crane FastVariant.
 Set Crane Loopify.
 Crane Extraction "fast_variant" FastVariant.

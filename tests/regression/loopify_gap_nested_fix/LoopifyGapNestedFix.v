@@ -1,6 +1,6 @@
 From Stdlib Require Import Arith.PeanoNat List.
 Import ListNotations.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 From Crane Require Extraction.
 
 (** An inner [fix] that calls the outer function.

@@ -14,7 +14,7 @@
     [rec]/[call] and a hand-written stack. *)
 
 From ITree Require Import ITree.
-From Crane Require Import Mapping.NatIntStd Monads.ITree.
+From Crane Require Import Mapping.NatInt Monads.ITree.
 Import Monads.
 Local Open Scope monad_scope.
 

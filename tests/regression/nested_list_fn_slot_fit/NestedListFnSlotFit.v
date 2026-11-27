@@ -13,7 +13,7 @@
     namespaces the two are written in ([Calls.regroup_by_expected],
     [Cpp_ir.Types.same_arrows_unqualified], [Cpp_ir.Types.regroup_as]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

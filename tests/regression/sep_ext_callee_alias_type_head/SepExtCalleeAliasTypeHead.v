@@ -17,7 +17,7 @@
     alias is unfolded, and from a callee's signature only for a member of a
     functor parameter; a call is written against every callee's signature,
     which is now walked for each. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

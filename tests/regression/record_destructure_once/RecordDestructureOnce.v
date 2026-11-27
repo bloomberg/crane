@@ -25,5 +25,5 @@ Definition r_zero : nat := t_zero (count 40).
 End RecordDestructureOnce.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "record_destructure_once" RecordDestructureOnce.

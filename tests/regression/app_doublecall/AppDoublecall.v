@@ -18,7 +18,7 @@
    The fix is to introduce a temporary: auto _s = %a1; and use _s.begin(), _s.end().
 *)
 
-From Crane Require Import Mapping.NatIntStd Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.DequeList.
 Require Crane.Extraction.
 
 Module AppDoublecall.

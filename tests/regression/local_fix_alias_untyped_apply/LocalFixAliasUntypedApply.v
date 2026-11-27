@@ -16,7 +16,7 @@
 
     Expected: extracts under CRANE_CHECK_IR, [result = 703]. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

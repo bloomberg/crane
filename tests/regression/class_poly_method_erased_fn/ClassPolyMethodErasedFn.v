@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 (** A typeclass method polymorphic in its own type argument

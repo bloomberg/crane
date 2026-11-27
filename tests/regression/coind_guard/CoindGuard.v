@@ -59,5 +59,5 @@ Definition test_iterate_hd : nat := hd nats.
 End CoindGuard.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "coind_guard" CoindGuard.

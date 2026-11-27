@@ -12,7 +12,7 @@
     (Move_check): a lambda whose plan captures by reference never escapes. *)
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

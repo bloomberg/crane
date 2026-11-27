@@ -50,5 +50,5 @@ Definition test_count : nat := count_nested [[1; 2]; [3]; [4; 5; 6]].
 End LetFixNestedClone.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "let_fix_nested_clone" LetFixNestedClone.

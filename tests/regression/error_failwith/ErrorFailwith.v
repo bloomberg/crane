@@ -10,7 +10,7 @@
 From Stdlib Require Import List PeanoNat.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Corelib Require Import PrimString PrimInt63.
 From Crane Require Import Mapping.Std Monads.ITree Monads.IO Monads.Env Monads.Error.
 From ITree Require Import Events.Exception.

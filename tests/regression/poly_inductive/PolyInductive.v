@@ -68,5 +68,5 @@ Definition test_ptree : nat := ptree_size (PNode nat (PLeaf nat 1) (PNode nat (P
 End PolyInductive.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "poly_inductive" PolyInductive.

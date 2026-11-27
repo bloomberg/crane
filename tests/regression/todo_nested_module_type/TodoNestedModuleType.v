@@ -40,6 +40,6 @@ Definition test_twice : nat :=
 End TodoNestedModuleType.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "todo_nested_module_type" TodoNestedModuleType.

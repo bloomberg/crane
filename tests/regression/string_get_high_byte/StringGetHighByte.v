@@ -11,7 +11,7 @@
     signed: the byte read as -61 and sign-extended when used as an [int63].
     [char63] is [int] by definition, so it is now mapped to [int64_t], and
     [get] reads the byte unsigned.  Also on main (legacy [Mapping.Std]). *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import ZArith Uint63.
 From Corelib Require Import PrimString.

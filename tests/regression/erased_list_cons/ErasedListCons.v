@@ -23,7 +23,7 @@ Import ListNotations.
    [std::pair] mapping routes pair construction through the custom-cons codegen
    path that performs the erased-context type-variable erasure (the bug site). *)
 From Crane Require Import Mapping.Std.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module Type SYM.
   Parameter terminal nonterminal : Type.

@@ -29,5 +29,5 @@ Definition t : nat := tag D' + tag D_ + tag D'' + tag D__ + tag D'_ + tag D_'.
 End CtorEscapeCollision.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "ctor_escape_collision" CtorEscapeCollision.

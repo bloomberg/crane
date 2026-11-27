@@ -12,7 +12,7 @@
     Expected: extracts under [CRANE_CHECK_IR]; [run = true],
     [counter = 7]. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Module TypedFitAliasOverApplied.
 

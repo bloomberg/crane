@@ -1,7 +1,7 @@
 (* Rocq bug #4710: extraction of primitive projections *)
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module RocqBug4710.
 

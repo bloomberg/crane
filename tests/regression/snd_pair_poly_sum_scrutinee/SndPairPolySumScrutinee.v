@@ -10,7 +10,7 @@
     let's value is extracted, what inference left open in its binder type
     is now filled from the Rocq annotation, where that names only the
     definition's own type variables. Same cause as [poly_sum_payload_obj]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 
 Module SndPairPolySumScrutinee.

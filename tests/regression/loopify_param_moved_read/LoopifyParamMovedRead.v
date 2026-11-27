@@ -13,7 +13,7 @@
 
     Expected: extracts under [CRANE_CHECK_IR]; [result = 0] ([g] of a leaf
     is [inr ""]). *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 From Stdlib Require Import List String.
 Import ListNotations.

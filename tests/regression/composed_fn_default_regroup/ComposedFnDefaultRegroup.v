@@ -11,7 +11,7 @@
     Fixed: an undeclared immediately invoked lambda is typed as what its
     returns are where they agree ([Match_types.value_iife_typed]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

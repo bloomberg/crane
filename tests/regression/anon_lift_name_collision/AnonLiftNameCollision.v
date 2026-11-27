@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 
 (** Eliminators applied directly are lifted into anonymous helpers, and every

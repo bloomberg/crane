@@ -9,7 +9,7 @@
    This involves polymorphic functions where type instantiation should happen
    but might not be reducing properly.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module TypeApp.

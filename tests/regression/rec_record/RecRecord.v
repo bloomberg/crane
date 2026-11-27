@@ -71,5 +71,5 @@ Definition test_dept_head_name : nat := emp_name (dept_head test_dept).
 End RecRecord.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "rec_record" RecRecord.

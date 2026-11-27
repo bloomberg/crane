@@ -21,7 +21,7 @@
     Expected: extracts under [CRANE_CHECK_IR]; [via_method true = 1],
     [via_method false = 2], [via_local_fix 0 = 0], [rb (via_record []) = []],
     [rb (via_record [true]) = [1]], [via_eta = 3]. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Corelib Require Import PrimString.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.

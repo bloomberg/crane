@@ -12,7 +12,7 @@
     at a type variable, instantiated at a function type, now arrives as the
     [crane::fn] its closures convert to. [t_2] covers [fold_right], a global
     initial value, and the mapped [map] building functions ([t_2 = 20]). *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.Std Mapping.DequeList.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

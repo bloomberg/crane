@@ -1,6 +1,6 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Mapping.DequeList.
 From Stdlib Require Import List Ascii String.
 Import ListNotations.

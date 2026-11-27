@@ -13,7 +13,7 @@
     a root". An image cannot initialise one instantiation's member, so the
     check now refuses a constant declared in a functor application
     (following aliases), and [total] is computed at startup. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

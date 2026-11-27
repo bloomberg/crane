@@ -13,7 +13,7 @@
     every run's header a comment past the first 1000 rows, so the image
     was five times larger than needed (30 MB for 100000 deep); a header is
     now bare there, as rows are. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

@@ -15,7 +15,7 @@
     a parameter that outlives the loop; otherwise it holds the canonical
     [std::string], copied once out of the caller's view.
     Typed-mappings regression: main has no read views. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List ZArith Uint63.
 From Corelib Require Import PrimString.

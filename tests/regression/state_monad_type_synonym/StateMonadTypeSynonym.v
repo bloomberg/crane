@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A state-monad type synonym ([st A := nat -> (A * nat)]) makes a definition
     a value of function type: a bare reference to it is a data member, so it
     must not be spelled as a nullary call. *)

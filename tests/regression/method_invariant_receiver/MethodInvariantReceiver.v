@@ -8,7 +8,7 @@
     pointer nothing declared. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Set Crane Loopify.
 

@@ -4,7 +4,7 @@
 (** Test sigma type precondition extraction *)
 
 From Stdlib Require Import Arith PeanoNat.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 (* [sig] is its witness ([Mapping.Shared]'s [sig_mapping]). *)

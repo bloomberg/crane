@@ -14,7 +14,7 @@
     argument at a declared parameter already was
     ([Application.gen_call_args], [Calls.parameter_at_written]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module TwiceFnTransformerStep.
 

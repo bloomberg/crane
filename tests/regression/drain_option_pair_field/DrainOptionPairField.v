@@ -1,6 +1,6 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 
 (** The iterative destructor walks a recursive field to avoid deep recursion.
     For a field of type [option (t * nat)] the walk reads the pair component as

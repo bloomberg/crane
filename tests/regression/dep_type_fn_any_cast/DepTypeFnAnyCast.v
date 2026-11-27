@@ -2,7 +2,7 @@ From Stdlib Require Import Lists.List.
 Import ListNotations.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 Module DepTypeFnAnyCast.
   (** The same producer/consumer erasure mismatch as [dep_return_any_cast],

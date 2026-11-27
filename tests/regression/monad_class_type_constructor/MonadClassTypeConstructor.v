@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A monad typeclass over a type constructor (`Mon (M : Type -> Type)`), with a
     carrier (`Opt`) that is itself a definition.  Exercises the higher-kinded
     class parameter together with an erased callback passed to `mbind`. *)

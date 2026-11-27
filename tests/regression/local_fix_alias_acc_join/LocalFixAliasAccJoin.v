@@ -13,7 +13,7 @@
     return type in force, and a match there is built at it
     ([Application.eta_fun], a non-global callee), as for a global callee. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

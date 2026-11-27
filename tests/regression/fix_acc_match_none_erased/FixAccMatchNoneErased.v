@@ -15,7 +15,7 @@
     type as its slot; now every argument does, and the forms that hand
     their slot on (match branches, let bodies, constructor fields) carry it
     to the value built inside. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 From Corelib Require Import PrimString.

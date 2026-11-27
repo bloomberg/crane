@@ -44,5 +44,5 @@ Definition t : bool :=
 End PreservesAllPairs.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "preserves_all_pairs" PreservesAllPairs.

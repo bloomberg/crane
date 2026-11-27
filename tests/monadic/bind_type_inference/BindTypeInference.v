@@ -41,7 +41,7 @@ Module BindTypeInference.
 
   (* Case 4: Vector operations returning different type *)
   Definition test4 : itree vectorE int :=
-    v <- emptyVec int ;;
+    v <- empty_vector int ;;
     push v 1 ;;
     push v 2 ;;
     push v 3 ;;

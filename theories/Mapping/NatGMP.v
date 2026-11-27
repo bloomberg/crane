@@ -1,13 +1,5 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Extraction.
-From Crane Require Export Mapping.Std.
-From Crane Require Import Mapping.Descriptor.
-From Corelib Require Import PrimString.
-From Stdlib Require Import List.
-Import ListNotations.
-Local Open Scope pstring_scope.
-
 (** Extraction of [nat] to GMP's [mpz_class] (arbitrary-precision integers).
 
     This maps Peano-style [nat] to the C++ wrapper [mpz_class] from
@@ -17,6 +9,13 @@ Local Open Scope pstring_scope.
     - GMP library installed with C++ bindings (libgmpxx)
     - Link with [-lgmpxx -lgmp]
 *)
+From Crane Require Extraction.
+From Crane Require Export Mapping.Std.
+From Crane Require Import Mapping.Descriptor.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
+Local Open Scope pstring_scope.
 
 (** [nat] is a GMP [mpz_class]; a numeral is gmpxx's exact literal [(n_mpz)]. *)
 #[export] Instance gmp_nat_mapping : TypeMapping nat :=

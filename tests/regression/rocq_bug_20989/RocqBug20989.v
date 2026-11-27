@@ -1,7 +1,7 @@
 (* Rocq bug #20989: extraction of module alias through functor application *)
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module RocqBug20989.
 

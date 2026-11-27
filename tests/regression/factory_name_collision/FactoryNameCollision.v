@@ -11,7 +11,7 @@
       name and the second declaration redeclares the first. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module FactoryNameCollision.
   Inductive other : Set := Only.

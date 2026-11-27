@@ -2,7 +2,7 @@ From Stdlib Require Import Lists.List.
 Import ListNotations.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 Module SuperclassOnlyConcept.
   (** A class whose fields are all superclass instances has no methods of its

@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A non-uniform (nested) inductive
     ([tree A := Lf : A -> tree A | Nd : tree (A * A) -> tree A]) has its type
     parameter erased, so a literal value built at [tree nat] passes a

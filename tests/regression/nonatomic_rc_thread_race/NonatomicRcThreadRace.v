@@ -10,7 +10,7 @@
    pure and uses no axioms; it must run cleanly under the sanitizers. *)
 From Corelib Require Import PrimInt63 PrimString.
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO Monads.Thread.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO Monads.Thread.
 Open Scope itree_scope.
 Set Crane NonAtomicRc.
 
@@ -48,7 +48,7 @@ Module NonatomicRcThreadRace.
     join t2 ;;
     Ret tt.
 
-  Definition run (u : unit) : unit := runConc test.
+  Definition run (u : unit) : unit := run_conc test.
 
 End NonatomicRcThreadRace.
 

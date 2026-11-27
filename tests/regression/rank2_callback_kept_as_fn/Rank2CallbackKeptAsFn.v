@@ -19,7 +19,7 @@
 From Stdlib Require Import List PeanoNat.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module Rank2CallbackKeptAsFn.
 

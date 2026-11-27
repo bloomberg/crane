@@ -24,7 +24,7 @@
    This test FAILS at compile time due to bug #1: the S branch tries to
    return std::any as T1 without an any_cast. *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 Require Crane.Extraction.
 
 Module AnyCastNested.

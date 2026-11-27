@@ -14,5 +14,5 @@ Definition t : nat := double 1 + double_ 2.
 End EscapeCollision.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "escape_collision" EscapeCollision.

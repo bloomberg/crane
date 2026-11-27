@@ -1,7 +1,7 @@
 (* WIP: loopify does not fire when the recursive call is wrapped in a single-field box constructor on the receiver, so mk recurses in C++ and overflows the stack at depth 200000. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Set Crane Loopify.
 Module LoopifyWrapperReceiver.
 Inductive box (A : Type) : Type := B : A -> box A.

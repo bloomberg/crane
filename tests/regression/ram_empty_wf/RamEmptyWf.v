@@ -39,5 +39,5 @@ Definition default_bank_idx : nat := sel_bank default_sel.
 End RamEmptyWf.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "ram_empty_wf" RamEmptyWf.

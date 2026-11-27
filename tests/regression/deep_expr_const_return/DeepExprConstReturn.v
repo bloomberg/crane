@@ -1,6 +1,6 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 
 (** An expression nested past the depth limit is rewritten into a sequence of
     bindings inside an immediately-invoked lambda.  The lambda is given the

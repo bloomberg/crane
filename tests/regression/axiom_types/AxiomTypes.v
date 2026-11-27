@@ -6,7 +6,7 @@
    The C++ test verifies that calling axiom-dependent code throws catchable
    exceptions at runtime (not at static initialization time).
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module AxiomTypes.

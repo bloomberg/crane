@@ -9,7 +9,7 @@
     After std::move(x), the pointer is null, so ->field causes segfault.
 *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module UseAfterMove.

@@ -13,7 +13,7 @@
     to its low byte, [compare] is lexicographic on unsigned bytes.  Also on
     main (legacy [Mapping.Std]).  The other cases check each of these
     against Rocq ([Eval] below: all [true]). *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Corelib Require Import PrimString PrimInt63.
 Open Scope uint63_scope.

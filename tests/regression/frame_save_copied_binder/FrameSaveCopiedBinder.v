@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 From Stdlib Require Import Nat.
 Import ListNotations.

@@ -12,7 +12,7 @@
 
 From Stdlib Require Import Arith Lia Vectors.Fin.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Set Crane Loopify.
 

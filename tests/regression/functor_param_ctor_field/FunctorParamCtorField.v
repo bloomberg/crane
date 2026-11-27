@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** A constructor field whose type is a custom applied to a functor's
     parameter type: [lhs : option nt], [option] a custom, its inductive

@@ -20,7 +20,7 @@
     ([Cpp_passes.Erasure.tolerant]), which reads a boxed-whole callable at
     a concrete signature ([crane_any_cast], [crane_boxed_callable]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module IdAnyCastFlatFn.
 

@@ -2,7 +2,7 @@ From Stdlib Require Import Lists.List.
 Import ListNotations.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 Module AssocTypeTvarLeak.
   (** An associated [Type] used as a list element type.  The instance body's

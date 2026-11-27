@@ -108,5 +108,5 @@ Definition t : bool * nat * nat :=
 End EncodeOps.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "encode_ops" EncodeOps.

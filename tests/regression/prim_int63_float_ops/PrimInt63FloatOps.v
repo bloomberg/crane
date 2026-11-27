@@ -6,7 +6,7 @@
     below shows they all hold in Rocq, and the C++ checks them again.
     Found missing in the audit after Ephyra round 20 ([prim_array_default]):
     they extracted as unrealized axioms. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Corelib Require Import PrimInt63 PrimFloat CarryType.
 From Stdlib Require Import List.

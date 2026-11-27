@@ -4,7 +4,7 @@
     a word at a time, so that it keeps its capability on targets where a
     pointer is more than its address bits (such as Fil-C). *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module PtrWord.
 

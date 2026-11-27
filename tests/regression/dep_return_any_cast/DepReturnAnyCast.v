@@ -2,7 +2,7 @@ From Stdlib Require Import Lists.List.
 Import ListNotations.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 Module DepReturnAnyCast.
   (** A definition with a dependent return type erases to [std::any].  The

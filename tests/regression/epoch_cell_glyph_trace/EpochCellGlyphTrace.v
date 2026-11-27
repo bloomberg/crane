@@ -395,6 +395,6 @@ Definition sample_epoch_178_misaligned : bool :=
 End EpochCellGlyphTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "epoch_cell_glyph_trace" EpochCellGlyphTraceCase.

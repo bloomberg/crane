@@ -1,14 +1,5 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Extraction.
-From Stdlib Require Import BinNat BinPos.
-From Crane Require Import Mapping.Descriptor Mapping.Cpp.
-From Corelib Require Import PrimString.
-From Stdlib Require Import List.
-Import ListNotations.
-Local Open Scope pstring_scope.
-Import Crane.Cpp.
-
 (** Extraction of [N] (binary natural numbers) to [unsigned int]: the
     mappings both flavours share, selected by [NInt.v] (std) and
     [NIntBDE.v].
@@ -25,6 +16,14 @@ Import Crane.Cpp.
     use the arbitrary-precision GMP mappings ([Mapping.NGMP], [Mapping.ZGMP])
     instead.
 *)
+From Crane Require Extraction.
+From Stdlib Require Import BinNat BinPos.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
+Local Open Scope pstring_scope.
+Import Crane.Cpp.
 
 (** [positive] is an [unsigned int]: [xI p] is [2p + 1], [xO p] is [2p],
     [xH] is [1]; a match tests [1], then oddness; a numeral is an
@@ -322,7 +321,7 @@ Definition n_succ_double_mapping : OperationMapping (Ref N.succ_double) :=
          ReturnValue [] |}.
 
 (* Conversions.  A [nat] is whatever the [nat] mapping in force makes it
-   ([uint64_t] under [Mapping.NatIntStd]), so the conversions into it name
+   ([uint64_t] under [Mapping.NatInt]), so the conversions into it name
    the type their call yields, [ResultType], rather than this mapping's width. *)
 Definition n_of_nat_mapping : OperationMapping (Ref N.of_nat) :=
   {| operation_headers := [];

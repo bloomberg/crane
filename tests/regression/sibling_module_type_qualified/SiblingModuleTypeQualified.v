@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 (** A type defined in a sibling module is spelled relative to the extraction
     target in the generated [.cpp], not relative to the enclosing namespace:

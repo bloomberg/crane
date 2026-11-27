@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From Stdlib.Strings Require Import Byte.
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 
 (** Rocq's [byte] inductive extracts to a C++ [enum] named [Byte], but the
     generated code also declares a [struct Byte] for the module wrapping it and

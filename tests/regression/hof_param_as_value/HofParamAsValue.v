@@ -5,7 +5,7 @@
     function template, deducing that parameter.  Passing its name as a value
     to a higher-order method then has no type to deduce. *)
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

@@ -39,6 +39,6 @@ Definition test : nat :=
 End ConceptQualifyArgs.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "concept_qualify_args" ConceptQualifyArgs.

@@ -11,7 +11,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module ListOfProdDeep.
 Inductive lst (A : Type) : Type := lnil : lst A | lcons : A -> lst A -> lst A.
 Arguments lnil {A}. Arguments lcons {A} _ _.

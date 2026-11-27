@@ -60,5 +60,5 @@ Definition tagged_bool : Tagged := mkTagged TBool true.
 End DepRecord.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "dep_record" DepRecord.

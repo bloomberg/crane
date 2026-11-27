@@ -32,5 +32,5 @@ Definition t : bool := Nat.eqb (acc (execute_rdr (execute_wrr sample))) 13.
 End WrrRdrRoundtrip.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "wrr_rdr_roundtrip" WrrRdrRoundtrip.

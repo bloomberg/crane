@@ -2,7 +2,7 @@
     into [cross_unit_duplicate_symbol_lib.{h,cpp}]. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module Lib.
   Inductive lst : Set := Nil | Cons : nat -> lst -> lst.

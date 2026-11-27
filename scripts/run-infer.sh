@@ -106,7 +106,7 @@ REPORT="$PROJECT_ROOT/infer-out/report.txt"
 #     the shared_ptr destructor deletes the ITree and then k() accesses it, but
 #     k() creates a fresh ITree<void>::ret() and never touches m.  Suppressed by
 #     "invalidated by `delete` during the call to `itree_bind()`".
-#   - stm.cpp: modifyTVar(c, f) takes c by value (copy); when the copy is
+#   - stm.cpp: modify_tvar(c, f) takes c by value (copy); when the copy is
 #     destroyed, Infer thinks the shared_ptr<VarControlBlock> is freed, but the
 #     original c still holds a reference so the control block stays alive.
 #     Suppressed by Infer's synthetic field name __infer_backing_count.
@@ -144,7 +144,7 @@ FP_UNINIT_RE = re.compile(r"`__param_0\b")
 FP_UAD_ITREE_RE = re.compile(
     r"invalidated by `delete` during the call to `itree_bind\(\)`"
 )
-# (2) TVar modifyTVar: Infer thinks the by-value TVar copy's destructor frees
+# (2) TVar modify_tvar: Infer thinks the by-value TVar copy's destructor frees
 # the shared control block; __infer_backing_count is its synthetic field name.
 FP_UAD_STM_RE = re.compile(r"__infer_backing_count")
 

@@ -40,5 +40,5 @@ Definition t : bool := Nat.eqb (nth (sel_rom after_src) (rom_ports after_wrr) 0)
 End SrcWrrRomPortRoundtrip.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "src_wrr_rom_port_roundtrip" SrcWrrRomPortRoundtrip.

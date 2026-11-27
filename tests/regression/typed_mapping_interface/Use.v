@@ -5,7 +5,7 @@
     [typed_mapping_interface_lib], written against [Narrow], and resolves
     [Meter] with [Narrow] too, so it is accepted. *)
 
-From Crane Require Import Extraction Mapping.NatIntStd.
+From Crane Require Import Extraction Mapping.NatInt.
 From CraneTestsRegression Require Import typed_mapping_interface.Lib.
 Import Narrow.
 

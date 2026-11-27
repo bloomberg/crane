@@ -27,7 +27,7 @@ Crane Extract Inductive vectorE => ""
   [ "{}" "%a0.at(%a1)" "%a0.push_back(%a1)"
     "%a0.pop_back()" "%a0.size()" "%a0.empty()" "%a0.assign(%a1, %a2)" ].
 
-Definition emptyVec {E} `{vectorE -< E} (A : Type) : itree E (vector A) :=
+Definition empty_vector {E} `{vectorE -< E} (A : Type) : itree E (vector A) :=
   embed (EmptyVec A).
 Definition get {E} `{vectorE -< E} {A} (v : vector A) (x : int) : itree E A :=
   embed (Get v x).
@@ -37,15 +37,15 @@ Definition pop {E} `{vectorE -< E} {A} (v : vector A) : itree E unit :=
   embed (Pop v).
 Definition size {E} `{vectorE -< E} {A} (v : vector A) : itree E int :=
   embed (Size v).
-Definition isEmpty {E} `{vectorE -< E} {A} (v : vector A) : itree E bool :=
+Definition is_empty {E} `{vectorE -< E} {A} (v : vector A) : itree E bool :=
   embed (IsEmpty v).
 Definition assign {E} `{vectorE -< E} {A} (v : vector A) (x : int) (a : A)
   : itree E (vector A) := embed (Assign v x a).
 
-Crane Extract Inlined Constant emptyVec => "{}".
+Crane Extract Inlined Constant empty_vector => "{}".
 Crane Extract Inlined Constant get => "%a0.at(%a1)".
 Crane Extract Inlined Constant push => "%a0.push_back(%a1)".
 Crane Extract Inlined Constant pop => "%a0.pop_back()".
 Crane Extract Inlined Constant size => "%a0.size()".
-Crane Extract Inlined Constant isEmpty => "%a0.empty()".
+Crane Extract Inlined Constant is_empty => "%a0.empty()".
 Crane Extract Inlined Constant assign => "%a0.assign(%a1, %a2)".

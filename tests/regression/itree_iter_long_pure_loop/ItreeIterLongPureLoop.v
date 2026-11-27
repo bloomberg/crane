@@ -9,7 +9,7 @@
    Expected: [count_down 1000000] runs to 0.
    Before:   a stack overflow. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITreeReified.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITreeReified.
 From ITree Require Import ITree.
 
 Module ItreeIterLongPureLoop.

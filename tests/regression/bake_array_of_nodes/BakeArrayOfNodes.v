@@ -13,7 +13,7 @@
     now walks the array in place ([persistent_array::ref]); every other
     container hook (optional, pair, tuple, sequence, shared array, handle)
     already walked by reference. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Import Extraction.
 From Stdlib Require Import List ZArith Uint63.
 From Corelib Require Import PrimArray.

@@ -7,7 +7,7 @@
     that it reaches the outer one; written bare, a function alias recursed
     forever and a constant alias initialised itself from itself. *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Definition dbl (n : nat) : nat := n + n.

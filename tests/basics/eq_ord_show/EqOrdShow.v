@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import Std NatIntStd.
+From Crane.Mapping Require Import Std NatInt.
 From Corelib Require Import PrimString.
 
 (* ============================================================= *)

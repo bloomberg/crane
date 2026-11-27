@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From Corelib Require Import PrimInt63.
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.Par.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.Par.
 
 Open Scope itree_scope.
 
@@ -22,7 +22,7 @@ Module ParallelTest.
     f (fst p) (snd p).
 
   Definition fast (m n : nat) : nat * nat :=
-    runPar (
+    run_par (
       let p := (m, n) in
       t1 <- async ack p ;;
       t2 <- async ack p ;;

@@ -11,7 +11,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module DoubleOptionNest.
 Inductive t : Type := node : nat -> option (option t) -> t.
 Definition wrap (k : nat) (acc : t) : t := node k (Some (Some acc)).

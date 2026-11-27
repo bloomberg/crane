@@ -31,7 +31,7 @@ Import ListNotations.
 
 Section STArraysProofs.
 
-  Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.HMapOk_halist.
+  Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.hmap_ok_halist.
 
   Lemma array_simp_fixed_init_eq_five :
     ST.run (fun R => array_simp_fixed_init (R := R)) ≈ Ret 5.

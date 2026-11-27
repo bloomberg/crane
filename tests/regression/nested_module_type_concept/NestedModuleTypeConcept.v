@@ -1,6 +1,6 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 
 (** A module type declared inside another module yields no concept at all: the
     enclosing module is emitted as an empty [struct Defs], and the functor

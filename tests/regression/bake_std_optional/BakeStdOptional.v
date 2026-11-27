@@ -10,7 +10,7 @@
     the payload type, which read the image as a bare [T].  A baked global
     is now initialised with [crane::bake::read<T>(image)] at its declared
     type (CppIR [Baked_value]). *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 
 Module BakeStdOptional.

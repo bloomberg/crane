@@ -8,7 +8,7 @@
     drops; a value built at run time is counted and freed as before. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module ImmortalStickyCount.
 

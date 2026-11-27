@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** An out-of-line definition spells its return type *before* the qualified
     function name, so the enclosing struct's scope is not yet open there.  A

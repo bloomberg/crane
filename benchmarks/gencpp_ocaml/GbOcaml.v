@@ -1,5 +1,5 @@
 (** Plain OCaml extraction of the [benchmarks/gencpp] workloads.  [nat] is
-    OCaml's [int], and the arithmetic Crane's NatIntStd maps to [uint64_t]
+    OCaml's [int], and the arithmetic Crane's NatInt maps to [uint64_t]
     operators maps to OCaml's integer operators here. *)
 From Stdlib Require Import Extraction ExtrOcamlNatInt PeanoNat.
 From GenCppBench Require GbBst GbLists GbInterp GbClo GbMaps.

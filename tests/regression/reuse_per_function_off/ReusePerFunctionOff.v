@@ -7,7 +7,7 @@
     rebuilds it in place; [incr_fresh], of the same shape, allocates. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module ReusePerFunctionOff.
 

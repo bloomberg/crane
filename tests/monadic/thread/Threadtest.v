@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From Corelib Require Import PrimInt63 PrimString.
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO Monads.Thread.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO Monads.Thread.
 
 Open Scope itree_scope.
 
@@ -33,7 +33,7 @@ Module threadtest.
     join t2 ;;
     Ret tt.
 
-  Definition test_pure (m n : nat) : unit := runConc (test m n).
+  Definition test_pure (m n : nat) : unit := run_conc (test m n).
 
 End threadtest.
 

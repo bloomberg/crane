@@ -46,5 +46,5 @@ Definition t : Prop := program_wf sample_prog sample_layout.
 End ProgramWfProp.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "program_wf_prop" ProgramWfProp.

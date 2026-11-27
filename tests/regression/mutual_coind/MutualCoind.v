@@ -60,5 +60,5 @@ Definition test_take5 : list nat := takeA 5 (countA 0).
 End MutualCoind.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "mutual_coind" MutualCoind.

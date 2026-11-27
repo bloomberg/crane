@@ -3,7 +3,7 @@
 
 (** Bugs in std::visit and record pattern match field access *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module VisitMatchBug.

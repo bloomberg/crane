@@ -21,5 +21,5 @@ Definition updated_length : nat := length (update_nth 1 9 sample).
 End ForallList.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "forall_list" ForallList.

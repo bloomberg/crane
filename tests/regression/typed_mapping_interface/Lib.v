@@ -12,7 +12,7 @@
 From Corelib Require Import PrimString.
 From Stdlib Require Import List.
 Import ListNotations.
-From Crane Require Import Extraction Mapping.Descriptor Mapping.NatIntStd.
+From Crane Require Import Extraction Mapping.Descriptor Mapping.NatInt.
 Local Open Scope pstring_scope.
 
 Inductive Meter : Type := meter (n : nat).

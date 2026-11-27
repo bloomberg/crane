@@ -27,7 +27,7 @@
 From Stdlib Require Import List.
 From ITree Require Import ITree Events.Exception.
 From Crane Require Import
-  Mapping.NatIntStd
+  Mapping.NatInt
   Monads.ITree
   Monads.Error
   Mapping.Descriptor.

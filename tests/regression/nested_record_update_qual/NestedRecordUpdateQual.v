@@ -19,5 +19,5 @@ Definition t : Shadow.shadow := bump (Shadow.Mk 1).
 End NestedRecordUpdateQual.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "nested_record_update_qual" NestedRecordUpdateQual.

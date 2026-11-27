@@ -17,7 +17,7 @@
     now compares them with the unit's aliases unfolded).
 
     Expected: compiles; [result = 10]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

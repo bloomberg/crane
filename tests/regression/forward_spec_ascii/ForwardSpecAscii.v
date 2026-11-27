@@ -23,5 +23,5 @@ Definition t : nat := bump_node (ANode 2).
 End ForwardSpecAscii.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "forward_spec_ascii" ForwardSpecAscii.

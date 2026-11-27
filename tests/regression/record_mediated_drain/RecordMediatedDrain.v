@@ -10,7 +10,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module RecordMediatedDrain.
 Record cell (A : Type) : Type := mkc { hd : nat ; tl : A }.
 Arguments mkc {A} _ _. Arguments hd {A} _. Arguments tl {A} _.

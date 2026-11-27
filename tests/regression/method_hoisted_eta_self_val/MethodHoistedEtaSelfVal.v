@@ -11,7 +11,7 @@
     copy [_self_val] ("use of undeclared identifier '_self_val'"), declared
     after the hoisted static that read it.  The substitution now stops at a
     lambda binding the same name.  Expected [t_1 = 4]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

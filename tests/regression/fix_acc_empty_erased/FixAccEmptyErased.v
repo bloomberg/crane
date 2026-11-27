@@ -13,7 +13,7 @@
     generated with no slot, so nothing refined it. A constructed argument is
     now generated against the callee's parameter, its Core type read from
     the binder's recorded type for a local function. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.Std Mapping.DequeList.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 From Corelib Require Import PrimString.

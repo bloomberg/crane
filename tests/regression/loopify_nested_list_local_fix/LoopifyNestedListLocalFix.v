@@ -15,7 +15,7 @@
     [decltype] only where none is recorded.
 
     Expected: extracts; [size (h 3) = 7], [size (h2 3) = 10]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

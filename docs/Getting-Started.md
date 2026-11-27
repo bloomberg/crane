@@ -66,7 +66,7 @@ Mappings are type-class instances that activate on `Import`, so import them
 without using it. `Mapping.Std` maps `option`, pairs, strings and Rocq's
 primitive integers and floats to the C++ standard library. Here `nat` has
 no mapping, so Crane generates a Peano `Nat` type; import
-`Mapping.NatIntStd` instead to extract `nat` as `uint64_t` (bounded, so only
+`Mapping.NatInt` instead to extract `nat` as `uint64_t` (bounded, so only
 for values that fit). [Crane Base Library](Crane-Base-Library.md) lists the
 mapping sets.
 

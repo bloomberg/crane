@@ -1,4 +1,4 @@
-From Crane Require Import Mapping.NatIntStd Mapping.ZInt.
+From Crane Require Import Mapping.NatInt Mapping.ZInt.
 From Crane Require Extraction.
 From Stdlib Require Import List ZArith Strings.String.
 Import ListNotations.

@@ -4,7 +4,7 @@
     once and may move out of what it captured before it throws, so a second
     force must not run it again: the exception is kept and rethrown.  [boom]
     is an axiom, which throws when called. *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 Require Crane.Extraction.

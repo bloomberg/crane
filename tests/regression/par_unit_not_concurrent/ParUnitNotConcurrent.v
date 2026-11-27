@@ -14,7 +14,7 @@
 From Stdlib Require Import List PeanoNat.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Corelib Require Import PrimInt63.
 From Crane Require Import Mapping.Std Monads.ITree Monads.Par.
 
@@ -34,7 +34,7 @@ Definition shared : tree := mk 2000.
 Definition work (k : nat) : nat := churn k shared + sum (mk 3000).
 
 Definition race (k : nat) : nat :=
-  runPar (a <- async work k ;; b <- async work k ;; c <- async work k ;; d <- async work k ;;
+  run_par (a <- async work k ;; b <- async work k ;; c <- async work k ;; d <- async work k ;;
           x <- get_thread a ;; y <- get_thread b ;; z <- get_thread c ;; w <- get_thread d ;;
           Ret (x + y + z + w)).
 

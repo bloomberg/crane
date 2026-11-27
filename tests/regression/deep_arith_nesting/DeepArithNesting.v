@@ -5,7 +5,7 @@
     source therefore cannot be compiled. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module DeepArithNesting.
   (** 1200 additions: deeper than clang's 1024-bracket limit. *)

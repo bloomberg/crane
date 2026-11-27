@@ -7,7 +7,7 @@
     destructured via a nested match on the record constructor. *)
 From Stdlib Require Import List.
 Import ListNotations.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Require Crane.Extraction.
 
 Module SllPairCast.

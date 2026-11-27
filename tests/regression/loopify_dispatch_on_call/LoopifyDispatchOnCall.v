@@ -3,7 +3,7 @@
     the call before the dispatch, and the machine resumes after it there. *)
 
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Set Crane Loopify.
 

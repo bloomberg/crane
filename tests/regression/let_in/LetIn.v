@@ -3,7 +3,7 @@
 
 (** Test let-in expressions *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module LetIn.

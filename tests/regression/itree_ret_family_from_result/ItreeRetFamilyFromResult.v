@@ -10,7 +10,7 @@
 From Stdlib Require Import List.
 From ITree Require Import ITree.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 Import ITreeNotations.
 
 Module ItreeRetFamilyFromResult.

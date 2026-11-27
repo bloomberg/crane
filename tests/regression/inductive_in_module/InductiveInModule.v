@@ -8,7 +8,7 @@
    Inside a module (which becomes a struct in C++), this creates invalid
    namespace-inside-struct code.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module InductiveInModule.

@@ -8,7 +8,7 @@
     backslash, control bytes and a hex digit after an escape, a negative
     [Z] and a negative float.  The program checks the values and that the
     shared suffix is one list again. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.ZInt.
+From Crane Require Import Mapping.NatInt Mapping.Std Mapping.ZInt.
 From Crane Require Extraction.
 From Stdlib Require Import List ZArith.
 From Corelib Require Import PrimString PrimInt63 PrimFloat.

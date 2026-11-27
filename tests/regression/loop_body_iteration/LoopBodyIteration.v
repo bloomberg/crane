@@ -35,5 +35,5 @@ Definition t : nat := get_reg0 (iterate_body 5 sample).
 End LoopBodyIteration.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "loop_body_iteration" LoopBodyIteration.

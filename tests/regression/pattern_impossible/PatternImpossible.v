@@ -6,7 +6,7 @@
    aren't currently supported (not Prel 1 with single id, not Pwild with
    empty ids, etc.)
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module PatternImpossible.

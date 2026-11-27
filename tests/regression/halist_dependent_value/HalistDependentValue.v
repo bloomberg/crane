@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Utils.HAList.
+From Crane Require Import Mapping.Std Mapping.NatInt Utils.HAList.
 From Stdlib Require Import List Classes.EquivDec.
 Import ListNotations.
 

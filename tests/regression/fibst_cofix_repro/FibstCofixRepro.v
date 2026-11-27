@@ -72,7 +72,7 @@ Module FibstCofixReproTests.
   Definition fibst_repro := @fibst_repro ST.cpp_refs.
 End FibstCofixReproTests.
 
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 Set Crane Loopify.
 

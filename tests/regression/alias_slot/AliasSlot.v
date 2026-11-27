@@ -5,7 +5,7 @@
 From Stdlib Require Import List String.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Local Open Scope string_scope.
 
 Module AliasSlot.

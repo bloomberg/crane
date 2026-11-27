@@ -12,7 +12,7 @@
     '(lambda at ...)' must match previous return type"). Every immediately
     invoked lambda computing a value now goes through one join
     ([Match_types.value_iife]). Expected [t_1 = 0]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

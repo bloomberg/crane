@@ -3,7 +3,7 @@
 
 (** Test extraction of option type to std::optional *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Mapping.Std.
 From Crane Require Extraction.
 

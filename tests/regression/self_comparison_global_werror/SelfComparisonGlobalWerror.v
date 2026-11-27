@@ -10,7 +10,7 @@
     one variable or one projection of it; it now folds any two identical
     pure operands: variables, globals no mapping spells, literals, and
     constructors and calls over them. *)
-From Crane Require Import Mapping.NatIntStd Mapping.ZInt Mapping.NInt.
+From Crane Require Import Mapping.NatInt Mapping.ZInt Mapping.NInt.
 From Crane Require Extraction.
 From Stdlib Require Import List NArith.
 Import ListNotations.

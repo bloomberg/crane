@@ -80,6 +80,6 @@ End IndParam.
 
 Require Crane.Extraction.
 Require Import Crane.Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 Crane Extraction "ind_param" IndParam.

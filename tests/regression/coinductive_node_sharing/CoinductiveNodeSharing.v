@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From ITree Require Import ITree.
 
 (** A coinductive value is one heap node, shared by every copy.  An

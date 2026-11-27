@@ -19,7 +19,7 @@
     cell or the emptied field. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module LoopifyReuseCursorTurns.
 

@@ -1,7 +1,7 @@
 (* WIP: non-uniform (nested) inductive with a list A recursive occurrence; the emitted C++ template does not instantiate. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import List.
 Module NonUniformListNest.
 Inductive n2 (A : Type) : Type := Z2 : A -> n2 A | S2 : n2 (list A) -> n2 A.

@@ -1417,7 +1417,7 @@ let gen_dfun cx ~minted n b cty ty temps =
           into = Exactly cod;
           returns = true }
     else
-      (* Some tail expressions (like writeTVar) have side effects that must
+      (* Some tail expressions (like write_tvar) have side effects that must
          not be discarded. *)
       Destination.return_at (Some cod)
   in

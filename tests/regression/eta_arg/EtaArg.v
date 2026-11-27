@@ -6,7 +6,7 @@
 From Stdlib Require Import List.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 (** Counted by the test: [eta_tick] is in eta_tick.h. *)
 Definition tick (n : nat) : nat := n.

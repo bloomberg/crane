@@ -11,7 +11,7 @@ From Corelib Require PrimString.
 From ITree Require Import Events.Exception ITree.
 From Crane Require Monads.ST.
 From Crane Require Import
-  Mapping.NatIntStd
+  Mapping.NatInt
   Monads.Error
   Monads.ITree.
 

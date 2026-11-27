@@ -640,9 +640,9 @@ Definition unknown_fault_blocks : bool :=
 End ValidatedPumpDeliveryTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
-(* [NatIntStd] maps the PeanoNat operations this file used to override
+(* [NatInt] maps the PeanoNat operations this file used to override
    (div, modulo, eqb, leb, ltb) as typed operations. *)
 
 Crane Extraction "validated_pump_delivery_trace" ValidatedPumpDeliveryTraceCase.

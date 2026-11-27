@@ -4,7 +4,7 @@
    Test coinductive types and corecursive definitions.
    These might trigger different code paths in extraction.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module Coinductive.

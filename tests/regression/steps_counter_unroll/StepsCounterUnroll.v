@@ -25,5 +25,5 @@ Definition t : nat :=
 End StepsCounterUnroll.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "steps_counter_unroll" StepsCounterUnroll.

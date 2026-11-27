@@ -64,5 +64,5 @@ Definition test_z_sign_zero : Z := z_sign 0.
 End BinaryNums.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "binary_nums" BinaryNums.

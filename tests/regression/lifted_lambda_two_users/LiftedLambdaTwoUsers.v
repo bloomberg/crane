@@ -1,7 +1,7 @@
 (* WIP: two definitions each lift a lambda; the helpers are emitted after their call sites. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module LiftedLambdaTwoUsers.
 Inductive t : Type := L | N : t -> t.
 Fixpoint depth (x : t) : nat := match x with L => 0 | N u => S (depth u) end.

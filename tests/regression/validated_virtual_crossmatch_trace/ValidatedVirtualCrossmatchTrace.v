@@ -377,6 +377,6 @@ Definition sample_authorized_order_stays_authorized : bool :=
 End ValidatedVirtualCrossmatchTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "validated_virtual_crossmatch_trace" ValidatedVirtualCrossmatchTraceCase.

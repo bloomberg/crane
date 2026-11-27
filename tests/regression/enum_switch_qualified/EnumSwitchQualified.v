@@ -27,5 +27,5 @@ Definition t : nat := Outer.code (Outer.flip Outer.Red).
 End EnumSwitchQualified.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "enum_switch_qualified" EnumSwitchQualified.

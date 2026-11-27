@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Extraction of [Z] to [int64_t], std flavour: the mappings of [Mapping.ZIntDefs]. *)
 From Crane Require Extraction.
-From Crane Require Export Mapping.NInt Mapping.NatIntStd.
+From Crane Require Export Mapping.NInt Mapping.NatInt.
 From Crane Require Import Mapping.Descriptor Mapping.Cpp Mapping.ZIntDefs.
 From Stdlib Require Import BinNat BinPos BinInt.
 

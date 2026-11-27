@@ -1,6 +1,6 @@
 (** Crane mappings for [SatVec]: each event is a direct call. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree.
 Require Import SatVec.
 
 Crane Extract Inductive vec => "satbench::vec<%t0>" [ "satbench::no_loc<%t0>(%a0)" ] From "sat_vec.h".

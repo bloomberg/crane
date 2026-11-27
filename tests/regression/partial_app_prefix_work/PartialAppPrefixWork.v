@@ -4,7 +4,7 @@
     application stands, once, as in Rocq, not again at every application of
     the closure. *)
 From Stdlib Require Import List.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 Import ListNotations.
 

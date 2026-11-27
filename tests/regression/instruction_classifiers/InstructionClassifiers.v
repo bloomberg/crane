@@ -137,5 +137,5 @@ Definition t : nat * nat * nat * nat :=
 End InstructionClassifiers.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "instruction_classifiers" InstructionClassifiers.

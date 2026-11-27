@@ -1,7 +1,7 @@
 From Stdlib Require Import List.
 From Stdlib Require Import Nat.
 Import ListNotations.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module LoopifyListGeneration.

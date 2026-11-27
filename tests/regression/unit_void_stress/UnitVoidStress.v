@@ -3,7 +3,7 @@
 
 (** Adversarial stress test for unit→void and std::monostate extraction. *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module UnitVoidStress.

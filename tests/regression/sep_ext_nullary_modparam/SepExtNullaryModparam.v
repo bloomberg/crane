@@ -11,7 +11,7 @@
 
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module Type IntLike.
   Parameter t : Type.

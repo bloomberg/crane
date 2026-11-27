@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Mapping.AsciiChar.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import Ascii String.
 Open Scope string_scope.
 

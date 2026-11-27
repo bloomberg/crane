@@ -162,7 +162,7 @@ Proof. decide equality; apply Nat.eq_dec. Defined.
   @HMap_halist (nat * nat) (key_type V) eq_equivalence key_eq_dec_instance.
 
 #[global] Instance hmap_ok (V : nat -> Type) : HMapOk (hmap V) :=
-  HMapOk_halist (nat * nat) (key_type V).
+  hmap_ok_halist (nat * nat) (key_type V).
 
 Section Model.
 

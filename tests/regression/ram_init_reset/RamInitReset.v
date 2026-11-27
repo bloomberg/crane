@@ -72,5 +72,5 @@ Definition reset_pc : nat := state_pc (reset_state init_state).
 End RamInitReset.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "ram_init_reset" RamInitReset.

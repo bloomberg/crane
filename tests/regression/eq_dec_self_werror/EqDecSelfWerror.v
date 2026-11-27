@@ -1,6 +1,6 @@
 (** Found by Ephyra round 28. A variant of [self_comparison_werror]
     (regression: [Nat.eqb n n] and kin): [Nat.eq_dec x x] in an [if], seen
-    under [Mapping.NatIntStd] and [Mapping.NatIntBDE], the operands a
+    under [Mapping.NatInt] and [Mapping.NatIntBDE], the operands a
     parameter or a [let]-bound variable.
 
     Expected: compiles with the suite's flags; [result = 1].
@@ -12,7 +12,7 @@
     its last two arguments, [forall .., {x = y} + {_}], applied to one
     value. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import Arith.
 
 Module EqDecSelfWerror.

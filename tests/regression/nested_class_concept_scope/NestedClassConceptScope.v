@@ -1,6 +1,6 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 
 (** A class declared inside a submodule has its concept hoisted to file scope,
     because a C++ concept cannot be a class member.  The [static_assert]

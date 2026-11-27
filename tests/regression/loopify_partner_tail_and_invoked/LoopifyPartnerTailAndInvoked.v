@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** [walk] calls its partner [step] both as a tail call and as the operand
     of an addition, and [step] calls [walk] back where its body runs.  Its

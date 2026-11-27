@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import List. Import ListNotations.
 (** Using [nth_error] on a [list (nat -> nat)] instantiates the
     erasure-converting [List] constructor, whose body names the source

@@ -27,7 +27,7 @@
 
     Expected: compiles; [deque_map [plus; minus] = 2],
     [maybe_get (Just plus) = 3], [maybe_get Nothing = 1]. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.Std Mapping.DequeList.
 From Corelib Require Import PrimString.
 From Crane Require Import Extraction Mapping.Descriptor.
 From Stdlib Require Import List.

@@ -13,7 +13,7 @@
 
     Expected: extracts under [CRANE_CHECK_IR]; [len 0 = 2],
     [of_sum 0 = "cd"], [of_list 0 = "f"]. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Corelib Require Import PrimString.
 From Stdlib Require Uint63 BinInt.
 From Crane Require Import Extraction.

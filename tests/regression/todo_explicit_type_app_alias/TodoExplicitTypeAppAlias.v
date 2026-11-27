@@ -17,6 +17,6 @@ Definition test_value : nat :=
 End TodoExplicitTypeAppAlias.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "todo_explicit_type_app_alias" TodoExplicitTypeAppAlias.

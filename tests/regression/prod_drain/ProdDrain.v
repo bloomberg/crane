@@ -9,7 +9,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Set Crane Loopify.
 Module ProdDrain.
 Inductive t : Type := L : t | N : (t * nat) -> t.

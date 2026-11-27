@@ -1,9 +1,5 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Extraction.
-From Crane Require Export Mapping.Std.
-From Stdlib Require Import Reals Rtrigo Ratan Rsqrt_def.
-
 (** Extraction of [R] (axiomatized reals) to a C++ [Real] class
     wrapping [long double].
 
@@ -25,6 +21,9 @@ From Stdlib Require Import Reals Rtrigo Ratan Rsqrt_def.
     integer-inductive mapping.  This short-circuits the constructive real
     infrastructure (ConstructiveCauchyReals, ClassicalDedekindReals, etc.) by
     mapping R and its operations directly to concrete C++. *)
+From Crane Require Extraction.
+From Crane Require Export Mapping.Std.
+From Stdlib Require Import Reals Rtrigo Ratan Rsqrt_def.
 
 From Crane Require Import Mapping.Descriptor.
 From Corelib Require Import PrimString.

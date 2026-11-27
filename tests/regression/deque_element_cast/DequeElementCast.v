@@ -9,7 +9,7 @@
     Crane may omit the any_cast entirely and use the std::any directly. *)
 From Stdlib Require Import List.
 Import ListNotations.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Mapping.DequeList.
+From Crane Require Import Mapping.Std Mapping.NatInt Mapping.DequeList.
 Require Crane.Extraction.
 
 Module DequeElementCast.

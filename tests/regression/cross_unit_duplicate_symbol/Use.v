@@ -5,7 +5,7 @@
     a duplicate symbol for [Lib::len]. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From CraneTestsRegression Require Import cross_unit_duplicate_symbol.Lib.
 
 Module Use.

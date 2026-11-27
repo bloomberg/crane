@@ -10,7 +10,7 @@
     user. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From CraneTestsRegression Require recursive_library_datatypes.Src.
 
 Crane Recursive Extraction Library Src.

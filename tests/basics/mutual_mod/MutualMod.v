@@ -39,6 +39,6 @@ Definition test_odd_len := EvenOdd.odd_length EvenOdd.three.
 
 Require Crane.Extraction.
 Require Import Crane.Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 Crane Extraction "mutual_mod" test_even_len test_odd_len.

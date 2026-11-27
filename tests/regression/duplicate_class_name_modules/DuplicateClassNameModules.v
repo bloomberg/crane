@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 (** Two modules each declare a class called [C].  A class is emitted as a
     concept at file scope rather than inside its module's struct, so the second

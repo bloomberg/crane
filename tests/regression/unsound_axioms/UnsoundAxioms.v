@@ -7,7 +7,7 @@
    WARNING: This uses axioms that make Coq inconsistent!
    This is ONLY for testing extraction edge cases.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module UnsoundAxioms.

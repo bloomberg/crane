@@ -5,7 +5,7 @@
     is not a declaration of the program, so a plan of declarations alone
     does not know it.  [len] is tail recursive, [sum_all] is not. *)
 
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

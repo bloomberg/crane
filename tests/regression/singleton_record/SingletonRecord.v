@@ -3,7 +3,7 @@
 
 (** Test singleton records (records with single field - special case) *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module SingletonRecord.

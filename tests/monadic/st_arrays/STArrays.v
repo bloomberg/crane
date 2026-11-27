@@ -16,7 +16,7 @@ From ITree Require Import
 
 From Crane Require Monads.ST.
 From Crane Require Import
-  Mapping.NatIntStd
+  Mapping.NatInt
   Monads.Error
   Monads.ITree
 .

@@ -7,7 +7,7 @@
     anything is written -- first with no mapping of [Meter] imported, then
     with [Wide]. *)
 
-From Crane Require Import Extraction Mapping.NatIntStd.
+From Crane Require Import Extraction Mapping.NatInt.
 From CraneTestsRegression Require Import typed_mapping_interface.Lib.
 
 Module Unmapped.

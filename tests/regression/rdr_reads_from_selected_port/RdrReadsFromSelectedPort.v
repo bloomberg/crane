@@ -22,5 +22,5 @@ Definition t : bool := Nat.eqb (acc (execute_rdr sample)) 7.
 End RdrReadsFromSelectedPort.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "rdr_reads_from_selected_port" RdrReadsFromSelectedPort.

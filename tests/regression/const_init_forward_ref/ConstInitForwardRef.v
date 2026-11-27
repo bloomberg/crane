@@ -31,7 +31,7 @@
     struct to be complete. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 From Stdlib Require Import List.
 From CraneTestsRegression Require Import const_init_forward_ref.Coord.
 Import ListNotations.

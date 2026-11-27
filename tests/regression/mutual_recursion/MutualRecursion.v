@@ -4,7 +4,7 @@
    Test mutually recursive functions and types.
    These might create complex ML AST patterns.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module MutualRecursion.

@@ -13,7 +13,7 @@
     but not used.  A finishing pass ([dead_stores], ported from
     st-code-rank2) drops a by-value variable only ever assigned. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From ITree Require Import ITree Events.Exception.
 From Crane Require Monads.ST.
 From Crane Require Import Monads.ITree Monads.Error.

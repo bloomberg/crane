@@ -10,7 +10,7 @@
     [m], dead after the second call, and the frame check failed. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Set Crane Loopify.
 

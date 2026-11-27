@@ -2,8 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Strings as a typed mapping with a [std::string_view] read view, from
-    [Mapping.Std] (imported here through [Mapping.StringView], which
-    re-exports it):
+    [Mapping.Std]:
 
     - [size_of] only calls [length]: [std::string_view].
     - [describe] passes [name] to [length], [sub] and [cat]: [cat] reads
@@ -37,7 +36,7 @@
 From Stdlib Require Import List.
 Import ListNotations.
 From Corelib Require Import PrimInt63 PrimString.
-From Crane Require Import Mapping.StringView Mapping.Descriptor.
+From Crane Require Import Mapping.Std Mapping.Descriptor.
 Local Open Scope pstring_scope.
 
 Module StringViews.

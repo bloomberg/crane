@@ -74,7 +74,7 @@ Section NatProgramProofs.
   Let E0 := (Global.Event T V) +' exceptE Err.
 
 
-  Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.HMapOk_halist.
+  Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.hmap_ok_halist.
 
   Derive (tree_simplified : itree (exceptE Err) (HAList.halist (Global.idx_key T) (Global.idx_key_type (fun _ : T => nat)) * nat)) in
     ( Global.run tree_simp_nat 

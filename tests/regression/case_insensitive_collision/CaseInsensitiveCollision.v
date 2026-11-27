@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** Crane capitalises an inductive's name to form its C++ type, so the
     inductive [bar] and the definition [Bar] both want to be [Bar].  The

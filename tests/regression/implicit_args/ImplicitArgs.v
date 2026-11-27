@@ -3,7 +3,7 @@
 
 (** Test implicit arguments *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module ImplicitArgs.

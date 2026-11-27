@@ -8,7 +8,7 @@
     Each assertion names its subject from where it is finally written,
     qualified by every struct it left. *)
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 
 Module AssertionHeldThroughStructs.
 

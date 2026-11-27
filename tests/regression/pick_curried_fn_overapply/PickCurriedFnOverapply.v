@@ -14,7 +14,7 @@
     result is the callable the type argument spells, evaluated once, as
     Rocq evaluates it. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module PickCurriedFnOverapply.
 

@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A [sigT] over a boolean-indexed type family whose branches are [nat] and
     [nat -> nat]: the payload is erased to [std::any], so the function branch
     must be called through the canonical erased-callable adapter and its

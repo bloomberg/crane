@@ -5,7 +5,7 @@
     Focuses on variable usage after unit binding. *)
 
 From Corelib Require Import PrimString.
-From Crane Require Import Mapping.NatIntStd Mapping.Std Monads.ITree Monads.IO.
+From Crane Require Import Mapping.NatInt Mapping.Std Monads.ITree Monads.IO.
 From Crane Require Extraction.
 
 Module UnitVoidEdge2.

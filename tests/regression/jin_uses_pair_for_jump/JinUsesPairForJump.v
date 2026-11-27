@@ -30,5 +30,5 @@ Definition t : bool := Nat.eqb (pc (execute_jin sample 3)) 555.
 End JinUsesPairForJump.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "jin_uses_pair_for_jump" JinUsesPairForJump.

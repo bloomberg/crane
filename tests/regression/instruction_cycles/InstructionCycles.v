@@ -204,5 +204,5 @@ Definition t : nat * nat * bool * bool * nat * (nat * nat) * nat :=
 End InstructionCycles.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "instruction_cycles" InstructionCycles.

@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** A module becomes a C++ struct, so a definition or an inductive named after
     its enclosing module becomes a member with the same name as its class,

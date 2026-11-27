@@ -1,5 +1,5 @@
 ; OCaml baseline for benchmarks/gencpp: the same Gb* workloads through plain
-; Rocq->OCaml extraction, nat as OCaml int (parity with NatIntStd's uint64_t).
+; Rocq->OCaml extraction, nat as OCaml int (parity with NatInt's uint64_t).
 ;   dune build benchmarks/gencpp_ocaml
 ; writes benchmarks/gencpp_ocaml/out/gb_*.ml; see build.sh.
 (coq.theory

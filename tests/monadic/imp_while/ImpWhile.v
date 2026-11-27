@@ -22,7 +22,7 @@ From ITree Require Import
 
 From Crane Require Monads.ST.
 From Crane Require Import
-  Mapping.NatIntStd
+  Mapping.NatInt
   Monads.Error
   Monads.ITree
 .
@@ -135,7 +135,7 @@ Definition square (k : nat) : stmt :=
 Definition forever : stmt := While (Num 1) (Assign 0 (Add (Var 0) (Num 1))).
 
 (** In the model: [ST.run] interprets [rec] with ITree's [mrec]. *)
-Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.HMapOk_halist.
+Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.hmap_ok_halist.
 
 Lemma factorial_5 :
   burn 5000 (ITree.map snd (ST.run (fun R => run (R := R) 2 (factorial 5)))) = Ret [0; 120].

@@ -14,7 +14,7 @@
 From Stdlib Require Import List PeanoNat.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Corelib Require Import PrimFloat.
 From Crane Require Import Mapping.Std.
 

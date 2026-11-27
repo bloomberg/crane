@@ -1,4 +1,4 @@
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 From CraneTestsRegression Require Import sep_ext_callee_alias_type_head.Lib.
 

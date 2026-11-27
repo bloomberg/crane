@@ -7,7 +7,7 @@
     The substantive assertions run while DuplicateOutputTarget.vo is built. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Module First.
   Definition one : nat := 1.

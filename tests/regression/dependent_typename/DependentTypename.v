@@ -7,7 +7,7 @@
    Dependent type references like K::t need typename K::t in C++
    when K is a template parameter.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module DependentTypename.

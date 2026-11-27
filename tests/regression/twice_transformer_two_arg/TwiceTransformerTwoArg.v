@@ -16,7 +16,7 @@
     parameter at the outer call's grouping ([Representation_plan.region]),
     as lowering builds it. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module TwiceTransformerTwoArg.
 

@@ -6,7 +6,7 @@
    deduction and custom match template expansion.
 *)
 From Corelib Require Import PrimString PrimInt63.
-From Crane Require Import Mapping.Std Mapping.NatIntStd
+From Crane Require Import Mapping.Std Mapping.NatInt
   Monads.ITree Monads.IO Monads.Env.
 Local Open Scope pstring_scope.
 

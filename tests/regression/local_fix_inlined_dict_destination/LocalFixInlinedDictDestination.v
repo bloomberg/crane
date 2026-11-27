@@ -12,7 +12,7 @@
     parameter's type as the return type in force
     ([Local_functions.gen_applied_fix]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

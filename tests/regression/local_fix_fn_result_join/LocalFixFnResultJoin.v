@@ -17,7 +17,7 @@
     back a node it changed nothing in ([Lifting.local_var_subst_expr]).
 
     Expected: compiles; [result = 6]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

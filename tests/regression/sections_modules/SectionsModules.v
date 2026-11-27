@@ -4,7 +4,7 @@
    Test sections, module types with multiple inheritance, and other
    complex module system features that might create unusual patterns.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module SectionsModules.

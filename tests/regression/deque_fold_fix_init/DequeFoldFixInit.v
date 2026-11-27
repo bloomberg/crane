@@ -14,7 +14,7 @@
     closures do not assign to.  An argument of a mapping at a parameter
     declared at a type variable instantiated at a function type is now
     wrapped whatever it is written as. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.Std Mapping.DequeList.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

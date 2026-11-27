@@ -22,7 +22,7 @@
     ([Core_plan.Access.read_off]).
 
     Expected: compiles; [result = 6]. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.Std Mapping.DequeList.
 From Corelib Require Import PrimString.
 From Crane Require Import Extraction Mapping.Descriptor.
 From Stdlib Require Import List Uint63 BinInt.

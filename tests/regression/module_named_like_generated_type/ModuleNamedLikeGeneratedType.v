@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 (** A module whose name is the one Crane picks for a generated type — [Nat] for
     Rocq's [nat], [Bool0] for [bool] — is emitted as a struct nested inside

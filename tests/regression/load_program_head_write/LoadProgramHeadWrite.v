@@ -46,5 +46,5 @@ Definition t : nat :=
 End LoadProgramHeadWrite.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "load_program_head_write" LoadProgramHeadWrite.

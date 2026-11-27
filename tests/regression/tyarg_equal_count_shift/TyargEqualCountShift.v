@@ -9,7 +9,7 @@
     map, [nat] goes to [A] and [B] stays open for the later argument. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module TyargEqualCountShift.
 

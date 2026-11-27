@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Crane bug: [Mapping.NInt] converts [N.to_nat] to [unsigned int], whatever
-    [nat] is represented as.  Under [Mapping.NatIntStd] a [nat] is a
+    [nat] is represented as.  Under [Mapping.NatInt] a [nat] is a
     [uint64_t], so [Nat.max (N.to_nat n) 5] -- [std::max] of an
     [unsigned int] and a [uint64_t] -- cannot deduce one type: "no matching
     function for call to 'max'", and the same for [min]. *)
@@ -10,7 +10,7 @@
 From Stdlib Require Import List PeanoNat.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import NArith.
 From Crane Require Import Mapping.NInt.
 

@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** [Nat.iter] is lowered to a [for] whose accumulator is declared [auto] from
     the *initial* value.  When the iterated type is a function type the initial

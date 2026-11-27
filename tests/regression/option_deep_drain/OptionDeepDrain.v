@@ -11,7 +11,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Set Crane Loopify.
 Module OptionDeepDrain.
 Inductive chain : Type := Link : nat -> option chain -> chain.

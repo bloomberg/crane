@@ -13,7 +13,7 @@
 From Stdlib Require Import List.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module TyargPartialTypeApplication.
 

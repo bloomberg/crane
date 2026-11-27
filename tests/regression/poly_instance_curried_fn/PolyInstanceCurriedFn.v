@@ -20,7 +20,7 @@
     next ([Declared_at n]).
 
     Expected: compiles and extracts under [CRANE_CHECK_IR]; [result = 4]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 
 Module PolyInstanceCurriedFn.

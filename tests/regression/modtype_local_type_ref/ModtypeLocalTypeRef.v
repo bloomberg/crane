@@ -5,7 +5,7 @@
     module.  The concept is emitted before the enclosing namespace, so the
     [requires] clause names an identifier that is not declared yet. *)
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 
 Module ModtypeLocalTypeRef.
 

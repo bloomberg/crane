@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From ITree Require Import ITree.
 Require Crane.Extraction.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 (** Factorial through coq-itree's [mrec]: each recursive call is an event
     [interp_mrec] answers by running the body again.  [interp_mrec] passes

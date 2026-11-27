@@ -21,5 +21,5 @@ Definition t : nat :=
 End SetTestPinUpdate.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "set_test_pin_update" SetTestPinUpdate.

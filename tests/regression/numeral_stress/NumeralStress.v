@@ -13,7 +13,7 @@
 *)
 From Corelib Require Import PrimInt63.
 From Stdlib Require Import BinNat BinPos BinInt.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 From Crane Require Import Mapping.NInt Mapping.ZInt.
 
 Module NumeralStress.

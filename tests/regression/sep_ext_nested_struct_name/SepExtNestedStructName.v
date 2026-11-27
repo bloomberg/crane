@@ -7,7 +7,7 @@
     written as it is, not qualified for global scope. *)
 
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From CraneTestsRegression Require sep_ext_nested_struct_name.NestedLib.
 
 Inductive tree : Type :=

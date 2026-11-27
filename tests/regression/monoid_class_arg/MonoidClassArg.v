@@ -5,7 +5,7 @@
     The instance is passed as a dictionary, but is emitted as a template
     instantiation in expression position, which is not an expression. *)
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

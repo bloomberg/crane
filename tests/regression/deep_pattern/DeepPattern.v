@@ -4,7 +4,7 @@
    Try to create deep nested patterns that might not optimize well,
    potentially triggering the Impossible exception or creating unusual patterns.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module DeepPattern.

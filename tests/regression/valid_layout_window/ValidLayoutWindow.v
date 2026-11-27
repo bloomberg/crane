@@ -21,5 +21,5 @@ Definition t : nat :=
 End ValidLayoutWindow.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "valid_layout_window" ValidLayoutWindow.

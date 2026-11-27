@@ -4,7 +4,7 @@
 (** Edge cases for void-returning callbacks in monadic and pure contexts. *)
 
 From Corelib Require Import PrimString.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
 Local Open Scope pstring_scope.
 
 Module VoidCallback.

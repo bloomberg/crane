@@ -26,5 +26,5 @@ Definition get_thread {E} `{parE -< E} {B} (t : future B)
 
 Crane Extract Inlined Constant get_thread => "%a0.get()".
 
-Axiom runPar : forall {A}, itree parE A -> A.
-Crane Extract Inlined Constant runPar => "%a0".
+Axiom run_par : forall {A}, itree parE A -> A.
+Crane Extract Inlined Constant run_par => "%a0".

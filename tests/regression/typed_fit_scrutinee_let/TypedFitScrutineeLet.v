@@ -13,7 +13,7 @@
 
     Expected: extracts under [CRANE_CHECK_IR]; [on_t3 true 4 = 0],
     [on_t3 false 4 = 1], [on_z true 4 = 0], [on_z false 4 = 1]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 From Stdlib Require Import ZArith.
 

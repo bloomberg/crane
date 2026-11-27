@@ -7,7 +7,7 @@
    and generate valid C++ with both [std::async] and [std::cout].
 *)
 From Corelib Require Import PrimString.
-From Crane Require Import Mapping.Std Mapping.NatIntStd
+From Crane Require Import Mapping.Std Mapping.NatInt
                           Monads.ITree Monads.IO Monads.Par.
 
 Module EffectCompose.

@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import Std NatIntStd.
+From Crane.Mapping Require Import Std NatInt.
 
 Set Crane Loopify.
 

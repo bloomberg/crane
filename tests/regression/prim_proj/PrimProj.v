@@ -21,5 +21,5 @@ Definition translate (dx dy : nat) (p : point) : point :=
 End PrimProj.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "prim_proj" PrimProj.

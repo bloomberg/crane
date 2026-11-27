@@ -1,7 +1,7 @@
 (* Rocq bug #11114: indexed inductive with record and extraction implicit *)
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module RocqBug11114.
 

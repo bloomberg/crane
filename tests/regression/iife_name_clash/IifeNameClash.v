@@ -20,5 +20,5 @@ Definition double_get (w1 w2 : wrapper) : nat :=
 End IifeNameClash.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "iife_name_clash" IifeNameClash.

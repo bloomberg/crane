@@ -14,7 +14,7 @@
     parameters now apply to what it returns
     ([inner(nil, std::move(acc))(eta0_)]), as at any call of a known
     arity. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 From Corelib Require Import PrimString.

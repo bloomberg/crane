@@ -15,5 +15,5 @@ Definition t : nat := if valid_program [1; 2; 3; 4] then 1 else 0.
 End EvenLengthByteValidation.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "even_length_byte_validation" EvenLengthByteValidation.

@@ -24,5 +24,5 @@ Definition t : nat := target_of (count_loop_test 37).
 End CountLoopTestTarget.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "count_loop_test_target" CountLoopTestTarget.

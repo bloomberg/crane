@@ -5,7 +5,7 @@
     [rc.h] (which clang-format would otherwise sort first) and must include
     [<atomic>] itself for [std::memory_order_acquire]. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module AtomicInclude.
 

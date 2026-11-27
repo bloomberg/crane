@@ -73,5 +73,5 @@ Definition test_length : nat := poly_length (cons 1 (cons 2 (cons 3 nil))).
 End UniversePoly.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "universe_poly" UniversePoly.

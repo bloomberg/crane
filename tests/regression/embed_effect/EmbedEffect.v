@@ -8,7 +8,7 @@
 *)
 From Corelib Require Import PrimString PrimInt63.
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree.
 
 Local Open Scope pstring_scope.
 Local Open Scope itree_scope.

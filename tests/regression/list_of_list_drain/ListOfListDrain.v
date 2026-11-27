@@ -11,7 +11,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module ListOfListDrain.
 Inductive lst (A : Type) : Type := nil : lst A | cons : A -> lst A -> lst A.
 Arguments nil {A}. Arguments cons {A} _ _.

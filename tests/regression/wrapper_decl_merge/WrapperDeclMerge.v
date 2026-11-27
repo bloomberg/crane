@@ -24,5 +24,5 @@ Definition y : nat := B.Nat.fb 4.
 End WrapperDeclMerge.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "wrapper_decl_merge" WrapperDeclMerge.

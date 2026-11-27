@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** An instance parameterised by another instance (`Def A -> Def (option A)`)
     used at `option (option nat)`: the nested instantiation must list the
     instance argument before the type argument, matching the generated

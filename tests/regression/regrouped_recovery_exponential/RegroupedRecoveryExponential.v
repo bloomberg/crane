@@ -11,7 +11,7 @@
     regrouped, and the adapter holds it by move. Expected and now:
     [lvl 40 = 2^40] immediately. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Module RegroupedRecoveryExponential.
 

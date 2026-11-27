@@ -1,13 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-
-
-(* A library for generic indexes accessed through a typeclass interface.
-   The purpose of the interface is to abstract away the manipulations of indices
-   so that writers of programs in Rocq cannot access them directly. One use-case for this is
-   for a set of references. One might conceal the address type in order to make it impossible to manipulate
-   addresses and do pointer arithmetic. 
- *)
+(** Generic indices behind a typeclass interface ([Ix], specified by
+    [Ix_Correct], with [nat] instances), so that programs cannot manipulate
+    indices directly: a set of references can conceal its address type and
+    rule out pointer arithmetic. *)
 
 From Stdlib Require Import
   Arith.PeanoNat

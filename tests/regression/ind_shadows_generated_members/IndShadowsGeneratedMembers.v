@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** Every generated inductive carries a [variant_t] alias and [v] / [v_mut]
     accessors.  An inductive that is itself named [variant_t], with

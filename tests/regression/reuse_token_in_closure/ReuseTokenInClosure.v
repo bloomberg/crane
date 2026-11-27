@@ -27,7 +27,7 @@
    rebuilt constructor the arm returns, one per path. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Set Crane NonAtomicRc.
 Set Crane Reuse.
 

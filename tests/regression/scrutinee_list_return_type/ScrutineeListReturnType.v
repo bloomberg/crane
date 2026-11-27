@@ -14,7 +14,7 @@
     which nothing constrains, so it stays [crane::obj]).  It now falls back
     to the binder's own type, its erased parts spelled erased, and never to
     the enclosing result. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 From Corelib Require Import PrimString.

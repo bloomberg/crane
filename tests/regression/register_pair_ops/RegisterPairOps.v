@@ -155,5 +155,5 @@ Definition t : (nat * bool * bool * bool * bool * bool * bool * bool * bool * bo
 End RegisterPairOps.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "register_pair_ops" RegisterPairOps.

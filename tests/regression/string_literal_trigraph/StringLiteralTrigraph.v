@@ -7,7 +7,7 @@
     Fixed: the literal was printed as ["??="] and clang rejected it:
     "trigraph ignored [-Werror,-Wtrigraphs]".  The string literal printer
     now escapes a [?] that follows a [?] ([?\?=]).  Also on main. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Corelib Require Import PrimString.
 

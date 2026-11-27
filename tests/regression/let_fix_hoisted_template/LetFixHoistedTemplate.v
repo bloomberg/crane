@@ -30,5 +30,5 @@ Definition test_rev : list nat := reverse_onto [1; 2; 3].
 End LetFixHoistedTemplate.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "let_fix_hoisted_template" LetFixHoistedTemplate.

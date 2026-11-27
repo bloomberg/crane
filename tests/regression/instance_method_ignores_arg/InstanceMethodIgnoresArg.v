@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 (** An instance method that discards its argument ([fun _ => 1]) loses the
     argument on the way out: the method is emitted nullary while the concept

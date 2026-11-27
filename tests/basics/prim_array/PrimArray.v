@@ -4,7 +4,7 @@
 
 From Corelib Require Import PrimInt63.
 From Corelib Require Import PrimArray.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Require Crane.Extraction.
 
 Module PrimArray.

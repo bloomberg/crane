@@ -3,7 +3,7 @@
 
 (** Test anonymous/local fixpoints *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module AnonFixpoint.

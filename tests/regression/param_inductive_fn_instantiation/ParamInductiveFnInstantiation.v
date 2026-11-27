@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A parameterised inductive with a function field
     (`endo A := E : (A -> A) -> endo A`) instantiated at a function type: the
     argument's nested binders must stay curried to match the field's

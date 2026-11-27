@@ -29,7 +29,7 @@ Fixpoint sum1 (l : lst) : nat :=
 End R.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 Set Crane NonAtomicRc.
 Set Crane Reuse.
 Set Crane Loopify.

@@ -9,7 +9,7 @@
     (a bounds check), never an unchecked [operator[]]. Covers security-scan
     findings 21 (PrimString.get) and 23 (StringView.sv_get) for the std flavor. *)
 Require Import PrimString PrimInt63.
-From Crane Require Import Extraction Mapping.Std External.StringViewStd.
+From Crane Require Import Extraction Mapping.Std External.StringView.
 
 Open Scope pstring_scope.
 Open Scope int63.

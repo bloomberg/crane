@@ -5,7 +5,7 @@
     [map (@id nat) l].  The call spells a template instantiation, while the
     definition was emitted with an erased signature over [std::any]. *)
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

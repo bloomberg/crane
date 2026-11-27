@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** [tree_size]'s partner [forest_size] calls it back only from a local
     fixpoint over a list of trees, and [tree_size] calls [forest_size] as

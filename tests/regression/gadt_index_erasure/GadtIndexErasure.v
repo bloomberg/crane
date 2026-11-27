@@ -6,7 +6,7 @@
     branch nor a call passed to [map] recovers the concrete type, and the two
     disagree about what the box holds. *)
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

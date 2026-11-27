@@ -13,7 +13,7 @@
     dropped there.
 
     Expected: extracts under [CRANE_CHECK_IR]; [size (g [1; 2; 3]) = 1]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

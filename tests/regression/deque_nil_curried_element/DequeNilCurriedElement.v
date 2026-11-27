@@ -17,7 +17,7 @@
     [Constructors.custom], [Constructors.custom_field]), and a nullary one
     is typed at the instantiation it was built at. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.DequeList.
 From Stdlib Require Import List.
 Import ListNotations.
 

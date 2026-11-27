@@ -11,7 +11,7 @@
     values. The wrap now names the type variable's instantiation, curried as
     a type variable spells it, and the call's result, which the mapping
     yields from that accumulator, is applied one argument at a time. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.Std Mapping.DequeList.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

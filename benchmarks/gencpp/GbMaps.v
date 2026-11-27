@@ -2,7 +2,7 @@
     pipelines, an interpreter, closures and a balanced map from the standard
     library.  Each entry point folds its result into one number. *)
 From Stdlib Require Import List PeanoNat FMapAVL OrderedTypeEx.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 Import ListNotations.
 

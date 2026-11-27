@@ -34,6 +34,6 @@ Definition test_twice : nat :=
 End TodoWithTypeConstraint.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "todo_with_type_constraint" TodoWithTypeConstraint.

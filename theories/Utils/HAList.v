@@ -1,3 +1,8 @@
+(* Copyright 2026 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Heterogeneous association lists, [list {k : K & V k}]: an [HMap]
+    instance with its [HMapOk] proof ([hmap_ok_halist]) and a [Foldable]
+    instance. *)
 From Stdlib Require Import Classes.EquivDec List.
 From ExtLib Require Import Structures.Reducible.
 From Crane Require Import Utils.HMap.
@@ -115,7 +120,7 @@ Section HAList.
       - apply mapsto_remove_neq_halist, Hneq.
     Qed.
 
-    #[global] Instance HMapOk_halist : HMapOk HMap_halist :=
+    #[global] Instance hmap_ok_halist : HMapOk HMap_halist :=
       {| mapsto := mapsto_halist
        ; mapsto_empty := mapsto_empty_halist
        ; mapsto_lookup := mapsto_lookup_halist

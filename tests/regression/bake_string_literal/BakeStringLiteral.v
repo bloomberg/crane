@@ -11,7 +11,7 @@
     the literal as [const char*].  The root is now handed over at the
     constant's declared type, [crane::bake::template root<std::string>(...)],
     whatever the initialiser deduces to. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Corelib Require Import PrimString PrimInt63.
 Module BakeStringLiteral.

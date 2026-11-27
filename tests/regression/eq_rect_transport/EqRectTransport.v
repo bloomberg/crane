@@ -6,7 +6,7 @@
     call, but a type-level definition has no C++ declaration, so the name is
     undeclared. *)
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 
 Module EqRectTransport.
 Definition cast (A B : Type) (H : A = B) (a : A) : B := eq_rect A (fun T => T) a B H.

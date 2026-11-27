@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITreeReified.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITreeReified.
 From ITree Require Import ITree.
 
 Variant AE : Type -> Type := A0 : AE nat.

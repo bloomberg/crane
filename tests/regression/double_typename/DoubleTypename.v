@@ -35,6 +35,6 @@ Definition test : list nat :=
 End DoubleTypename.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "double_typename" DoubleTypename.

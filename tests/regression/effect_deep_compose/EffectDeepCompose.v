@@ -5,7 +5,7 @@
    Tests that ReSum infrastructure types are properly erased.
 *)
 From Corelib Require Import PrimString PrimInt63.
-From Crane Require Import Mapping.Std Mapping.NatIntStd
+From Crane Require Import Mapping.Std Mapping.NatInt
                           Monads.ITree Monads.IO Monads.Env Monads.Clock.
 Local Open Scope pstring_scope.
 

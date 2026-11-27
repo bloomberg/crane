@@ -7,7 +7,7 @@
     printed, where it used to leave the placeholder in the C++ text. *)
 
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import Std NatIntStd.
+From Crane.Mapping Require Import Std NatInt.
 
 Axiom double : nat -> nat.
 Crane Extract Inlined Constant double => "static_cast<%ret>(2 * %a0)".

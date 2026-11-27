@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A constructor field holding the inductive under a pair
     ([N : (nat * c) -> c]) is stored as [shared_ptr<pair<uint64_t, c>>].  The
     pattern match must dereference the pointer before projecting [.second]. *)

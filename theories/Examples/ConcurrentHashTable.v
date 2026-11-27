@@ -64,33 +64,33 @@ Record CHT (K V : Type) := {
 Definition bucket_of {K V} (t : CHT K V) (k : K)
   :  itree stmE (TVar (list (K * V))) :=
   let i := mod (t.(cht_hash) k) t.(cht_nbuckets) in
-  getSTM t.(cht_buckets) i.
+  get_stm t.(cht_buckets) i.
 
 Section STM.
 
 (* Get *)
 Definition stm_get {K V} (t : CHT K V) (k : K) : itree stmE (option V) :=
   b <- bucket_of t k ;;
-  xs <- readTVar b ;;
+  xs <- read_tvar b ;;
   Ret (assoc_lookup t.(cht_eqb) k xs).
 
 (* Put / upsert *)
 Definition stm_put {K V} (t : CHT K V) (k : K) (v : V) : itree stmE unit :=
   b <- bucket_of t k ;;
-  xs <- readTVar b ;;
+  xs <- read_tvar b ;;
   let xs' := assoc_insert_or_replace t.(cht_eqb) k v xs in
-  writeTVar b xs' ;;
+  write_tvar b xs' ;;
   Ret tt.
 
 (* Delete; returns previous value if any *)
 Definition stm_delete {K V} (t : CHT K V) (k : K) : itree stmE (option V) :=
   b <- bucket_of t k ;;
-  xs <- readTVar b ;;
+  xs <- read_tvar b ;;
   let p := assoc_remove t.(cht_eqb) k xs in
   match fst p with
   | None => Ret (fst p)
   | _ =>
-    writeTVar b (snd p) ;;
+    write_tvar b (snd p) ;;
     Ret (fst p)
   end.
 
@@ -98,11 +98,11 @@ Definition stm_delete {K V} (t : CHT K V) (k : K) : itree stmE (option V) :=
 Definition stm_update {K V}
            (t : CHT K V) (k : K) (f : option V -> V) : itree stmE V :=
   b <- bucket_of t k ;;
-  xs <- readTVar b ;;
+  xs <- read_tvar b ;;
   let ov := assoc_lookup t.(cht_eqb) k xs in
   let v  := f ov in
   let xs' := assoc_insert_or_replace t.(cht_eqb) k v xs in
-  writeTVar b xs' ;;
+  write_tvar b xs' ;;
   Ret v.
 
 Definition stm_get_or {K V} (t : CHT K V) (k : K) (dflt : V) : itree stmE V :=
@@ -122,11 +122,11 @@ Crane Extract Skip vecIOE.
 
 (* Build N empty buckets *)
 Definition mk_buckets {K V} (num : int) : itree vecIOE (vector (TVar (list (K * V)))) :=
-  buckets <- (emptyVec (TVar (list (K * V)))) ;;
+  buckets <- (empty_vector (TVar (list (K * V)))) ;;
   (fix f n := match n with
   | 0 => Ret buckets
   | S n' =>
-    b <- atomically (newTVar ([] : list (K * V))) ;;
+    b <- atomically (new_tvar ([] : list (K * V))) ;;
     push buckets b ;;
     f n'
   end) (nat_of_int num).
@@ -137,10 +137,10 @@ Definition new_hash {K V}
   : itree vecIOE (CHT K V) :=
   let n := max requested 1 in
   bs <- mk_buckets (K:=K) (V:=V) n ;;
-  empt <- isEmpty bs ;;
+  empt <- is_empty bs ;;
   if empt then
-      fb <- atomically (newTVar ([] : list (K * V))) ;;
-      v <- emptyVec (TVar (list (K * V))) ;;
+      fb <- atomically (new_tvar ([] : list (K * V))) ;;
+      v <- empty_vector (TVar (list (K * V))) ;;
       push v fb ;;
       Ret {| cht_eqb := eqb; cht_hash := hash;
                 cht_buckets := v; cht_nbuckets := 1; cht_fallback := fb |}

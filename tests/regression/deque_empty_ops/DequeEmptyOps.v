@@ -7,7 +7,7 @@
    [front()] on an empty deque would be undefined behaviour). Each operation is
    wrapped in a function so it is exercised at runtime on both empty and
    non-empty inputs supplied by the test driver (CWE-476 / CWE-125). *)
-From Crane Require Import Mapping.NatIntStd Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.DequeList.
 From Stdlib Require Import Nat List.
 Import ListNotations.
 Require Crane.Extraction.

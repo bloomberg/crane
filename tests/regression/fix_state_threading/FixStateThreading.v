@@ -48,5 +48,5 @@ Definition test_sum : nat * nat := sum_with_acc [10; 20; 30] 0.
 End FixStateThreading.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "fix_state_threading" FixStateThreading.

@@ -15,7 +15,7 @@
    ([Extraction.sequential_monad_alias]) and every declaration below is
    spelled as [direct] is: [static void aliased()], [static void both()]. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
 From ITree Require Import ITree.
 From Corelib Require Import PrimString.
 Open Scope pstring_scope.

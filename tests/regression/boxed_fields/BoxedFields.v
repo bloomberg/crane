@@ -79,7 +79,7 @@ Definition light_total : nat := tag_of light + untag light.
 End BoxedFields.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Set Crane BoxedFields.
 Set Crane Loopify.
 Crane Extraction "boxed_fields" BoxedFields.

@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** A local mutual group whose partner [g], not the member [f] the group is
     projected to, takes a type argument.  Dummy elimination

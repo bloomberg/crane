@@ -1,5 +1,5 @@
 From Stdlib Require Import Arith.PeanoNat.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 (** Loopification of a recursive call whose result feeds a branch condition.

@@ -6,7 +6,7 @@
    used to read the move as a value receiver and decline, leaving an unbounded
    C++ recursion that overflows the stack at depth 100000. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 Set Crane Loopify.
 
 Module MethodifiedTmcNoLoopify.

@@ -3,7 +3,7 @@
 
 (** Test matching on empty types (absurd patterns) *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module EmptyMatch.

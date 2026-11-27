@@ -3,7 +3,7 @@
 
 (** Custom inline extraction bugs: std::make_optional and std::make_pair *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module CustomInlineBug.

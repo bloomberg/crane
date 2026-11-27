@@ -1,4 +1,4 @@
-From Crane Require Import Mapping.NatIntStd Mapping.ZInt.
+From Crane Require Import Mapping.NatInt Mapping.ZInt.
 From Crane Require Import Mapping.Descriptor Mapping.Cpp.
 From Crane Require Extraction.
 From Corelib Require Import PrimString.

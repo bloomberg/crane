@@ -14,7 +14,7 @@
 
     Expected: extracts under [CRANE_CHECK_IR]; [use [] true = 0],
     [use [1; 2] false = 0]. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Corelib Require Import PrimString.
 From Crane Require Import Extraction Mapping.Descriptor.
 From Stdlib Require Import List.

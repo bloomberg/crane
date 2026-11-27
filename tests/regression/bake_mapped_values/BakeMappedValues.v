@@ -9,7 +9,7 @@
     an optional, a pair, a string).  [deep] is a left spine of 30000 nodes:
     writing and reading it walks the spine with an explicit stack, whichever
     field holds it. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.Std Mapping.DequeList.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 From Corelib Require Import PrimInt63 PrimFloat PrimArray PrimString.

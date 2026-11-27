@@ -38,5 +38,5 @@ Definition test_sum : nat := sum_with_acc [10; 20; 30].
 End LetFixByrefListParam.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "let_fix_byref_list_param" LetFixByrefListParam.

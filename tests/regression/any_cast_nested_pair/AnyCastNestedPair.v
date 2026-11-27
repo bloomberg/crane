@@ -10,7 +10,7 @@
    SemVal must NOT get any_cast<std::any> — they should pass through
    directly since the value IS already std::any. *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import Lists.List.
 Import ListNotations.
 Require Crane.Extraction.

@@ -11,7 +11,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module ReuseMovedCaptureRenamed.
 

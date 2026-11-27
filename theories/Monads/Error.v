@@ -1,6 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** Runtime errors: the [Err] exception type and [failwith], which
+    throws it in an [itree] and extracts to a thrown [std::runtime_error]. *)
+
 From Stdlib Require Import
   PrimString
 .

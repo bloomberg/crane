@@ -17,5 +17,5 @@ Crane Extract Inductive tvarE => ""
 
 Crane Extract Inlined Constant TVar => "stm::TVar<%t0>" From "stm_adapter.h".
 
-Crane Extract Inlined Constant readTVar => "stm::readTVar(%a0)".
-Crane Extract Inlined Constant writeTVar => "stm::writeTVar(%a0, %a1)".
+Crane Extract Inlined Constant read_tvar => "stm::readTVar(%a0)".
+Crane Extract Inlined Constant write_tvar => "stm::writeTVar(%a0, %a1)".

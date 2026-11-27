@@ -204,5 +204,5 @@ Definition t : nat :=
 End RamStateOps.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "ram_state_ops" RamStateOps.

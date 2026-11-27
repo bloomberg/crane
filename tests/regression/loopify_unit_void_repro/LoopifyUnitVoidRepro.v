@@ -1,5 +1,5 @@
 From Stdlib Require Import Lists.List.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree.
 From Crane Require Extraction.
 Import ListNotations.
 

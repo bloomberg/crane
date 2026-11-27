@@ -87,5 +87,5 @@ Definition test_queue_size : nat :=
 End FunctorComp.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "functor_comp" FunctorComp.

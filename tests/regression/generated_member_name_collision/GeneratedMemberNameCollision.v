@@ -9,7 +9,7 @@
       [clone()] then reads as a constructor with a return type. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module GeneratedMemberNameCollision.
   Inductive boxed : Set := Box (clone : nat) (v_mut : nat).

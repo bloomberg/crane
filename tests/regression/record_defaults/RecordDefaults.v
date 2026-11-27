@@ -61,5 +61,5 @@ Definition test_rect_area : nat := rect_area (make_rect 0 0 10 5).
 End RecordDefaults.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "record_defaults" RecordDefaults.

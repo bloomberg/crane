@@ -12,7 +12,7 @@
     so a frame's copy of it is a value of its own. Now only fields whose
     value lies in a cell count as such (in the frame storage plan and in
     the parts a turn passes), and the frame holds [l] and [m] by value. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

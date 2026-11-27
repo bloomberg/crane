@@ -93,5 +93,5 @@ Definition test_state_fib : nat := fib 5.
 End Monadic.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "monadic" Monadic.

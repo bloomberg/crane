@@ -1,6 +1,6 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 
 (** A constant whose type is a class applied to arguments is treated purely as
     an instance declaration: Crane emits [static_assert(Monoid<dict, ...>)] for

@@ -11,7 +11,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module PairBothRecursive.
 Inductive t : Type := leaf : nat -> t | br : (t * t) -> t.
 Definition wrap (acc : t) : t := br (acc, leaf 0).

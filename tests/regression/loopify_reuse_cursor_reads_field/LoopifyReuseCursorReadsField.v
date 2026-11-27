@@ -10,7 +10,7 @@
     were evaluated after the step, through the null handle it had left. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module LoopifyReuseCursorReadsField.
 

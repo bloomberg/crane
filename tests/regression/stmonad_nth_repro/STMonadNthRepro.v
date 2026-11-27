@@ -1,4 +1,4 @@
-From Crane Require Import Mapping.NatIntStd Monads.ITree.
+From Crane Require Import Mapping.NatInt Monads.ITree.
 From Crane Require Extraction.
 
 From ITree Require Import ITree.

@@ -7,7 +7,7 @@
     is loopified as [plain] is, over a list deeper than the C++ stack. *)
 
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 From Equations Require Import Equations.
 From Stdlib Require Import List Arith Lia.
 Import ListNotations.

@@ -32,5 +32,5 @@ Definition t : nat := length (bank_chips (get_bank sample_state 7)).
 End BankLookupDefault.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "bank_lookup_default" BankLookupDefault.

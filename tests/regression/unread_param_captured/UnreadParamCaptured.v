@@ -11,7 +11,7 @@
     the planned moves were written as captures whether or not the final
     body read them.  A lambda now captures by move only what its body
     reads. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 From Stdlib Require Import List String Ascii.
 Import ListNotations.

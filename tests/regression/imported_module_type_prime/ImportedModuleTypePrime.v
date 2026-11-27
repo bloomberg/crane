@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From Stdlib Require Import Orders Arith Lia.
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 
 (** A module type declared in another library is re-emitted as a concept, but
     its name is copied verbatim instead of being sanitised, so the apostrophe in

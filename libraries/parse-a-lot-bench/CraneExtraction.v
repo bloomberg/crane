@@ -1,7 +1,7 @@
 (* SPDX-License-Identifier: BSD-3-Clause *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Mapping.ZInt.
 From Crane Require Import Mapping.Descriptor.
 From Corelib Require Import PrimString.

@@ -1,10 +1,10 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 Module NatModZero.
   (** In Rocq, [Nat.modulo n 0 = n] — perfectly defined.
-      But NatIntStd maps [Nat.modulo] to [(%a0 % %a1)] with
+      But NatInt maps [Nat.modulo] to [(%a0 % %a1)] with
       no zero guard — unlike [Nat.div] which has one.
       So [my_mod n 0] produces [n % 0u] in C++ — UB (SIGFPE). *)
 

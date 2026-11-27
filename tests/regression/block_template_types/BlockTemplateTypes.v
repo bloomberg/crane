@@ -7,7 +7,7 @@
    for non-string return types: unsigned int (nat), bool, and mixed.
 *)
 From Corelib Require Import PrimString.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
 
 Local Open Scope pstring_scope.
 

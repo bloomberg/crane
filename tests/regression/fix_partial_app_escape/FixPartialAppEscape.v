@@ -8,7 +8,7 @@
    This test reproduces the ascii_of_pos pattern: a fixpoint
    with 2 params partially applied to 1 arg. *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module FixPartialAppEscape.

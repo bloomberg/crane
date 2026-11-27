@@ -18,7 +18,7 @@ as the Rocq library `Crane`.
 Activation follows Rocq's imports. `From Crane Require Import Mapping.Std.`
 activates the standard mappings; a bare `Require` loads the file without
 activating them. A file that imports two mappings of the same type (say
-`Mapping.NatIntStd` and `Mapping.NatGMP`) gets an ambiguity error naming
+`Mapping.NatInt` and `Mapping.NatGMP`) gets an ambiguity error naming
 both instances at extraction.
 
 ---
@@ -35,7 +35,7 @@ Rocq definitions.
 | --- | --- |
 | `Mapping.Std` | standard library: `option`, `prod`, strings, primitive integers and floats |
 | `Mapping.BDE` | the same with BDE (`bsl::`) types |
-| `Mapping.NatIntStd`, `Mapping.NInt`, `Mapping.ZInt` | `nat`, `N`/`positive`, `Z` as machine integers (bounded; for prototyping) |
+| `Mapping.NatInt`, `Mapping.NInt`, `Mapping.ZInt` | `nat`, `N`/`positive`, `Z` as machine integers (bounded; for prototyping) |
 | `Mapping.NatIntBDE`, `Mapping.NIntBDE`, `Mapping.ZIntBDE` | the same, BDE flavour |
 | `Mapping.NatGMP`, `Mapping.NGMP`, `Mapping.ZGMP` | arbitrary precision with GMP's `mpz_class` |
 | `Mapping.Real` | axiomatized reals as `long double` |
@@ -97,9 +97,6 @@ that keeps, returns, stores or matches it takes `const std::string&` (or
 `std::string` when it owns it); a function returning a string returns
 `std::string`. A string literal passed as a view is the view of the literal.
 
-`Mapping/StringView.v` re-exports `Std`, for files that imported it when the
-string-view mapping was separate.
-
 ### `Mapping/BDE.v`
 
 The `Std` descriptors with BDE spellings. Exports `Shared`; sets
@@ -122,18 +119,18 @@ avoids C++23/26 features (`crane::unreachable` instead of
 
 | File | Maps | C++ type | Exports |
 | --- | --- | --- | --- |
-| `NatIntStd.v` | `nat` | `uint64_t` | `Std` |
+| `NatInt.v` | `nat` | `uint64_t` | `Std` |
 | `NatIntBDE.v` | `nat` | `unsigned int` | `BDE` |
 | `NInt.v` | `positive`, `N` | `unsigned int` | `Std` |
 | `NIntBDE.v` | `positive`, `N` | `unsigned int` | `BDE` |
-| `ZInt.v` | `Z` | `int64_t` | `NInt`, `NatIntStd` |
+| `ZInt.v` | `Z` | `int64_t` | `NInt`, `NatInt` |
 | `ZIntBDE.v` | `Z` | `int64_t` | `NIntBDE`, `NatIntBDE` |
 | `NatGMP.v` | `nat` | `mpz_class` | `Std` |
 | `NGMP.v` | `positive`, `N` | `mpz_class` | `Std` |
 | `ZGMP.v` | `Z` | `mpz_class` | `NGMP`, `NatGMP` |
 
 Each type mapping declares its numerals, so a constructor chain is written as
-one literal (`UINT64_C(3)` for `nat` under `NatIntStd`). Operations:
+one literal (`UINT64_C(3)` for `nat` under `NatInt`). Operations:
 
 - `nat`: `Nat.add`, `mul`, `div`, `modulo`, `double`, `pred`, `sub`, `max`,
   `min`, `eqb`, `ltb`, `leb`, `compare`, `PeanoNat.Nat.eq_dec`, and in the
@@ -227,21 +224,21 @@ definitions in `IODefs.v`.
 ### `Monads/STM.v` / `Monads/STMBDE.v`
 
 Software transactional memory, implemented by `stm_adapter.h` over
-`crane-stm/`. `TVar A`, `newTVar`, `readTVar`, `writeTVar`,
-`atomically : itree stmE A -> itree ioE A`, `orElse`, `retry`, `check`,
-`modifyTVar`, and `getSTM`, `isEmptySTM` over vectors. Shared definitions
+`crane-stm/`. `TVar A`, `new_tvar`, `read_tvar`, `write_tvar`,
+`atomically : itree stmE A -> itree ioE A`, `or_else`, `retry`, `check`,
+`modify_tvar`, and `get_stm`, `is_empty_stm` over vectors. Shared definitions
 in `STMDefs.v`.
 
 ### `Monads/Thread.v` / `Monads/ThreadBDE.v`
 
 `thread` (a `std::shared_future<void>` from `std::async`: copyable, joinable
 from any copy, the last copy waiting for the thread), `spawn`,
-`join`, `sleep` (milliseconds), `runConc`. `concE` composes `threadE` with
+`join`, `sleep` (milliseconds), `run_conc`. `concE` composes `threadE` with
 `consoleE`. Shared definitions in `ThreadDefs.v`.
 
 ### `Monads/Par.v` / `Monads/ParBDE.v`
 
-Futures: `future B`, `async`, `get_thread` (`.get()`), `runPar`. Shared
+Futures: `future B`, `async`, `get_thread` (`.get()`), `run_par`. Shared
 definitions in `ParDefs.v`.
 
 ### Clock, directories, environment, paths, temporary files
@@ -320,11 +317,11 @@ through ITree's exception events. Require `Global` qualified as `ST`
 
 ### `External/Vector.v` / `External/VectorBDE.v`
 
-`vector A` as `std::vector<A>` (or `bsl::vector`): `emptyVec`, `get`,
-`push`, `pop`, `size`, `isEmpty`, `assign`. Shared definitions in
+`vector A` as `std::vector<A>` (or `bsl::vector`): `empty_vector`, `get`,
+`push`, `pop`, `size`, `is_empty`, `assign`. Shared definitions in
 `VectorDefs.v`.
 
-### `External/StringViewStd.v` / `External/StringViewBDE.v`
+### `External/StringView.v` / `External/StringViewBDE.v`
 
 An axiomatized `string_view` type (`std::basic_string_view<char>`) with
 `empty`, `empty_sv`, `sv_eq`, `length`, `substr`, `sv_get` (bounds-checked,

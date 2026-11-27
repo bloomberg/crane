@@ -223,5 +223,5 @@ Defined.
 End MergesortFuel.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "mergesort_fuel" MergesortFuel.

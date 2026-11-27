@@ -5,7 +5,7 @@
     struct [Tree] nested in [Sub]'s struct. *)
 
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module Sub.
   Inductive tree : Type :=

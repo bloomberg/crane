@@ -5,7 +5,7 @@
     Tests match returning different types to isolate the std::any bug. *)
 
 From Corelib Require Import PrimString PrimInt63.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Module LetMatchType2.
 

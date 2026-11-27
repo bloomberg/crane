@@ -11,7 +11,7 @@
     written against the parameter as that body would be
     ([Calls.argument_position]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module TwiceComposedFnDestination.
 

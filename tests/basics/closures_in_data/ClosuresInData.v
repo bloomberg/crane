@@ -58,5 +58,5 @@ Definition test_maybe_none : nat := maybe_apply None 42.
 End ClosuresInData.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "closures_in_data" ClosuresInData.

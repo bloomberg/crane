@@ -8,7 +8,7 @@
     still be told which constants are methods. *)
 
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Inductive tree : Type :=
 | Leaf : tree

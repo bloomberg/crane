@@ -21,6 +21,6 @@ Fixpoint eval {t} (e : expr t) : match t with TNat => nat | TBool => bool end :=
 
 Require Crane.Extraction.
 Require Import Crane.Mapping.Std 
-               Crane.Mapping.NatIntStd.
+               Crane.Mapping.NatInt.
 
 Crane Extraction "typed_expr" eval.

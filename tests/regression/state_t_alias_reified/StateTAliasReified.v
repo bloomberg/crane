@@ -20,7 +20,7 @@
 
    Reduced from wip/handler_lambda_targ_undeclared ([on_ls]). *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITreeReified.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITreeReified.
 From ITree Require Import ITree.
 Import ITree.Basics.Basics.Monads.
 

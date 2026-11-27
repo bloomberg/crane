@@ -9,7 +9,7 @@
     v} *)
 
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import List Arith.
 
 Module EtaMatchReturnsFun.

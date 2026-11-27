@@ -13,7 +13,7 @@
    Expected: [check] is [true].
    Before:   [std::bad_any_cast]. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Module ErasedUnitResult.
   Definition touch (n : nat) : unit := tt.

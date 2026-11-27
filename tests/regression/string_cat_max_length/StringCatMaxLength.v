@@ -12,7 +12,7 @@
     and moves the temporary through, so a chain still appends to one
     buffer; cutting each link equals Rocq's cut at each [cat].  [Mapping.BDE]
     likewise.  Also on main. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Corelib Require Import PrimString PrimInt63.
 Open Scope uint63_scope.

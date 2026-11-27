@@ -5,7 +5,7 @@
     Tests interactions between bind, effects, and unit return types. *)
 
 From Corelib Require Import PrimString PrimInt63.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
 
 Module MonadicVoidEdge.
 

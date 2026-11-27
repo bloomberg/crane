@@ -9,7 +9,7 @@
     bound nothing it could recycle and declined reuse. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module ReuseArmFieldOrder.
 

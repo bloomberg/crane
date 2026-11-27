@@ -6,7 +6,7 @@
     into a bare literal of the numeral type. *)
 
 From Stdlib Require Import BinInt.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Mapping.ZInt.
+From Crane Require Import Mapping.Std Mapping.NatInt Mapping.ZInt.
 
 Module NumeralConverterKind.
 

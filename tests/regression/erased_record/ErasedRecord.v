@@ -5,7 +5,7 @@
    records with many erased fields that could cause indexing mismatches
    between ids and non_erased_fields.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import Lia.
 Require Crane.Extraction.
 

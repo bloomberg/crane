@@ -9,7 +9,7 @@
 From Stdlib Require Import List.
 Import ListNotations.
 From Corelib Require Import PrimString PrimInt63.
-From Crane Require Import Mapping.Std Mapping.NatIntStd
+From Crane Require Import Mapping.Std Mapping.NatInt
   Monads.ITree Monads.IO Monads.Env Monads.Dir Monads.Path.
 Local Open Scope pstring_scope.
 

@@ -8,7 +8,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import List.
 From CraneTestsRegression Require Import wrapper_instance_lifted_helper.Sizes.
 Import ListNotations.

@@ -16,5 +16,5 @@ Definition t : Node.shadow := id Node.Tag.
 End ShadowQualNode.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "shadow_qual_node" ShadowQualNode.

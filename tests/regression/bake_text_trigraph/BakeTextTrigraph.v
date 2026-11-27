@@ -10,7 +10,7 @@
     ([crane::bake::detail::quoted]) now writes a [?] after a [?] as [\?],
     as Crane's printer does ([escape_cpp_string]), in the text and in the
     rows' comments. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Import Extraction.
 From Stdlib Require Import List ZArith Uint63.
 From Corelib Require Import PrimString.

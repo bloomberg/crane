@@ -1,5 +1,5 @@
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 From CraneTestsRegression Require Import decl_order_alias_record.InstrLib.

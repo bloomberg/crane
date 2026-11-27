@@ -1,14 +1,5 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Extraction.
-From Crane Require Export Mapping.NGMP Mapping.NatGMP.
-From Stdlib Require Import BinInt.
-From Crane Require Import Mapping.Descriptor.
-From Corelib Require Import PrimString.
-From Stdlib Require Import List.
-Import ListNotations.
-Local Open Scope pstring_scope.
-
 (** Extraction of [Z] (binary integers) to GMP [mpz_class].
 
     Builds on [NGMP.v] which already extracts [positive] and [N].
@@ -18,6 +9,14 @@ Local Open Scope pstring_scope.
     - GMP library installed with C++ bindings (libgmpxx)
     - Link with [-lgmpxx -lgmp]
 *)
+From Crane Require Extraction.
+From Crane Require Export Mapping.NGMP Mapping.NatGMP.
+From Stdlib Require Import BinInt.
+From Crane Require Import Mapping.Descriptor.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
+Local Open Scope pstring_scope.
 
 (** [Z] is a GMP [mpz_class]; a numeral is gmpxx's exact literal [(n_mpz)]. *)
 #[export] Instance gmp_z_mapping : TypeMapping Z :=

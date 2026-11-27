@@ -17,7 +17,7 @@
      visitor then have mismatched return types, which makes std::visit
      ill-formed. *)
 
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module LoopifyMatchArg.

@@ -4,7 +4,7 @@
    a custom extraction directive, the extraction's mlt_env typedef cache
    must NOT expand the constant's body, otherwise it extracts the projection to std::any. *)
 
-From Crane Require Import Mapping.NatIntStd Monads.ITree.
+From Crane Require Import Mapping.NatInt Monads.ITree.
 Require Import Crane.Extraction.
 From ITree Require Import ITree.
 

@@ -9,7 +9,7 @@
     an anomaly ("names the unmapped global ... which resolving it did not
     ask for"), as extracting ParseALot's LLPrediction was. *)
 
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Module FunctorParamSignatureType.
 

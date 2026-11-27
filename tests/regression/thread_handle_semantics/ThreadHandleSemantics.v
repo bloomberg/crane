@@ -16,7 +16,7 @@
 From Stdlib Require Import List PeanoNat.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Corelib Require Import PrimInt63 PrimString.
 From Crane Require Import Mapping.Std Monads.ITree Monads.IO Monads.Thread.
 
@@ -36,9 +36,9 @@ Fixpoint spawn_all (l : list nat) : itree concE (list thread) :=
 Fixpoint join_all (l : list thread) : itree concE unit :=
   match l with [] => Ret tt | h :: t => join h ;; join_all t end.
 
-Definition r1 : nat := runConc (never_joined 3).
-Definition r2 : nat := runConc (joined_twice 4).
-Definition r3 : nat := runConc (hs <- spawn_all [1; 2; 3] ;; join_all hs ;; Ret 7).
+Definition r1 : nat := run_conc (never_joined 3).
+Definition r2 : nat := run_conc (joined_twice 4).
+Definition r3 : nat := run_conc (hs <- spawn_all [1; 2; 3] ;; join_all hs ;; Ret 7).
 
 End ThreadHandleSemantics.
 

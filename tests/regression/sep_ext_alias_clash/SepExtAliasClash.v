@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 (** Regression test: module alias inside a functor body shares the same
     short name as a top-level module.  Before the fix, extracting any

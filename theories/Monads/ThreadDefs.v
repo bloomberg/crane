@@ -31,5 +31,5 @@ Definition join {E} `{threadE -< E} (t : thread) : itree E unit :=
 Definition sleep {E} `{threadE -< E} (d : int) : itree E unit :=
   embed (Sleep d).
 
-Axiom runConc : forall {A}, itree concE A -> A.
-Crane Extract Inlined Constant runConc => "%a0".
+Axiom run_conc : forall {A}, itree concE A -> A.
+Crane Extract Inlined Constant run_conc => "%a0".

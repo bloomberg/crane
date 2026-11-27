@@ -11,7 +11,7 @@ From Crane Require Monads.Global.
 From Crane Require Import
   Monads.ITree
   Monads.Indices
-  Mapping.NatIntStd
+  Mapping.NatInt
 .   
 
 

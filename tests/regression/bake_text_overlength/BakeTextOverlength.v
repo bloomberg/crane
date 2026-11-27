@@ -12,7 +12,7 @@
     ([crane::bake::image::text], [std::string_view] chunks), a string split
     across two where it falls on a cut, and the reader reads a string
     across chunks. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Import Extraction.
 From Stdlib Require Import List ZArith Uint63.
 From Corelib Require Import PrimString.

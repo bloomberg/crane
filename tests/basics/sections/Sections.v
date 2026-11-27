@@ -3,7 +3,7 @@
 
 (** Test Rocq sections *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module Sections.

@@ -11,7 +11,7 @@
     as recomputable from [l], which the frame keeps, and the continuation
     rebinds it after restoring [l]; the check only accepted recomputation
     from parameters no turn changes. It now accepts what the frame keeps. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 From Corelib Require Import PrimString.

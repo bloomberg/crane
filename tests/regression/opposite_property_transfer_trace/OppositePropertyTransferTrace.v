@@ -238,6 +238,6 @@ Definition sample_checksum : nat :=
 End OppositePropertyTransferTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "opposite_property_transfer_trace" OppositePropertyTransferTraceCase.

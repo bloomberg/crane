@@ -25,5 +25,5 @@ Definition r_steps : nat := t_steps (count 40).
 End RecordDestructureOnceExpr.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "record_destructure_once_expr" RecordDestructureOnceExpr.

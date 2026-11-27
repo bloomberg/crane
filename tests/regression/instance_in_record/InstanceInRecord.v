@@ -4,7 +4,7 @@
 (** A typeclass dictionary stored in a record field.  The class was emitted
     as a C++ concept, and a concept cannot be the type of a struct member. *)
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

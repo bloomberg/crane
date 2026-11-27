@@ -6,7 +6,7 @@
     (e.g. [state]) but type references use [String.capitalize_ascii]
     (e.g. [State]), causing compilation failures. *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module LowercaseEponymousRecord.

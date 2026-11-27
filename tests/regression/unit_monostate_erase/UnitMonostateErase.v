@@ -6,7 +6,7 @@
     plain [void] control flow. *)
 
 From Corelib Require Import PrimString.
-From Crane Require Import Mapping.Std Mapping.NatIntStd
+From Crane Require Import Mapping.Std Mapping.NatInt
   Monads.ITree Monads.IO.
 
 Module UnitMonostateErase.

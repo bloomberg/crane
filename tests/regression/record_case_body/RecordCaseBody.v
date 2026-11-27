@@ -7,7 +7,7 @@
    Strategy: Create bodies that are MLcase, MLfix, MLletin, or other complex
    expressions that might not be recognized.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module RecordCaseBody.

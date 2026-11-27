@@ -12,7 +12,7 @@ From Stdlib Require Import Arith.
 From Stdlib Require Import Eqdep.
 From Corelib Require Import PrimInt63 Uint63Axioms.
 From Crane Require Import Mapping.Std.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Set Implicit Arguments.
 

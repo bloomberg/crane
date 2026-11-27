@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A constructor field holding the inductive under an [option]
     ([N : option c -> c]) is stored as [shared_ptr<optional<c>>].  The pattern
     match must dereference the pointer before testing [has_value()]. *)

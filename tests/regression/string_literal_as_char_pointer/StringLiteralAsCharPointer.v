@@ -16,7 +16,7 @@
     A literal returned from a lambda without a declared return type, or
     bound to an [auto] variable, is now constructed as the string
     ([std::string("x")]).  Also on main. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List ZArith Uint63.
 From Corelib Require Import PrimString.

@@ -18,7 +18,7 @@
 
 From Stdlib Require Import List Bool Arith Program.Wf Lia.
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO Monads.STM.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO Monads.STM.
 From Corelib Require Import PrimInt63.
 
 Import ListNotations.
@@ -223,7 +223,7 @@ Fixpoint findPath_aux (curr : NodeRef K V) (target : K) (level : nat)
   end.
 
 Definition findPath (sl : SkipList K V) (target : K) : itree stmE (Path K V) :=
-  lvl <- readTVar (slLevel sl) ;;
+  lvl <- read_tvar (slLevel sl) ;;
   path <- emptyPath ;;
   findPath_aux (slHead sl) target lvl path.
 
@@ -295,7 +295,7 @@ Definition linkNode (path : Path K V) (head : NodeRef K V) (newNode : NodeRef K 
 
 Definition insert (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itree stmE unit :=
   path <- findPath sl k ;;
-  curLvl <- readTVar (slLevel sl) ;;
+  curLvl <- read_tvar (slLevel sl) ;;
   (* Extend path with head for levels above current slLevel *)
   extendPath path (slHead sl) (S newLevel) curLvl ;;
   pred0 <- getPath path 0 ;;
@@ -308,14 +308,14 @@ Definition insert (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itree s
         newN <- newNode k v newLevel ;;
         linkNode path (slHead sl) newN ;;
         (if Nat.ltb curLvl newLevel then
-          writeTVar (slLevel sl) newLevel
+          write_tvar (slLevel sl) newLevel
         else
           Ret tt)
   | None =>
       newN <- newNode k v newLevel ;;
       linkNode path (slHead sl) newN ;;
       (if Nat.ltb curLvl newLevel then
-        writeTVar (slLevel sl) newLevel
+        write_tvar (slLevel sl) newLevel
       else
         Ret tt)
   end.
@@ -348,7 +348,7 @@ Definition remove (k : K) (sl : SkipList K V) : itree stmE unit :=
   match nextOpt with
   | Some node =>
       if eqK (getKey node) k then
-        curLvl <- readTVar (slLevel sl) ;;
+        curLvl <- read_tvar (slLevel sl) ;;
         (* Extend path for the target node's level *)
         extendPath path (slHead sl) (S (getLevel node)) curLvl ;;
         unlinkNode path node
@@ -388,13 +388,13 @@ Fixpoint findKey_aux (curr : NodeRef K V) (target : K) (level : nat) : itree stm
   end.
 
 Definition memberFast (k : K) (sl : SkipList K V) : itree stmE bool :=
-  lvl <- readTVar (slLevel sl) ;;
+  lvl <- read_tvar (slLevel sl) ;;
   findKey_aux (slHead sl) k lvl.
 
 (* Original member using lookup - kept for compatibility *)
 (* Note: Inlined body to avoid extraction bug with simple function aliases *)
 Definition member (k : K) (sl : SkipList K V) : itree stmE bool :=
-  lvl <- readTVar (slLevel sl) ;;
+  lvl <- read_tvar (slLevel sl) ;;
   findKey_aux (slHead sl) k lvl.
 
 (* ========================================================================= *)
@@ -430,7 +430,7 @@ Definition length (sl : SkipList K V) : itree stmE nat :=
 (* ------------------------------------------------------------------------ *)
 
 Definition exists_ (k : K) (sl : SkipList K V) : itree stmE bool :=
-  lvl <- readTVar (slLevel sl) ;;
+  lvl <- read_tvar (slLevel sl) ;;
   findKey_aux (slHead sl) k lvl.
 
 (* ------------------------------------------------------------------------ *)
@@ -517,7 +517,7 @@ Fixpoint removeAll_aux (fuel : nat) (head : NodeRef K V) (acc : nat) : itree stm
 
 Definition removeAll (sl : SkipList K V) : itree stmE nat :=
   count <- removeAll_aux findPredFuel (slHead sl) 0 ;;
-  writeTVar (slLevel sl) 0 ;;
+  write_tvar (slLevel sl) 0 ;;
   Ret count.
 
 (* ------------------------------------------------------------------------ *)
@@ -527,7 +527,7 @@ Definition removeAll (sl : SkipList K V) : itree stmE nat :=
 (* add - Add key/data pair to the list (allows duplicates) - renamed from insert *)
 Definition add (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itree stmE unit :=
   path <- findPath sl k ;;
-  curLvl <- readTVar (slLevel sl) ;;
+  curLvl <- read_tvar (slLevel sl) ;;
   extendPath path (slHead sl) (S newLevel) curLvl ;;
   pred0 <- getPath path 0 ;;
   nextOpt <- readNext pred0 0 ;;
@@ -539,14 +539,14 @@ Definition add (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itree stmE
         newN <- newNode k v newLevel ;;
         linkNode path (slHead sl) newN ;;
         (if Nat.ltb curLvl newLevel then
-          writeTVar (slLevel sl) newLevel
+          write_tvar (slLevel sl) newLevel
         else
           Ret tt)
   | None =>
       newN <- newNode k v newLevel ;;
       linkNode path (slHead sl) newN ;;
       (if Nat.ltb curLvl newLevel then
-        writeTVar (slLevel sl) newLevel
+        write_tvar (slLevel sl) newLevel
       else
         Ret tt)
   end.
@@ -554,7 +554,7 @@ Definition add (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itree stmE
 (* addUnique - Add only if key doesn't already exist. Returns true on success. *)
 Definition addUnique (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itree stmE bool :=
   path <- findPath sl k ;;
-  curLvl <- readTVar (slLevel sl) ;;
+  curLvl <- read_tvar (slLevel sl) ;;
   extendPath path (slHead sl) (S newLevel) curLvl ;;
   pred0 <- getPath path 0 ;;
   nextOpt <- readNext pred0 0 ;;
@@ -566,7 +566,7 @@ Definition addUnique (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itre
         newN <- newNode k v newLevel ;;
         linkNode path (slHead sl) newN ;;
         (if Nat.ltb curLvl newLevel then
-          writeTVar (slLevel sl) newLevel
+          write_tvar (slLevel sl) newLevel
         else
           Ret tt) ;;
         Ret true
@@ -574,7 +574,7 @@ Definition addUnique (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : itre
       newN <- newNode k v newLevel ;;
       linkNode path (slHead sl) newN ;;
       (if Nat.ltb curLvl newLevel then
-        writeTVar (slLevel sl) newLevel
+        write_tvar (slLevel sl) newLevel
       else
         Ret tt) ;;
       Ret true
@@ -675,7 +675,7 @@ Definition findUpperBound (k : K) (sl : SkipList K V) : itree stmE (option (Pair
 Definition removePair (pair : Pair K V) (sl : SkipList K V) : itree stmE bool :=
   let k := getKey pair in
   path <- findPath sl k ;;
-  curLvl <- readTVar (slLevel sl) ;;
+  curLvl <- read_tvar (slLevel sl) ;;
   pred0 <- getPath path 0 ;;
   nextOpt <- readNext pred0 0 ;;
   match nextOpt with
@@ -732,7 +732,7 @@ Variable eqK : K -> K -> bool.
 Definition bde_add (key : K) (data : V) (sl : SkipList K V) (level : nat)
   : itree stmE (Pair K V * bool) :=
   path <- findPath ltK sl key ;;
-  curLvl <- readTVar (slLevel sl) ;;
+  curLvl <- read_tvar (slLevel sl) ;;
   extendPath path (slHead sl) (S level) curLvl ;;
   (* Check if this will be at front *)
   curFront <- readNext (slHead sl) 0 ;;
@@ -751,7 +751,7 @@ Definition bde_add (key : K) (data : V) (sl : SkipList K V) (level : nat)
         newN <- newNode key data level ;;
         linkNode path (slHead sl) newN ;;
         (if Nat.ltb curLvl level then
-          writeTVar (slLevel sl) level
+          write_tvar (slLevel sl) level
         else
           Ret tt) ;;
         Ret (newN, isNewFront)
@@ -759,7 +759,7 @@ Definition bde_add (key : K) (data : V) (sl : SkipList K V) (level : nat)
       newN <- newNode key data level ;;
       linkNode path (slHead sl) newN ;;
       (if Nat.ltb curLvl level then
-        writeTVar (slLevel sl) level
+        write_tvar (slLevel sl) level
       else
         Ret tt) ;;
       Ret (newN, isNewFront)
@@ -775,7 +775,7 @@ Definition bde_add (key : K) (data : V) (sl : SkipList K V) (level : nat)
 Definition bde_addUnique (key : K) (data : V) (sl : SkipList K V) (level : nat)
   : itree stmE (nat * option (Pair K V) * bool) :=
   path <- findPath ltK sl key ;;
-  curLvl <- readTVar (slLevel sl) ;;
+  curLvl <- read_tvar (slLevel sl) ;;
   extendPath path (slHead sl) (S level) curLvl ;;
   curFront <- readNext (slHead sl) 0 ;;
   let isNewFront := match curFront with
@@ -792,7 +792,7 @@ Definition bde_addUnique (key : K) (data : V) (sl : SkipList K V) (level : nat)
         newN <- newNode key data level ;;
         linkNode path (slHead sl) newN ;;
         (if Nat.ltb curLvl level then
-          writeTVar (slLevel sl) level
+          write_tvar (slLevel sl) level
         else
           Ret tt) ;;
         Ret (e_SUCCESS, Some newN, isNewFront)
@@ -800,7 +800,7 @@ Definition bde_addUnique (key : K) (data : V) (sl : SkipList K V) (level : nat)
       newN <- newNode key data level ;;
       linkNode path (slHead sl) newN ;;
       (if Nat.ltb curLvl level then
-        writeTVar (slLevel sl) level
+        write_tvar (slLevel sl) level
       else
         Ret tt) ;;
       Ret (e_SUCCESS, Some newN, isNewFront)
@@ -885,7 +885,7 @@ Definition bde_removeAll (sl : SkipList K V) : itree stmE nat :=
 (* ------------------------------------------------------------------------ *)
 
 Definition bde_exists (key : K) (sl : SkipList K V) : itree stmE bool :=
-  lvl <- readTVar (slLevel sl) ;;
+  lvl <- read_tvar (slLevel sl) ;;
   findKey_aux ltK eqK (slHead sl) key lvl.
 
 (* ------------------------------------------------------------------------ *)
@@ -958,8 +958,8 @@ End BDECompatible.
 
 Definition create {K V : Type} (dummyKey : K) (dummyVal : V) : itree stmE (SkipList K V) :=
   headNode <- newNode dummyKey dummyVal (maxLevels - 1) ;;
-  lvlTV <- newTVar 0 ;;
-  lenTV <- newTVar 0 ;;
+  lvlTV <- new_tvar 0 ;;
+  lenTV <- new_tvar 0 ;;
   Ret (mkSkipList headNode maxLevels lvlTV lenTV).
 
 Definition createIO {K V : Type} (dummyKey : K) (dummyVal : V) : itree ioE (SkipList K V) :=

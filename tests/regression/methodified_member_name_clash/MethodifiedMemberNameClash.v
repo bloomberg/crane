@@ -12,7 +12,7 @@
    [v0] and [variant_t] becomes [variant_t0] -- the same treatment the factory
    names get via [factory_name_of_ctor]. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module MethodifiedMemberNameClash.
 

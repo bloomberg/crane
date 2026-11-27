@@ -1,7 +1,7 @@
 (* WIP: user identifiers named uint64_t collide with the C++ type name from the nat mapping. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module IdentNamedUint64.
 Inductive t : Type := uint64_t_ : nat -> t.
 Definition uint64_t (n : nat) : nat := n.

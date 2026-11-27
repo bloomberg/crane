@@ -79,7 +79,7 @@ Module QuicksortFun.
 
 End QuicksortFun.
 
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 
 Crane Extract Inlined Constant QuicksortFun.int_to_string => "std::to_string(%a0)".

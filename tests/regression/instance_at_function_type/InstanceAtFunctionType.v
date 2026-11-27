@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A typeclass instance at a function type (`Sz (nat -> nat)`): the instance
     method's parameter is concrete (`std::function<uint64_t(uint64_t)>`) even
     though the class abstracts over it, so calling it must not go through the

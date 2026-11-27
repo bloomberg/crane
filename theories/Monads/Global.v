@@ -165,7 +165,7 @@ Section Construction.
     HMap T V (halist T V) := @HMap_halist T V eq_equivalence _.
 
   #[global] Instance map_idx_correct :
-    HMapOk hmap_from_idx := HMapOk_halist T V.
+    HMapOk hmap_from_idx := hmap_ok_halist T V.
 
   Definition interp
     : itree (Event T V +' E) ~> Monads.stateT M (itree (E)) :=

@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 (** Memory safety probe: type-indexed inductives with multiple indices.
 

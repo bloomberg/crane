@@ -7,7 +7,7 @@
     when using Mapping.DequeList. *)
 From Stdlib Require Import List.
 Import ListNotations.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Mapping.DequeList.
+From Crane Require Import Mapping.Std Mapping.NatInt Mapping.DequeList.
 Require Crane.Extraction.
 
 Module SllPairCastDeque.

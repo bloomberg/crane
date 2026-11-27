@@ -6,7 +6,7 @@ From Crane.Libraries.ParseALot.Lexer.DFA Require Import IntDFA.
 
 (* Parity with CraneExtraction.v.  Whatever the C++ side represents natively,
    this side does too, so the comparison measures the two compilers rather
-   than two representations.  Crane loads Mapping.NatIntStd ([nat] ->
+   than two representations.  Crane loads Mapping.NatInt ([nat] ->
    uint64_t) and Mapping.ZInt, which re-exports Mapping.NInt ([N] and
    [positive] -> unsigned int, [Z] -> int64_t), each with its arithmetic
    inlined; ExtrOcamlNatInt and ExtrOcamlZInt give the types the same native

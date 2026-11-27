@@ -7,7 +7,7 @@
    Expected: the match reads [inl1] as 1 and [inr1] as 2.
    Before:   [std::bad_any_cast] from [crane_event_as<Sum1<AE, AE, ...>>]. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITreeReified.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITreeReified.
 From ITree Require Import ITree.
 
 Variant AE : Type -> Type := A0 : AE nat.

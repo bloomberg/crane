@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 From Stdlib Require Import Vector Fin.
 
 (** [Vector.nth] eliminates the vector under a motive [Fin.t n -> A] and then

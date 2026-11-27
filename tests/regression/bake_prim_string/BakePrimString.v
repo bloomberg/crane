@@ -10,7 +10,7 @@
     discovers them first, and accepts a primitive type.  Inside a
     constructor field the refusal also repeated ", in a constructor field,"
     once per level. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 From Corelib Require Import PrimString.

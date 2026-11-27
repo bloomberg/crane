@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From ExtLib Require Import Structures.Monad.
 
 (** A closure whose only use of a captured/passed value is to read it into a

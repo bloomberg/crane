@@ -8,7 +8,7 @@
     The image writer and reader saw through [std::shared_ptr],
     [crane::shared_box] and [crane::rc] but not [crane::field_box]; all four
     are now one [handle] trait in crane_bake.h. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

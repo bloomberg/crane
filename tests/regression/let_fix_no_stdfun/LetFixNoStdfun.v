@@ -56,5 +56,5 @@ Definition test_flatten : list nat := flatten [[10; 20]; [30]; [40; 50]].
 End LetFixNoStdfun.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "let_fix_no_stdfun" LetFixNoStdfun.

@@ -6,7 +6,7 @@
 
 From Stdlib Require Import List.
 Import ListNotations.
-From Crane Require Import Extraction Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Extraction Mapping.Std Mapping.NatInt.
 
 Module ConceptParamMismatch.
 

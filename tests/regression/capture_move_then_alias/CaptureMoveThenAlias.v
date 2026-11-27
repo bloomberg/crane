@@ -11,7 +11,7 @@
     checked that nothing later moves from [pp], but did not count a lambda
     taking [pp] into its capture by move; it does now, so [sb] stays a
     copy. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

@@ -3,7 +3,7 @@
 
 (** Test that Prop terms are erased during extraction *)
 
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 Module PropErasure.

@@ -11,7 +11,7 @@
     match's scrutinee under the match's own type ([option<string>]), so the
     coercion of the list head was planned at the string position. The plan
     now walks a custom match's scrutinee as lowering does. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.
 From Corelib Require Import PrimString PrimInt63.

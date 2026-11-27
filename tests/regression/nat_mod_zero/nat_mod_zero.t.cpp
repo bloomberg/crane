@@ -7,7 +7,7 @@ int main() {
   // In Rocq: Nat.modulo 42 0 = 42 (total function, well-defined)
   // In C++:  42u % 0u  is undefined behavior (typically SIGFPE)
   //
-  // NatIntStd maps Nat.div with a zero guard:
+  // NatInt maps Nat.div with a zero guard:
   //   (%a1 ? %a0 / %a1 : 0)
   // but Nat.modulo WITHOUT one:
   //   (%a0 % %a1)

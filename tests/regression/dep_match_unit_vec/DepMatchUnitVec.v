@@ -1,7 +1,7 @@
 (* WIP: dependent match returning unit in the impossible branch: the emitted C++ branch returns a unit value where the other branch returns uint64_t, so the generated function does not compile. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module DepMatchUnitVec.
 Inductive vec (A : Type) : nat -> Type :=
 | vnil : vec A 0

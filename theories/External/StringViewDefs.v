@@ -6,7 +6,7 @@
     and character access, plus axioms relating these operations for use
     in verified programs.
 
-    Flavor files ([StringViewStd.v], [StringViewBDE.v]) re-export this
+    Flavor files ([StringView.v], [StringViewBDE.v]) re-export this
     module and add flavor-specific C++ extraction mappings. *)
 From Corelib Require Import PrimString PrimInt63.
 From Corelib Require Import Relations.Relation_Definitions.

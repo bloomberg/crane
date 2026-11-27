@@ -10,7 +10,7 @@
     once did, so the constant's initialiser kept the recursive [go_impl]
     lambda.  A constant's initialiser now lowers its local machines as a
     function's body does. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

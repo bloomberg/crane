@@ -5,8 +5,8 @@ From Corelib Require Import PrimInt63.
 From Stdlib Require Import Lists.List.
 From Stdlib Require Import Structures.Equalities.
 From Crane Require Import Mapping.Std.
-From Crane Require Import Mapping.NatIntStd.
-From Crane Require Import External.StringViewStd.
+From Crane Require Import Mapping.NatInt.
+From Crane Require Import External.StringView.
 From Crane Require Import Monads.ITree Monads.IO.
 From Crane Require Import External.Vector.
 
@@ -70,7 +70,7 @@ Module Tokenizer.
 
   Fixpoint list_to_vec_h {A : Type} (l : list A) : itree vectorE (vector A) :=
     match l with
-    | [] => emptyVec A
+    | [] => empty_vector A
     | a :: l' =>
       v <- list_to_vec_h l' ;;
       push v a ;;
@@ -81,7 +81,7 @@ Module Tokenizer.
 
   Fixpoint list_to_vec_map_h {A B : Type} (f : A -> B) (l : list A) : itree vectorE (vector B) :=
     match l with
-    | [] => emptyVec B
+    | [] => empty_vector B
     | a :: l' =>
       v <- list_to_vec_map_h f l' ;;
       push v (f a) ;;

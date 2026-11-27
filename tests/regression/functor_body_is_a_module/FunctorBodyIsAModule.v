@@ -8,7 +8,7 @@
     module's members. *)
 
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 
 Module FunctorBodyIsAModule.
 

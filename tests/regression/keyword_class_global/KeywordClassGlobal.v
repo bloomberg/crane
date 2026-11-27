@@ -12,5 +12,5 @@ Definition t : nat := class 4.
 End KeywordClassGlobal.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "keyword_class_global" KeywordClassGlobal.

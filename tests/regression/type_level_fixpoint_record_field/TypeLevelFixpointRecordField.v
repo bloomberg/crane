@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A record field whose type is a `Type`-valued `Fixpoint` applied to a
     literal (`ty 2`, i.e. a nested pair) is erased, so projecting it must not
     inherit the enclosing definition's return type as a cast target. *)

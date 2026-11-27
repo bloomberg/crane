@@ -9,7 +9,7 @@
     its branches built [List<std::optional<uint64_t>>] at the parameter's
     type. The lambda's return type is now the annotation refined by the
     slot, as the branches' values are. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 From Corelib Require Import PrimString.

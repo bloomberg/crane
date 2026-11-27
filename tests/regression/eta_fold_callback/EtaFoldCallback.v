@@ -5,7 +5,7 @@
     eta-reduced to a one-argument lambda, which no longer satisfies the
     two-argument constraint on the generated [fold_right]. *)
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

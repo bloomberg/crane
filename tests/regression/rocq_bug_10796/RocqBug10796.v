@@ -1,7 +1,7 @@
 (* Rocq bug #10796: extraction inside a module *)
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module RocqBug10796.
 

@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Mapping.DequeList.
+From Crane Require Import Mapping.Std Mapping.NatInt Mapping.DequeList.
 From Stdlib Require Import List Bool.
 Import ListNotations.
 

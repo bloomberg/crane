@@ -47,5 +47,5 @@ Definition test_positives : list nat := positives_up_to 5.
 End SigmaTypes.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "sigma_types" SigmaTypes.

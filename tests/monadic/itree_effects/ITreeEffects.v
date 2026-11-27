@@ -8,7 +8,7 @@
 *)
 From Corelib Require Import PrimString.
 Require Import Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree.
 
 (** ------------------------------------------------------------------ *)
 (** Effect types                                                        *)

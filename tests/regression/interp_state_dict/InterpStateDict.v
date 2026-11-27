@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From ITree Require Import ITree Events.State.
 Require Crane.Extraction.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 (** A counter interpreted through coq-itree's [interp_state].
 

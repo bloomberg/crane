@@ -1,7 +1,7 @@
 (* WIP: a user inductive named List collides with the runtime's List<T> template; the emitted C++ does not compile. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import List.
 Module InductiveNamedList.
 Inductive List : Type := LNil | LCons : nat -> List -> List.

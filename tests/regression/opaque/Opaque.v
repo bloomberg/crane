@@ -58,5 +58,5 @@ Definition test_eq_false : bool := are_equal 3 7.
 End Opaque.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "opaque" Opaque.

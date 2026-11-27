@@ -1,7 +1,7 @@
 (* WIP: a typeclass with a superclass field: the superclass projection is not emitted correctly and the generated C++ does not compile. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module ClassSuperclassField.
 Class Eqb (A : Type) := { eqb : A -> A -> bool }.
 Class Ord (A : Type) := { ord_eq :: Eqb A ; le : A -> A -> bool }.

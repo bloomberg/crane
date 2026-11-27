@@ -1,4 +1,4 @@
-From Crane Require Import Mapping.Std Mapping.NatIntStd Mapping.ZInt.
+From Crane Require Import Mapping.Std Mapping.NatInt Mapping.ZInt.
 From Crane Require Extraction.
 From Stdlib Require Import ZArith PrimInt63.
 

@@ -1,6 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** Lemmas for reasoning about monadic programs: [lookup] after [add] and
+    [remove] on an [HMapOk] map, and [eutt] rules for [fmap] and [bind]. *)
+
 From Crane Require Import
   Extraction
   Monads.Error

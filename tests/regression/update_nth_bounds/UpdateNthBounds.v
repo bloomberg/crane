@@ -22,5 +22,5 @@ Definition out_of_bounds_length : nat := length (update_nth 9 7 [1; 2; 3]).
 End UpdateNthBounds.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "update_nth_bounds" UpdateNthBounds.

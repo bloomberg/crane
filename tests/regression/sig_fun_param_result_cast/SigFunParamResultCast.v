@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A [sig] whose payload is a function, passed as a parameter (so its C++ type
     is the concrete [Sig<std::function<uint64_t(uint64_t)>>]), must be applied
     directly rather than through an erased-function cast. *)

@@ -55,5 +55,5 @@ Definition test_fun_coercion : nat := double_transform 5.
 End Coercions.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "coercions" Coercions.

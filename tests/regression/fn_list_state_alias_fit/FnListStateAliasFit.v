@@ -16,7 +16,7 @@
     states its result applied to the excess arguments
     ([Calls.plan_call]'s [result_tvar_map]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

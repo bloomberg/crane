@@ -13,5 +13,5 @@ Definition t : nat := add_one_from_param 6.
 End IdentifierEscapeParam.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "identifier_escape_param" IdentifierEscapeParam.

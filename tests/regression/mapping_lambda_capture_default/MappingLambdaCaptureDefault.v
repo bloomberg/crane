@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Mapping.ZInt.
+From Crane Require Import Mapping.Std Mapping.NatInt Mapping.ZInt.
 From Stdlib Require Import BinInt.
 Open Scope Z_scope.
 

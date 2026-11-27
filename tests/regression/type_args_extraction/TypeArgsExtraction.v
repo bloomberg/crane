@@ -26,7 +26,7 @@ Definition double_n (n : nat) : itree void1 nat
   := Eval unfold double_n_body in (rec double_n_body n).
 
 
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 
 Crane Extract Inlined Constant rec =>

@@ -1,4 +1,4 @@
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Extraction.
 
 (** Shape 1: a [let]-bound compound expression computed after the recursive

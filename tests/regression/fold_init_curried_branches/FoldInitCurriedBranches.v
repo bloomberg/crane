@@ -12,7 +12,7 @@
     in place now joins its callables at the type its branches are written
     under where that regroups the annotation's arrows
     ([Match_types.joined_at]). Expected [t_1 = 12]. *)
-From Crane Require Import Mapping.NatIntStd Mapping.ZInt.
+From Crane Require Import Mapping.NatInt Mapping.ZInt.
 From Crane Require Extraction.
 From Stdlib Require Import List ZArith.
 Import ListNotations.

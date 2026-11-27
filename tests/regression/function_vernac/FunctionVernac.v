@@ -33,5 +33,5 @@ Definition test_sum : nat := list_sum [1; 2; 3; 4; 5].
 End FunctionVernac.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "function_vernac" FunctionVernac.

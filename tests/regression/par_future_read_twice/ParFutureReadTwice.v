@@ -16,7 +16,7 @@
 From Stdlib Require Import List PeanoNat.
 Import ListNotations.
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Corelib Require Import PrimInt63.
 From Crane Require Import Mapping.Std Monads.ITree Monads.Par.
 
@@ -27,7 +27,7 @@ Open Scope itree_scope.
 Definition sq (n : nat) : nat := n * n.
 
 Definition twice (n : nat) : nat :=
-  runPar (t <- async sq n ;; a <- get_thread t ;; b <- get_thread t ;; Ret (a + b)).
+  run_par (t <- async sq n ;; a <- get_thread t ;; b <- get_thread t ;; Ret (a + b)).
 
 Fixpoint spawn_all (l : list nat) : itree parE (list (future nat)) :=
   match l with [] => Ret [] | x :: t => f <- async sq x ;; fs <- spawn_all t ;; Ret (f :: fs) end.
@@ -35,7 +35,7 @@ Fixpoint spawn_all (l : list nat) : itree parE (list (future nat)) :=
 Fixpoint join_all (l : list (future nat)) : itree parE nat :=
   match l with [] => Ret 0 | f :: t => a <- get_thread f ;; b <- join_all t ;; Ret (a + b) end.
 
-Definition listed : nat := runPar (fs <- spawn_all [1; 2; 3] ;; join_all fs).
+Definition listed : nat := run_par (fs <- spawn_all [1; 2; 3] ;; join_all fs).
 
 End ParFutureReadTwice.
 

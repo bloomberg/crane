@@ -22,5 +22,5 @@ Definition test_bool : bool := same true false.
 End CanonStruct.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "canon_struct" CanonStruct.

@@ -1,7 +1,7 @@
 (* WIP: explicit superclass projection application; the generated C++ does not compile. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module ClassSuperclassExplicit.
 Class Base (A : Type) := { base : A -> nat }.
 Class Ext (A : Type) := { ext_base : Base A ; ext : A -> nat }.

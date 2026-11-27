@@ -8,7 +8,7 @@
     cast targets don't match at runtime. *)
 From Stdlib Require Import List String.
 Import ListNotations.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Require Crane.Extraction.
 
 Module ParserAnyCast.

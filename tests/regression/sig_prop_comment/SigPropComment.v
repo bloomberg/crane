@@ -16,7 +16,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module SigSubset.
 Inductive lst : Type := nil : lst | cons : nat -> lst -> lst.
 Definition nonempty (l : lst) : Prop := match l with nil => False | _ => True end.

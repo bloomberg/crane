@@ -32,5 +32,5 @@ Definition sample_code_size : nat := code_size sample_layout.
 End ProgramWf.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "program_wf" ProgramWf.

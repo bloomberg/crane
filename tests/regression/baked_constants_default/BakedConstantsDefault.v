@@ -4,7 +4,7 @@
     sequences (static blocks), records holding a mapped string and an option.
     [baked_constants] covers the refusals and the shared DAG. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List String Ascii.
 Import ListNotations.
 

@@ -28,6 +28,6 @@ Definition test_value : nat :=
 End TodoTypeSubstPackAlias.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "todo_type_subst_pack_alias" TodoTypeSubstPackAlias.

@@ -11,7 +11,7 @@
     unfolded it to the inductive [prod], a value inductive, lent by const
     reference.  Both now read an alias of a typed-mapped type by its
     mapping, and so does the access-driven parameter form. *)
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Crane Require Import Extraction.
 
 Module AliasParamConventionCheck.

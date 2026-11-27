@@ -21,5 +21,5 @@ Definition test_interleave : list nat :=
 End ProgFix.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "program_fixpoint" ProgFix.

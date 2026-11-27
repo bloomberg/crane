@@ -12,7 +12,7 @@
     depth. *)
 
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Set Crane Loopify.
 

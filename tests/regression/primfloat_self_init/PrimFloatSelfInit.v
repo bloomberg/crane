@@ -9,7 +9,7 @@
     they name. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 From Stdlib Require Import Floats.
 
 Module PrimFloatSelfInit.

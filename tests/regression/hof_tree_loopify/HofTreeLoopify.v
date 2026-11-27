@@ -19,7 +19,7 @@
 *)
 From Stdlib Require Import List Nat.
 Import ListNotations.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Set Crane Loopify.

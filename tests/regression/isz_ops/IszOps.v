@@ -51,5 +51,5 @@ Definition t : nat * nat * nat :=
 End IszOps.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "isz_ops" IszOps.

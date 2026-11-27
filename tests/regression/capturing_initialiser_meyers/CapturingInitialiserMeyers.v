@@ -31,5 +31,5 @@ Definition shifted_sum_four : nat := SumsFour.shifted_sum.
 End CapturingInitialiserMeyers.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "capturing_initialiser_meyers" CapturingInitialiserMeyers.

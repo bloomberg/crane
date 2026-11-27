@@ -11,7 +11,7 @@
     C++ type but not given its Core type as the slot, so the lambda did not
     take the binders the flat parameter takes; it now does, and is written
     [[=](uint64_t, bool eta0_) { return acc(0, eta0_); }]. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Import Extraction.
 From Stdlib Require Import List.
 Import ListNotations.

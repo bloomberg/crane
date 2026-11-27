@@ -20,7 +20,7 @@
 
     Expected: compiles, [result = 4]. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Corelib Require Import PrimString.
 From Crane Require Import Mapping.Descriptor.
 From Stdlib Require Import List.

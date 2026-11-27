@@ -1,3 +1,8 @@
+(* Copyright 2026 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Heterogeneous maps, whose value type depends on the key: the [HMap]
+    operations class, its [HMapOk] specification, and derived operations
+    ([contains], [singleton], [combine], [filter]). *)
 From ExtLib Require Import Structures.Reducible.
 
 Section HMaps.

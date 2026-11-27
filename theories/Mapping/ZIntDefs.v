@@ -1,5 +1,11 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Extraction of [Z] (binary integers) to [int64_t] with native C++
+    arithmetic: the mappings both flavours share; [ZInt.v] (std) and
+    [ZIntBDE.v] select them, building on [NInt.v] / [NIntBDE.v], which
+    extract [positive] and [N], and on [NatInt.v] / [NatIntBDE.v]: [Z.of_nat]
+    and [Z.to_nat] are casts between machine integers, so a flavour only
+    holds together if [nat] is one too. *)
 From Crane Require Extraction.
 From Stdlib Require Import BinInt.
 From Crane Require Import Mapping.Descriptor Mapping.Cpp.
@@ -8,16 +14,6 @@ From Stdlib Require Import List.
 Import ListNotations.
 Local Open Scope pstring_scope.
 Import Crane.Cpp.
-
-(** Extraction of [Z] (binary integers) to [int64_t].
-
-    The mappings both flavours share; [ZInt.v] (std) and [ZIntBDE.v] select
-    them, building on [NInt.v] / [NIntBDE.v], which extract [positive] and
-    [N], and on [NatIntStd.v] / [NatIntBDE.v]: [Z.of_nat] and [Z.to_nat] are
-    casts between machine integers, so a flavour only holds together if
-    [nat] is one too.
-    Maps [Z] to [int64_t] with native C++ arithmetic.
-*)
 
 (** [Z] is an [int64_t]: [Z0] is [0], [Zpos p] is [p], [Zneg p] is [-p]
     (the [positive] of [NInt] is an [unsigned int]); a numeral is an

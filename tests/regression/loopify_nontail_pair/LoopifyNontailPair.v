@@ -1,6 +1,6 @@
 From Stdlib Require Import Arith.PeanoNat List Arith.Wf_nat.
 Import ListNotations.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 From Crane Require Extraction.
 
 Set Crane Loopify.

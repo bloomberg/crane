@@ -12,7 +12,7 @@
    mfold takes list (m_carrier M), which becomes List<std::any> in
    any_cast. But with DequeList, the runtime value is std::deque<std::any>.
 *)
-From Crane Require Import Mapping.NatIntStd Mapping.DequeList.
+From Crane Require Import Mapping.NatInt Mapping.DequeList.
 From Stdlib Require Import Nat List.
 Import ListNotations.
 Require Crane.Extraction.

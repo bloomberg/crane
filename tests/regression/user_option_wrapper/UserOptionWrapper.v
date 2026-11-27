@@ -11,7 +11,7 @@
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module UserOptionWrapper.
 Inductive opt (A : Type) : Type := non : opt A | so : A -> opt A.
 Arguments non {A}. Arguments so {A} _.

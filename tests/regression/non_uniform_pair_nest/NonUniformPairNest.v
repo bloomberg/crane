@@ -1,7 +1,7 @@
 (* WIP: non-uniform (nested) inductive: the recursive occurrence is at type nest (A*A); the emitted C++ template does not instantiate. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Module NonUniformPairNest.
 Inductive nest (A : Type) : Type := NZ : A -> nest A | NS : nest (A * A) -> nest A.
 Arguments NZ {A} _.

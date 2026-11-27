@@ -11,7 +11,7 @@
     types found PrimInt63 and PrimFloat primitives unmapped too, now mapped
     and tested in [prim_int63_float_ops]; the BDE [persistent_array] did not
     clamp [make]'s length to [max_length] and now does.  Also on main. *)
-From Crane Require Import Mapping.NatIntStd Mapping.Std.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Crane Require Extraction.
 From Corelib Require Import PrimInt63 PrimArray.
 Open Scope uint63_scope.

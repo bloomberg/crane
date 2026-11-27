@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 (** Use-after-move: a constructor field is moved out of an owned scrutinee
     while a sibling argument of the same call still reads that scrutinee.

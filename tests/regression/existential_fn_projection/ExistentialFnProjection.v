@@ -5,7 +5,7 @@
     function and as a value when it is data. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Module ExistentialFnProjection.
   Definition measurer : {A : Type & A -> nat} :=

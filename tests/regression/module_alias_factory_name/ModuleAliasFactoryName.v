@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 (** A module alias is transparent to Rocq but not to the factory-method namer:
     reached through the alias [A], the constructor [c] of [Lib.t] is called as

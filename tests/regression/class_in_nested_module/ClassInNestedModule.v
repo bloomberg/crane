@@ -1,5 +1,5 @@
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 (** A typeclass becomes a C++ concept, and a module becomes a struct.  A class
     declared inside a module therefore emits a concept inside a struct, which

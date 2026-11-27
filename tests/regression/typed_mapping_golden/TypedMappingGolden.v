@@ -20,7 +20,7 @@ From Corelib Require Import PrimString.
 From Stdlib Require Import List.
 Import ListNotations.
 From Crane Require Import Extraction Mapping.Descriptor.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Open Scope pstring_scope.
 

@@ -8,7 +8,7 @@
    live in [itree_invariants.t.cpp], which drives the C++ runtime type
    directly. *)
 From Stdlib Require Import Nat.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITreeReified.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITreeReified.
 Require Crane.Extraction.
 
 Module IO_axioms.

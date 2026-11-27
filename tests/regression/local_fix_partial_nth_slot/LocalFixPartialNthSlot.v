@@ -11,7 +11,7 @@
     variables off its position's type, as an over-applied call does not
     ([Calls.plan_call]'s [result_tvar_map]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

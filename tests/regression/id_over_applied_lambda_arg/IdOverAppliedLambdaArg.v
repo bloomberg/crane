@@ -13,7 +13,7 @@
     boxed whole ([crane_erase_fn]), the way a recovery reads it back.
     Expected and now: [one_arg 4 = 5], [two_args 4 = 5], [control 4 = 5]. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Module IdOverAppliedLambdaArg.
 

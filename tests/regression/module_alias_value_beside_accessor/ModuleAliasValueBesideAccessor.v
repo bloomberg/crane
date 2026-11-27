@@ -7,7 +7,7 @@
     another module has an accessor of the same name says nothing about it. *)
 
 From Crane Require Import Extraction.
-From Crane.Mapping Require Import NatIntStd.
+From Crane.Mapping Require Import NatInt.
 
 Module ModuleAliasValueBesideAccessor.
 

@@ -249,7 +249,7 @@ End AccountProofs.
 (** * The examples, run in the model *)
 
 Transparent HAList.halist_lookup HAList.halist_add
-            HAList.HMap_halist HAList.HMapOk_halist.
+            HAList.HMap_halist HAList.hmap_ok_halist.
 
 Definition run_test1 : itree (exceptE Err) (Z * Z * Z) := ST.run (fun R => testtoST1 (R := R)).
 
@@ -277,7 +277,7 @@ Definition run_bank_acc1 : itree (exceptE Err) (Z * bool * Z * Z) :=
 Lemma bank_acc_run_burn1 : burn 100 run_bank_acc1 = Ret (100, true, 250, 0)%Z.
 Proof. lazy. reflexivity. Qed.
 
-From Crane Require Import Mapping.ZInt Mapping.NatIntStd.
+From Crane Require Import Mapping.ZInt Mapping.NatInt.
 
 Definition testtoST1_ext :=
   Eval unfold testtoST1, class_pointST in (@testtoST1 ST.cpp_refs).

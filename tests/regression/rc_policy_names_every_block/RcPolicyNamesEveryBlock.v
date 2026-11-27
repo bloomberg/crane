@@ -9,7 +9,7 @@
    box, a coinductive's cell -- is declared in the policy's namespace.
    Before:   [crane::rc_local::obj] and [crane::rc_local::lazy] did not exist. *)
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Set Crane NonAtomicRc.
 
 Module RcPolicyNamesEveryBlock.

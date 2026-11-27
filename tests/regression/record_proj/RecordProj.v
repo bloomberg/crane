@@ -10,7 +10,7 @@
    These occur when record field access doesn't match expected patterns,
    such as when trying to access fields out of bounds or with complex patterns.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import Lia.
 Require Crane.Extraction.
 

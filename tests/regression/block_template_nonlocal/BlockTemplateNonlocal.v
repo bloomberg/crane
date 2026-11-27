@@ -13,7 +13,7 @@
    (like std::cin).
 *)
 From Corelib Require Import PrimString.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
 
 (** A non-monadic block template *)
 Axiom scan_nat_pure : nat.

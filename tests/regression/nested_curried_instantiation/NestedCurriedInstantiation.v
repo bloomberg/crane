@@ -19,7 +19,7 @@
     included; a constructor field at a variable is built at the
     constructor's written type argument ([Constructors.regular_field]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 

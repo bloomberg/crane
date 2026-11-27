@@ -15,7 +15,7 @@
     writes ([Coerce.declared_cpp], [Types.spell_as_declared]):
     [twice]'s step as [crane::fn<F(F)>], not two arguments in one group. *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module TwiceTwiceEtaFlat.
 

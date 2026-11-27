@@ -5,7 +5,7 @@
     position its value can take. *)
 
 From Stdlib Require Import Arith.PeanoNat Lia List.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Import ListNotations.
 
 Module SigIsItsWitness.

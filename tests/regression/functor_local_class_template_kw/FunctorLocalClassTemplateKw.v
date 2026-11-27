@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 (** A class declared inside a functor is reached, after instantiation, through
     a [template] disambiguator that does not belong there: the generated code

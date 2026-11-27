@@ -158,7 +158,7 @@ From Corelib Require Import PrimString.
 From Stdlib Require Import List.
 Import ListNotations.
 From Crane Require Import Extraction Mapping.Descriptor.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Open Scope pstring_scope.
 
 Axiom Counter : Type.
@@ -384,7 +384,7 @@ Record NumeralSpec (T : Type) : Type := {
 }.
 ```
 
-`Mapping/NatIntStd.v` maps `nat` to `uint64_t` with
+`Mapping/NatInt.v` maps `nat` to `uint64_t` with
 `IntegerToken "UINT64_C(" ")"`, so `S (S (S O))` is written `UINT64_C(3)`.
 A typed type's literals come from its descriptor; an extraction where the
 type also has a `Crane Extract Numeral` fails. The actions name no
@@ -915,7 +915,7 @@ a word stream at static initialisation, keeping sharing.
 
 ```coq
 From Stdlib Require Import List.
-From Crane Require Import Extraction Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Extraction Mapping.Std Mapping.NatInt.
 
 Module Squares.
 Definition table : list nat := List.map (fun n => n * n) (List.seq 0 10).

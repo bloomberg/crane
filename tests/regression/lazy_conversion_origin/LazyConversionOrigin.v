@@ -9,7 +9,7 @@
     stream and through [crane::lazy] directly: run-once, a rethrown
     exception, the round trip, and the source being released with the
     conversion. *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Module LazyConversionOrigin.

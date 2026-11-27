@@ -17,7 +17,7 @@
 From Stdlib Require Import Arith.PeanoNat List.
 From ITree Require Import Events.Exception ITree.
 From Crane Require Monads.ST.
-From Crane Require Import Mapping.NatIntStd Monads.Error Monads.ITree.
+From Crane Require Import Mapping.NatInt Monads.Error Monads.ITree.
 Import Monads.
 Import ListNotations.
 Local Open Scope monad_scope.

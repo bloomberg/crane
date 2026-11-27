@@ -8,7 +8,7 @@
     the parameter declarations, let-ins included. *)
 
 From Stdlib Require Import List.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
 
 Import ListNotations.

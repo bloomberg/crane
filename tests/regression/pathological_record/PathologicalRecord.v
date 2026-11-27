@@ -7,7 +7,7 @@
    Strategy: Create matches where the body uses fields in non-trivial ways
    that might not simplify to MLrel during optimization.
 *)
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 From Stdlib Require Import Lia.
 Require Crane.Extraction.
 

@@ -17,7 +17,7 @@
      };
 *)
 From Corelib Require Import PrimString.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO.
+From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
 
 (** Block template with %a0 that will receive a string containing ';' *)
 Axiom read_trimmed : forall {E} `{fileE -< E}, string -> itree E string.

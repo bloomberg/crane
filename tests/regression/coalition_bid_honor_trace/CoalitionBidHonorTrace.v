@@ -631,6 +631,6 @@ Definition sample_state_force_count : nat :=
 End CoalitionBidHonorTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Crane Extraction "coalition_bid_honor_trace" CoalitionBidHonorTraceCase.

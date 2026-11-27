@@ -9,7 +9,7 @@
     both arguments, and the second read a moved-from list. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module ReuseArmFieldUsedTwice.
 

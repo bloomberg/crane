@@ -201,5 +201,5 @@ Definition t : nat * nat * nat * nat * nat * nat * nat * nat * nat * nat * list 
 End NestedInd.
 
 Require Crane.Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatInt.
 Crane Extraction "nested_ind" NestedInd.

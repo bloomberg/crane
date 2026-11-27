@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 (** A typeclass parameterised by a type constructor (`Container (F : Type -> Type)`).
     The higher-kinded parameter is demoted to a promoted associated type holding
     the element-erased carrier, so the concept, the instance and the method

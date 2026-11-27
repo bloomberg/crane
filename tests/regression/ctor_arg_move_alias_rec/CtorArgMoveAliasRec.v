@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.NatInt.
 
 (** Recursive variant of [ctor_arg_move_alias]: the same use-after-move, but
     reached through a tail-modulo-cons [Fixpoint] rather than a one-shot

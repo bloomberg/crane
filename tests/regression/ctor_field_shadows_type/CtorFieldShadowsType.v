@@ -6,7 +6,7 @@
     beside it. *)
 
 From Crane Require Import Extraction.
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatInt.
 
 Module CtorFieldShadowsType.
   Inductive t : Set := Mk (t : nat) (extra : nat).
