@@ -8,7 +8,7 @@
     [rep]: the array cell of each element holds the node [get] gives in the
     map. Each ST operation preserves [rep] and returns what its pure
     counterpart returns ([find_sim], [union_sim], [same_sim]), stated in the
-    [st_spec] logic of [STMonadSpec]. Since both versions use the same fuel,
+    [spec] logic of [STSpec]. Since both versions use the same fuel,
     this needs only that parents stay in range ([Closed]).
 
     Fuel is the element count [n]. Parent links form a forest: from every
@@ -34,13 +34,13 @@ From ITree Require Import
   ITreeFacts
 .
 
+From Crane Require Monads.ST.
 From Crane Require Import
   Monads.Error
   Monads.ITree
   Monads.MonadFacts
-  Monads.STMonad
-  Monads.STMonadFacts
-  Monads.STMonadSpec
+  Monads.STFacts
+  Monads.STSpec
   Utils.HMap
 .
 
@@ -53,9 +53,9 @@ Local Open Scope monad_scope.
 Module NatMapFacts := FMapFacts.Facts NatMap.
 
 (** The store of the ST version, and its cell at key [k] of array index 0. *)
-Notation store := (mem (fun _ : nat => node)).
-Notation cell m k := (st_get (V := fun _ : nat => node) k m).
-Notation store_add k v m := (st_put (V := fun _ : nat => node) k v m).
+Notation store := (ST.mem (fun _ : nat => node)).
+Notation cell m k := (read_at (V := fun _ : nat => node) k m).
+Notation store_add k v m := (write_at (V := fun _ : nat => node) k v m).
 
 Definition par (s : uf) (x : nat) : nat := fst (get s x).
 
@@ -257,7 +257,7 @@ Section Simulation.
 
   Context (n base : nat).
 
-  Let arr : @STArray model_refs node := MkArrLoc base n.
+  Let arr : @ST.array ST.model_refs node := ST.MkArrayLoc base n.
 
   (** The array cell of every element holds its node in the map. *)
   Definition rep (m : store) (s : uf) : Prop :=
@@ -267,94 +267,94 @@ Section Simulation.
     rep (store_add (base + x) nd m) (NatMap.add x nd s).
   Proof.
     intros Hrep Hx i Hi. rewrite get_add. destruct (Nat.eqb_spec x i).
-    - subst i. apply st_get_put_eq.
-    - rewrite st_get_put_ne by lia. auto.
+    - subst i. apply read_at_write_at_eq.
+    - rewrite read_at_write_at_ne by lia. auto.
   Qed.
 
-  Lemma st_spec_read m s x (Q : store -> node -> Prop) :
+  Lemma spec_read m s x (Q : store -> node -> Prop) :
     rep m s -> x < n -> Q m (get s x) ->
-    st_spec (E := exceptE Err) (readArray arr x) m Q.
+    spec (E := exceptE Err) (ST.read_array arr x) m Q.
   Proof.
-    intros Hrep Hx HQ. eapply st_spec_readArray; [ exact Hx | | exact HQ ]. auto.
+    intros Hrep Hx HQ. eapply read_array; [ exact Hx | | exact HQ ]. auto.
   Qed.
 
-  Lemma st_spec_write m s x nd (Q : store -> unit -> Prop) :
+  Lemma spec_write m s x nd (Q : store -> unit -> Prop) :
     rep m s -> x < n -> (forall m', rep m' (NatMap.add x nd s) -> Q m' tt) ->
-    st_spec (E := exceptE Err) (writeArray arr x nd) m Q.
+    spec (E := exceptE Err) (ST.write_array arr x nd) m Q.
   Proof.
-    intros Hrep Hx HQ. apply st_spec_writeArray; [ exact Hx |].
+    intros Hrep Hx HQ. apply write_array; [ exact Hx |].
     apply HQ. apply rep_add; assumption.
   Qed.
 
   Lemma find_sim f : forall s m x, rep m s -> Closed n s -> x < n ->
-    st_spec (E := exceptE Err) (find_ST arr f x) m
+    spec (E := exceptE Err) (find_ST arr f x) m
       (fun m' r => r = fst (find_fun f s x) /\ rep m' (snd (find_fun f s x))).
   Proof.
     induction f as [|f IH]; intros s m x Hrep Hs Hx; cbn [find_ST find_fun].
-    - apply st_spec_ret. auto.
-    - apply st_spec_bind. eapply st_spec_read; [ eassumption | exact Hx |].
+    - apply spec_ret. auto.
+    - apply spec_bind. eapply spec_read; [ eassumption | exact Hx |].
       pose proof (Hs x Hx) as Hp. unfold par in Hp.
       destruct (get s x) as [p k]. cbn in Hp |- *. destruct (p =? x).
-      + apply st_spec_ret. auto.
-      + apply st_spec_bind. eapply st_spec_weaken; [| apply IH; eassumption ].
+      + apply spec_ret. auto.
+      + apply spec_bind. eapply spec_weaken; [| apply IH; eassumption ].
         intros m' r [-> Hrep']. destruct (find_fun f s p) as [r s'']. cbn in *.
-        apply st_spec_bind. eapply st_spec_write; [ eassumption | exact Hx |].
-        intros m'' Hrep''. apply st_spec_ret. auto.
+        apply spec_bind. eapply spec_write; [ eassumption | exact Hx |].
+        intros m'' Hrep''. apply spec_ret. auto.
   Qed.
 
   Lemma union_sim s m x y : rep m s -> Closed n s -> x < n -> y < n ->
-    st_spec (E := exceptE Err) (union_ST n arr x y) m (fun m' _ => rep m' (union_fun n s x y)).
+    spec (E := exceptE Err) (union_ST n arr x y) m (fun m' _ => rep m' (union_fun n s x y)).
   Proof.
     intros Hrep Hs Hx Hy. unfold union_ST, union_fun.
-    apply st_spec_bind. eapply st_spec_weaken; [| apply find_sim; eassumption ].
+    apply spec_bind. eapply spec_weaken; [| apply find_sim; eassumption ].
     intros m1 r1 [-> Hrep1].
     destruct (find_fun_closed n n s x Hs Hx) as [Hrx Hs1].
     destruct (find_fun n s x) as [rx s1]. cbn [fst snd] in *.
-    apply st_spec_bind. eapply st_spec_weaken; [| apply find_sim; eassumption ].
+    apply spec_bind. eapply spec_weaken; [| apply find_sim; eassumption ].
     intros m2 r2 [-> Hrep2].
     destruct (find_fun_closed n n s1 y Hs1 Hy) as [Hry Hs2].
     destruct (find_fun n s1 y) as [ry s2]. cbn [fst snd] in *.
-    destruct (rx =? ry); [ apply st_spec_ret; exact Hrep2 |].
-    apply st_spec_bind. eapply st_spec_read; [ eassumption | exact Hrx |].
+    destruct (rx =? ry); [ apply spec_ret; exact Hrep2 |].
+    apply spec_bind. eapply spec_read; [ eassumption | exact Hrx |].
     destruct (get s2 rx) as [px kx]. cbn beta iota.
-    apply st_spec_bind. eapply st_spec_read; [ eassumption | exact Hry |].
+    apply spec_bind. eapply spec_read; [ eassumption | exact Hry |].
     destruct (get s2 ry) as [py ky]. cbn beta iota.
     destruct (kx <? ky); [| destruct (ky <? kx)].
-    - eapply st_spec_write; eauto.
-    - eapply st_spec_write; eauto.
-    - apply st_spec_bind. eapply st_spec_write; [ eassumption | exact Hry |].
-      intros m3 Hrep3. eapply st_spec_write; eauto.
+    - eapply spec_write; eauto.
+    - eapply spec_write; eauto.
+    - apply spec_bind. eapply spec_write; [ eassumption | exact Hry |].
+      intros m3 Hrep3. eapply spec_write; eauto.
   Qed.
 
   Lemma same_sim s m x y : rep m s -> Closed n s -> x < n -> y < n ->
-    st_spec (E := exceptE Err) (same_ST n arr x y) m
+    spec (E := exceptE Err) (same_ST n arr x y) m
       (fun m' b => b = fst (same_fun n s x y) /\ rep m' (snd (same_fun n s x y))).
   Proof.
     intros Hrep Hs Hx Hy. unfold same_ST, same_fun.
-    apply st_spec_bind. eapply st_spec_weaken; [| apply find_sim; eassumption ].
+    apply spec_bind. eapply spec_weaken; [| apply find_sim; eassumption ].
     intros m1 r1 [-> Hrep1].
     destruct (find_fun_closed n n s x Hs Hx) as [_ Hs1].
     destruct (find_fun n s x) as [rx s1]. cbn [fst snd] in *.
-    apply st_spec_bind. eapply st_spec_weaken; [| apply find_sim; eassumption ].
+    apply spec_bind. eapply spec_weaken; [| apply find_sim; eassumption ].
     intros m2 r2 [-> Hrep2].
-    destruct (find_fun n s1 y) as [ry s2]. apply st_spec_ret. auto.
+    destruct (find_fun n s1 y) as [ry s2]. apply spec_ret. auto.
   Qed.
 
   Lemma run_sim ops : forall s m, rep m s -> Closed n s -> Forall (op_ok n) ops ->
-    st_spec (E := exceptE Err) (run_ST n arr ops) m (fun _ bs => bs = run_fun n s ops).
+    spec (E := exceptE Err) (run_ST n arr ops) m (fun _ bs => bs = run_fun n s ops).
   Proof.
     induction ops as [|[x y | x y] ops IH]; intros s m Hrep Hs Hok; cbn [run_ST run_fun].
-    - apply st_spec_ret. reflexivity.
+    - apply spec_ret. reflexivity.
     - apply Forall_cons_iff in Hok as [[Hx Hy] Hok'].
-      apply st_spec_bind. eapply st_spec_weaken; [| apply union_sim; eassumption ].
+      apply spec_bind. eapply spec_weaken; [| apply union_sim; eassumption ].
       intros m' u Hrep'. apply IH; auto. apply union_fun_closed; assumption.
     - apply Forall_cons_iff in Hok as [[Hx Hy] Hok'].
-      apply st_spec_bind. eapply st_spec_weaken; [| apply same_sim; eassumption ].
+      apply spec_bind. eapply spec_weaken; [| apply same_sim; eassumption ].
       intros m' b [-> Hrep'].
       pose proof (same_fun_closed n s x y Hs Hx Hy) as Hs'.
       destruct (same_fun n s x y) as [b s']. cbn in *.
-      apply st_spec_bind. eapply st_spec_weaken; [| apply IH; eassumption ].
-      intros m'' bs ->. apply st_spec_ret. reflexivity.
+      apply spec_bind. eapply spec_weaken; [| apply IH; eassumption ].
+      intros m'' bs ->. apply spec_ret. reflexivity.
   Qed.
 
 End Simulation.
@@ -363,42 +363,42 @@ End Simulation.
     keeping those below [i]. *)
 Lemma init_sim n base k : forall i m (acc : Acc lt (n - i)), n - i = k ->
   (forall j, j < i -> j < n -> cell m (base + j) = Some (j, 0)) ->
-  st_spec (E := exceptE Err) (init_ST (R := model_refs) (MkArrLoc base n) n i acc) m
+  spec (E := exceptE Err) (init_ST (R := ST.model_refs) (ST.MkArrayLoc base n) n i acc) m
     (fun m' _ => forall j, j < n -> cell m' (base + j) = Some (j, 0)).
 Proof.
   induction k as [|k IH]; intros i m [acc] Hk Hcells; cbn [init_ST];
     destruct (Sumbool.sumbool_of_bool (Nat.ltb i n)) as [Hlt | Hge].
   - pose proof (proj1 (Nat.ltb_lt i n) Hlt). lia.
-  - apply st_spec_ret. intros j Hj. apply Nat.ltb_ge in Hge. apply Hcells; lia.
+  - apply spec_ret. intros j Hj. apply Nat.ltb_ge in Hge. apply Hcells; lia.
   - pose proof (proj1 (Nat.ltb_lt i n) Hlt) as Hin.
-    apply st_spec_bind, st_spec_writeArray; [ exact Hin |].
+    apply spec_bind, write_array; [ exact Hin |].
     apply IH; [ lia |]. intros j Hj Hjn. destruct (Nat.eq_dec i j) as [<- | Hne].
-    + apply st_get_put_eq.
-    + rewrite st_get_put_ne by lia. apply Hcells; lia.
+    + apply read_at_write_at_eq.
+    + rewrite read_at_write_at_ne by lia. apply Hcells; lia.
   - apply Nat.ltb_ge in Hge. lia.
 Qed.
 
 Lemma make_sim n m :
-  st_spec (E := exceptE Err) (make_ST (R := model_refs) n) m
-    (fun m' a => exists base, a = MkArrLoc base n /\ rep n base m' empty_uf).
+  spec (E := exceptE Err) (make_ST (R := ST.model_refs) n) m
+    (fun m' a => exists base, a = ST.MkArrayLoc base n /\ rep n base m' empty_uf).
 Proof.
-  unfold make_ST. apply st_spec_bind, st_spec_newArray. intros base m1 _.
-  apply st_spec_bind.
-  eapply st_spec_weaken; [| apply (init_sim n base (n - 0)); [ reflexivity | intros j Hj; lia ] ].
-  intros m2 u Hcells. apply st_spec_ret. exists base. split; [ reflexivity |].
+  unfold make_ST. apply spec_bind, new_array. intros base m1 _.
+  apply spec_bind.
+  eapply spec_weaken; [| apply (init_sim n base (n - 0)); [ reflexivity | intros j Hj; lia ] ].
+  intros m2 u Hcells. apply spec_ret. exists base. split; [ reflexivity |].
   intros i Hi. apply Hcells. exact Hi.
 Qed.
 
 (** The imperative union-find computes the pure one. *)
 Theorem union_find_fun_eq_union_find_ST : forall (n : nat) (ops : list op),
     Forall (op_ok n) ops ->
-    Ret (union_find_fun n ops) ≈ runST (fun R => union_find_ST (R := R) n ops).
+    Ret (union_find_fun n ops) ≈ ST.run (fun R => union_find_ST (R := R) n ops).
 Proof.
   intros n ops Hok.
-  destruct (st_spec_runST (fun R => union_find_ST (R := R) n ops)
+  destruct (run (fun R => union_find_ST (R := R) n ops)
               (fun bs => bs = union_find_fun n ops)) as (bs & Hrun & ->).
-  - unfold union_find_ST. apply st_spec_bind.
-    eapply st_spec_weaken; [| apply make_sim ].
+  - unfold union_find_ST. apply spec_bind.
+    eapply spec_weaken; [| apply make_sim ].
     intros m a (base & -> & Hrep). apply run_sim; auto. intros x Hx. exact Hx.
   - symmetry. exact Hrun.
 Qed.
@@ -407,5 +407,5 @@ Qed.
 Example union_find_small :
   let ops := [Union 0 1; Union 2 3; Same 0 1; Same 1 2; Union 1 3; Same 0 2; Same 3 4] in
   union_find_fun 5 ops = [true; false; true; false]
-  /\ burn 200 (runST (fun R => union_find_ST (R := R) 5 ops)) = Ret [true; false; true; false].
+  /\ burn 200 (ST.run (fun R => union_find_ST (R := R) 5 ops)) = Ret [true; false; true; false].
 Proof. split; lazy; reflexivity. Qed.

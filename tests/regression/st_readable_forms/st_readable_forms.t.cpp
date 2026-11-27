@@ -15,7 +15,7 @@ void check(bool ok, const char *what) {
 } // namespace
 
 int main() {
-  using M = StReadableForms;
+  using M = STReadableForms;
   check(M::pair_parts == 9, "pair_parts = 3 + 6");
   check(M::fib_step(10) == 55, "fib_step 10 = 55");
   check(M::fib_step(1) == 1, "fib_step 1 = 1");

@@ -231,7 +231,7 @@
 (subdir st_refs
  (rule
   (targets st_refs.t.exe)
-  (deps StRefs.vo StRefsProofs.vo st_refs.t.cpp (source_tree .))
+  (deps STRefs.vo STRefsProofs.vo st_refs.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} st_refs.t.exe st_refs.t.cpp st_refs.cpp)))
  (rule
@@ -242,7 +242,7 @@
 (subdir st_arrays
  (rule
   (targets st_arrays.t.exe)
-  (deps StArrays.vo StArraysProofs.vo st_arrays.t.cpp (source_tree .))
+  (deps STArrays.vo STArraysProofs.vo st_arrays.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} st_arrays.t.exe st_arrays.t.cpp st_arrays.cpp)))
  (rule
@@ -253,7 +253,7 @@
 (subdir st_array_helpers
  (rule
   (targets st_array_helpers.t.exe)
-  (deps StArrayHelpers.vo st_array_helpers.t.cpp (source_tree .))
+  (deps STArrayHelpers.vo st_array_helpers.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} st_array_helpers.t.exe st_array_helpers.t.cpp st_array_helpers.cpp)))
  (rule
@@ -264,7 +264,7 @@
 (subdir st_array_loops
  (rule
   (targets st_array_loops.t.exe)
-  (deps StArrayLoops.vo st_array_loops.t.cpp (source_tree .))
+  (deps STArrayLoops.vo st_array_loops.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} st_array_loops.t.exe st_array_loops.t.cpp st_array_loops.cpp)))
  (rule
@@ -275,7 +275,7 @@
 (subdir st_fibonacci
  (rule
   (targets st_fibonacci.t.exe)
-  (deps StFibonacci.vo StFibonacciProofs.vo st_fibonacci.t.cpp (source_tree .))
+  (deps STFibonacci.vo STFibonacciProofs.vo st_fibonacci.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} st_fibonacci.t.exe st_fibonacci.t.cpp st_fibonacci.cpp)))
  (rule
@@ -286,7 +286,7 @@
 (subdir st_quicksort
  (rule
   (targets st_quicksort.t.exe)
-  (deps StQuicksort.vo StQuicksortProofs.vo st_quicksort.t.cpp (source_tree .))
+  (deps STQuicksort.vo STQuicksortProofs.vo st_quicksort.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} st_quicksort.t.exe st_quicksort.t.cpp st_quicksort.cpp)))
  (rule

@@ -52,29 +52,29 @@ using BoolWrite = std::span<bool>;
 // The helpers' signatures: the read view for a read, the writable view for
 // an element write, the canonical handle by const reference for a canonical
 // write, by value where it is kept, by reference where replaced.
-static_assert(std::is_same_v<decltype(&StArrayHelpers::peek),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::peek),
                              uint64_t (*)(NatRead, uint64_t)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::bump),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::bump),
                              void (*)(NatWrite, uint64_t)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::middle),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::middle),
                              void (*)(NatWrite, uint64_t)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::outer),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::outer),
                              void (*)(NatWrite)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::swap_ends),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::swap_ends),
                              void (*)(NatWrite, uint64_t)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::zero_from),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::zero_from),
                              void (*)(NatWrite, uint64_t, uint64_t)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::sum_from),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::sum_from),
                              uint64_t (*)(NatRead, uint64_t, uint64_t)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::write_and_refill),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::write_and_refill),
                              void (*)(const NatArray &, uint64_t)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::pick),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::pick),
                              NatArray (*)(bool, NatArray, NatArray)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::write_then_pick),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::write_then_pick),
                              NatArray (*)(NatArray, NatArray)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::regrow_then_write),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::regrow_then_write),
                              void (*)(NatArray &, uint64_t)>);
-static_assert(std::is_same_v<decltype(&StArrayHelpers::flip),
+static_assert(std::is_same_v<decltype(&STArrayHelpers::flip),
                              void (*)(BoolWrite, uint64_t)>);
 
 } // namespace
@@ -84,48 +84,48 @@ static_assert(std::is_same_v<decltype(&StArrayHelpers::flip),
 int main() {
   {
     auto r = to_vector(
-        StArrayHelpers::helpers_list(from_vector<uint64_t>({1, 2, 3, 4})));
+        STArrayHelpers::helpers_list(from_vector<uint64_t>({1, 2, 3, 4})));
     ASSERT((r == std::vector<uint64_t>{4, 3, 42, 42}));
     std::cout << "helpers_list [1; 2; 3; 4]: " << r.size() << " elements"
               << std::endl;
   }
 
   {
-    auto [elems, others] = StArrayHelpers::keep_list(3);
+    auto [elems, others] = STArrayHelpers::keep_list(3);
     ASSERT((to_vector(elems) == std::vector<uint64_t>{8, 7, 3}));
     ASSERT((to_vector(others) == std::vector<uint64_t>{4, 4}));
     std::cout << "keep_list 3: ok" << std::endl;
   }
 
   {
-    auto [first, elems] = StArrayHelpers::refill_list(5);
+    auto [first, elems] = STArrayHelpers::refill_list(5);
     ASSERT(first == 5);
     ASSERT((to_vector(elems) == std::vector<uint64_t>{5, 5, 5}));
     std::cout << "refill_list 5: ok" << std::endl;
   }
 
   {
-    auto [sum, elems] = StArrayHelpers::loops_list(4);
+    auto [sum, elems] = STArrayHelpers::loops_list(4);
     ASSERT(sum == 4);
     ASSERT((to_vector(elems) == std::vector<uint64_t>{2, 0, 0, 2}));
     std::cout << "loops_list 4: ok" << std::endl;
   }
 
   {
-    auto r = to_vector(StArrayHelpers::regrow_list(3));
+    auto r = to_vector(STArrayHelpers::regrow_list(3));
     ASSERT((r == std::vector<uint64_t>{3, 0, 0}));
     std::cout << "regrow_list 3: ok" << std::endl;
   }
 
   {
     auto r = to_vector(
-        StArrayHelpers::flip_list(from_vector<bool>({true, false, true})));
+        STArrayHelpers::flip_list(from_vector<bool>({true, false, true})));
     ASSERT((r == std::vector<bool>{false, false, false}));
     std::cout << "flip_list: ok" << std::endl;
   }
 
   {
-    auto [b, elems] = StArrayHelpers::bools_filled(3);
+    auto [b, elems] = STArrayHelpers::bools_filled(3);
     ASSERT(b);
     ASSERT((to_vector(elems) == std::vector<bool>{false, true, false}));
     std::cout << "bools_filled 3: ok" << std::endl;
@@ -136,9 +136,9 @@ int main() {
     // a helper given a view neither copies nor retains the handle.
     NatArray a = std::make_shared<crane::array_storage<uint64_t>>(4, 1);
     std::weak_ptr<crane::array_storage<uint64_t>> w = a;
-    StArrayHelpers::bump(NatWrite{*a}, 2);
+    STArrayHelpers::bump(NatWrite{*a}, 2);
     ASSERT((*a)[2] == 2);
-    ASSERT(StArrayHelpers::peek(NatRead{*a}, 2) == 2);
+    ASSERT(STArrayHelpers::peek(NatRead{*a}, 2) == 2);
     ASSERT(a.use_count() == 1);
     a.reset();
     ASSERT(w.expired());

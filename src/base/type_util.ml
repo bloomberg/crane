@@ -444,7 +444,7 @@ let core_type_is_unit (ty : _ Core.Type.at) : bool =
     its C++ signature, a call by name passing nothing for it: a [void] one
     ({!void_binder}), or one whose one value is known without being passed --
     [unit], or an inductive of one constructor that carries nothing once its
-    types are erased ({!Table.is_content_free_singleton}): the [STRefs] an ST
+    types are erased ({!Table.is_content_free_singleton}): the [ST.Refs] an ST
     program is polymorphic in, which only types its references.  A callable
     value's parameter -- a lambda's, a [crane::fn]'s -- is kept: a
     polymorphic slot [A -> B] instantiated at [A := unit] calls it with a

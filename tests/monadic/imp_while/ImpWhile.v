@@ -20,11 +20,11 @@ From ITree Require Import
   ITree
 .
 
+From Crane Require Monads.ST.
 From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.STMonad
 .
 
 Import Monads.
@@ -48,16 +48,16 @@ Inductive stmt : Type :=
 
 Section Imp.
 
-  Context {R : STRefs}.
+  Context {R : ST.Refs}.
   Notation V := (fun _ : nat => nat).
-  Notation E0 := (STEvent R V +' exceptE Err).
+  Notation E0 := (ST.Event R V +' exceptE Err).
   Notation E1 := (callE stmt nat +' E0).
 
   (** The value of [e], the variables read from [vars]. *)
-  Fixpoint eval (vars : STArray nat) (e : expr) : itree E1 nat :=
+  Fixpoint eval (vars : ST.array nat) (e : expr) : itree E1 nat :=
     match e with
     | Num n => Ret n
-    | Var x => readArray (E := E1) (V := V) vars x
+    | Var x => ST.read_array (E := E1) (V := V) vars x
     | Add a b => x <- eval vars a;; y <- eval vars b;; Ret (x + y)
     | Sub a b => x <- eval vars a;; y <- eval vars b;; Ret (x - y)
     | Mul a b => x <- eval vars a;; y <- eval vars b;; Ret (x * y)
@@ -65,12 +65,12 @@ Section Imp.
     end.
 
   (** One statement: its substatements are run by [call]. *)
-  Definition exec_body (vars : STArray nat) (s : stmt) : itree E1 nat :=
+  Definition exec_body (vars : ST.array nat) (s : stmt) : itree E1 nat :=
     match s with
     | Skip => Ret 1
     | Assign x e =>
       v <- eval vars e;;
-      writeArray (E := E1) (V := V) vars x v;;
+      ST.write_array (E := E1) (V := V) vars x v;;
       Ret 1
     | Seq s1 s2 =>
       n1 <- call s1;;
@@ -89,15 +89,15 @@ Section Imp.
         Ret (S (n1 + n2))
     end.
 
-  Definition exec (vars : STArray nat) (s : stmt) : itree E0 nat :=
+  Definition exec (vars : ST.array nat) (s : stmt) : itree E0 nat :=
     rec (exec_body vars) s.
 
   (** Runs [s] on [n] variables, all [0]: the steps it took and the final
       variables. *)
   Definition run (n : nat) (s : stmt) : itree E0 (nat * list nat) :=
-    vars <- newArray (E := E0) (V := V) n 0;;
+    vars <- ST.new_array (E := E0) (V := V) n 0;;
     steps <- exec vars s;;
-    vs <- getElems (E := E0) (V := V) vars;;
+    vs <- ST.array_to_list (E := E0) (V := V) vars;;
     Ret (steps, vs).
 
 End Imp.
@@ -134,21 +134,21 @@ Definition square (k : nat) : stmt :=
 (** Never terminates: [exec] accepts it all the same.  Not run. *)
 Definition forever : stmt := While (Num 1) (Assign 0 (Add (Var 0) (Num 1))).
 
-(** In the model: [runST] interprets [rec] with ITree's [mrec]. *)
+(** In the model: [ST.run] interprets [rec] with ITree's [mrec]. *)
 Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.HMapOk_halist.
 
 Lemma factorial_5 :
-  burn 5000 (ITree.map snd (runST (fun R => run (R := R) 2 (factorial 5)))) = Ret [0; 120].
+  burn 5000 (ITree.map snd (ST.run (fun R => run (R := R) 2 (factorial 5)))) = Ret [0; 120].
 Proof. lazy. reflexivity. Qed.
 
 Lemma square_3 :
-  burn 5000 (ITree.map snd (runST (fun R => run (R := R) 3 (square 3)))) = Ret [0; 0; 9].
+  burn 5000 (ITree.map snd (ST.run (fun R => run (R := R) 3 (square 3)))) = Ret [0; 0; 9].
 Proof. lazy. reflexivity. Qed.
 
 Module ImpWhile.
-  Definition run_factorial (k : nat) : nat * list nat := run_st (run (R := cpp_refs) 2 (factorial k)).
-  Definition run_fibonacci (k : nat) : nat * list nat := run_st (run (R := cpp_refs) 4 (fibonacci k)).
-  Definition run_square (k : nat) : nat * list nat := run_st (run (R := cpp_refs) 3 (square k)).
+  Definition run_factorial (k : nat) : nat * list nat := ST.run_cpp (run (R := ST.cpp_refs) 2 (factorial k)).
+  Definition run_fibonacci (k : nat) : nat * list nat := ST.run_cpp (run (R := ST.cpp_refs) 4 (fibonacci k)).
+  Definition run_square (k : nat) : nat * list nat := ST.run_cpp (run (R := ST.cpp_refs) 3 (square k)).
   Definition nth := Eval unfold List.nth in (@List.nth nat).
 End ImpWhile.
 

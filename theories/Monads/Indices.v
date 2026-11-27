@@ -71,8 +71,8 @@ Local Open Scope string_scope.
 (* TODO: The `sub,zero,fromNat,toNat` functions are there in order
   to be able to talk about ranges of indices, which is required to write
   an in-place quicksort that recurses down into sections of an array.
-  This came about because STArrays are collections of STRefs, morally.
-  To make that safer, one could adjust array STRefs to form a "region"
+  This came about because ST arrays are collections of ST references, morally.
+  To make that safer, one could adjust array references to form a "region"
   for which one could manipulate "raw" nats instead.
  *)
 Class Ix (T : Type)

@@ -41,11 +41,11 @@ From ITree Require Import
 
 From Equations Require Import Equations.
 
+From Crane Require Monads.Global.
 From Crane Require Import
   Monads.Error
   Monads.ITree
   Monads.Indices
-  Monads.GlobalState
 .   
 
 
@@ -60,53 +60,53 @@ Section NatExampleTrees.
   Context {T S : Type}.
   Context {ltu : T -> T -> Prop}.
   Context `{Ix_Correct T ltu}.
-  Context {HGlob: GlobRefClass T}.
+  Context {HGlob: Global.RefClass T}.
   
   Let V : T -> Type := fun _ => nat. (* Nats only for this example. *)
-  Let E0 := (GlobEvent T V) +' exceptE Err.
+  Let E0 := (Global.Event T V) +' exceptE Err.
 
 
   Definition new_and_read_both_nat : itree E0 (nat * nat) :=
-      r1 <- newGlobRef zero 5 ;;
-      r2 <- newGlobRef (suc zero) 6 ;; 
-      x1 <- readGlobRef r1 ;;
-      x2 <- readGlobRef r2 ;;
+      r1 <- Global.new_ref zero 5 ;;
+      r2 <- Global.new_ref (suc zero) 6 ;; 
+      x1 <- Global.read_ref r1 ;;
+      x2 <- Global.read_ref r2 ;;
       Ret (x1, x2).
 
   Definition tree_simp_nat : itree E0 nat :=
-    v <- newGlobRef zero 5;;
-    readGlobRef v.
+    v <- Global.new_ref zero 5;;
+    Global.read_ref v.
 
   (* NOTE: this failing definition is intentional.
     The intent is to test that we don't allow reference indices to escape. *)
   Fail Definition tree_escape_nat : itree E0 nat :=
-    v <- newGlobRef 5;;
-    writeGlobRef v (match v with mkGlobRef _ _ idx => idx end);;
-    readGlobRef v.
+    v <- Global.new_ref 5;;
+    Global.write_ref v (match v with Global.make_ref _ _ idx => idx end);;
+    Global.read_ref v.
 
   Definition tree_simp_another_nat : itree E0 nat :=
-    v <- newGlobRef zero 5;;
-    writeGlobRef v 6;;
-    val <- readGlobRef v;;
+    v <- Global.new_ref zero 5;;
+    Global.write_ref v 6;;
+    val <- Global.read_ref v;;
     Ret val.
 
 
-   Definition write_incr_one (v : GlobRef nat) : itree E0 unit :=
-    a <- @readGlobRef E0 T HGlob V _ zero v;;
-    @writeGlobRef E0 T HGlob V _ zero v (a + 1).
+   Definition write_incr_one (v : Global.ref nat) : itree E0 unit :=
+    a <- @Global.read_ref E0 T HGlob V _ zero v;;
+    @Global.write_ref E0 T HGlob V _ zero v (a + 1).
 
-   Definition swap' (v w : GlobRef nat) : itree E0 unit :=
-    a <- @readGlobRef E0 T _ V  _ zero v;;
-    b <- @readGlobRef E0 T _ V _ (suc zero) w;;
-    writeGlobRef v b;;
-    writeGlobRef w a.
+   Definition swap' (v w : Global.ref nat) : itree E0 unit :=
+    a <- @Global.read_ref E0 T _ V  _ zero v;;
+    b <- @Global.read_ref E0 T _ V _ (suc zero) w;;
+    Global.write_ref v b;;
+    Global.write_ref w a.
 
   (* "swap" function from "Lazy Functional State Threads", by John Launchbury and Simon L Peyton Jones. *)
-  Fail Definition swap (v w : GlobRef nat) : itree E0 unit :=
-    a <- readGlobRef v;;
-    b <- readGlobRef w;;
-    writeGlobRef v b;;
-    writeGlobRef w a.
+  Fail Definition swap (v w : Global.ref nat) : itree E0 unit :=
+    a <- Global.read_ref v;;
+    b <- Global.read_ref w;;
+    Global.write_ref v b;;
+    Global.write_ref w a.
 
 
 
@@ -115,14 +115,14 @@ Section NatExampleTrees.
   Definition idx_x := zero.
   Definition idx_y := suc zero.
 
-  Fixpoint fib_loop (k : nat) (x y : GlobRef nat) : itree E0 nat :=
+  Fixpoint fib_loop (k : nat) (x y : Global.ref nat) : itree E0 nat :=
     match k with
-    | 0 => @readGlobRef _ _ _ _ _ idx_x x
+    | 0 => @Global.read_ref _ _ _ _ _ idx_x x
     | Datatypes.S k' =>
-        x' <- @readGlobRef _ _ _ V _ idx_x x;;
-        y' <- @readGlobRef _ _ _ V _ idx_y y;;
-        @writeGlobRef _ _ _ _ _ idx_x x y';;
-        @writeGlobRef _ _ _ _ _ idx_y y (x' + y');;
+        x' <- @Global.read_ref _ _ _ V _ idx_x x;;
+        y' <- @Global.read_ref _ _ _ V _ idx_y y;;
+        @Global.write_ref _ _ _ _ _ idx_x x y';;
+        @Global.write_ref _ _ _ _ _ idx_y y (x' + y');;
         fib_loop k' x y 
     end.
 
@@ -130,8 +130,8 @@ Section NatExampleTrees.
     if (Nat.ltb n 2)
     then Ret n
     else
-      x <- newGlobRef zero 0;;
-      y <- newGlobRef (suc zero) 1;;
+      x <- Global.new_ref zero 0;;
+      y <- Global.new_ref (suc zero) 1;;
       fib_loop n x y.
 
   Definition fib_fun (n : nat) : nat :=
@@ -145,11 +145,11 @@ Section NatExampleTrees.
 
   Definition ctr_idx := suc (suc zero).
 
-  Definition start_counter : itree E0 (GlobRef nat) := newGlobRef ctr_idx 0.
+  Definition start_counter : itree E0 (Global.ref nat) := Global.new_ref ctr_idx 0.
 
-  Definition counter_next (ctr : GlobRef nat) :  itree E0 nat :=
-    a <- @readGlobRef E0 T HGlob V _ ctr_idx ctr;;
-    @writeGlobRef E0 T HGlob V _ ctr_idx ctr (a + 1);;
+  Definition counter_next (ctr : Global.ref nat) :  itree E0 nat :=
+    a <- @Global.read_ref E0 T HGlob V _ ctr_idx ctr;;
+    @Global.write_ref E0 T HGlob V _ ctr_idx ctr (a + 1);;
     Ret a.
 
     

@@ -10,8 +10,8 @@
     - [bump] reads one cell and writes it back: [std::span<T>] (Read + Write
       joins to the writable view, which narrows to the read view for the
       read).
-    - [swapArray] (from [STMonad], not unfolded) likewise.
-    - [outer -> middle -> writeArray]: the write reaches [outer] through
+    - [ST.swap_array] (from [ST], not unfolded) likewise.
+    - [outer -> middle -> ST.write_array]: the write reaches [outer] through
       [middle]; both take [std::span<T>].
     - [write_and_refill] writes a cell and calls [refill], a test-only
       operation that writes the whole array canonically ([WriteCanonical]):
@@ -37,11 +37,11 @@ From ITree Require Import
   ITree
 .
 
+From Crane Require Monads.ST.
 From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.STMonad
 .
 From Crane Require Mapping.Descriptor.
 
@@ -49,33 +49,33 @@ Import Monads.
 Import ListNotations.
 Local Open Scope monad_scope.
 
-Module StArrayHelpers.
+Module STArrayHelpers.
 
-  Notation NatE := (STEvent cpp_refs (fun _ : nat => nat) +' exceptE Err).
-  Notation BoolE := (STEvent cpp_refs (fun _ : nat => bool) +' exceptE Err).
-  Notation NatArray := (@STArray cpp_refs nat).
-  Notation BoolArray := (@STArray cpp_refs bool).
+  Notation NatE := (ST.Event ST.cpp_refs (fun _ : nat => nat) +' exceptE Err).
+  Notation BoolE := (ST.Event ST.cpp_refs (fun _ : nat => bool) +' exceptE Err).
+  Notation NatArray := (@ST.array ST.cpp_refs nat).
+  Notation BoolArray := (@ST.array ST.cpp_refs bool).
 
   (** Only reads a cell. *)
   Definition peek (arr : NatArray) (i : nat) : itree NatE nat :=
-    readArray arr i.
+    ST.read_array arr i.
 
   (** Reads one cell and writes it back. *)
   Definition bump (arr : NatArray) (i : nat) : itree NatE unit :=
-    v <- readArray arr i;;
-    writeArray arr i (S v).
+    v <- ST.read_array arr i;;
+    ST.write_array arr i (S v).
 
   (** A write two calls deep. *)
   Definition middle (arr : NatArray) (i : nat) : itree NatE unit :=
-    writeArray arr i 42.
+    ST.write_array arr i 42.
 
   Definition outer (arr : NatArray) : itree NatE unit :=
     middle arr 0;;
     middle arr 2.
 
-  (** Swaps the first and last cells: [swapArray] is called, not unfolded. *)
+  (** Swaps the first and last cells: [ST.swap_array] is called, not unfolded. *)
   Definition swap_ends (arr : NatArray) (last : nat) : itree NatE unit :=
-    swapArray arr 0 last.
+    ST.swap_array arr 0 last.
 
   (** Returns one of its arrays: it keeps them, so takes them by value. *)
   Definition pick (b : bool) (arr1 arr2 : NatArray) : NatArray :=
@@ -84,14 +84,14 @@ Module StArrayHelpers.
   (** Writes its first array and passes both to [pick], which keeps them:
       by value too. *)
   Definition write_then_pick (arr1 arr2 : NatArray) : itree NatE NatArray :=
-    writeArray arr1 1 7;;
+    ST.write_array arr1 1 7;;
     Ret (pick true arr1 arr2).
 
   (** Returns its array through the monad's [Ret], a legacy mapping whose
       argument Crane takes to be only read: borrowed, and copied where it is
       returned. *)
   Definition keep (arr : NatArray) : itree NatE NatArray :=
-    writeArray arr 1 7;;
+    ST.write_array arr 1 7;;
     Ret arr.
 
   (** Reseats the handle to a fresh array of [n] zeros. *)
@@ -102,14 +102,14 @@ Module StArrayHelpers.
   Fixpoint zero_from (arr : NatArray) (i n : nat) : itree NatE unit :=
     match n with
     | O => Ret tt
-    | S m => writeArray arr i 0;; zero_from arr (S i) m
+    | S m => ST.write_array arr i 0;; zero_from arr (S i) m
     end.
 
   Fixpoint sum_from (arr : NatArray) (i n : nat) : itree NatE nat :=
     match n with
     | O => Ret 0
     | S m =>
-        x <- readArray arr i;;
+        x <- ST.read_array arr i;;
         r <- sum_from arr (S i) m;;
         Ret (x + r)
     end.
@@ -119,82 +119,82 @@ Module StArrayHelpers.
 
   (** Writes a cell, then refills the array canonically. *)
   Definition write_and_refill (arr : NatArray) (v : nat) : itree NatE unit :=
-    writeArray arr 0 v;;
+    ST.write_array arr 0 v;;
     refill arr v.
 
   (** Replaces its array, then writes the new one. *)
   Definition regrow_then_write (arr : NatArray) (n : nat) : itree NatE unit :=
     regrow arr n;;
-    writeArray arr 0 n.
+    ST.write_array arr 0 n.
 
   (** A [bool] array: reads one cell and writes its negation back. *)
   Definition flip (arr : BoolArray) (i : nat) : itree BoolE unit :=
-    b <- readArray arr i;;
-    writeArray arr i (negb b).
+    b <- ST.read_array arr i;;
+    ST.write_array arr i (negb b).
 
   Definition helpers_list (xs : list nat) : list nat :=
-    run_st
-      (arr <- newListArray xs;;
+    ST.run_cpp
+      (arr <- ST.array_of_list xs;;
        bump arr 1;;
        outer arr;;
        swap_ends arr (length xs - 1);;
-       getElems arr).
+       ST.array_to_list arr).
 
   Definition keep_list (n : nat) : list nat * list nat :=
-    run_st
-      (arr <- newArray n 3;;
-       other <- newArray 2 4;;
+    ST.run_cpp
+      (arr <- ST.new_array n 3;;
+       other <- ST.new_array 2 4;;
        kept <- keep arr;;
        picked <- write_then_pick kept other;;
-       writeArray picked 0 8;;
-       elems <- getElems arr;;
-       others <- getElems other;;
+       ST.write_array picked 0 8;;
+       elems <- ST.array_to_list arr;;
+       others <- ST.array_to_list other;;
        Ret (elems, others)).
 
   Definition refill_list (n : nat) : nat * list nat :=
-    run_st
-      (arr <- newArray 3 1;;
+    ST.run_cpp
+      (arr <- ST.new_array 3 1;;
        write_and_refill arr n;;
        first <- peek arr 0;;
-       elems <- getElems arr;;
+       elems <- ST.array_to_list arr;;
        Ret (first, elems)).
 
   Definition loops_list (n : nat) : nat * list nat :=
-    run_st
-      (arr <- newArray n 2;;
+    ST.run_cpp
+      (arr <- ST.new_array n 2;;
        zero_from arr 1 2;;
        s <- sum_from arr 0 n;;
-       elems <- getElems arr;;
+       elems <- ST.array_to_list arr;;
        Ret (s, elems)).
 
   Definition regrow_list (n : nat) : list nat :=
-    run_st
-      (arr <- newArray 2 5;;
+    ST.run_cpp
+      (arr <- ST.new_array 2 5;;
        regrow_then_write arr n;;
-       getElems arr).
+       ST.array_to_list arr).
 
   Definition flip_list (bs : list bool) : list bool :=
-    run_st
-      (arr <- newListArray bs;;
+    ST.run_cpp
+      (arr <- ST.array_of_list bs;;
        flip arr 0;;
        flip arr 2;;
-       getElems arr).
+       ST.array_to_list arr).
 
   Definition bools_filled (n : nat) : bool * list bool :=
-    run_st
-      (arr <- newArray n false;;
+    ST.run_cpp
+      (arr <- ST.new_array n false;;
        flip arr 1;;
-       b <- readArray arr 1;;
-       elems <- getElems arr;;
+       b <- ST.read_array arr 1;;
+       elems <- ST.array_to_list arr;;
        Ret (b, elems)).
 
-End StArrayHelpers.
+End STArrayHelpers.
 
 Import Crane.Mapping.Descriptor.
 From Corelib Require Import PrimString.
 Open Scope pstring_scope.
 
-#[export] Instance regrow_mapping : OperationMapping (Ref StArrayHelpers.regrow) :=
+#[export] Instance regrow_mapping : OperationMapping (Ref STArrayHelpers.regrow) :=
   {| operation_headers := ["memory"; "vector"];
      operation_cpp :=
        Expr "%arg(arr) = std::make_shared<crane::array_storage<uint64_t>>(%arg(n), 0)";
@@ -204,7 +204,7 @@ Open Scope pstring_scope.
           {| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
 
-#[export] Instance refill_mapping : OperationMapping (Ref StArrayHelpers.refill) :=
+#[export] Instance refill_mapping : OperationMapping (Ref STArrayHelpers.refill) :=
   {| operation_headers := ["algorithm"];
      operation_cpp := Expr "std::ranges::fill(*%arg(arr), %arg(v))";
      operation_contract :=
@@ -215,4 +215,4 @@ Open Scope pstring_scope.
          [WritesComponent {| path_argument := "arr"; path_components := ["contents"] |} None] |}.
 
 
-Crane Extraction "st_array_helpers" StArrayHelpers.
+Crane Extraction "st_array_helpers" STArrayHelpers.

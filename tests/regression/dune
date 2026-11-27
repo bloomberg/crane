@@ -16501,7 +16501,7 @@
 (subdir st_dead_ref_loop_param
  (rule
   (targets st_dead_ref_loop_param.t.exe)
-  (deps StDeadRefLoopParam.vo st_dead_ref_loop_param.t.cpp (source_tree .))
+  (deps STDeadRefLoopParam.vo st_dead_ref_loop_param.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} st_dead_ref_loop_param.t.exe st_dead_ref_loop_param.t.cpp st_dead_ref_loop_param.cpp)))
  (rule
@@ -16610,7 +16610,7 @@
 (subdir st_dead_stores
  (rule
   (targets st_dead_stores.t.exe)
-  (deps StDeadStores.vo st_dead_stores.t.cpp (source_tree .))
+  (deps STDeadStores.vo st_dead_stores.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} st_dead_stores.t.exe st_dead_stores.t.cpp st_dead_stores.cpp)))
  (rule
@@ -16621,7 +16621,7 @@
 (subdir st_readable_forms
  (rule
   (targets st_readable_forms.t.exe)
-  (deps StReadableForms.vo st_readable_forms.t.cpp (source_tree .))
+  (deps STReadableForms.vo st_readable_forms.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} st_readable_forms.t.exe st_readable_forms.t.cpp st_readable_forms.cpp)))
  (rule

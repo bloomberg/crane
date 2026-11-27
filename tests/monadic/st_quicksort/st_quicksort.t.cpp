@@ -30,33 +30,33 @@ int main() {
              1, List<uint64_t>::cons(2, List<uint64_t>::nil())));
 
   {
-    auto result = StQuicksort::quicksort_fun(lst);
+    auto result = STQuicksort::quicksort_fun(lst);
     ASSERT(result.length() == 3);
-    ASSERT(StQuicksort::nth(0, result, 0) == 1);
-    ASSERT(StQuicksort::nth(1, result, 0) == 2);
-    ASSERT(StQuicksort::nth(2, result, 0) == 4);
-    std::cout << "quicksort_fun [4; 1; 2]: [" << StQuicksort::nth(0, result, 0)
-              << ", " << StQuicksort::nth(1, result, 0) << ", "
-              << StQuicksort::nth(2, result, 0) << "]" << std::endl;
+    ASSERT(STQuicksort::nth(0, result, 0) == 1);
+    ASSERT(STQuicksort::nth(1, result, 0) == 2);
+    ASSERT(STQuicksort::nth(2, result, 0) == 4);
+    std::cout << "quicksort_fun [4; 1; 2]: [" << STQuicksort::nth(0, result, 0)
+              << ", " << STQuicksort::nth(1, result, 0) << ", "
+              << STQuicksort::nth(2, result, 0) << "]" << std::endl;
   }
 
   {
-    auto result = StQuicksort::quicksort_ST_mine(lst);
+    auto result = STQuicksort::quicksort_ST_mine(lst);
     ASSERT(result.length() == 3);
-    ASSERT(StQuicksort::nth(0, result, 0) == 1);
-    ASSERT(StQuicksort::nth(1, result, 0) == 2);
-    ASSERT(StQuicksort::nth(2, result, 0) == 4);
+    ASSERT(STQuicksort::nth(0, result, 0) == 1);
+    ASSERT(STQuicksort::nth(1, result, 0) == 2);
+    ASSERT(STQuicksort::nth(2, result, 0) == 4);
     std::cout << "quicksort_ST_mine [4; 1; 2]: ["
-              << StQuicksort::nth(0, result, 0) << ", "
-              << StQuicksort::nth(1, result, 0) << ", "
-              << StQuicksort::nth(2, result, 0) << "]" << std::endl;
+              << STQuicksort::nth(0, result, 0) << ", "
+              << STQuicksort::nth(1, result, 0) << ", "
+              << STQuicksort::nth(2, result, 0) << "]" << std::endl;
   }
 
   {
     const std::string expected =
         "[ 4, 51, 126, 127, 2412, 5981, 10645, 74879, 212498, 2749812,  ]";
-    auto st = StQuicksort::test_quicksort_ST();
-    auto fun = StQuicksort::test_quicksort_fun();
+    auto st = STQuicksort::test_quicksort_ST();
+    auto fun = STQuicksort::test_quicksort_fun();
     ASSERT(st == expected);
     ASSERT(fun == expected);
     std::cout << "test_quicksort_ST: " << st << std::endl;

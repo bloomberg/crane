@@ -109,7 +109,7 @@ There are two mechanisms:
   module that declares it is imported (`#[export] Instance`), so the imports
   of a file are its mapping configuration. Every mapping in
   `theories/Mapping/` and the ST arrays and references of
-  `Monads/STMonad.v` are typed.
+  `Monads/ST.v` are typed.
 * **Legacy mapping commands** (`Crane Extract Inductive`, `Crane Extract
   Inlined Constant`, ...) give C++ as template strings with no contract.
   They remain necessary for monads and effects (`Crane Extract Monad`,
@@ -346,7 +346,7 @@ refuses `InvalidatesViews` on an argument given as a view.
 The standard string mapping (`Mapping/Std.v`) declares a
 `std::string_view` read view materialised as `std::string`, so a generated
 function that only reads a string takes `std::string_view`. ST arrays
-(`Monads/STMonad.v`) declare `std::span<const T>` and `std::span<T>` views,
+(`Monads/ST.v`) declare `std::span<const T>` and `std::span<T>` views,
 `BorrowOnly`.
 
 #### Constructors and matches
@@ -1224,7 +1224,7 @@ Drops the listed arguments (positions from 1, or names) of a constant,
 inductive or constructor from the generated signature.
 
 ```coq
-Crane Extraction Implicit newSTRef [idx].
+Crane Extraction Implicit new_ref [R].
 ```
 
 ### `Crane Extraction Blacklist`

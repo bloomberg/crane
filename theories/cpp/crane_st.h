@@ -1,7 +1,7 @@
 // Copyright 2026 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
 //
-// ST arrays (theories/Monads/STMonad.v): an array is a
+// ST arrays (theories/Monads/ST.v): an array is a
 // std::shared_ptr<crane::array_storage<T>>, read through a
 // std::span<const T> and written through a std::span<T>.  These operations
 // convert between an array and a generated List: the list type is a template

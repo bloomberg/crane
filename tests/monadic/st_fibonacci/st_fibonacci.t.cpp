@@ -27,8 +27,8 @@ void aSsErT(bool condition, const char *message, int line) {
 int main() {
   const uint64_t expected[] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55};
   for (uint64_t n = 0; n <= 10; ++n) {
-    auto st = StFibonacci::fib_ST(n);
-    auto fun = StFibonacci::fib_fun(n);
+    auto st = STFibonacci::fib_ST(n);
+    auto fun = STFibonacci::fib_fun(n);
     ASSERT(st == expected[n]);
     ASSERT(fun == expected[n]);
     std::cout << "fib_ST " << n << " = " << st << ", fib_fun " << n << " = "

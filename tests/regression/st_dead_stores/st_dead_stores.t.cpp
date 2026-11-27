@@ -15,7 +15,7 @@ void check(bool ok, const char *what) {
 } // namespace
 
 int main() {
-  using M = StDeadStores;
+  using M = STDeadStores;
   check(M::written_only == 7, "written_only = 7");
   check(M::read_by_dead_store == 0, "read_by_dead_store = 0");
   check(M::written_in_branch(true) == 11, "written_in_branch true = 11");

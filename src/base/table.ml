@@ -3024,7 +3024,7 @@ let is_custom r =
   Core.Ref.Can.Map.mem r !customs || Mapping_plan.is_mapped r || Mapping_operation.is_operation_head r
 
 (** Whether [r] is an inductive with one constructor none of whose fields
-    survives extraction -- a type class holding only types, [STRefs]: its one
+    survives extraction -- a type class holding only types, [ST.Refs]: its one
     value says nothing, so a function need not be passed it.  Not a mapped
     type, whose C++ spelling the mapping decides. *)
 let is_content_free_singleton r =

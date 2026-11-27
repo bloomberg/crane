@@ -256,19 +256,22 @@ definitions in `ParDefs.v`.
 
 Each has a `*Defs.v` file with the shared definitions.
 
-### `Monads/STMonad.v`
+### `Monads/ST.v`
 
 A Haskell-style `ST` monad for local mutable state, distinct from STM.
-`STMonadFacts.v`, `STMonadSpec.v` and `STMonadArrayFacts.v` hold the
-reasoning principles (not extracted).
+`STFacts.v`, `STSpec.v` and `STArrayFacts.v` hold the
+reasoning principles (not extracted). Require it qualified,
+`From Crane Require Monads.ST.`, and write `ST.new_ref`, `ST.ref A`: importing
+it would shadow ITree's `interp`. Its mapping instances are global, so a
+qualified Require is enough.
 
-A program is written against an abstract `STRefs` (the type of references
-and of arrays, nothing more) and `runST` takes it polymorphic in it,
-`forall R : STRefs, itree (STEvent R V +' E) A`: inside the program a
+A program is written against an abstract `ST.Refs` (the type of references
+and of arrays, nothing more) and `ST.run` takes it polymorphic in it,
+`forall R : ST.Refs, itree (ST.Event R V +' E) A`: inside the program a
 reference is of an abstract type, so it cannot be inspected, forged or
-returned from the run. `runST` interprets the program in a model where a
-reference is a location; extraction instantiates it at `cpp_refs` and runs
-it with `run_st`, the identity. Values of different types share the store
+returned from the run. `ST.run` interprets the program in a model where a
+reference is a location; extraction instantiates it at `ST.cpp_refs` and runs
+it with `ST.run_cpp`, the identity. Values of different types share the store
 through codes, `V : nat -> Type`; a `Code V A` instance gives `A` its code
 (`code_const` does where every value has one type), so no operation takes
 one.
@@ -277,19 +280,19 @@ The array and reference types are typed mappings:
 
 | Rocq | C++ | Views |
 | --- | --- | --- |
-| `STRef A` | `std::shared_ptr<A>` | `const A*` (read), `A*` (write), borrow-only |
-| `STArray A` | `std::shared_ptr<crane::array_storage<A>>` | `std::span<const A>` (read), `std::span<A>` (write), borrow-only |
+| `ST.ref A` | `std::shared_ptr<A>` | `const A*` (read), `A*` (write), borrow-only |
+| `ST.array A` | `std::shared_ptr<crane::array_storage<A>>` | `std::span<const A>` (read), `std::span<A>` (write), borrow-only |
 
 | Operation | C++ | Contract |
 | --- | --- | --- |
-| `newSTRef v` | `std::make_shared<A>(v)` | takes `v`, fresh identity |
-| `readSTRef r` | `*r` | reads `r` |
-| `writeSTRef r a` | `*r = a` | writes `r`, takes `a` |
-| `newArray n def`, `newListArray elems` | a new `array_storage` | fresh identity |
-| `readArray arr i` | `arr[i]` | reads `arr` |
-| `writeArray arr i v` | `arr[i] = v` | writes `arr`, takes `v` |
-| `swapArray arr i j` | `std::swap(arr[i], arr[j])` | writes `arr` |
-| `getElems arr` | the elements as a list | reads `arr` |
+| `ST.new_ref v` | `std::make_shared<A>(v)` | takes `v`, fresh identity |
+| `ST.read_ref r` | `*r` | reads `r` |
+| `ST.write_ref r a` | `*r = a` | writes `r`, takes `a` |
+| `ST.new_array n def`, `ST.array_of_list elems` | a new `array_storage` | fresh identity |
+| `ST.read_array arr i` | `arr[i]` | reads `arr` |
+| `ST.write_array arr i v` | `arr[i] = v` | writes `arr`, takes `v` |
+| `ST.swap_array arr i j` | `std::swap(arr[i], arr[j])` | writes `arr` |
+| `ST.array_to_list arr` | the elements as a list | reads `arr` |
 
 So a helper that reads and writes one array extracts as its own function
 taking `std::span<A>` (or `const std::shared_ptr<...>&` where it keeps the
@@ -303,12 +306,13 @@ Recursive `ST` code is an ordinary `Fixpoint`; one that is not structural
 recursion recurses on an accessibility proof, which is erased
 (`tests/monadic/st_quicksort`).
 
-### `Monads/GlobalState.v`, `Monads/Error.v`
+### `Monads/Global.v`, `Monads/Error.v`
 
 A global-state event family, its references mapped as ST references
 (`std::shared_ptr<A>`), with its reasoning facts in
-`GlobalStateFacts.v`, and `Err`, the error type of runtime errors raised
-through ITree's exception events.
+`GlobalFacts.v`, and `Err`, the error type of runtime errors raised
+through ITree's exception events. Require `Global` qualified as `ST`
+(`Global.new_ref`, `{H : Global.RefClass T}`).
 
 ---
 

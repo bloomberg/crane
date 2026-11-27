@@ -711,8 +711,8 @@ let eta_fun cx (slot : Slot.slot) env f args :
        their lists are left whole. *)
     (* The declared types of the regular parameters, in order, read off the
        roles Core gave the call's arguments: an instance need not lead -- a
-       section's [{R : STRefs}] comes before the definition's
-       [`{STEvent R V -< E}] -- so the [i]th regular argument is the [i]th
+       section's [{R : ST.Refs}] comes before the definition's
+       [`{ST.Event R V -< E}] -- so the [i]th regular argument is the [i]th
        parameter whose argument is [Regular], and an eta parameter past the
        given arguments is regular too.  Each argument but a [Dropped] one
        stands for the next value parameter. *)

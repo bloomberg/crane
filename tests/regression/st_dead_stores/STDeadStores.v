@@ -16,21 +16,22 @@
 
 From Stdlib Require Import Arith.PeanoNat List.
 From ITree Require Import Events.Exception ITree.
-From Crane Require Import Mapping.NatIntStd Monads.Error Monads.ITree Monads.STMonad.
+From Crane Require Monads.ST.
+From Crane Require Import Mapping.NatIntStd Monads.Error Monads.ITree.
 Import Monads.
 Import ListNotations.
 Local Open Scope monad_scope.
 
 Section S.
-  Context {R : STRefs}.
-  Notation E0 := (STEvent R (fun _ : nat => nat) +' exceptE Err).
+  Context {R : ST.Refs}.
+  Notation E0 := (ST.Event R (fun _ : nat => nat) +' exceptE Err).
 
   Definition written_only : itree E0 nat :=
-    r <- newSTRef 1;;
-    let fix go (k : nat) (p : STRef nat) : itree E0 nat :=
+    r <- ST.new_ref 1;;
+    let fix go (k : nat) (p : ST.ref nat) : itree E0 nat :=
       match k with
       | O => Ret 7
-      | Datatypes.S k' => writeSTRef p (k' * 2);; go k' p
+      | Datatypes.S k' => ST.write_ref p (k' * 2);; go k' p
       end in
     go 3 r.
 
@@ -38,28 +39,28 @@ Section S.
     let fix go (k acc : nat) : itree E0 nat :=
       match k with
       | O => Ret k
-      | Datatypes.S k' => r <- newSTRef acc;; go k' (acc + 1)
+      | Datatypes.S k' => r <- ST.new_ref acc;; go k' (acc + 1)
       end in
     go 4 0.
 
   Definition written_in_branch (b : bool) : itree E0 nat :=
-    r <- newSTRef 0;;
-    x <- (if b then writeSTRef r 5;; Ret 1 else Ret 2);;
+    r <- ST.new_ref 0;;
+    x <- (if b then ST.write_ref r 5;; Ret 1 else Ret 2);;
     Ret (x + 10).
 
   Definition written_in_unused_branch (b : bool) : itree E0 nat :=
-    r <- newSTRef 0;;
-    s <- newSTRef 3;;
-    x <- (if b then writeSTRef r 5;; v <- readSTRef s;; writeSTRef s (v + 1);; Ret 1 else Ret 2);;
-    readSTRef s.
+    r <- ST.new_ref 0;;
+    s <- ST.new_ref 3;;
+    x <- (if b then ST.write_ref r 5;; v <- ST.read_ref s;; ST.write_ref s (v + 1);; Ret 1 else Ret 2);;
+    ST.read_ref s.
 End S.
 
-Module StDeadStores.
-  Definition written_only : nat := run_st (@written_only cpp_refs).
-  Definition read_by_dead_store : nat := run_st (@read_by_dead_store cpp_refs).
-  Definition written_in_branch (b : bool) : nat := run_st (@written_in_branch cpp_refs b).
-  Definition written_in_unused_branch (b : bool) : nat := run_st (@written_in_unused_branch cpp_refs b).
-End StDeadStores.
+Module STDeadStores.
+  Definition written_only : nat := ST.run_cpp (@written_only ST.cpp_refs).
+  Definition read_by_dead_store : nat := ST.run_cpp (@read_by_dead_store ST.cpp_refs).
+  Definition written_in_branch (b : bool) : nat := ST.run_cpp (@written_in_branch ST.cpp_refs b).
+  Definition written_in_unused_branch (b : bool) : nat := ST.run_cpp (@written_in_unused_branch ST.cpp_refs b).
+End STDeadStores.
 
 Set Crane Loopify.
-Crane Extraction "st_dead_stores" StDeadStores.
+Crane Extraction "st_dead_stores" STDeadStores.

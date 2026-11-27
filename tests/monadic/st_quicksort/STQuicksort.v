@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** In-place quicksort on an ST array (Lomuto partition), next to the pure
-    [quicksort_fun]. [StQuicksortProofs] shows that the two agree. *)
+    [quicksort_fun]. [STQuicksortProofs] shows that the two agree. *)
 
 From Stdlib Require Import
   Arith.PeanoNat
@@ -19,11 +19,11 @@ From ITree Require Import
   ITree
 .
 
+From Crane Require Monads.ST.
 From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.STMonad
 .
 
 Import Monads.
@@ -32,24 +32,24 @@ Local Open Scope monad_scope.
 
 Section Quicksort.
 
-  Context {R : STRefs}.
+  Context {R : ST.Refs}.
   Notation V := (fun _ : nat => nat).
-  Notation E0 := (STEvent R V +' exceptE Err).
+  Notation E0 := (ST.Event R V +' exceptE Err).
 
   (** The Lomuto scan of [arr[i..hi-1]] against the pivot value [pv]: an
       element [<= pv] is swapped to [s], the next free slot of the small
       region [lo..s-1].  Returns the final [s], with its bounds.  It
       recurses on the accessibility of [hi - i], which is erased; the
       proofs are left as holes and closed below the definition. *)
-  #[refine] Fixpoint lomuto_scan {E' : Type -> Type} `{STEvent R V -< E'}
-    (arr : STArray nat) (pv lo hi i s : nat)
+  #[refine] Fixpoint lomuto_scan {E' : Type -> Type} `{ST.Event R V -< E'}
+    (arr : ST.array nat) (pv lo hi i s : nat)
     (Hs : lo <= s <= i) (Hi : i <= hi) (acc : Acc lt (hi - i)) {struct acc}
     : itree E' {p : nat | lo <= p <= hi} :=
     match Sumbool.sumbool_of_bool (Nat.ltb i hi) with
     | left Hlt =>
-      v <- readArray (E := E') (V := V) arr i;;
+      v <- ST.read_array (E := E') (V := V) arr i;;
       if Nat.leb v pv
-      then swapArray (E := E') (V := V) arr i s;;
+      then ST.swap_array (E := E') (V := V) arr i s;;
            @lomuto_scan E' _ arr pv lo hi (Datatypes.S i) (Datatypes.S s) _ _
              (@Acc_inv _ _ _ acc (hi - Datatypes.S i) _)
       else @lomuto_scan E' _ arr pv lo hi (Datatypes.S i) s _ _
@@ -60,13 +60,13 @@ Section Quicksort.
 
   (** Lomuto partition of [arr[lo..hi]] around [arr[pividx]]; returns the
       final position of the pivot, within [lo..hi]. *)
-  #[refine] Definition partition {E' : Type -> Type} `{STEvent R V -< E'}
-    (arr : STArray nat) (lo hi pividx : nat) (Hlo : lo <= hi)
+  #[refine] Definition partition {E' : Type -> Type} `{ST.Event R V -< E'}
+    (arr : ST.array nat) (lo hi pividx : nat) (Hlo : lo <= hi)
     : itree E' {p : nat | lo <= p <= hi} :=
-    pv <- readArray (E := E') (V := V) arr pividx;;
-    swapArray (E := E') (V := V) arr pividx hi;;
+    pv <- ST.read_array (E := E') (V := V) arr pividx;;
+    ST.swap_array (E := E') (V := V) arr pividx hi;;
     p <- @lomuto_scan E' _ arr pv lo hi lo lo _ Hlo (lt_wf (hi - lo));;
-    swapArray (E := E') (V := V) arr (proj1_sig p) hi;;
+    ST.swap_array (E := E') (V := V) arr (proj1_sig p) hi;;
     Ret p.
   Proof. lia. Defined.
 
@@ -74,8 +74,8 @@ Section Quicksort.
       effectful [partition], so the recursion is not structural: it is on
       the accessibility of [hi - lo], which [partition]'s bounds decrease.
       The proofs are erased; no counter runs. *)
-  #[refine] Fixpoint quicksort_ST {E' : Type -> Type} `{STEvent R V -< E'}
-    (arr : STArray nat) (lo hi : nat) (acc : Acc lt (hi - lo)) {struct acc} : itree E' unit :=
+  #[refine] Fixpoint quicksort_ST {E' : Type -> Type} `{ST.Event R V -< E'}
+    (arr : ST.array nat) (lo hi : nat) (acc : Acc lt (hi - lo)) {struct acc} : itree E' unit :=
     match Sumbool.sumbool_of_bool (Nat.ltb lo hi) with
     | left Hlt =>
       p <- @partition E' _ arr lo hi (lo + (hi - lo) / 2) _;;
@@ -93,9 +93,9 @@ Section Quicksort.
     match xs with
     | [] => Ret []
     | _ :: _ =>
-      arr <- newListArray (E := E0) (V := V) xs;;
+      arr <- ST.array_of_list (E := E0) (V := V) xs;;
       quicksort_ST arr 0 (length xs - 1) (Acc_intro_generator 10 lt_wf _);;
-      getElems (E := E0) (V := V) arr
+      ST.array_to_list (E := E0) (V := V) arr
     end.
 
 End Quicksort.
@@ -115,12 +115,12 @@ Proof.
   - specialize (filter_length (fun x => Nat.leb p x) xs). simpl. lia.
 Defined.
 
-Module StQuicksort.
+Module STQuicksort.
   Transparent quicksort_fun.
   Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
   Definition quicksort_ST_mine :=
     Eval unfold quicksort_ST_list in
-      (@quicksort_ST_list cpp_refs).
+      (@quicksort_ST_list ST.cpp_refs).
 
   Definition nth := Eval unfold List.nth in (@List.nth nat).
 
@@ -138,13 +138,13 @@ Module StQuicksort.
   Definition input_lst1 := [212498; 127; 5981; 2749812; 74879; 126; 4; 51; 2412; 10645].
 
   Definition test_quicksort_ST (_ : unit) : PrimString.string :=
-    run_st
+    ST.run_cpp
       (out <- quicksort_ST_mine input_lst1;;
        Ret (list_to_string out)).
 
   Definition test_quicksort_fun (_ : unit) : PrimString.string :=
     list_to_string (quicksort_fun input_lst1).
-End StQuicksort.
+End STQuicksort.
 
 Set Crane Loopify.
 (** The two recursive calls stay C++ recursion, as deep as the sort:
@@ -152,9 +152,9 @@ Set Crane Loopify.
     (tests/wip/itree_two_self_calls). *)
 Crane NoLoopify quicksort_ST.
 
-Crane Extraction "st_quicksort" StQuicksort.
+Crane Extraction "st_quicksort" STQuicksort.
 
 Crane Benchmark
-  StQuicksort.test_quicksort_fun,
-  StQuicksort.test_quicksort_ST
+  STQuicksort.test_quicksort_fun,
+  STQuicksort.test_quicksort_ST
 On C++ With "".

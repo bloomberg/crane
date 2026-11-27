@@ -19,17 +19,17 @@ From ITree Require Import
   ITreeFacts
 .
 
+From Crane Require Monads.ST.
 From Crane Require Import
   Monads.Error
   Monads.ITree
   Monads.MonadFacts
-  Monads.STMonad
-  Monads.STMonadFacts
-  Monads.STMonadSpec
+  Monads.STFacts
+  Monads.STSpec
   Utils.HMap
 .
 
-From CraneTestsMonadic.st_fibonacci Require Import StFibonacci.
+From CraneTestsMonadic.st_fibonacci Require Import STFibonacci.
 
 Import Monads.
 Local Open Scope monad_scope.
@@ -62,42 +62,42 @@ Section FibonacciProofs.
 
   (** [x] and [y] are different locations, holding [a] and [b]. *)
   Lemma fib_loop_spec :
-    forall k (a b : nat) (m : mem V) (x y : nat),
-    x <> y -> st_get x m = Some a -> st_get y m = Some b ->
-    st_spec (E := exceptE Err) (fib_loop (R := model_refs) k x y) m
+    forall k (a b : nat) (m : ST.mem V) (x y : nat),
+    x <> y -> read_at x m = Some a -> read_at y m = Some b ->
+    spec (E := exceptE Err) (fib_loop (R := ST.model_refs) k x y) m
       (fun _ r => r = fib_seq a b k).
   Proof.
     induction k as [|k IH]; intros a b m x y Hxy hx hy; cbn [fib_loop].
-    - eapply st_spec_readSTRef; [ exact hx | reflexivity ].
-    - apply st_spec_bind. eapply st_spec_readSTRef; [ exact hx |]. cbv beta.
-      apply st_spec_bind. eapply st_spec_readSTRef; [ exact hy |]. cbv beta.
-      apply st_spec_bind, st_spec_writeSTRef. cbv beta.
-      apply st_spec_bind, st_spec_writeSTRef. cbv beta.
+    - eapply read_ref; [ exact hx | reflexivity ].
+    - apply spec_bind. eapply read_ref; [ exact hx |]. cbv beta.
+      apply spec_bind. eapply read_ref; [ exact hy |]. cbv beta.
+      apply spec_bind, write_ref. cbv beta.
+      apply spec_bind, write_ref. cbv beta.
       apply IH; [ exact Hxy | | ].
-      + rewrite st_get_put_ne by exact Hxy. apply st_get_put_eq.
-      + apply st_get_put_eq.
+      + rewrite read_at_write_at_ne by exact Hxy. apply read_at_write_at_eq.
+      + apply read_at_write_at_eq.
   Qed.
 
 End FibonacciProofs.
 
 Lemma fib_ST_eq_fib_fun : forall (n : nat),
-    Ret (fib_fun n) ≈ runST (fun R => fib_ST (R := R) n).
+    Ret (fib_fun n) ≈ ST.run (fun R => fib_ST (R := R) n).
 Proof.
   intros n.
-  destruct (st_spec_runST (fun R => fib_ST (R := R) n) (fun r => r = fib_fun n))
+  destruct (run (fun R => fib_ST (R := R) n) (fun r => r = fib_fun n))
     as (r & Hrun & ->); [| symmetry; exact Hrun ].
   unfold fib_ST. destruct (Nat.ltb_spec n 2) as [Hn | Hn].
-  - apply st_spec_ret. destruct n as [|[|n]]; [ reflexivity | reflexivity | lia ].
-  - apply st_spec_bind, st_spec_newSTRef. cbv beta.
-    apply st_spec_bind, st_spec_newSTRef. cbv beta.
-    set (m1 := st_put _ 0 _).
+  - apply spec_ret. destruct n as [|[|n]]; [ reflexivity | reflexivity | lia ].
+  - apply spec_bind, new_ref. cbv beta.
+    apply spec_bind, new_ref. cbv beta.
+    set (m1 := write_at _ 0 _).
     (* the second location is past the first, which is in use *)
-    assert (Hfresh : st_fresh (V := fun _ : nat => nat) HMap.empty <> st_fresh m1).
-    { intros Heq. assert (Hin : st_get (V := fun _ : nat => nat) (st_fresh HMap.empty) m1 = Some 0)
-        by apply st_get_put_eq.
-      rewrite Heq, st_get_fresh in Hin by lia. discriminate. }
-    eapply st_spec_weaken; [| apply fib_loop_spec; [ exact Hfresh | | ] ].
+    assert (Hfresh : ST.fresh (V := fun _ : nat => nat) HMap.empty <> ST.fresh m1).
+    { intros Heq. assert (Hin : read_at (V := fun _ : nat => nat) (ST.fresh HMap.empty) m1 = Some 0)
+        by apply read_at_write_at_eq.
+      rewrite Heq, read_at_fresh in Hin by lia. discriminate. }
+    eapply spec_weaken; [| apply fib_loop_spec; [ exact Hfresh | | ] ].
     + intros _ r ->. symmetry. apply fib_fun_eq_seq.
-    + rewrite st_get_put_ne by exact Hfresh. apply st_get_put_eq.
-    + apply st_get_put_eq.
+    + rewrite read_at_write_at_ne by exact Hfresh. apply read_at_write_at_eq.
+    + apply read_at_write_at_eq.
 Qed.

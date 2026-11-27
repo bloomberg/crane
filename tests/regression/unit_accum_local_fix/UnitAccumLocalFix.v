@@ -4,38 +4,39 @@
 From Stdlib Require Import Arith.PeanoNat List.
 From Stdlib Require PrimString.
 From ITree Require Import Events.Exception ITree.
-From Crane Require Import Mapping.NatIntStd Monads.Error Monads.ITree Monads.STMonad.
+From Crane Require Monads.ST.
+From Crane Require Import Mapping.NatIntStd Monads.Error Monads.ITree.
 From Crane Require Extraction.
 Import Monads. Import ListNotations. Local Open Scope monad_scope.
 
 Section S.
-  Context {R : STRefs}.
-  Notation E0 := (STEvent R (fun _ : nat => nat) +' exceptE Err).
+  Context {R : ST.Refs}.
+  Notation E0 := (ST.Event R (fun _ : nat => nat) +' exceptE Err).
 
-  (** [for_each_with] at [B := unit], unfolded below into a local fixpoint. *)
+  (** [ST.for_each_with] at [B := unit], unfolded below into a local fixpoint. *)
   Definition fill (n : nat) : itree E0 nat :=
-    a <- newArray n 0;;
-    for_each_with (seq 0 n) tt (fun _ i => writeArray a i (i * 2));;
-    readArray a (n - 1).
+    a <- ST.new_array n 0;;
+    ST.for_each_with (seq 0 n) tt (fun _ i => ST.write_array a i (i * 2));;
+    ST.read_array a (n - 1).
 
 End S.
 
 Module UnitAccumLocalFix.
-  Definition fill := Eval unfold fill, for_each_with in @fill cpp_refs.
+  Definition fill := Eval unfold fill, ST.for_each_with in @fill ST.cpp_refs.
 
-  (** [for_each_with] at [B := unit] as a top-level [Fixpoint]. *)
+  (** [ST.for_each_with] at [B := unit] as a top-level [Fixpoint]. *)
   Fixpoint each_unit (xs : list nat) (u : unit)
-    (f : unit -> nat -> itree (STEvent cpp_refs (fun _ : nat => nat) +' exceptE Err) unit)
-    : itree (STEvent cpp_refs (fun _ : nat => nat) +' exceptE Err) unit :=
+    (f : unit -> nat -> itree (ST.Event ST.cpp_refs (fun _ : nat => nat) +' exceptE Err) unit)
+    : itree (ST.Event ST.cpp_refs (fun _ : nat => nat) +' exceptE Err) unit :=
     match xs with
     | nil => Ret u
     | i :: t => u' <- f u i;; each_unit t u' f
     end.
 
-  Definition fill_top (n : nat) : itree (STEvent cpp_refs (fun _ : nat => nat) +' exceptE Err) nat :=
-    a <- newArray n 0;;
-    each_unit (seq 0 n) tt (fun _ i => writeArray a i (i * 3));;
-    readArray a (n - 1).
+  Definition fill_top (n : nat) : itree (ST.Event ST.cpp_refs (fun _ : nat => nat) +' exceptE Err) nat :=
+    a <- ST.new_array n 0;;
+    each_unit (seq 0 n) tt (fun _ i => ST.write_array a i (i * 3));;
+    ST.read_array a (n - 1).
 
   (** A pure top-level [Fixpoint] returning its [unit] accumulator. *)
   Fixpoint walk_top (xs : list nat) (u : unit) : unit :=

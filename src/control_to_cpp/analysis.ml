@@ -762,7 +762,7 @@ and collect_stmts check ~in_visitor stmts =
       (* Void/unit tail-call pattern [f(); return (val)] where [f()] is itself
          the recursive call — treat it as [return f()].  Guard on [check e] so
          we only fire when the [Expression] is genuinely the recursive tail call; a
-         bare side-effect followed by [return g()] (e.g. [writeSTRef(...);
+         bare side-effect followed by [return g()] (e.g. [write_ref(...);
          return _self_go(...)]) must fall through so the recursive call in the
          [Return] is not discarded. *)
       collect_stmt check ~in_visitor (Return (Some e)) @ go rest

@@ -12,59 +12,60 @@
 
 From Stdlib Require Import Arith.PeanoNat List.
 From ITree Require Import Events.Exception ITree.
-From Crane Require Import Mapping.NatIntStd Monads.Error Monads.ITree Monads.STMonad.
+From Crane Require Monads.ST.
+From Crane Require Import Mapping.NatIntStd Monads.Error Monads.ITree.
 Import Monads.
 Import ListNotations.
 Local Open Scope monad_scope.
 
 Section S.
-  Context {R : STRefs}.
-  Notation E0 := (STEvent R (fun _ : nat => nat) +' exceptE Err).
+  Context {R : ST.Refs}.
+  Notation E0 := (ST.Event R (fun _ : nat => nat) +' exceptE Err).
 
   Definition bump_twice : itree E0 nat :=
-    r <- newSTRef 0;;
-    let fix bump (k : nat) (x : STRef nat) : itree E0 unit :=
+    r <- ST.new_ref 0;;
+    let fix bump (k : nat) (x : ST.ref nat) : itree E0 unit :=
       match k with
       | O => Ret tt
-      | Datatypes.S k' => v <- readSTRef x;; writeSTRef x (v + 1);; bump k' x
+      | Datatypes.S k' => v <- ST.read_ref x;; ST.write_ref x (v + 1);; bump k' x
       end in
     bump 3 r;;
     bump 4 r;;
-    readSTRef r.
+    ST.read_ref r.
 
   Definition bump_each : itree E0 (nat * nat) :=
-    r <- newSTRef 0;;
-    s <- newSTRef 10;;
-    let fix bump (k : nat) (x : STRef nat) : itree E0 unit :=
+    r <- ST.new_ref 0;;
+    s <- ST.new_ref 10;;
+    let fix bump (k : nat) (x : ST.ref nat) : itree E0 unit :=
       match k with
       | O => Ret tt
-      | Datatypes.S k' => v <- readSTRef x;; writeSTRef x (v + 1);; bump k' x
+      | Datatypes.S k' => v <- ST.read_ref x;; ST.write_ref x (v + 1);; bump k' x
       end in
     bump 3 r;;
     bump 4 s;;
-    a <- readSTRef r;;
-    b <- readSTRef s;;
+    a <- ST.read_ref r;;
+    b <- ST.read_ref s;;
     Ret (a, b).
 
   Definition fill_each : itree E0 (list nat * list nat) :=
-    a <- newArray 3 0;;
-    b <- newArray 2 0;;
-    let fix fill (i n : nat) (arr : STArray nat) : itree E0 unit :=
+    a <- ST.new_array 3 0;;
+    b <- ST.new_array 2 0;;
+    let fix fill (i n : nat) (arr : ST.array nat) : itree E0 unit :=
       match n with
       | O => Ret tt
-      | Datatypes.S n' => writeArray arr i (i + 1);; fill (Datatypes.S i) n' arr
+      | Datatypes.S n' => ST.write_array arr i (i + 1);; fill (Datatypes.S i) n' arr
       end in
     fill 0 3 a;;
     fill 0 2 b;;
-    xs <- getElems a;;
-    ys <- getElems b;;
+    xs <- ST.array_to_list a;;
+    ys <- ST.array_to_list b;;
     Ret (xs, ys).
 End S.
 
 Module LocalLambdaRefs.
-  Definition bump_twice : nat := run_st (@bump_twice cpp_refs).
-  Definition bump_each : nat * nat := run_st (@bump_each cpp_refs).
-  Definition fill_each : list nat * list nat := run_st (@fill_each cpp_refs).
+  Definition bump_twice : nat := ST.run_cpp (@bump_twice ST.cpp_refs).
+  Definition bump_each : nat * nat := ST.run_cpp (@bump_each ST.cpp_refs).
+  Definition fill_each : list nat * list nat := ST.run_cpp (@fill_each ST.cpp_refs).
   Definition nth := Eval unfold List.nth in (@List.nth nat).
 End LocalLambdaRefs.
 

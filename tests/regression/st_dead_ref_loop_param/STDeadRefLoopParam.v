@@ -1,6 +1,6 @@
 (** Found by Ephyra round 28 (ST programs on main: [FZ_ST_MAIN]). A
     tail-recursive local helper in the ST monad whose accumulator [acc] is
-    read only by a [newSTRef] whose reference is never used. Seen with
+    read only by a [ST.new_ref] whose reference is never used. Seen with
     pair-valued references (with a [nat] reference the read survived as an
     unused [_x] and compiled). Kin of the st-code-rank2 round 26
     [st_dead_stores] and round 5's [unused_let_local_fix_werror].
@@ -15,28 +15,29 @@
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatIntStd.
 From ITree Require Import ITree Events.Exception.
-From Crane Require Import Monads.ITree Monads.Error Monads.STMonad.
+From Crane Require Monads.ST.
+From Crane Require Import Monads.ITree Monads.Error.
 Import Monads.
 Local Open Scope monad_scope.
 
 Section S.
-  Context {R : STRefs}.
-  Notation E0 := (STEvent R (fun _ : nat => (nat * nat)%type) +' exceptE Err).
+  Context {R : ST.Refs}.
+  Notation E0 := (ST.Event R (fun _ : nat => (nat * nat)%type) +' exceptE Err).
 
   Definition st_1 : itree E0 nat :=
-    r0 <- newSTRef (2, 1);;
-    let fix h (k : nat) (acc : nat) (p : STRef (nat * nat)) : itree E0 nat :=
+    r0 <- ST.new_ref (2, 1);;
+    let fix h (k : nat) (acc : nat) (p : ST.ref (nat * nat)) : itree E0 nat :=
       match k with
       | O => Ret 5
-      | Datatypes.S k' => r <- newSTRef (k', acc);; h k' 7 p
+      | Datatypes.S k' => r <- ST.new_ref (k', acc);; h k' 7 p
       end in
     y <- h 4 1 r0;;
-    '(a, b) <- readSTRef r0;;
+    '(a, b) <- ST.read_ref r0;;
     Ret (y * 10 + a + b).
 End S.
 
-Module StDeadRefLoopParam.
-  Definition result : nat := run_st (@st_1 cpp_refs).
-End StDeadRefLoopParam.
+Module STDeadRefLoopParam.
+  Definition result : nat := ST.run_cpp (@st_1 ST.cpp_refs).
+End STDeadRefLoopParam.
 
-Crane Extraction "st_dead_ref_loop_param" StDeadRefLoopParam.
+Crane Extraction "st_dead_ref_loop_param" STDeadRefLoopParam.

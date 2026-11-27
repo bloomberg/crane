@@ -49,13 +49,13 @@ Local Open Scope monad_scope.
 From Corelib Require Derive.
 From CraneTestsMonadic.global_state Require Import GlobalStateExamples.
 
+From Crane Require Monads.Global.
 From Crane Require Import
   Monads.Error
   Monads.ITree
   Monads.Indices
   Monads.MonadFacts
-  Monads.GlobalState
-  Monads.GlobalStateFacts
+  Monads.GlobalFacts
   Utils.HMap
 .
 
@@ -65,45 +65,45 @@ Section NatProgramProofs.
   Let T := nat.
   Let ltu := Nat.le.
   Existing Instance nat_ix_correct.
-  Existing Instance nat_ix_globref.
+  Existing Instance Global.nat_ref_class.
   Context {S : Type}.
   
   (* only integer typed values here *)
   Let V : T -> Type := fun _ => nat.
 
-  Let E0 := (GlobEvent T V) +' exceptE Err.
+  Let E0 := (Global.Event T V) +' exceptE Err.
 
 
   Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.HMapOk_halist.
 
-  Derive (tree_simplified : itree (exceptE Err) (HAList.halist (idx_key T) (idx_key_type (fun _ : T => nat)) * nat)) in
-    ( runGlob tree_simp_nat 
+  Derive (tree_simplified : itree (exceptE Err) (HAList.halist (Global.idx_key T) (Global.idx_key_type (fun _ : T => nat)) * nat)) in
+    ( Global.run tree_simp_nat 
         ≈
       tree_simplified
     ) as tree_simplification.
   Proof using Type.
-    unfold runGlob.
+    unfold Global.run.
     unfold tree_simp_nat.
     etransitivity.
-    eapply (eutt_eq_bind_interp_glob ltu ltac:(refine_prod)).
-    - unfold newGlobRef.
-      eapply interp_glob_trigger.
+    eapply (eutt_eq_bind_interp ltu ltac:(refine_prod)).
+    - unfold Global.new_ref.
+      eapply interp_trigger.
     - intros u lmem'.
-      unfold readGlobRef.
-      eapply interp_glob_trigger.
+      unfold Global.read_ref.
+      eapply interp_trigger.
     - repeat setoid_rewrite bind_Ret_l. cbn.
       unfold tree_simplified.
       reflexivity.
   Defined.
 
   Lemma fib_10 :
-    burn 100 (runGlob (fib_Glob 10))
-    = Ret ([existT (fun k : idx_key nat => idx_key_type (fun _ : nat => nat) k) (2, 1) 89;
-           existT (fun k : idx_key nat => idx_key_type (fun _ : nat => nat) k) (1, 0) 55],
+    burn 100 (Global.run (fib_Glob 10))
+    = Ret ([existT (fun k : Global.idx_key nat => Global.idx_key_type (fun _ : nat => nat) k) (2, 1) 89;
+           existT (fun k : Global.idx_key nat => Global.idx_key_type (fun _ : nat => nat) k) (1, 0) 55],
           55).
   Proof using Type. lazy. reflexivity. Qed.
 
-  (* TODO: duplicates functional proof work from STMonadFunctionalTests.v *)
+  (* TODO: duplicates functional proof work from STFunctionalTests.v *)
   (* Fibonacci function proofs. *)
 
 
@@ -133,35 +133,35 @@ Section NatProgramProofs.
     apply fib_seq_add.
   Qed.
 
-  Opaque add lookup GlobRefToIx zero suc.
+  Opaque add lookup Global.ref_index zero suc.
   Lemma fib_loop_correct :
-    forall k (a b : nat) (m : mem) (x y : GlobRef nat),
-    lookup (GlobRefToIx nat x, idx_x) m = Some a ->
-    lookup (GlobRefToIx nat y, idx_y) m = Some b ->
-    fmap snd (interp_glob ltu nat (fib_loop k x y) m)
+    forall k (a b : nat) (m : mem) (x y : Global.ref nat),
+    lookup (Global.ref_index nat x, idx_x) m = Some a ->
+    lookup (Global.ref_index nat y, idx_y) m = Some b ->
+    fmap snd (Global.interp ltu nat (fib_loop k x y) m)
     ≈ ITreeDefinition.Ret (fib_seq a b k).
   Proof.
     induction k; intros a b m x y hx hy.
     - simpl fib_loop.
       etransitivity.
       { eapply eutt_fmap.
-        unfold readGlobRef. rewrite interp_glob_trigger. cbn. rewrite hx. reflexivity. }
+        unfold Global.read_ref. rewrite interp_trigger. cbn. rewrite hx. reflexivity. }
       setoid_rewrite map_ret. cbn. reflexivity.
     - simpl fib_loop.
       etransitivity.
       { eapply eutt_fmap.
-        eapply (eutt_eq_bind_interp_glob ltu ltac:(refine_arg)).
-        + unfold readGlobRef. rewrite interp_glob_trigger. cbn. rewrite hx. reflexivity.
-        + intros u lmem'. eapply (eutt_eq_bind_interp_glob ltu ltac:(refine_arg)).
-          * unfold readGlobRef. rewrite interp_glob_trigger. cbn.
+        eapply (eutt_eq_bind_interp ltu ltac:(refine_arg)).
+        + unfold Global.read_ref. rewrite interp_trigger. cbn. rewrite hx. reflexivity.
+        + intros u lmem'. eapply (eutt_eq_bind_interp ltu ltac:(refine_arg)).
+          * unfold Global.read_ref. rewrite interp_trigger. cbn.
             change lmem' with (fst (lmem', u)). reflexivity.
-          * intros u0 lmem'0. eapply (eutt_eq_bind_interp_glob ltu ltac:(refine_arg)).
-            -- unfold writeGlobRef. rewrite interp_glob_trigger. cbn.
+          * intros u0 lmem'0. eapply (eutt_eq_bind_interp ltu ltac:(refine_arg)).
+            -- unfold Global.write_ref. rewrite interp_trigger. cbn.
                change u0 with (snd (lmem'0, u0)).
                change lmem'0 with (fst (lmem'0, u0)).
                change lmem' with (fst (lmem', u)). reflexivity.
-            -- intros u1 lmem'1. eapply (eutt_eq_bind_interp_glob ltu ltac:(refine_arg)).
-               ++ unfold writeGlobRef. rewrite interp_glob_trigger. cbn.
+            -- intros u1 lmem'1. eapply (eutt_eq_bind_interp ltu ltac:(refine_arg)).
+               ++ unfold Global.write_ref. rewrite interp_trigger. cbn.
                   change u with (snd (lmem', u)).
                   change u0 with (snd (lmem'0, u0)).
                   change lmem'1 with (fst (lmem'1, u1)).
@@ -178,19 +178,19 @@ Section NatProgramProofs.
   Qed.
 
   Lemma fib_Glob_full_correct : forall n,
-    fmap snd (interp_glob ltu nat
-      (x <- newGlobRef idx_x 0;; y <- newGlobRef idx_y 1;; fib_loop n x y)
+    fmap snd (Global.interp ltu nat
+      (x <- Global.new_ref idx_x 0;; y <- Global.new_ref idx_y 1;; fib_loop n x y)
       HMap.empty)
     ≈ Ret (fib_seq 0 1 n).
   Proof.
     intro n.
     etransitivity.
     { eapply eutt_fmap.
-      eapply (eutt_eq_bind_interp_glob ltu ltac:(refine_prod)).
-      + unfold newGlobRef. rewrite interp_glob_trigger. cbn. reflexivity.
+      eapply (eutt_eq_bind_interp ltu ltac:(refine_prod)).
+      + unfold Global.new_ref. rewrite interp_trigger. cbn. reflexivity.
       + intros u lmem'.
-        eapply (eutt_eq_bind_interp_glob ltu ltac:(refine_prod)).
-        * unfold newGlobRef. rewrite interp_glob_trigger. cbn.
+        eapply (eutt_eq_bind_interp ltu ltac:(refine_prod)).
+        * unfold Global.new_ref. rewrite interp_trigger. cbn.
           change lmem' with (fst (lmem', u)). reflexivity.
         * intros ? ?. reflexivity. }
     setoid_rewrite map_bind. repeat setoid_rewrite bind_Ret_l. cbn [fst snd].
@@ -203,13 +203,13 @@ Section NatProgramProofs.
 End NatProgramProofs.
 
 Lemma fib_ST_eq_fib_fun : forall (n : nat),
-    Ret (fib_fun n) ≈ fmap snd (runGlob (fib_Glob n)).
+    Ret (fib_fun n) ≈ fmap snd (Global.run (fib_Glob n)).
 Proof.
-  intros n. unfold runGlob, fib_Glob.
+  intros n. unfold Global.run, fib_Glob.
   destruct (Nat.ltb n 2) eqn:Hn.
   - apply Nat.ltb_lt in Hn. symmetry.
     etransitivity.
-    { eapply eutt_fmap. change_to_monad. rewrite interp_glob_ret. reflexivity. }
+    { eapply eutt_fmap. change_to_monad. rewrite interp_monad_ret. reflexivity. }
     setoid_rewrite map_ret. cbn. apply eqit_Ret.
     destruct n as [|[|n]]; try lia; reflexivity.
   - apply Nat.ltb_ge in Hn. symmetry.

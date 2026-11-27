@@ -3,10 +3,10 @@
 
 (** Functional model of ST arrays of naturals.
 
-    An array [MkArrLoc base n] whose cells [base .. base + n - 1] hold the
+    An array [ST.MkArrayLoc base n] whose cells [base .. base + n - 1] hold the
     list [full] is related to [full] by [arr_rep]; in-place writes and swaps
     are modelled by [upd] and [list_swap], and the array operations are
-    [st_spec] rules over [arr_rep]. *)
+    [spec] rules over [arr_rep]. *)
 
 From Stdlib Require Import
   Arith.PeanoNat
@@ -30,9 +30,9 @@ From Crane Require Import
   Monads.Error
   Monads.ITree
   Monads.MonadFacts
-  Monads.STMonad
-  Monads.STMonadFacts
-  Monads.STMonadSpec
+  Monads.ST
+  Monads.STFacts
+  Monads.STSpec
   Utils.HMap
 .
 
@@ -60,7 +60,7 @@ Proof.
   destruct i, j; simpl; try reflexivity; try lia. apply IHl; lia.
 Qed.
 
-(** Pure list swap, modelling [swapArray]. *)
+(** Pure list swap, modelling [ST.swap_array]. *)
 Definition list_swap (l : list nat) (i j : nat) : list nat :=
   upd (upd l i (nth j l 0)) j (nth i l 0).
 
@@ -127,62 +127,62 @@ Section NatArrays.
 
   (** The cells [base .. base + |full| - 1] hold [full]. *)
   Definition arr_rep (m : mem V) (base : nat) (full : list nat) : Prop :=
-    forall k, k < length full -> st_get (V := V) (base + k) m = Some (nth k full 0).
+    forall k, k < length full -> read_at (V := V) (base + k) m = Some (nth k full 0).
 
   Lemma arr_rep_write : forall base full i v m,
     arr_rep m base full -> i < length full ->
-    arr_rep (st_put (V := V) (base + i) v m) base (upd full i v).
+    arr_rep (write_at (V := V) (base + i) v m) base (upd full i v).
   Proof.
     intros base full i v m Hrep Hi k Hk. rewrite upd_length in Hk.
     destruct (Nat.eq_dec k i) as [-> | Hne].
-    - rewrite st_get_put_eq, nth_upd_eq by lia. reflexivity.
-    - rewrite st_get_put_ne by lia. rewrite nth_upd_neq by lia. apply Hrep. lia.
+    - rewrite read_at_write_at_eq, nth_upd_eq by lia. reflexivity.
+    - rewrite read_at_write_at_ne by lia. rewrite nth_upd_neq by lia. apply Hrep. lia.
   Qed.
 
   Lemma arr_rep_swap : forall base full l r m,
     arr_rep m base full -> l < length full -> r < length full ->
-    arr_rep (st_put (V := V) (base + r) (nth l full 0)
-               (st_put (V := V) (base + l) (nth r full 0) m))
+    arr_rep (write_at (V := V) (base + r) (nth l full 0)
+               (write_at (V := V) (base + l) (nth r full 0) m))
             base (list_swap full l r).
   Proof.
     intros. apply arr_rep_write; [ apply arr_rep_write | rewrite upd_length ]; auto.
   Qed.
 
-  (** The array operations as [st_spec] rules over [arr_rep]: what a program
+  (** The array operations as [spec] rules over [arr_rep]: what a program
       knows of an array is the list it represents. *)
-  Lemma st_spec_readArray_rep base n full i m (Q : mem V -> nat -> Prop) :
+  Lemma read_array_rep base n full i m (Q : mem V -> nat -> Prop) :
     arr_rep m base full -> length full = n -> i < n -> Q m (nth i full 0) ->
-    st_spec (E := E) (readArray (R := model_refs) (V := V) (MkArrLoc base n) i) m Q.
+    spec (E := E) (ST.read_array (R := ST.model_refs) (V := V) (ST.MkArrayLoc base n) i) m Q.
   Proof.
-    intros Hrep Hlen Hi HQ. eapply st_spec_readArray; [ exact Hi | apply Hrep; lia | exact HQ ].
+    intros Hrep Hlen Hi HQ. eapply read_array; [ exact Hi | apply Hrep; lia | exact HQ ].
   Qed.
 
-  Lemma st_spec_swapArray_rep base n full l r m (Q : mem V -> unit -> Prop) :
+  Lemma swap_array_rep base n full l r m (Q : mem V -> unit -> Prop) :
     arr_rep m base full -> length full = n -> l < n -> r < n ->
     (forall m', arr_rep m' base (list_swap full l r) -> Q m' tt) ->
-    st_spec (E := E) (swapArray (R := model_refs) (V := V) (MkArrLoc base n) l r) m Q.
+    spec (E := E) (ST.swap_array (R := ST.model_refs) (V := V) (ST.MkArrayLoc base n) l r) m Q.
   Proof.
-    intros Hrep Hlen Hl Hr HQ. unfold swapArray.
-    apply st_spec_bind. eapply st_spec_readArray_rep; [ eassumption | eassumption | exact Hl |].
-    apply st_spec_bind. eapply st_spec_readArray_rep; [ eassumption | eassumption | exact Hr |].
-    apply st_spec_bind. eapply st_spec_writeArray; [ exact Hl |].
-    eapply st_spec_writeArray; [ exact Hr |].
+    intros Hrep Hlen Hl Hr HQ. unfold ST.swap_array.
+    apply spec_bind. eapply read_array_rep; [ eassumption | eassumption | exact Hl |].
+    apply spec_bind. eapply read_array_rep; [ eassumption | eassumption | exact Hr |].
+    apply spec_bind. eapply write_array; [ exact Hl |].
+    eapply write_array; [ exact Hr |].
     apply HQ, arr_rep_swap; [ exact Hrep | lia | lia ].
   Qed.
 
-  Lemma st_spec_getElems_rep base n full m (Q : mem V -> list nat -> Prop) :
+  Lemma array_to_list_rep base n full m (Q : mem V -> list nat -> Prop) :
     arr_rep m base full -> length full = n -> Q m full ->
-    st_spec (E := E) (getElems (R := model_refs) (V := V) (MkArrLoc base n)) m Q.
+    spec (E := E) (ST.array_to_list (R := ST.model_refs) (V := V) (ST.MkArrayLoc base n)) m Q.
   Proof.
-    intros Hrep Hlen HQ. eapply st_spec_getElems; [ exact Hlen | | exact HQ ].
+    intros Hrep Hlen HQ. eapply array_to_list; [ exact Hlen | | exact HQ ].
     intros k Hk. rewrite Hrep by lia. symmetry. apply nth_error_nth'. lia.
   Qed.
 
-  Lemma st_spec_newListArray_rep xs m (Q : mem V -> ArrLoc nat -> Prop) :
-    (forall base m', arr_rep m' base xs -> Q m' (MkArrLoc base (length xs))) ->
-    st_spec (E := E) (newListArray (R := model_refs) (V := V) xs) m Q.
+  Lemma array_of_list_rep xs m (Q : mem V -> ST.ArrayLoc nat -> Prop) :
+    (forall base m', arr_rep m' base xs -> Q m' (ST.MkArrayLoc base (length xs))) ->
+    spec (E := E) (ST.array_of_list (R := ST.model_refs) (V := V) xs) m Q.
   Proof.
-    intros HQ. apply st_spec_newListArray. intros base m' Hcells. apply HQ.
+    intros HQ. apply array_of_list. intros base m' Hcells. apply HQ.
     intros k Hk. rewrite Hcells by exact Hk. apply nth_error_nth'. exact Hk.
   Qed.
 

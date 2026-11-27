@@ -1,5 +1,5 @@
 
-From Crane Require Import Monads.STMonad.   
+From Crane Require Monads.ST.
 
 From Stdlib Require Import
   Arith.PeanoNat

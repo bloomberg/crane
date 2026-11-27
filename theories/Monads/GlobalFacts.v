@@ -18,7 +18,7 @@ From Crane Require Import
   Monads.Error
   Monads.ITree
   Monads.Indices
-  Monads.GlobalState
+  Monads.Global
   Monads.MonadFacts
   Utils.HAList
   Utils.HMap
@@ -58,15 +58,15 @@ Local Open Scope monad_scope.
 Local Open Scope string_scope.
 
 
-Section InterpGlobTheorems.
+Section InterpTheorems.
 
   Context {E : Type -> Type}.
   Context {T S : Type}.
   Variable (ltu : T -> T -> Prop).
   Context `{Ix_Correct T ltu}.
-  Context `{GlobRefClass T}.
+  Context `{Global.RefClass T}.
   Context {V : T -> Type}.
-  Context `{GlobEvent T V -< E}. 
+  Context `{Global.Event T V -< E}. 
   Context `{exceptE Err -< E}.
 
 
@@ -77,26 +77,26 @@ Section InterpGlobTheorems.
 
 
 
-  Definition _interp_glob {R}
-    (ot : itree' (GlobEvent T V +' E) R)
+  Definition interp_ {R}
+    (ot : itree' (Global.Event T V +' E) R)
     (l : mem)
     : itree E (mem * R) :=
     match ot with
     | RetF r => ret (l, r)
-    | TauF t => Tau (interp_glob ltu _ t l)
+    | TauF t => Tau (Global.interp ltu _ t l)
     | @VisF _ _ _ X e k =>
-        x <- handle_GlobEvent_leave_rest ltu X e l;;
-        Tau (interp_glob _ _ (k (snd x)) (fst x))
+        x <- Global.handle_leave_rest ltu X e l;;
+        Tau (Global.interp _ _ (k (snd x)) (fst x))
     end.
 
-  Lemma unfold_interp_glob {R}
-    (t : itree (GlobEvent T V +' E) R)
+  Lemma unfold_interp {R}
+    (t : itree (Global.Event T V +' E) R)
     (l : mem) :
     eq_itree eq
-    (interp_glob _ _ t l)
-    (_interp_glob (observe t) l).
+    (Global.interp _ _ t l)
+    (interp_ (observe t) l).
   Proof using Type.
-    unfold interp_glob, interp_glob, interp, Basics.iter, MonadIter_stateT0, Basics.iter.
+    unfold Global.interp, ITree.Interp.Interp.interp, Basics.iter, MonadIter_stateT0, Basics.iter.
     cbn.
     setoid_rewrite unfold_iter; cbn.
     destruct observe; cbn.
@@ -110,57 +110,57 @@ Section InterpGlobTheorems.
       reflexivity.
   Qed.
 
-  Lemma interp_glob_ret:  forall {R : Type} (val: R) (l : mem),
-      interp_glob (E := E) _ _ (ret val) l ≅ ret (l, val).
+  Lemma interp_monad_ret:  forall {R : Type} (val: R) (l : mem),
+      Global.interp (E := E) _ _ (ret val) l ≅ ret (l, val).
     Proof using Type.
-      intros. rewrite unfold_interp_glob. reflexivity.
+      intros. rewrite unfold_interp. reflexivity.
     Qed.
 
-  Lemma interp_glob_Ret: forall {R : Type} (val: R) (l : mem),
-      interp_glob (E := E) _ _ (Ret val) l ≅ Ret (l, val).
+  Lemma interp_ret: forall {R : Type} (val: R) (l : mem),
+      Global.interp (E := E) _ _ (Ret val) l ≅ Ret (l, val).
     Proof using Type.
-      intros. rewrite unfold_interp_glob. reflexivity.
+      intros. rewrite unfold_interp. reflexivity.
     Qed.
 
-  Lemma interp_glob_Ret_eutt: forall {R : Type} (val: R) (l : mem),
-      interp_glob (E := E) _ _ (Ret val) l ≈ Ret (l, val).
+  Lemma interp_ret_eutt: forall {R : Type} (val: R) (l : mem),
+      Global.interp (E := E) _ _ (Ret val) l ≈ Ret (l, val).
     Proof using Type.
-      intros. rewrite unfold_interp_glob. reflexivity.
+      intros. rewrite unfold_interp. reflexivity.
     Qed.
 
-  Lemma interp_glob_vis
+  Lemma interp_vis
     {R U} 
-    (e : (GlobEvent T V +' E) R)
-    (k : R -> itree (GlobEvent T V +' E) U)
+    (e : (Global.Event T V +' E) R)
+    (k : R -> itree (Global.Event T V +' E) U)
     (l : mem)
-    : interp_glob ltu _ (Vis e k) l
-    ≅ x <- handle_GlobEvent_leave_rest ltu _ e l;;
-      Tau (interp_glob ltu _ (k (snd x)) (fst x)).
+    : Global.interp ltu _ (Vis e k) l
+    ≅ x <- Global.handle_leave_rest ltu _ e l;;
+      Tau (Global.interp ltu _ (k (snd x)) (fst x)).
     Proof using Type.
-      intros. rewrite unfold_interp_glob. reflexivity.
+      intros. rewrite unfold_interp. reflexivity.
     Qed.
 
     
-  Lemma interp_glob_tau {R : Type}
-      (t : itree (GlobEvent T V +' E) R)
+  Lemma interp_tau {R : Type}
+      (t : itree (Global.Event T V +' E) R)
       (l : mem)
-      : interp_glob ltu _ (Tau t) l ≅ Tau (interp_glob ltu _ t l).
+      : Global.interp ltu _ (Tau t) l ≅ Tau (Global.interp ltu _ t l).
     Proof using Type.
-      intros. rewrite unfold_interp_glob. reflexivity.
+      intros. rewrite unfold_interp. reflexivity.
     Qed.
 
 
   Lemma Ret_is_ret {R : Type} (x : R) : ((Ret x) : itree E R)  = ret x.
     Proof using Type. reflexivity. Qed.
     
-  Lemma interp_glob_trigger
+  Lemma interp_trigger
     {R : Type} 
-    (e : (GlobEvent T V +' E) R)
+    (e : (Global.Event T V +' E) R)
     (l : mem) :
-    interp_glob ltu _ (ITree.trigger e) l ≈ handle_GlobEvent_leave_rest ltu _ e l.
+    Global.interp ltu _ (ITree.trigger e) l ≈ Global.handle_leave_rest ltu _ e l.
     Proof using Type.
       unfold ITree.trigger.
-      rewrite interp_glob_vis.
+      rewrite interp_vis.
       match goal with
         |- ?y ≈ ?x => remember y; rewrite <- (bind_ret_r x); subst
       end.
@@ -168,7 +168,7 @@ Section InterpGlobTheorems.
       intros [].
       - setoid_rewrite tau_eutt.
         unfold snd, fst.
-        apply interp_glob_Ret_eutt.
+        apply interp_ret_eutt.
     Qed.
 
     
@@ -176,13 +176,13 @@ Definition eq_itree_eqv_global {R E} (x1 x2 : itree (E) (mem * R)) : Prop :=
   @eq_itree (E) _ _ eq x1 x2.
 
 
-Global Instance eq_itree_interp_glob {R : Type} :
-Proper (@eq_itree (GlobEvent T V +' E) R R eq ==> eq ==> eq_itree_eqv_global)
-        (interp_glob ltu R).
+Global Instance eq_itree_interp {R : Type} :
+Proper (@eq_itree (Global.Event T V +' E) R R eq ==> eq ==> eq_itree_eqv_global)
+        (Global.interp ltu R).
 Proof.
   repeat red.
   ginit. pcofix CIH. intros x y Heq s1 s2 Hseq.
-  rewrite !unfold_interp_glob. punfold Heq. red in Heq.
+  rewrite !unfold_interp. punfold Heq. red in Heq.
     destruct Heq; subst; pclearbot; try discriminate; cbn.
     - gstep; constructor; auto.
     - gstep; constructor; auto with paco.
@@ -193,26 +193,26 @@ Proof.
   Qed.
 
     
-Lemma interp_glob_bind {U R} 
-  (t : itree (GlobEvent T V +' E) R)
-  (k : R -> itree (GlobEvent T V +' E) U)
+Lemma interp_bind {U R} 
+  (t : itree (Global.Event T V +' E) R)
+  (k : R -> itree (Global.Event T V +' E) U)
   (mem : mem)
-  : interp_glob ltu U (ITree.bind t k) mem
-      ≅ '(new_mem, new_val) <- interp_glob ltu R t mem;;
-    interp_glob ltu U (k new_val) new_mem.
+  : Global.interp ltu U (ITree.bind t k) mem
+      ≅ '(new_mem, new_val) <- Global.interp ltu R t mem;;
+    Global.interp ltu U (k new_val) new_mem.
   revert t k mem.
   ginit. pcofix CIH.
   intros t k mem.
-  assert (unfold_bind' : interp_glob ltu U (ITree.bind t k) mem
-                        ≅ interp_glob ltu U (bind_ t k) mem).
-  { apply eq_itree_interp_glob. apply unfold_bind. reflexivity.  }
+  assert (unfold_bind' : Global.interp ltu U (ITree.bind t k) mem
+                        ≅ Global.interp ltu U (bind_ t k) mem).
+  { apply eq_itree_interp. apply unfold_bind. reflexivity.  }
   rewrite unfold_bind'.
-  rewrite (unfold_interp_glob t mem).
+  rewrite (unfold_interp t mem).
   destruct (observe t).
   - cbn. rewrite !bind_ret_l. cbn. apply reflexivity.
-  - rewrite interp_glob_tau. cbn. rewrite bind_tau.
+  - rewrite interp_tau. cbn. rewrite bind_tau.
     gstep. econstructor; eauto with paco.
-  - rewrite interp_glob_vis. cbn. rewrite bind_bind.
+  - rewrite interp_vis. cbn. rewrite bind_bind.
     guclo eqit_clo_bind. econstructor.
     + reflexivity.
     + intros u2 ? []. destruct u2 eqn:Equ2.
@@ -221,26 +221,26 @@ Lemma interp_glob_bind {U R}
       auto with paco.
 Qed.
 
-Lemma interp_glob_bind_eutt {U R} 
-  (t : itree (GlobEvent T V +' E) R)
-  (k : R -> itree (GlobEvent T V +' E) U)
+Lemma interp_bind_eutt {U R} 
+  (t : itree (Global.Event T V +' E) R)
+  (k : R -> itree (Global.Event T V +' E) U)
   (mem : mem)
-  : interp_glob ltu U (ITree.bind t k) mem
-      ≈ '(new_mem, new_val) <- interp_glob ltu R t mem;;
-    interp_glob ltu U (k new_val) new_mem.
+  : Global.interp ltu U (ITree.bind t k) mem
+      ≈ '(new_mem, new_val) <- Global.interp ltu R t mem;;
+    Global.interp ltu U (k new_val) new_mem.
   revert t k mem.
   ginit. pcofix CIH.
   intros t k mem.
-  assert (unfold_bind' : interp_glob ltu U (ITree.bind t k) mem
-                        ≅ interp_glob ltu U (bind_ t k) mem).
-  { apply eq_itree_interp_glob. apply unfold_bind. reflexivity.  }
+  assert (unfold_bind' : Global.interp ltu U (ITree.bind t k) mem
+                        ≅ Global.interp ltu U (bind_ t k) mem).
+  { apply eq_itree_interp. apply unfold_bind. reflexivity.  }
   rewrite unfold_bind'.
-  rewrite (unfold_interp_glob t mem).
+  rewrite (unfold_interp t mem).
   destruct (observe t).
   - cbn. rewrite !bind_ret_l. cbn. apply reflexivity.
-  - rewrite interp_glob_tau. cbn. rewrite bind_tau.
+  - rewrite interp_tau. cbn. rewrite bind_tau.
     gstep. econstructor; eauto with paco.
-  - rewrite interp_glob_vis. cbn. rewrite bind_bind.
+  - rewrite interp_vis. cbn. rewrite bind_bind.
     guclo eqit_clo_bind. econstructor.
     + reflexivity.
     + intros u2 ? []. destruct u2 eqn:Equ2.
@@ -249,26 +249,26 @@ Lemma interp_glob_bind_eutt {U R}
       auto with paco.
 Qed.
 
-Lemma interp_glob_bind_eutt' {U R} 
-  (t : itree (GlobEvent T V +' E) R)
-  (k : R -> itree (GlobEvent T V +' E) U)
+Lemma interp_bind_eutt' {U R} 
+  (t : itree (Global.Event T V +' E) R)
+  (k : R -> itree (Global.Event T V +' E) U)
   (mem : mem)
-  : (interp_glob ltu U (ITree.bind t k) mem)
-      ≈ '(new_mem, new_val) <- interp_glob ltu R t mem;;
-    interp_glob ltu U (k new_val) new_mem.
+  : (Global.interp ltu U (ITree.bind t k) mem)
+      ≈ '(new_mem, new_val) <- Global.interp ltu R t mem;;
+    Global.interp ltu U (k new_val) new_mem.
   revert t k mem.
   ginit. pcofix CIH.
   intros t k mem.
-  assert (unfold_bind' : interp_glob ltu U (ITree.bind t k) mem
-                        ≅ interp_glob ltu U (bind_ t k) mem).
-  { apply eq_itree_interp_glob. apply unfold_bind. reflexivity.  }
+  assert (unfold_bind' : Global.interp ltu U (ITree.bind t k) mem
+                        ≅ Global.interp ltu U (bind_ t k) mem).
+  { apply eq_itree_interp. apply unfold_bind. reflexivity.  }
   rewrite unfold_bind'.
-  rewrite (unfold_interp_glob t mem).
+  rewrite (unfold_interp t mem).
   destruct (observe t).
   - cbn. rewrite !bind_ret_l. cbn. apply reflexivity.
-  - rewrite interp_glob_tau. cbn. rewrite bind_tau.
+  - rewrite interp_tau. cbn. rewrite bind_tau.
     gstep. econstructor; eauto with paco.
-  - rewrite interp_glob_vis. cbn. rewrite bind_bind.
+  - rewrite interp_vis. cbn. rewrite bind_bind.
     guclo eqit_clo_bind. econstructor.
     + reflexivity.
     + intros u2 ? []. destruct u2 eqn:Equ2.
@@ -278,28 +278,28 @@ Lemma interp_glob_bind_eutt' {U R}
 Qed.
 
 
-Lemma eutt_eq_bind_interp_glob {U R}
+Lemma eutt_eq_bind_interp {U R}
   (k2 : (mem * R) -> itree E (mem * U))
   (lmem : mem)
-  (t1 : itree (GlobEvent T V +' E) R)
+  (t1 : itree (Global.Event T V +' E) R)
   (t2 : itree E (mem * R))
-  (k1: R -> itree (GlobEvent T V +' E) U)
+  (k1: R -> itree (Global.Event T V +' E) U)
   :
-  interp_glob ltu R t1 lmem ≈ t2 ->
-  (forall u lmem', interp_glob ltu U (k1 u) lmem' ≈ (k2 (lmem', u))) ->
-  interp_glob ltu U (ITree.bind t1 k1) lmem
+  Global.interp ltu R t1 lmem ≈ t2 ->
+  (forall u lmem', Global.interp ltu U (k1 u) lmem' ≈ (k2 (lmem', u))) ->
+  Global.interp ltu U (ITree.bind t1 k1) lmem
   ≈
   ITree.bind t2 k2.
 Proof.
   intros t1_eq keq.
-  rewrite (interp_glob_bind_eutt t1 k1).                                                                                
+  rewrite (interp_bind_eutt t1 k1).                                                                                
   apply eutt_eq_bind'; [assumption | intuition].
 Qed.
 
-End InterpGlobTheorems.
+End InterpTheorems.
 
-Lemma IdxRefSameIdx : forall (n : nat) A,
-  GlobRefToIx A (mkGlobRef A n) = n.
+Lemma idx_ref_same_idx : forall (n : nat) A,
+  Global.ref_index A (Global.make_ref A n) = n.
 Proof. reflexivity. Qed.
 
 

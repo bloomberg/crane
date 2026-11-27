@@ -55,49 +55,49 @@ From Crane Require Import
 
 (* Global Ref Class*)
 
-Class GlobRefClass (T : Type) : Type :=
+Class RefClass (T : Type) : Type :=
   {
-    GlobRef : forall A : Type, Type;
-    mkGlobRef : forall A : Type, T -> GlobRef A;
-    GlobRefToIx : forall A : Type, GlobRef A -> T;
+    ref : forall A : Type, Type;
+    make_ref : forall A : Type, T -> ref A;
+    ref_index : forall A : Type, ref A -> T;
   }.
 
 
 (* GlobalRef Event *)
 
-Section GlobRefNatDefs.
+Section NatRefDefs.
 
   Variable (T : Type).
   
 
-  Variant GlobRefNat : Type -> Type :=
-  | MkGlobRef (A : Type) (idx : nat) : GlobRefNat A.
+  Variant NatRef : Type -> Type :=
+  | MkNatRef (A : Type) (idx : nat) : NatRef A.
 
   
-  Definition GlobRefToIxNat (A : Type) (ref : GlobRefNat A) : nat :=
+  Definition nat_ref_index (A : Type) (ref : NatRef A) : nat :=
    match ref with
-   | MkGlobRef _ idx => idx
+   | MkNatRef _ idx => idx
    end. 
 
 
-End GlobRefNatDefs.
+End NatRefDefs.
 
-#[export] Instance nat_ix_globref : GlobRefClass nat :=
-  {| GlobRef := GlobRefNat;
-    mkGlobRef := MkGlobRef ;
-    GlobRefToIx := GlobRefToIxNat |}.
+#[global] Instance nat_ref_class : RefClass nat :=
+  {| ref := NatRef;
+    make_ref := MkNatRef ;
+    ref_index := nat_ref_index |}.
 
-Section GlobEventDefine.
+Section EventDefine.
   Variable (T : Type).
-  Context `{GlobRefClass T}. 
+  Context `{RefClass T}. 
 
-Variant GlobEvent (V : T -> Type) : Type -> Type :=
-  | NewGlobRef (idx : T) (v : V idx) : GlobEvent V (GlobRef (V idx))
-  | ReadGlobRef (idx : T) : GlobRef (V idx) -> GlobEvent V (V idx)
-  | WriteGlobRef (idx : T) : GlobRef (V idx) -> (V idx) -> GlobEvent V unit
+Variant Event (V : T -> Type) : Type -> Type :=
+  | NewRef (idx : T) (v : V idx) : Event V (ref (V idx))
+  | ReadRef (idx : T) : ref (V idx) -> Event V (V idx)
+  | WriteRef (idx : T) : ref (V idx) -> (V idx) -> Event V unit
 .
 
-End GlobEventDefine.
+End EventDefine.
 
 Section Construction.
 
@@ -105,21 +105,21 @@ Section Construction.
   Context {T : Type}.
   Context (ltu : T -> T -> Prop).
   Context `{Ix_Correct T ltu}.
-  Context `{GlobRefClass T}.
+  Context `{RefClass T}.
   Context {V : T -> Type}.
-  Context `{GlobEvent T V -< E}. 
+  Context `{Event T V -< E}. 
   Context `{exceptE Err -< E}.
 
 
   (* NOTE: explicit index here because we cannot infer it automatically, yet. *)
-  Definition newGlobRef (idx : T) (v : (V idx)) : itree E (GlobRef (V idx)) :=
-    trigger (NewGlobRef T V idx v).
+  Definition new_ref (idx : T) (v : (V idx)) : itree E (ref (V idx)) :=
+    trigger (NewRef T V idx v).
 
-  Definition readGlobRef {idx : T} (ref : GlobRef (V idx)) : itree E (V idx) :=
-    trigger (ReadGlobRef T V idx ref).
+  Definition read_ref {idx : T} (ref : ref (V idx)) : itree E (V idx) :=
+    trigger (ReadRef T V idx ref).
 
-  Definition writeGlobRef {idx : T} (ref : GlobRef (V idx)) (a : (V idx)) : itree E unit :=
-    trigger (WriteGlobRef T V idx ref a).
+  Definition write_ref {idx : T} (ref : ref (V idx)) (a : (V idx)) : itree E unit :=
+    trigger (WriteRef T V idx ref a).
 
 
   (* key type definitions *)
@@ -135,74 +135,74 @@ Section Construction.
 
   (* Handler for GlobalRef *)
   
-  Definition handle_GlobEvent `{EqDec T eq} 
-    : forall (A : Type), GlobEvent T V A -> Monads.stateT M (itree E) A :=
+  Definition handle `{EqDec T eq} 
+    : forall (A : Type), Event T V A -> Monads.stateT M (itree E) A :=
     fun _ e mem =>
     match e with
-    | NewGlobRef _ _ idx v =>
+    | NewRef _ _ idx v =>
         let n := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem)
-        in Ret (add (n, idx) v mem, mkGlobRef (V idx) n)
-    | ReadGlobRef _ _ idx s =>
-        match lookup (GlobRefToIx (V idx) s, idx) mem with
+        in Ret (add (n, idx) v mem, make_ref (V idx) n)
+    | ReadRef _ _ idx s =>
+        match lookup (ref_index (V idx) s, idx) mem with
         | Some v => Ret (mem, v)
         | None => failwith "Lookup failed!"
         end
-    | WriteGlobRef _ _ idx s v => Ret (add (GlobRefToIx (V idx) s, idx) v mem, tt)
+    | WriteRef _ _ idx s v => Ret (add (ref_index (V idx) s, idx) v mem, tt)
     end.
 
 
   (* Interpretation in Rocq *)
     
-  Definition handle_GlobEvent_leave_rest
-    (A : Type) (e : (GlobEvent T V +' E) A)
+  Definition handle_leave_rest
+    (A : Type) (e : (Event T V +' E) A)
     : Monads.stateT M (itree (E)) A :=
     match e with
-    | inl1 e0 => handle_GlobEvent A e0
+    | inl1 e0 => handle A e0
     | inr1 e0 => fun st : M => r <- trigger e0;; Ret (st, r)
     end.
   
-  #[export] Instance hmap_from_idx :
+  #[global] Instance hmap_from_idx :
     HMap T V (halist T V) := @HMap_halist T V eq_equivalence _.
 
-  #[export] Instance map_idx_correct :
+  #[global] Instance map_idx_correct :
     HMapOk hmap_from_idx := HMapOk_halist T V.
 
-  Definition interp_glob
-    : itree (GlobEvent T V +' E) ~> Monads.stateT M (itree (E)) :=
-    interp_state handle_GlobEvent_leave_rest.
+  Definition interp
+    : itree (Event T V +' E) ~> Monads.stateT M (itree (E)) :=
+    interp_state handle_leave_rest.
 
 End Construction.
 
 
-Definition runGlob {A : Type}
+Definition run {A : Type}
   {T : Type} {ltu : T -> T -> Prop}
   `{Ix T ltu}
   `{Ix_Correct T}
   `{EqDec T eq}
-  `{GlobRefClass T}
+  `{RefClass T}
   {E : Type -> Type}
   {V : T -> Type} `{exceptE Err -< E}
-  (t : itree ((GlobEvent T V) +' E) A)
+  (t : itree ((Event T V) +' E) A)
   : itree E ((halist (idx_key T) (idx_key_type V)) * A) :=
-  interp_glob ltu _ t HMap.empty.
+  interp ltu _ t HMap.empty.
 
 (* CPP Bindings *)
 
-Crane Extract Skip GlobEvent.
-Crane Extract Skip mkGlobRef.
-Crane Extract Skip GlobRefToIx.
+Crane Extract Skip Event.
+Crane Extract Skip make_ref.
+Crane Extract Skip ref_index.
 (** A global reference is a [std::shared_ptr<A>], as an ST reference
-    (theories/Monads/STMonad.v): a fresh cell per [newGlobRef]. *)
+    (theories/Monads/ST.v): a fresh cell per [new_ref]. *)
 
 From Crane Require Import Mapping.Descriptor.
 Import ListNotations.
 
-Crane Extraction Implicit newGlobRef [idx].
-Crane Extraction Implicit readGlobRef [idx].
-Crane Extraction Implicit writeGlobRef [idx].
+Crane Extraction Implicit new_ref [idx].
+Crane Extraction Implicit read_ref [idx].
+Crane Extraction Implicit write_ref [idx].
 
-#[export] Instance glob_ref_mapping (T : Type) (H : GlobRefClass T) (A : Type)
-  : TypeMapping (@GlobRef T H A) :=
+#[global] Instance ref_mapping (T : Type) (H : RefClass T) (A : Type)
+  : TypeMapping (@ref T H A) :=
   {| type_headers := ["memory"%pstring];
      type_cpp := Crane.Cpp.Apply "std::shared_ptr"
                    [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "contents")];
@@ -210,14 +210,14 @@ Crane Extraction Implicit writeGlobRef [idx].
        [{| component_name := "contents"; component_type := KnownType A |}];
      type_copy := RetainIdentity;
      type_access := MutableHandle HandleByConstReference;
-     type_views := NoViews (@GlobRef T H A);
+     type_views := NoViews (@ref T H A);
      type_interface := AbstractInterface;
      type_model := Identity;
      type_lifetime := NativeRAII;
      type_release := OrdinaryRelease;
      type_numerals := None |}%pstring.
 
-#[export] Instance new_glob_ref_mapping : OperationMapping (Ref (@newGlobRef)) :=
+#[global] Instance new_ref_mapping : OperationMapping (Ref (@new_ref)) :=
   {| operation_headers := ["memory"];
      operation_cpp := Expr "std::make_shared<%stored(contents)>(%arg(v))";
      operation_contract :=
@@ -229,7 +229,7 @@ Crane Extraction Implicit writeGlobRef [idx].
                 initial_multiplicity := InitialiseOnce |}])
          [] |}%pstring.
 
-#[export] Instance read_glob_ref_mapping : OperationMapping (Ref (@readGlobRef)) :=
+#[global] Instance read_ref_mapping : OperationMapping (Ref (@read_ref)) :=
   {| operation_headers := [];
      operation_cpp := Expr "*%arg(ref)";
      operation_contract :=
@@ -238,7 +238,7 @@ Crane Extraction Implicit writeGlobRef [idx].
          ReturnValue
          [ReadsComponent {| path_argument := "ref"; path_components := ["contents"] |}] |}%pstring.
 
-#[export] Instance write_glob_ref_mapping : OperationMapping (Ref (@writeGlobRef)) :=
+#[global] Instance write_ref_mapping : OperationMapping (Ref (@write_ref)) :=
   {| operation_headers := [];
      operation_cpp := Expr "*%arg(ref) = %arg(a)";
      operation_contract :=

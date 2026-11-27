@@ -301,12 +301,12 @@ Reading:
   `existT nat ys = existT (vec nat) ws` cannot be refuted (`vec nat` might
   be `nat`), so typing never separates locations: every separation fact
   must be an explicit disequality. A type-code universe as in
-  `theories/Monads/STMonad.v` (cells indexed by a code, `V : T -> Type`,
+  `theories/Monads/ST.v` (cells indexed by a code, `V : T -> Type`,
   here just `nat` and `vec nat`) would fix this and remove the axiom, at
   the price of re-stating `step` over codes.
-- **`theories/Monads/STMonad*.v` as a reference.** It has a functional
+- **`theories/Monads/ST*.v` as a reference.** It has a functional
   handler into `stateT` via `interp_state`, and equational
-  `interp_st_{ret,vis,tau,trigger,bind}` lemmas under `≅`/`≈`. It has no
+  `ST.interp` `interp_{ret,vis,tau,trigger,bind}` lemmas under `≅`/`≈`. It has no
   Hoare layer and no proofs about looping programs, which is what the
   solver needs, so `runs`/`wp` stay. If the result should be stated in
   that style, an adequacy lemma `runs h t r h' ↔ interp_vec t h ≈ Ret (h',

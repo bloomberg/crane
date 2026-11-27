@@ -3,7 +3,7 @@
 
 (** Fibonacci with two ST references updated in a loop (after
     https://wiki.haskell.org/Monad/ST), next to the pure definition.
-    [StFibonacciProofs] shows that the two agree. *)
+    [STFibonacciProofs] shows that the two agree. *)
 
 From Stdlib Require Import Arith.PeanoNat.
 
@@ -12,11 +12,11 @@ From ITree Require Import
   ITree
 .
 
+From Crane Require Monads.ST.
 From Crane Require Import
   Mapping.NatIntStd
   Monads.Error
   Monads.ITree
-  Monads.STMonad
 .
 
 Import Monads.
@@ -24,18 +24,18 @@ Local Open Scope monad_scope.
 
 Section Fibonacci.
 
-  Context {R : STRefs}.
-  Notation E0 := (STEvent R (fun _ : nat => nat) +' exceptE Err).
+  Context {R : ST.Refs}.
+  Notation E0 := (ST.Event R (fun _ : nat => nat) +' exceptE Err).
 
   (** Run [k] steps of [(x, y) := (y, x + y)] and return [x]. *)
-  Fixpoint fib_loop (k : nat) (x y : STRef nat) : itree E0 nat :=
+  Fixpoint fib_loop (k : nat) (x y : ST.ref nat) : itree E0 nat :=
     match k with
-    | 0 => readSTRef x
+    | 0 => ST.read_ref x
     | Datatypes.S k' =>
-        x' <- readSTRef x;;
-        y' <- readSTRef y;;
-        writeSTRef x y';;
-        writeSTRef y (x' + y');;
+        x' <- ST.read_ref x;;
+        y' <- ST.read_ref y;;
+        ST.write_ref x y';;
+        ST.write_ref y (x' + y');;
         fib_loop k' x y
     end.
 
@@ -43,8 +43,8 @@ Section Fibonacci.
     if Nat.ltb n 2
     then Ret n
     else
-      x <- newSTRef 0;;
-      y <- newSTRef 1;;
+      x <- ST.new_ref 0;;
+      y <- ST.new_ref 1;;
       fib_loop n x y.
 
 End Fibonacci.
@@ -58,11 +58,11 @@ Definition fib_fun (n : nat) : nat :=
     end in
   fib' n.
 
-Module StFibonacci.
-  Definition fib_ST := Eval unfold fib_ST, fib_loop in (@fib_ST cpp_refs).
+Module STFibonacci.
+  Definition fib_ST := Eval unfold fib_ST, fib_loop in (@fib_ST ST.cpp_refs).
   Definition fib_fun := Eval unfold fib_fun in fib_fun.
-End StFibonacci.
+End STFibonacci.
 
 Set Crane Loopify.
 
-Crane Extraction "st_fibonacci" StFibonacci.
+Crane Extraction "st_fibonacci" STFibonacci.
