@@ -59,7 +59,13 @@ let erased_fn_instantiation ?(box = Cpp_ir.Type.Any) : Cpp_ir.Lowered.Expr.t -> 
     value reaching a flat slot is [\[=\](A a, B b) { return f(a)(b); }];
     a flat one reaching a curried slot is [\[=\](A a) { return \[=\](B b)
     { return f(a, b); }; }].  [expr] itself where the types are not so
-    related. *)
+    related.
+
+    [expr] is evaluated once, where the value is regrouped, as Rocq
+    evaluates it: one that is not a name or a closure already (a callable
+    recovered from a box, [crane_any_cast<F>(id(...))]) is bound first and
+    the adapter holds it, by move where its copy costs something
+    ({!adapter_param_moves}), rather than evaluating it on every call. *)
 let regroup_curried ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   (* [f] applied to [args] group by group as its type [t] takes them;
@@ -96,7 +102,16 @@ let regroup_curried ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type
       | None -> expr )
     | _ -> expr
   in
-  go 0 [] from into expr
+  match (expr : Cpp_ir.Lowered.Expr.t) with
+  | Local _ | Entity _ | Lambda _ -> go 0 [] from into expr
+  | _ -> (
+    let v = Id.of_string "_rg" in
+    match go 0 [] from into (Local v) with
+    | Lambda l ->
+      let from = strip_cpp_ref_const from in
+      let moved = if adapter_param_moves from then [v] else [] in
+      Cpp_ir.Build.iife None [Bind_variable (v, Declare (from, None), expr); Return (Some (Lambda {l with moved}))]
+    | _ -> expr )
 
 (** [nest ?into params body]: a closure taking [params] and returning
     [body], its parameters grouped as the function type [into] groups its
