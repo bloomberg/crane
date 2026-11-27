@@ -703,18 +703,38 @@ let eta_fun cx (slot : Slot.slot) env f args :
     let leading_params = Core_plan.Elaborated_call.leading_params call in
     (* The C++ arguments of a call by name, from the regular arguments in
        declared order (the given ones, then any eta parameters): a declared
-       [unit] parameter has no C++ counterpart
+       [unit] parameter, or one of a type holding nothing, has no C++
+       counterpart
        ({!Base.Type_util.declaration_drops_binder}), and Rocq's [unit] argument
        computes nothing worth keeping.  A custom's text takes its arguments by
        position, and a projection reads a field holding a callable value, so
        their lists are left whole. *)
+    (* The declared types of the regular parameters, in order, read off the
+       roles Core gave the call's arguments: an instance need not lead -- a
+       section's [{R : STRefs}] comes before the definition's
+       [`{STEvent R V -< E}] -- so the [i]th regular argument is the [i]th
+       parameter whose argument is [Regular], and an eta parameter past the
+       given arguments is regular too.  Each argument but a [Dropped] one
+       stands for the next value parameter. *)
+    let regular_types =
+      let all = Core_plan.Param_pos.to_list fn_param_core_tys_orig in
+      let rec go params (roles : Core_plan.Elaborated_call.role list) =
+        match (roles, params) with
+        | Core_plan.Elaborated_call.Dropped :: roles, _ -> go params roles
+        | Core_plan.Elaborated_call.Regular :: roles, t :: params -> t :: go params roles
+        | (Core_plan.Elaborated_call.Dictionary | Erased_dictionary) :: roles, _ :: params -> go params roles
+        | (Core_plan.Elaborated_call.Excess :: _ | []), params -> params
+        | _ :: _, [] -> []
+      in
+      go all call.Core_plan.Elaborated_call.roles
+    in
     let passed (l : Cpp_ir.Lowered.Expr.t list) =
       if Base.Table.is_custom id || Base.Table.is_projection id then l
       else
         List.filteri
           (fun i _ ->
             not
-              (match Core_plan.Param_pos.nth fn_param_core_tys_orig (Core_plan.Param_pos.of_regular ~leading:leading_params i) with
+              (match List.nth_opt regular_types i with
                | Some t -> Base.Type_util.declaration_drops_binder t
                | None -> false ) )
           l

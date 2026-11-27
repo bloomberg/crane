@@ -91,6 +91,18 @@ let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
         in
         Some (Cpp_ir.Build.lambda (List.map fst params) None body ~capture:Stored)
 
+(** The construction of the one value of binder [i]'s type, where that is a
+    content-free singleton ({!Base.Table.is_content_free_singleton}). *)
+let singleton_construction cx i =
+  match Option.map Base.Type_util.resolve_meta (get_env_type_opt cx i) with
+  | Some (Core.Type.Global_app {head = GlobRef.IndRef ind as head; _} as t)
+    when Base.Table.is_content_free_singleton head ->
+    Some
+      (Core.Expr.Construct
+         {result_type = t; constructor = GlobRef.ConstructRef (ind, 1); arguments = [];
+          occurrence = Core.Occurrence.fresh ()})
+  | _ -> None
+
 (** [gen_expr slot env core_e] -- the CppIR expression for the
     Core expression [core_e], generated against the type [slot] states
     ([Slot.into]), inside a body returning [slot.ret].  A global that is called when named
@@ -127,6 +139,10 @@ and gen_form cx (slot : Slot.slot) env (core_e : Core.Expr.t) : Typed.t =
   | Core.Expr.Bound_variable {index = i; _}
     when (match get_env_type_opt cx i with Some t -> core_type_is_unit t | None -> false) ->
     Typed.v ~ty:(Binders.read_value_type cx env i) (Monadic.mk_tt_expr ())
+  (* Nor has a content-free singleton more than one value: the read is its
+     one constructor. *)
+  | Core.Expr.Bound_variable {index = i; _} when Option.has_some (singleton_construction cx i) ->
+    gen_form cx slot env (Option.get (singleton_construction cx i))
   | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
     check_binder_scopes cx env i;
     let boxed_read = Binders.read_is_boxed cx i occ in

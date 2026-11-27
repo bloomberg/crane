@@ -543,7 +543,13 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
   let dictionary level =
     match Core.Lexenv.binder lex (Core.Lexenv.depth lex - level) with
     | Some {role = Dictionary; _} -> true
-    | Some {role = Value; _} | None -> false
+    | Some {role = Value; type_; _} -> (
+      (* A value of a content-free singleton is no C++ local: declarations
+         drop such parameters ({!Base.Type_util.declaration_drops_binder}). *)
+      match Base.Type_util.resolve_meta type_ with
+      | Core.Type.Global_app {head; _} -> Base.Table.is_content_free_singleton head
+      | _ -> false )
+    | None -> false
   in
   let dedup_passings ps =
     let same p p' =

@@ -442,11 +442,19 @@ let core_type_is_unit (ty : _ Core.Type.at) : bool =
 
 (** Whether a function declaration's parameter of type [ty] is left out of
     its C++ signature, a call by name passing nothing for it: a [void] one
-    ({!void_binder}), or a [unit] one, whose one value is known without being
-    passed.  A callable value's parameter -- a lambda's, a [crane::fn]'s -- is
-    kept: a polymorphic slot [A -> B] instantiated at [A := unit] calls it with
-    a value. *)
-let declaration_drops_binder (ty : Core.Type.t) : bool = void_binder ty || core_type_is_unit ty
+    ({!void_binder}), or one whose one value is known without being passed --
+    [unit], or an inductive of one constructor that carries nothing once its
+    types are erased ({!Table.is_content_free_singleton}): the [STRefs] an ST
+    program is polymorphic in, which only types its references.  A callable
+    value's parameter -- a lambda's, a [crane::fn]'s -- is kept: a
+    polymorphic slot [A -> B] instantiated at [A := unit] calls it with a
+    value. *)
+let declaration_drops_binder (ty : Core.Type.t) : bool =
+  void_binder ty || core_type_is_unit ty
+  ||
+  match resolve_meta ty with
+  | Core.Type.Global_app {head = r; _} -> Table.is_content_free_singleton r
+  | _ -> false
 
 (** Whether the declaration of type [decl_ty] leaves out its [i]th parameter
     (0-based, source order, erased ones counted), read off the declared domain

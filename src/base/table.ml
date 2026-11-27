@@ -3023,6 +3023,21 @@ let same_mutual_block r1 r2 =
 let is_custom r =
   Core.Ref.Can.Map.mem r !customs || Mapping_plan.is_mapped r || Mapping_operation.is_operation_head r
 
+(** Whether [r] is an inductive with one constructor none of whose fields
+    survives extraction -- a type class holding only types, [STRefs]: its one
+    value says nothing, so a function need not be passed it.  Not a mapped
+    type, whose C++ spelling the mapping decides. *)
+let is_content_free_singleton r =
+  match r with
+  | GlobRef.IndRef (kn, i) when not (is_custom r) -> (
+    try
+      let p = (unsafe_lookup_ind kn).packets.(i) in
+      (not p.logical) && p.signature = []
+      && Array.length p.constructor_argument_types = 1
+      && List.for_all (function Core.Type.Erased _ -> true | _ -> false) p.constructor_argument_types.(0)
+    with Not_found | Invalid_argument _ -> false )
+  | _ -> false
+
 (* The text a typed-mapped global stands for: a constructor's build
    template, or the canonical type in the legacy type vocabulary for the
    readers that reason about a type's text (the type itself is built

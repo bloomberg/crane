@@ -1068,6 +1068,13 @@ val same_mutual_block : GlobRef.t -> GlobRef.t -> bool
 (** Check if reference has custom extraction. *)
 val is_custom : GlobRef.t -> bool
 
+(** Whether the inductive [r] has one constructor none of whose fields
+    survives extraction (a type class holding only types) and that takes no
+    parameter or index: its one value carries nothing.  An indexed family
+    such as [getE : Type -> Type] is not one: its constructor fixes the
+    index.  Never a mapped type. *)
+val is_content_free_singleton : GlobRef.t -> bool
+
 (** Check if reference has inline custom extraction. *)
 val is_inline_custom : GlobRef.t -> bool
 
