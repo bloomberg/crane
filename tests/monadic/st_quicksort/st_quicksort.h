@@ -22,7 +22,7 @@ template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-enum class STRefs;
+enum class Refs;
 template <typename I, typename V, typename A>
 concept Code = requires {
   { I::code() } -> std::convertible_to<uint64_t>;
@@ -241,7 +241,7 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-enum class STRefs { BUILD_STREFS };
+enum class Refs { BUILD_REFS };
 
 template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
@@ -270,7 +270,7 @@ List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
   }
 }
 
-struct StQuicksort {
+struct STQuicksort {
   static List<uint64_t> quicksort_fun(const List<uint64_t> &x);
   static List<uint64_t> quicksort_ST_mine(const List<uint64_t> &xs);
   static uint64_t nth(uint64_t n, const List<uint64_t> &l, uint64_t default0);

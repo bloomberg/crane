@@ -37,7 +37,7 @@ void quicksort_ST(std::span<uint64_t> arr, uint64_t lo, uint64_t hi) {
   }
 }
 
-List<uint64_t> StQuicksort::quicksort_fun(const List<uint64_t> &x) {
+List<uint64_t> STQuicksort::quicksort_fun(const List<uint64_t> &x) {
   // Explicit stack replaces the non-tail recursion of quicksort_fun: _call
   // frames are pending calls, _after frames resume a caller.
   struct _call {
@@ -96,7 +96,7 @@ List<uint64_t> StQuicksort::quicksort_fun(const List<uint64_t> &x) {
   return _result;
 }
 
-List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
+List<uint64_t> STQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
     return List<uint64_t>::nil();
   } else {
@@ -109,7 +109,7 @@ List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
   }
 }
 
-uint64_t StQuicksort::nth(uint64_t n, const List<uint64_t> &l,
+uint64_t STQuicksort::nth(uint64_t n, const List<uint64_t> &l,
                           uint64_t default0) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
@@ -137,7 +137,7 @@ uint64_t StQuicksort::nth(uint64_t n, const List<uint64_t> &l,
   }
 }
 
-std::string StQuicksort::list_to_string_helper(const List<uint64_t> &l) {
+std::string STQuicksort::list_to_string_helper(const List<uint64_t> &l) {
   // Explicit stack replaces the non-tail recursion of list_to_string_helper:
   // _call frames are pending calls, _after frames resume a caller.
   struct _call {
@@ -180,17 +180,17 @@ std::string StQuicksort::list_to_string_helper(const List<uint64_t> &l) {
   return _result;
 }
 
-std::string StQuicksort::list_to_string(const List<uint64_t> &l) {
+std::string STQuicksort::list_to_string(const List<uint64_t> &l) {
   return (std::string("[ ") +
           (list_to_string_helper(l) + std::string(" ]")).substr(0,
                                                                 16777211))
              .substr(0, 16777211);
 }
 
-std::string StQuicksort::test_quicksort_ST() {
+std::string STQuicksort::test_quicksort_ST() {
   return list_to_string(quicksort_ST_mine(input_lst1));
 }
 
-std::string StQuicksort::test_quicksort_fun() {
+std::string STQuicksort::test_quicksort_fun() {
   return list_to_string(quicksort_fun(input_lst1));
 }

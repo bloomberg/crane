@@ -1,34 +1,34 @@
 #include "st_array_helpers.h"
 
 /// Only reads a cell.
-uint64_t StArrayHelpers::peek(std::span<const uint64_t> arr, uint64_t i) {
+uint64_t STArrayHelpers::peek(std::span<const uint64_t> arr, uint64_t i) {
   return arr[i];
 }
 
 /// Reads one cell and writes it back.
-void StArrayHelpers::bump(std::span<uint64_t> arr, uint64_t i) {
+void STArrayHelpers::bump(std::span<uint64_t> arr, uint64_t i) {
   uint64_t v = arr[i];
   arr[i] = (v + 1);
 }
 
 /// A write two calls deep.
-void StArrayHelpers::middle(std::span<uint64_t> arr, uint64_t i) {
+void STArrayHelpers::middle(std::span<uint64_t> arr, uint64_t i) {
   arr[i] = UINT64_C(42);
 }
 
-void StArrayHelpers::outer(std::span<uint64_t> arr) {
+void STArrayHelpers::outer(std::span<uint64_t> arr) {
   middle(arr, UINT64_C(0));
   middle(arr, UINT64_C(2));
 }
 
-/// Swaps the first and last cells: swapArray is called, not unfolded.
-void StArrayHelpers::swap_ends(std::span<uint64_t> arr, uint64_t last) {
+/// Swaps the first and last cells: ST.swap_array is called, not unfolded.
+void STArrayHelpers::swap_ends(std::span<uint64_t> arr, uint64_t last) {
   std::swap(arr[UINT64_C(0)], arr[last]);
 }
 
 /// Returns one of its arrays: it keeps them, so takes them by value.
 std::shared_ptr<crane::array_storage<uint64_t>>
-StArrayHelpers::pick(bool b,
+STArrayHelpers::pick(bool b,
                      std::shared_ptr<crane::array_storage<uint64_t>> arr1,
                      std::shared_ptr<crane::array_storage<uint64_t>> arr2) {
   if (b) {
@@ -40,7 +40,7 @@ StArrayHelpers::pick(bool b,
 
 /// Writes its first array and passes both to pick, which keeps them:
 /// by value too.
-std::shared_ptr<crane::array_storage<uint64_t>> StArrayHelpers::write_then_pick(
+std::shared_ptr<crane::array_storage<uint64_t>> STArrayHelpers::write_then_pick(
     std::shared_ptr<crane::array_storage<uint64_t>> arr1,
     std::shared_ptr<crane::array_storage<uint64_t>> arr2) {
   std::span{*arr1}[UINT64_C(1)] = UINT64_C(7);
@@ -50,7 +50,7 @@ std::shared_ptr<crane::array_storage<uint64_t>> StArrayHelpers::write_then_pick(
 /// Returns its array through the monad's Ret, a legacy mapping whose
 /// argument Crane takes to be only read: borrowed, and copied where it is
 /// returned.
-std::shared_ptr<crane::array_storage<uint64_t>> StArrayHelpers::keep(
+std::shared_ptr<crane::array_storage<uint64_t>> STArrayHelpers::keep(
     const std::shared_ptr<crane::array_storage<uint64_t>> &arr) {
   std::span{*arr}[UINT64_C(1)] = UINT64_C(7);
   return arr;
@@ -58,7 +58,7 @@ std::shared_ptr<crane::array_storage<uint64_t>> StArrayHelpers::keep(
 
 /// Recursive helpers keep the view: a tail-recursive write loop takes the
 /// writable view, a non-tail-recursive read the read view.
-void StArrayHelpers::zero_from(std::span<uint64_t> arr, uint64_t i,
+void STArrayHelpers::zero_from(std::span<uint64_t> arr, uint64_t i,
                                uint64_t n) {
   if (n <= 0) {
     return;
@@ -70,7 +70,7 @@ void StArrayHelpers::zero_from(std::span<uint64_t> arr, uint64_t i,
   }
 }
 
-uint64_t StArrayHelpers::sum_from(std::span<const uint64_t> arr, uint64_t i,
+uint64_t STArrayHelpers::sum_from(std::span<const uint64_t> arr, uint64_t i,
                                   uint64_t n) {
   if (n <= 0) {
     return UINT64_C(0);
@@ -83,26 +83,26 @@ uint64_t StArrayHelpers::sum_from(std::span<const uint64_t> arr, uint64_t i,
 }
 
 /// Writes a cell, then refills the array canonically.
-void StArrayHelpers::write_and_refill(
+void STArrayHelpers::write_and_refill(
     const std::shared_ptr<crane::array_storage<uint64_t>> &arr, uint64_t v) {
   std::span{*arr}[UINT64_C(0)] = v;
   std::ranges::fill(*arr, v);
 }
 
 /// Replaces its array, then writes the new one.
-void StArrayHelpers::regrow_then_write(
+void STArrayHelpers::regrow_then_write(
     std::shared_ptr<crane::array_storage<uint64_t>> &arr, uint64_t n) {
   arr = std::make_shared<crane::array_storage<uint64_t>>(n, 0);
   std::span{*arr}[UINT64_C(0)] = n;
 }
 
 /// A bool array: reads one cell and writes its negation back.
-void StArrayHelpers::flip(std::span<bool> arr, uint64_t i) {
+void STArrayHelpers::flip(std::span<bool> arr, uint64_t i) {
   bool b = arr[i];
   arr[i] = !(b);
 }
 
-List<uint64_t> StArrayHelpers::helpers_list(const List<uint64_t> &xs) {
+List<uint64_t> STArrayHelpers::helpers_list(const List<uint64_t> &xs) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       crane::st::new_list_array<uint64_t>(xs);
   bump(std::span{*arr}, UINT64_C(1));
@@ -114,7 +114,7 @@ List<uint64_t> StArrayHelpers::helpers_list(const List<uint64_t> &xs) {
 }
 
 std::pair<List<uint64_t>, List<uint64_t>>
-StArrayHelpers::keep_list(uint64_t n) {
+STArrayHelpers::keep_list(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
           static_cast<std::size_t>(n), UINT64_C(3));
@@ -130,7 +130,7 @@ StArrayHelpers::keep_list(uint64_t n) {
   return std::make_pair(std::move(elems), std::move(others));
 }
 
-std::pair<uint64_t, List<uint64_t>> StArrayHelpers::refill_list(uint64_t n) {
+std::pair<uint64_t, List<uint64_t>> STArrayHelpers::refill_list(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(3uz, UINT64_C(1));
   write_and_refill(arr, n);
@@ -140,7 +140,7 @@ std::pair<uint64_t, List<uint64_t>> StArrayHelpers::refill_list(uint64_t n) {
   return std::make_pair(first, std::move(elems));
 }
 
-std::pair<uint64_t, List<uint64_t>> StArrayHelpers::loops_list(uint64_t n) {
+std::pair<uint64_t, List<uint64_t>> STArrayHelpers::loops_list(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
           static_cast<std::size_t>(n), UINT64_C(2));
@@ -151,14 +151,14 @@ std::pair<uint64_t, List<uint64_t>> StArrayHelpers::loops_list(uint64_t n) {
   return std::make_pair(s, std::move(elems));
 }
 
-List<uint64_t> StArrayHelpers::regrow_list(uint64_t n) {
+List<uint64_t> STArrayHelpers::regrow_list(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(2uz, UINT64_C(5));
   regrow_then_write(arr, n);
   return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
 }
 
-List<bool> StArrayHelpers::flip_list(const List<bool> &bs) {
+List<bool> STArrayHelpers::flip_list(const List<bool> &bs) {
   std::shared_ptr<crane::array_storage<bool>> arr =
       crane::st::new_list_array<bool>(bs);
   flip(std::span{*arr}, UINT64_C(0));
@@ -166,7 +166,7 @@ List<bool> StArrayHelpers::flip_list(const List<bool> &bs) {
   return crane::st::elems<List<bool>>(std::span{std::as_const(*arr)});
 }
 
-std::pair<bool, List<bool>> StArrayHelpers::bools_filled(uint64_t n) {
+std::pair<bool, List<bool>> STArrayHelpers::bools_filled(uint64_t n) {
   std::shared_ptr<crane::array_storage<bool>> arr =
       std::make_shared<crane::array_storage<bool>>(static_cast<std::size_t>(n),
                                                    false);

@@ -15,7 +15,7 @@
 template <typename T1> struct code_const;
 template <typename Err> struct ExceptE;
 struct Err;
-enum class STRefs;
+enum class Refs;
 template <typename I, typename V, typename A>
 concept Code = requires {
   { I::code() } -> std::convertible_to<uint64_t>;
@@ -54,7 +54,7 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-enum class STRefs { BUILD_STREFS };
+enum class Refs { BUILD_REFS };
 
 template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
@@ -68,7 +68,7 @@ std::pair<uint64_t, uint64_t> swapped();
 std::pair<bool, bool> new_and_read_both_bool();
 bool tree_simp_bool();
 
-struct StRefs {
+struct STRefs {
   static inline const std::pair<uint64_t, uint64_t> new_and_read_both_nat =
       ::new_and_read_both_nat();
   static inline const uint64_t tree_simp_nat = ::tree_simp_nat();

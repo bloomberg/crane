@@ -43,7 +43,7 @@ uint64_t sum_with() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(4uz, UINT64_C(3));
   std::span{*arr}[UINT64_C(2)] = UINT64_C(10);
-  return STMonad::template for_each_with<uint64_t, uint64_t>(
+  return ST::template for_each_with<uint64_t, uint64_t>(
       ListDef::seq(UINT64_C(0), UINT64_C(4)), UINT64_C(0),
       [=, arr = std::move(arr)](uint64_t _x0,
                                 uint64_t _x1)
@@ -111,7 +111,7 @@ uint64_t unused_param() {
   return pass_view(&r0);
 }
 
-uint64_t StReadableForms::fib_step(uint64_t n) { return ::fib_step(n); }
+uint64_t STReadableForms::fib_step(uint64_t n) { return ::fib_step(n); }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
   // Builds the result front to back: _write points at the empty tail the next

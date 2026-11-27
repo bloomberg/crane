@@ -19,7 +19,7 @@
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-struct GlobRefNat;
+struct NatRef;
 template <typename I, typename T>
 concept Ix = requires {
   {
@@ -39,9 +39,9 @@ concept Ix = requires {
   { I::zero() } -> std::convertible_to<T>;
 };
 template <typename I, typename T>
-concept GlobRefClass = requires {
-  { I::mkGlobRef(std::declval<T>()) } -> std::convertible_to<crane::obj>;
-  { I::GlobRefToIx(std::declval<crane::obj>()) } -> std::convertible_to<T>;
+concept RefClass = requires {
+  { I::make_ref(std::declval<T>()) } -> std::convertible_to<crane::obj>;
+  { I::ref_index(std::declval<crane::obj>()) } -> std::convertible_to<T>;
 };
 
 struct ListDef {
@@ -164,17 +164,17 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct GlobRefNat {
+struct NatRef {
   // DATA
   uint64_t a;
 
   // ACCESSORS
-  GlobRefNat clone() const { return {a}; }
+  NatRef clone() const { return {a}; }
 
   // CREATORS
-  static GlobRefNat mkglobref(uint64_t a) { return {a}; }
+  static NatRef mknatref(uint64_t a) { return {a}; }
 
-  uint64_t GlobRefToIxNat() const;
+  uint64_t nat_ref_index() const;
 };
 
 struct GlobalStateTests {
@@ -218,18 +218,18 @@ struct GlobalStateTests {
   static_assert(Ix<nat_idx, uint64_t>);
 
   struct nat_stref {
-    static crane::obj mkGlobRef(uint64_t x) { return GlobRefNat::mkglobref(x); }
+    static crane::obj make_ref(uint64_t x) { return NatRef::mknatref(x); }
 
-    static uint64_t GlobRefToIx(crane::obj _p_a0) {
-      GlobRefNat a0 = crane::any_cast<GlobRefNat>(_p_a0);
-      return a0.GlobRefToIxNat();
+    static uint64_t ref_index(crane::obj _p_a0) {
+      NatRef a0 = crane::any_cast<NatRef>(_p_a0);
+      return a0.nat_ref_index();
     }
   };
 
-  static_assert(GlobRefClass<nat_stref, uint64_t>);
+  static_assert(RefClass<nat_stref, uint64_t>);
 
   template <typename _tcI0, typename _tcI1>
-    requires GlobRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
+    requires RefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
     std::shared_ptr<uint64_t> r1 = std::make_shared<uint64_t>(UINT64_C(5));
     std::shared_ptr<uint64_t> r2 = std::make_shared<uint64_t>(UINT64_C(6));
@@ -239,7 +239,7 @@ struct GlobalStateTests {
   }
 
   template <typename _tcI0, typename _tcI1>
-    requires GlobRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
+    requires RefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static uint64_t fib_Glob(uint64_t n) {
     if (n < UINT64_C(2)) {
       return n;
@@ -270,7 +270,7 @@ struct GlobalStateTests {
                             const std::string &prefix);
 };
 
-inline uint64_t GlobRefNat::GlobRefToIxNat() const {
+inline uint64_t NatRef::nat_ref_index() const {
   const auto &[a] = *this;
   return a;
 }

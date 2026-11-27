@@ -21,13 +21,13 @@ template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-enum class STRefs;
+enum class Refs;
 template <typename I, typename V, typename A>
 concept Code = requires {
   { I::code() } -> std::convertible_to<uint64_t>;
 };
 
-struct StArrays {
+struct STArrays {
   static uint64_t array_simp_fixed_init();
   static std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
   array_simp_list();
@@ -187,7 +187,7 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-enum class STRefs { BUILD_STREFS };
+enum class Refs { BUILD_REFS };
 
 template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }

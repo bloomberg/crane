@@ -28,7 +28,7 @@ struct Z;
 template <typename Err> struct ExceptE;
 struct Err;
 template <typename X> struct Compare;
-enum class STRefs;
+enum class Refs;
 struct Op;
 template <typename I, typename V, typename A>
 concept Code = requires {
@@ -464,7 +464,7 @@ struct BinInt {
   static bool eq_dec(const Z &x, const Z &y);
 };
 
-enum class STRefs { BUILD_STREFS };
+enum class Refs { BUILD_REFS };
 
 template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }

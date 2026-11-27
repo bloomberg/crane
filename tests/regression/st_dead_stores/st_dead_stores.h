@@ -14,7 +14,7 @@
 template <typename T1> struct code_const;
 template <typename Err> struct ExceptE;
 struct Err;
-enum class STRefs;
+enum class Refs;
 template <typename I, typename V, typename A>
 concept Code = requires {
   { I::code() } -> std::convertible_to<uint64_t>;
@@ -53,7 +53,7 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-enum class STRefs { BUILD_STREFS };
+enum class Refs { BUILD_REFS };
 
 template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
@@ -64,7 +64,7 @@ uint64_t read_by_dead_store();
 uint64_t written_in_branch(bool b);
 uint64_t written_in_unused_branch(bool b);
 
-struct StDeadStores {
+struct STDeadStores {
   static inline const uint64_t written_only = ::written_only();
   static inline const uint64_t read_by_dead_store = ::read_by_dead_store();
   static uint64_t written_in_branch(bool b);

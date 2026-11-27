@@ -21,7 +21,7 @@ template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-enum class STRefs;
+enum class Refs;
 struct Expr;
 struct Stmt;
 template <typename I, typename V, typename A>
@@ -152,7 +152,7 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-enum class STRefs { BUILD_STREFS };
+enum class Refs { BUILD_REFS };
 
 template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }

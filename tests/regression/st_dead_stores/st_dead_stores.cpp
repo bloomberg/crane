@@ -54,10 +54,10 @@ uint64_t written_in_unused_branch(bool b) {
   return s;
 }
 
-uint64_t StDeadStores::written_in_branch(bool b) {
+uint64_t STDeadStores::written_in_branch(bool b) {
   return ::written_in_branch(b);
 }
 
-uint64_t StDeadStores::written_in_unused_branch(bool b) {
+uint64_t STDeadStores::written_in_unused_branch(bool b) {
   return ::written_in_unused_branch(b);
 }

@@ -1,6 +1,6 @@
 #include "st_fibonacci.h"
 
-uint64_t StFibonacci::fib_ST(uint64_t n) {
+uint64_t STFibonacci::fib_ST(uint64_t n) {
   if (n < UINT64_C(2)) {
     return n;
   } else {
@@ -22,7 +22,7 @@ uint64_t StFibonacci::fib_ST(uint64_t n) {
   }
 }
 
-uint64_t StFibonacci::fib_fun(uint64_t n) {
+uint64_t STFibonacci::fib_fun(uint64_t n) {
   // Explicit stack replaces the non-tail recursion of fib_fun: _call frames are
   // pending calls, _after frames resume a caller.
   struct _call {

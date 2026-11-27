@@ -184,7 +184,7 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-struct StArrayHelpers {
+struct STArrayHelpers {
   /// Only reads a cell.
   static uint64_t peek(std::span<const uint64_t> arr, uint64_t i);
   /// Reads one cell and writes it back.
@@ -192,7 +192,7 @@ struct StArrayHelpers {
   /// A write two calls deep.
   static void middle(std::span<uint64_t> arr, uint64_t i);
   static void outer(std::span<uint64_t> arr);
-  /// Swaps the first and last cells: swapArray is called, not unfolded.
+  /// Swaps the first and last cells: ST.swap_array is called, not unfolded.
   static void swap_ends(std::span<uint64_t> arr, uint64_t last);
   /// Returns one of its arrays: it keeps them, so takes them by value.
   static std::shared_ptr<crane::array_storage<uint64_t>>

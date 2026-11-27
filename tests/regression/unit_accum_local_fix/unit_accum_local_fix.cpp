@@ -1,6 +1,6 @@
 #include "unit_accum_local_fix.h"
 
-/// for_each_with at B := unit, unfolded below into a local fixpoint.
+/// ST.for_each_with at B := unit, unfolded below into a local fixpoint.
 uint64_t UnitAccumLocalFix::fill(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> a =
       std::make_shared<crane::array_storage<uint64_t>>(

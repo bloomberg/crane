@@ -23,7 +23,7 @@ concept Code = requires {
 
 struct Nat {};
 
-struct StFibonacci {
+struct STFibonacci {
   static uint64_t fib_ST(uint64_t n);
   static uint64_t fib_fun(uint64_t n);
 };

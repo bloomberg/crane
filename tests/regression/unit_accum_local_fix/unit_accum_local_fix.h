@@ -257,10 +257,10 @@ template <typename T1> struct code_const {
 };
 
 struct UnitAccumLocalFix {
-  /// for_each_with at B := unit, unfolded below into a local fixpoint.
+  /// ST.for_each_with at B := unit, unfolded below into a local fixpoint.
   static uint64_t fill(uint64_t n);
 
-  /// for_each_with at B := unit as a top-level Fixpoint.
+  /// ST.for_each_with at B := unit as a top-level Fixpoint.
   template <typename F1>
   static void each_unit(const List<uint64_t> &xs, F1 &&f) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {

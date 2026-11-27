@@ -144,7 +144,7 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-struct StArrayLoops {
+struct STArrayLoops {
   static void zero_from(std::span<uint64_t> arr, uint64_t i, uint64_t n);
   static uint64_t sum_from(std::span<const uint64_t> arr, uint64_t i,
                            uint64_t n);

@@ -32,18 +32,18 @@ List<uint64_t> swap_first_and_last_list(const List<uint64_t> &xs) {
   return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
 }
 
-uint64_t StArrays::array_simp_fixed_init() { return ::array_simp_fixed_init(); }
+uint64_t STArrays::array_simp_fixed_init() { return ::array_simp_fixed_init(); }
 
 std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
-StArrays::array_simp_list() {
+STArrays::array_simp_list() {
   return ::array_simp_list();
 }
 
-List<uint64_t> StArrays::swap_first_and_last_list(const List<uint64_t> &x0_) {
+List<uint64_t> STArrays::swap_first_and_last_list(const List<uint64_t> &x0_) {
   return ::swap_first_and_last_list(x0_);
 }
 
-uint64_t StArrays::nth(uint64_t n, const List<uint64_t> &l, uint64_t default0) {
+uint64_t STArrays::nth(uint64_t n, const List<uint64_t> &l, uint64_t default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return default0;

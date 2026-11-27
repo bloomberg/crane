@@ -22,7 +22,7 @@ template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-enum class STRefs;
+enum class Refs;
 template <typename I, typename V, typename A>
 concept Code = requires {
   { I::code() } -> std::convertible_to<uint64_t>;
@@ -148,9 +148,9 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-enum class STRefs { BUILD_STREFS };
+enum class Refs { BUILD_REFS };
 
-struct STMonad {
+struct ST {
   template <typename T2, typename T3, typename F2>
   static T3 for_each_with(const List<T2> &xs, const T3 &v, F2 &&f);
 };
@@ -169,7 +169,7 @@ uint64_t ignore_ref(const uint64_t *_x0, uint64_t n);
 uint64_t pass_view(uint64_t *r0);
 uint64_t unused_param();
 
-struct StReadableForms {
+struct STReadableForms {
   static inline const uint64_t pair_parts = ::pair_parts();
   static uint64_t fib_step(uint64_t n);
   static inline const uint64_t sum_with = ::sum_with();
@@ -178,7 +178,7 @@ struct StReadableForms {
 };
 
 template <typename T2, typename T3, typename F2>
-T3 STMonad::for_each_with(const List<T2> &xs, const T3 &v, F2 &&f) {
+T3 ST::for_each_with(const List<T2> &xs, const T3 &v, F2 &&f) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
   T3 _loop_v = v;
