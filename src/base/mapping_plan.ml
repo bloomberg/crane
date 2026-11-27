@@ -57,6 +57,7 @@ type t = {
   head : GlobRef.t;
   canonical : type_expr;
   transparent : int option;
+  type_arity : int;
   integer : Cpp_ir.Integer_type.t option;
   components : (string * int) list;
   component_binders : (string * int) list;
@@ -425,6 +426,7 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     numerals;
     head;
     canonical = type_expr m.type_cpp;
+    type_arity = List.length (List.filter Fun.id kinds);
     transparent = (match m.type_cpp with Cpp.Source_type t -> parameter_of_type ids t | _ -> None);
     integer = (match m.type_cpp with Cpp.Int t -> Some t | _ -> None);
     components = List.map (fun (x, i) -> (x, position i)) components;

@@ -36,6 +36,11 @@ type resolved_operation_mapping = {
 (** Record the heads of the active instances, emptying the caches. *)
 val discover : unit -> unit
 
+(** Whether a constant of this type is a mapping instance ([TypeMapping],
+    [OperationMapping] or [LocalStorage]), which extraction writes nothing
+    for. *)
+val is_mapping_instance_type : Constr.types -> bool
+
 (** Whether a [TypeMapping] or [OperationMapping] instance is recorded for
     this head. *)
 val has_new_style_mapping : Names.GlobRef.t -> bool

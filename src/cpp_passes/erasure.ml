@@ -682,6 +682,21 @@ let rec instantiated_type ~boxing (t : ty) : ty =
          argument is the whole of what there is to write. *)
       | Apply (Entity_application (r, _, _), [arg]) when Base.Type_util.ref_has_no_cpp_name r ->
         Some (instantiated_type ~boxing arg)
+      (* A typed-mapped type constructor ([itree E] as a monad's carrier)
+         is its type at the carrier's sentinel in each missing argument,
+         which a synthesised template abstracts ({!Emit.Leaf_plan}). *)
+      (* A typed-mapped type constructor ([itree E] as a monad's carrier)
+         is its type at the carrier's sentinel in its last argument, which
+         a synthesised template abstracts, as a mapping's text is
+         ({!Emit.Leaf_plan.ctor_alias_at}). *)
+      | Type_constructor (Entity_application (r, (_ :: _ as tys), _)) when Base.Mapping_plan.is_type_head r ->
+        let plan = Base.Mapping_plan.find r in
+        Base.Mapping_plan.note_instantiated r;
+        let tys = List.map (instantiated_type ~boxing) tys in
+        let tys = tys @ List.init (max 0 (plan.type_arity - List.length tys)) (fun _ : ty -> Any) in
+        let last = List.length tys - 1 in
+        let tys = List.mapi (fun i (t : ty) : ty -> if i = last then Carrier_parameter else t) tys in
+        Some (Type_constructor (Base.Mapping_plan.cpp_type plan tys))
       (* A typed-mapped type is built from its compiled plan, structured:
          never text ({!Base.Mapping_plan.cpp_type}). *)
       | (Entity_application (r, tys, _) | In_namespace (_, Entity_application (r, tys, _)))

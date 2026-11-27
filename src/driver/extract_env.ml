@@ -397,6 +397,8 @@ and extract_mbody_spec : 'a. _ -> _ -> 'a generic_module_body -> _ =
     order (last to first) ensures correct dependencies. *)
 let rec extract_structure access env mp reso ~all = function
   | [] -> []
+  | (l, SFBconst cb) :: struc when Base.Mapping_discovery.is_mapping_instance_type cb.const_type ->
+    extract_structure access env mp reso ~all struc
   | (l, SFBconst cb) :: struc ->
     ( try
         let sg = Evd.from_env env in

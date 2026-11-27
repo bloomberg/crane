@@ -368,6 +368,10 @@ let shadow ?(al = as_written) ~adapter ~kind (from : Cpp_ir.Lowered.Value_type.t
         else if (match into with Exactly t -> Cpp_ir.Types.exists (fun t -> t = Auto) t | _ -> false) then
           " unchecked (generic slot)"
         else if planned = None && variables into then " unchecked (slot at type variables)"
+        (* A slot whose representation the seam settles later: {!decide}
+           plans nothing for it, whatever an adapter built. *)
+        else if planned = None && (match into with Exactly (Obligation Opaque_type) -> true | _ -> false) then
+          " unchecked (unsettled slot)"
         else if
           (* A callable said to fill a slot no callable fills: the position
              described the aggregate the value goes into, not the value's

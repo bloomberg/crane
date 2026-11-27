@@ -274,6 +274,22 @@ let resolve_type_mapping env sigma ty =
                 type_source = EConstr.to_constr sigma source;
                 type_mapping = mapping } ) )
 
+(** Whether a constant of type [ty] is a mapping instance: its type is a
+    [TypeMapping], [OperationMapping] or [LocalStorage].  An instance
+    is configuration, not program: extracting a module declaring one writes
+    nothing for it. *)
+let is_mapping_instance_type ty =
+  let _, concl = Term.decompose_prod_decls ty in
+  match Constr.kind (fst (Constr.decompose_app concl)) with
+  | Constr.Ind (ind, _) ->
+    List.exists
+      (fun name ->
+        match Mapping_decode.registered name with
+        | Some (GlobRef.IndRef i) -> Ind.CanOrd.equal i ind
+        | _ -> false)
+      ["TypeMapping"; "OperationMapping"; "LocalStorage"]
+  | _ -> false
+
 (** {1 Operation binders} *)
 
 type binder_role = Type_parameter of int | Runtime of int | Instance | Erased

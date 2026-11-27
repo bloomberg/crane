@@ -94,6 +94,7 @@ type t = {
       (** the binder of the type argument the canonical type is, where it is
           one ([itree E R] mapped to [R]): a reader looking for a mapped type
           looks through it *)
+  type_arity : int;  (** how many type arguments a use of the head takes *)
   integer : Cpp_ir.Integer_type.t option;
       (** the canonical type, where it is written [Int t]: an operation's
           structured body knows an argument of the type is a [t] *)

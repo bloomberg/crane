@@ -52,16 +52,16 @@ Local Open Scope pstring_scope.
              ctor_build := Expr "sum1_inl(%a0)";
              ctor_view :=
                Some {| view_requirement := CanonicalObservation;
-                       case_test := "std::holds_alternative<typename Sum1<%t0, %t1>::Inl1>(%scrut.v())";
+                       case_test := "std::holds_alternative<typename std::decay_t<decltype(%scrut)>::Inl1>(%scrut.v())";
                        case_fields :=
-                         [(0, CanonicalBorrowProjection "std::get<typename Sum1<%t0, %t1>::Inl1>(%scrut.v()).a0")] |} |};
+                         [(0, CanonicalBorrowProjection "std::get<typename std::decay_t<decltype(%scrut)>::Inl1>(%scrut.v()).a0")] |} |};
           {| ctor_source := Ref (@inr1 E1 E2 X);
              ctor_build := Expr "sum1_inr(%a0)";
              ctor_view :=
                Some {| view_requirement := CanonicalObservation;
-                       case_test := "std::holds_alternative<typename Sum1<%t0, %t1>::Inr1>(%scrut.v())";
+                       case_test := "std::holds_alternative<typename std::decay_t<decltype(%scrut)>::Inr1>(%scrut.v())";
                        case_fields :=
-                         [(0, CanonicalBorrowProjection "std::get<typename Sum1<%t0, %t1>::Inr1>(%scrut.v()).a0")] |} |}];
+                         [(0, CanonicalBorrowProjection "std::get<typename std::decay_t<decltype(%scrut)>::Inr1>(%scrut.v()).a0")] |} |}];
      type_model := Structural;
      type_lifetime := NativeRAII;
      type_release := OrdinaryRelease;

@@ -102,6 +102,14 @@ Definition dictionary {d : Declaration} (headers : list string) (args : list str
      operation_cpp := Expr cpp;
      operation_contract := PureOperation (uses Ignore args) ReturnValue [] |}.
 
+(** A pure operation reading each argument named in [args] in its canonical
+    representation, whose C++ is any construction. *)
+Definition pure_cpp {d : Declaration} (headers : list string) (args : list string) (cpp : Construction)
+  : OperationMapping d :=
+  {| operation_headers := headers;
+     operation_cpp := cpp;
+     operation_contract := PureOperation (uses ReadCanonical args) ReturnValue [] |}.
+
 (** An operation with an effect, its arguments used as [args] says, whose
     C++ is any construction. *)
 Definition effect_args {d : Declaration} (headers : list string) (args : list ArgumentSpec)
