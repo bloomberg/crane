@@ -35,7 +35,7 @@ int main() {
   for (int i = 0; i < DEPTH; ++i) {
     e = M::expr::succe(std::move(e));
   }
-  assert(M::size<uint64_t>(e) == DEPTH + 1);
+  assert(M::size(e) == DEPTH + 1);
   assert(count(e) == DEPTH + 1);
   std::cout << "loopify_recursor_instantiated: ok\n";
   return 0;

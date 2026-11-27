@@ -634,21 +634,87 @@ let rec normalize_erased_types cx : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type
     Function (List.map (normalize_erased_types cx) ps, normalize_erased_types cx r)
   | t -> t
 
+(* Whether a constructor of the inductive [i] of [kn], of [nparams]
+   parameters, stores a value whose C++ type writes a variable other than a
+   parameter inside another type: [A * nat], a parameter of an inductive, an
+   arrow -- not bare, and not at an inductive's index, which its generated
+   type strips. *)
+let stores_written_variable kn i nparams =
+  match Base.Table.lookup_ind kn (Global.lookup_mind kn) with
+  | exception Not_found -> true
+  | None -> true
+  | Some ind -> (
+    match List.nth_opt (Array.to_list ind.Core.Inductive.packets) i with
+    | None -> true
+    | Some (p : Core.Inductive.Packet.t) ->
+      let rec written ~under (t : Core.Type.t) =
+        match resolve_meta t with
+        | Variable {variable = j; _} -> under && j > nparams
+        | Variable_app {head; arguments} -> (under && head > nparams) || List.exists (written ~under:true) arguments
+        | Global_app {head = GlobRef.IndRef (kn', _); type_arguments; _} ->
+          let np = match Base.Table.get_ind_num_param_vars_opt kn' with Some k -> k | None -> List.length type_arguments in
+          List.exists (fun (k, a) -> k < np && written ~under:true a) (List.mapi (fun k a -> (k, a)) type_arguments)
+        | Global_app {type_arguments; _} -> List.exists (written ~under:true) type_arguments
+        | Arrow {parameter; result} -> written ~under:true parameter || written ~under:true result
+        | _ -> false
+      in
+      Array.exists (List.exists (written ~under:false)) p.constructor_argument_types )
+
 (** Whether [id]'s declaration declares a template parameter for its scheme
     variable of index [i]: one its declared type spells
-    ({!Base.Type_util.spelled_tvars_indexed}), or an index the body reads.
-    A callee written by a mapping's text rather than declared by Crane takes
-    the arguments its text names, so every variable counts. *)
+    ({!Base.Type_util.spelled_tvars_indexed}), but a result standing only at
+    an index, which the declaration returns boxed; and one inside a compound
+    index, which a body casts back to.  A callee written
+    by a mapping's text rather than declared by Crane takes the arguments its
+    text names, so every variable counts. *)
 let declares_tvar cx id =
   match callee_core_type cx id with
   | _ when Base.Table.is_custom id || Base.Table.is_mapped_operation id -> fun _ -> true
   | None -> fun _ -> true
   | Some core_ty ->
     let cty = cpp_ir_of_core_type cx (empty_env ()) [] (type_simpl core_ty) in
-    let declared =
-      IntSet.union
-        (IntSet.of_list (List.map fst (Base.Type_util.spelled_tvars_indexed cty)))
-        (collect_core_type_index_tvars core_ty)
+    let declared = IntSet.of_list (List.map fst (Base.Type_util.spelled_tvars_indexed cty)) in
+    (* A result that is a variable the arguments carry only as an index is
+       the box ([crane::obj]) the declaration returns
+       ({!Base.Type_util.index_only_result_tvar}): nothing spells it, and a
+       call that knows the index converts the result itself. *)
+    let index_result = Base.Type_util.index_only_result_tvar core_ty in
+    (* A variable at an index of a family some constructor of which stores
+       a value whose C++ type writes a variable of its own inside another type
+       -- [mk_pair_wrap : forall A, A * nat -> pair_wrap A] -- is what a body
+       casts the stored value back to ([std::pair<A, nat>]): a cast at the
+       box would test another type, so it stays a parameter.  So does a
+       variable inside a compound index.  One a family only ever stores bare,
+       or at another family's index, is only ever boxed. *)
+    let cast_back =
+      let acc = ref IntSet.empty in
+      let rec vars (t : Core.Type.t) =
+        match resolve_meta t with
+        | Variable {variable = j; _} -> acc := IntSet.add j !acc
+        | Variable_app {head; arguments} -> acc := IntSet.add head !acc; List.iter vars arguments
+        | Global_app {type_arguments; _} -> List.iter vars type_arguments
+        | Arrow {parameter; result} -> vars parameter; vars result
+        | _ -> ()
+      in
+      let rec walk (t : Core.Type.t) =
+        match resolve_meta t with
+        | Global_app {head = GlobRef.IndRef (kn, i); type_arguments; _} ->
+          let nparams = match Base.Table.get_ind_num_param_vars_opt kn with Some k -> k | None -> List.length type_arguments in
+          List.iteri
+            (fun k a ->
+              if k < nparams then walk a
+              else
+                match resolve_meta a with
+                | Variable {variable = j; _} -> if stores_written_variable kn i nparams then acc := IntSet.add j !acc
+                | a -> vars a)
+            type_arguments
+        | Global_app {type_arguments; _} -> List.iter walk type_arguments
+        | Variable_app {arguments; _} -> List.iter walk arguments
+        | Arrow {parameter; result} -> walk parameter; walk result
+        | _ -> ()
+      in
+      walk core_ty;
+      !acc
     in
     (* The C++ type above may write a variable through something it does not
        spell as an application -- a class's [Type -> Type] field, [memM B] --
@@ -661,16 +727,20 @@ let declares_tvar cx id =
       | Variable {variable = j; _} -> j = i
       | Variable_app {head; arguments} -> head = i || List.exists (spelled_in i) arguments
       | Global_app {head = g; type_arguments; _} -> (
-        match Base.Type_util.custom_referenced_positions_opt g with
-        | Some referenced ->
+        match (Base.Type_util.custom_referenced_positions_opt g, g) with
+        | Some referenced, _ ->
           List.exists (fun (k, t) -> IntSet.mem k referenced && spelled_in i t) (List.mapi (fun k t -> (k, t)) type_arguments)
-        | None -> List.exists (spelled_in i) type_arguments )
+        (* An inductive's index is stripped from the generated type. *)
+        | None, GlobRef.IndRef (kn, _) ->
+          let nparams = match Base.Table.get_ind_num_param_vars_opt kn with Some k -> k | None -> List.length type_arguments in
+          List.exists (fun (k, t) -> k < nparams && spelled_in i t) (List.mapi (fun k t -> (k, t)) type_arguments)
+        | None, _ -> List.exists (spelled_in i) type_arguments )
       | Arrow {parameter; result} ->
         ((not (Base.Core_util.is_erased_type parameter || Base.Table.is_typeclass_type parameter)) && spelled_in i parameter)
         || spelled_in i result
       | _ -> false
     in
-    fun i -> IntSet.mem i declared || spelled_in i core_ty
+    fun i -> IntSet.mem i cast_back || (index_result <> Some i && (IntSet.mem i declared || spelled_in i core_ty))
 
 (** How many of [id]'s leading template parameters no signature mentions:
     its leading phantoms, among the variables it declares

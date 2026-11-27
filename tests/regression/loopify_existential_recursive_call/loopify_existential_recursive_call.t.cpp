@@ -21,7 +21,7 @@ int main() {
     e = M::expr::fste(M::expr::paire(std::move(e), M::expr::bl(true)));
   }
 #ifndef BUILD_ONLY
-  assert(crane::any_cast<uint64_t>(M::eval<uint64_t>(e)) == 0);
+  assert(crane::any_cast<uint64_t>(M::eval(e)) == 0);
 #endif
   std::cout << "loopify_existential_recursive_call: ok\n";
   return 0;

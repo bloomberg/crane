@@ -20,7 +20,7 @@ int main() {
   for (int i = 0; i < DEPTH; ++i) {
     e = M::expr::succe(std::move(e));
   }
-  assert(crane::any_cast<uint64_t>(M::eval<uint64_t>(e)) == DEPTH);
+  assert(crane::any_cast<uint64_t>(M::eval(e)) == DEPTH);
   std::cout << "loopify_coerced_recursive_call: ok\n";
   return 0;
 }
