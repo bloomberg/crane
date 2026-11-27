@@ -131,6 +131,8 @@ let rec type_expr cx c : Cpp.type_expr =
   | 9, [] -> Cpp.Bool
   | 10, [] -> Cpp.Float64
   | 11, [] -> Cpp.Result_type
+  | 12, [s] -> Cpp.Type_parameter (string cx s)
+  | 13, [s; t] -> Cpp.Boxed_component (string cx s, type_expr cx t)
   | _ -> fail cx ~what:"a TypeExpr" c
 
 and int_type cx c : Cpp.int_type =
@@ -613,6 +615,8 @@ let rec pr_type_expr env = function
   | Cpp.Bool -> str "Bool"
   | Cpp.Float64 -> str "Float64"
   | Cpp.Result_type -> str "ResultType"
+  | Cpp.Type_parameter s -> str "TypeParameter " ++ pr_string s
+  | Cpp.Boxed_component (s, t) -> str "BoxedComponent " ++ pr_string s ++ str " (" ++ pr_type_expr env t ++ str ")"
 
 and pr_type_argument env = function
   | Cpp.Type_arg t -> str "TypeArg (" ++ pr_type_expr env t ++ str ")"

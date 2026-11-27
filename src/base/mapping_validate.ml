@@ -134,14 +134,15 @@ let rec stored_names acc = function
       (fun acc -> function Cpp.Type_arg t -> stored_names acc t | Cpp.Value_arg _ -> acc)
       acc args
   | Cpp.Pointer t | Cpp.Const t -> stored_names acc t
-  | Cpp.Name _ | Cpp.Source_type _ | Cpp.Unsafe_verbatim _ | Cpp.Int _ | Cpp.Bool | Cpp.Float64 | Cpp.Result_type -> acc
+  | Cpp.Boxed_component (s, t) -> stored_names (s :: acc) t
+  | Cpp.Name _ | Cpp.Source_type _ | Cpp.Unsafe_verbatim _ | Cpp.Int _ | Cpp.Bool | Cpp.Float64 | Cpp.Result_type | Cpp.Type_parameter _ -> acc
 
 let rec has_verbatim = function
   | Cpp.Unsafe_verbatim _ -> true
   | Cpp.Apply (_, args) ->
     List.exists (function Cpp.Type_arg t -> has_verbatim t | Cpp.Value_arg _ -> false) args
-  | Cpp.Pointer t | Cpp.Const t -> has_verbatim t
-  | Cpp.Name _ | Cpp.Source_type _ | Cpp.Stored_component _ | Cpp.Int _ | Cpp.Bool | Cpp.Float64 | Cpp.Result_type -> false
+  | Cpp.Pointer t | Cpp.Const t | Cpp.Boxed_component (_, t) -> has_verbatim t
+  | Cpp.Name _ | Cpp.Source_type _ | Cpp.Stored_component _ | Cpp.Int _ | Cpp.Bool | Cpp.Float64 | Cpp.Result_type | Cpp.Type_parameter _ -> false
 
 let ends_with c s =
   let s = String.trim s in
@@ -429,8 +430,9 @@ let structured_holes ~fail ~headers (body : Cpp.term) =
       plain "the type" s;
       List.iter (function Cpp.Type_arg t -> ty t | Cpp.Value_arg v -> plain "the type argument" v) args
     | Pointer t | Const t -> ty t
+    | Boxed_component _ -> fail "operation_cpp names a BoxedComponent, which only a type's canonical type can"
     | Name s | Unsafe_verbatim s -> plain "the type" s
-    | Source_type _ | Int _ | Bool | Float64 | Result_type -> ()
+    | Source_type _ | Int _ | Bool | Float64 | Result_type | Type_parameter _ -> ()
   in
   let rec term bound (e : Cpp.term) =
     let go = term bound in

@@ -27,6 +27,9 @@ type type_expr =
   | Pointer of type_expr
   | Const of type_expr
   | Verbatim of string  (** [UnsafeVerbatim] *)
+  | Boxed of int * type_expr
+      (** [BoxedComponent]: the type argument [i], or the box around it
+          where the element recurses through the mapped type *)
 
 and argument = Type of type_expr | Value of string
 
@@ -87,6 +90,10 @@ type t = {
   instance : Names.GlobRef.t;
   head : Names.GlobRef.t;
   canonical : type_expr;
+  transparent : int option;
+      (** the binder of the type argument the canonical type is, where it is
+          one ([itree E R] mapped to [R]): a reader looking for a mapped type
+          looks through it *)
   integer : Cpp_ir.Integer_type.t option;
       (** the canonical type, where it is written [Int t]: an operation's
           structured body knows an argument of the type is a [t] *)
@@ -137,11 +144,19 @@ val numeral_converters : Names.GlobRef.t -> Names.GlobRef.t list
     instance uses what this stage does not compile. *)
 val find : Names.GlobRef.t -> t
 
-(** The canonical C++ type of [p] at the type arguments [tys]. *)
-val cpp_type : t -> 'p Cpp_ir.Type.t list -> 'p Cpp_ir.Type.t
+(** The canonical C++ type of [p] at the type arguments [tys], the type
+    argument [i] boxed where [boxed i]. *)
+val cpp_type : ?boxed:(int -> bool) -> t -> 'p Cpp_ir.Type.t list -> 'p Cpp_ir.Type.t
 
 (** [e], a type of the plan, at the type arguments [tys]. *)
-val instantiate : type_expr -> 'p Cpp_ir.Type.t list -> 'p Cpp_ir.Type.t
+val instantiate : ?boxed:(int -> bool) -> type_expr -> 'p Cpp_ir.Type.t list -> 'p Cpp_ir.Type.t
+
+(** The box of [p]'s boxed component, its element written [%t0], where the
+    canonical type boxes one. *)
+val wrapper_text : t -> string option
+
+(** The [DrainWith] statement of [p]'s release plan, if any. *)
+val drain_text : t -> string option
 
 (** The view of kind [k] [p] declares, if any. *)
 val view : t -> view_kind -> view_plan option

@@ -388,7 +388,14 @@ let operation_context env g =
           binder_mapping = lazy (known x.binder_type) })
       retained
   in
-  {Mapping_validate.runtime_binders = Some runtime; result_mapping = known b.result_type}
+  (* A result type mapped to one of its type arguments ([itree E R] to
+     [R]) is that argument. *)
+  let rec result t =
+    match known t with
+    | Some {type_cpp = Mapping_descriptor.Cpp.Source_type t'; _} -> result (EConstr.of_constr t')
+    | m -> m
+  in
+  {Mapping_validate.runtime_binders = Some runtime; result_mapping = result b.result_type}
 
 let resolve_operation_mapping env sigma term =
   let term = Evarutil.nf_evar sigma term in

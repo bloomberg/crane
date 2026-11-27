@@ -3345,7 +3345,9 @@ let boxed_wrappers = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrBoxedWra
 
 let add_boxed_wrapper r s = boxed_wrappers := Core.Ref.Can.Map.add r s !boxed_wrappers
 
-let find_boxed_wrapper_opt r = Core.Ref.Can.Map.find_opt r !boxed_wrappers
+let find_boxed_wrapper_opt r =
+  if Mapping_plan.is_type_head r then Mapping_plan.wrapper_text (Mapping_plan.find r)
+  else Core.Ref.Can.Map.find_opt r !boxed_wrappers
 
 (* Custom drain templates (iterative-destructor support). Maps a custom container
    inductive (e.g. [list] mapped to [std::deque] / [immer::flex_vector]) to the
@@ -3359,7 +3361,9 @@ let custom_drains = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrCustomDra
 
 let add_custom_drain r s = custom_drains := Core.Ref.Can.Map.add r s !custom_drains
 
-let find_custom_drain_opt r = Core.Ref.Can.Map.find_opt r !custom_drains
+let find_custom_drain_opt r =
+  if Mapping_plan.is_type_head r then Mapping_plan.drain_text (Mapping_plan.find r)
+  else Core.Ref.Can.Map.find_opt r !custom_drains
 
 (* Set of inductives that recurse *through* a boxed-element container (e.g.
    [json_value] with a [list json_value] field). Populated during inductive
@@ -4196,7 +4200,9 @@ let check_typed_mapping_conflicts () =
   List.iter
     (fun (head, instances) ->
       let refuse = refuse ~kind:"typed" head instances in
-      if Core.Ref.Can.Map.mem head !customs then
+      (* A monad's [Crane Extract Monad] spelling is a custom too; the typed
+         mapping of the monad's type answers before it. *)
+      if Core.Ref.Can.Map.mem head !customs && not (is_monad head) then
         refuse "Crane Extract"
           ~fix:"Remove one of them: a type is mapped either by a TypeMapping instance or by Crane Extract Inductive/Constant, never both."
       else if Core.Ref.Can.Map.mem head !numeral_table then

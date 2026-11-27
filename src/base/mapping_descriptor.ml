@@ -45,6 +45,10 @@ module Cpp = struct
     | Bool
     | Float64
     | Result_type  (** the type a use yields, a template's [%ret] *)
+    | Type_parameter of string  (** an operation's type parameter, by binder name *)
+    | Boxed_component of string * type_expr
+        (** a component, held in the box where its element recurses through
+            the mapped type *)
 
   and type_argument = Type_arg of type_expr | Value_arg of string
 

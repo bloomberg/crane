@@ -67,6 +67,7 @@ val fold :
   t ->
   t
 
-(** [e] in the legacy term-template vocabulary ([%aN], [%tN], [%ret]), fully
-    parenthesised: what the readers of a mapping's text read. *)
+(** [e] in the term-template vocabulary ([%aN], [%tN], [%ret]), an operator's
+    operand parenthesised unless it binds tighter: what the readers of a
+    mapping's text read. *)
 val text : t -> string

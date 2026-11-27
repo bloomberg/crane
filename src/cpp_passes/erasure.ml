@@ -687,7 +687,11 @@ let rec instantiated_type ~boxing (t : ty) : ty =
       | (Entity_application (r, tys, _) | In_namespace (_, Entity_application (r, tys, _)))
         when Base.Mapping_plan.is_type_head r ->
         Base.Mapping_plan.note_instantiated r;
-        Some (Base.Mapping_plan.cpp_type (Base.Mapping_plan.find r) (List.map (instantiated_type ~boxing) tys))
+        let plan = Base.Mapping_plan.find r in
+        (* An element recursing through the container is boxed, as the
+           element hole of a constructor's text is ({!boxed_by}). *)
+        let boxed i = boxing && recurses_boxed (Option.default (Any : ty) (List.nth_opt tys i)) in
+        Some (Base.Mapping_plan.cpp_type ~boxed plan (List.map (instantiated_type ~boxing) tys))
       (* Written through the inductive's own head. *)
       | In_namespace ((GlobRef.IndRef _ as r), Entity_application (r', tys, args)) when Base.Common.globref_equal r r' ->
         let args = List.map (instantiated_expr ~boxing) args in

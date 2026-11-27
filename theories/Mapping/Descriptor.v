@@ -55,7 +55,14 @@ Inductive IntType : Type :=
     they print with correct declarator binding.  [Int], [Bool] and
     [Float64] are the built-in types; a canonical type written [Int] lets
     Crane know an operation's argument is that integer type.  [ResultType]
-    is the type a use of an operation yields. *)
+    is the type a use of an operation yields, and [TypeParameter x] the
+    type an operation's type parameter [x] is instantiated at (both only in
+    an operation's body).  [BoxedComponent c box], in a canonical type, is
+    the component [c], or [box] (naming the element [StoredComponent c])
+    where the element is an inductive recursive through the mapped type:
+    a container C++ needs its element complete to name ([immer] containers)
+    holds such an element boxed.  A constructor's [%stored(c)] is boxed the
+    same way; a view's and a projection's are not. *)
 Inductive TypeExpr : Type :=
 | Name (qualified_name : string)
 | Apply (qualified_name : string) (arguments : list TypeArgument)
@@ -68,6 +75,8 @@ Inductive TypeExpr : Type :=
 | Bool
 | Float64
 | ResultType
+| TypeParameter (name : string)
+| BoxedComponent (name : string) (box : TypeExpr)
 
 with TypeArgument : Type :=
 | TypeArg (type_argument : TypeExpr)

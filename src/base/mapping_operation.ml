@@ -173,11 +173,17 @@ let compile g =
   (* Whether an argument used as [use] at a binder of type [t] is passed to
      the template as a mutable lvalue: a [Replace] of a mapped type, or a
      write of one whose write-through form is [T&]. *)
-  let mapped_head t =
-    let head, _ = EConstr.decompose_app_list sigma t in
+  let rec mapped_head t =
+    let head, args = EConstr.decompose_app_list sigma t in
+    let mapped g =
+      match (Mapping_plan.find g).transparent with
+      (* Mapped to one of its type arguments: that argument's type. *)
+      | Some k -> Option.bind (List.nth_opt args k) mapped_head
+      | None -> Some g
+    in
     match EConstr.kind sigma head with
-    | Constr.Ind (i, _) when Mapping_plan.is_type_head (GlobRef.IndRef i) -> Some (GlobRef.IndRef i)
-    | Constr.Const (k, _) when Mapping_plan.is_type_head (GlobRef.ConstRef k) -> Some (GlobRef.ConstRef k)
+    | Constr.Ind (i, _) when Mapping_plan.is_type_head (GlobRef.IndRef i) -> mapped (GlobRef.IndRef i)
+    | Constr.Const (k, _) when Mapping_plan.is_type_head (GlobRef.ConstRef k) -> mapped (GlobRef.ConstRef k)
     | _ -> None
   in
   (* The view an argument used as [use] at a binder of type [t] is given to
@@ -246,6 +252,23 @@ let compile g =
          binders.binders)
   in
   let stored c = dictionaries + stored_parameter ~fail sigma binders candidates c in
+  (* The position of the type parameter named [x] among a call's type
+     arguments. *)
+  let type_parameter x =
+    match
+      List.find_map
+        (fun (b : Mapping_discovery.operation_binder) ->
+          match (b.role, b.binder_name) with
+          | Type_parameter m, Name id when Id.to_string id = x -> Some m
+          | _ -> None)
+        binders.binders
+    with
+    | Some m -> dictionaries + m
+    | None ->
+      fail
+        (Pp.strbrk
+           (Printf.sprintf "operation_cpp names TypeParameter \"%s\", which is not a type parameter of the operation." x))
+  in
   let template t = compile_template ~fail ~arg ~stored t in
   (* A view's conversions, in the operation's vocabulary: the component
      types are the operation's type parameters ([%tN]) the type [t] stores
@@ -339,6 +362,8 @@ let compile g =
     | Bool -> Name "bool"
     | Float64 -> Name "double"
     | Result_type -> fail (Pp.strbrk "operation_cpp names ResultType inside another type, which is not supported yet.")
+    | Type_parameter x -> Parameter (type_parameter x)
+    | Boxed_component _ -> fail (Pp.strbrk "operation_cpp names a BoxedComponent, which only a type's canonical type can.")
     | Source_type _ ->
       fail (Pp.strbrk "operation_cpp names a SourceType, which is not supported in an operation's body; use StoredComponent.")
   in
@@ -362,6 +387,7 @@ let compile g =
     match (m.operation_cpp, structured) with
     | _, Some t -> Mapping_term.text t
     | Expr e, _ -> template e
+    | With_body ("", b), _ -> template b
     | With_body (i, b), _ -> "%result = " ^ template i ^ "; " ^ template b
     | Structured _, None -> assert false
   in

@@ -53,3 +53,80 @@ Definition std_flavour : Flavour :=
 Definition bde_flavour : Flavour :=
   {| flavour_algorithm := "bsl_algorithm.h"%pstring; flavour_min := "bsl::min"%pstring;
      flavour_max := "bsl::max"%pstring |}.
+
+(** The contract arguments [args], each used as [use]. *)
+Definition uses (use : InputUse) (args : list string) : list ArgumentSpec :=
+  map (fun x => {| argument_name := x; argument_use := use |}) args.
+
+(** An operation with an effect, reading each argument named in [args], in
+    order, and returning a value computed by [body]. *)
+Definition effect {d : Declaration} (headers : list string) (args : list string) (body : Term)
+  : OperationMapping d :=
+  {| operation_headers := headers;
+     operation_cpp := Structured body;
+     operation_contract := EffectfulOperation (uses Read args) ReturnValue [] |}.
+
+(** An operation with an effect, reading each argument named in [args] in
+    its canonical representation (text may use any member of it), whose
+    C++ is any construction: [Expr] or [WithBody] text is for what [Term]
+    cannot say (statements, loops, lambdas). *)
+Definition effect_cpp {d : Declaration} (headers : list string) (args : list string)
+  (cpp : Construction) : OperationMapping d :=
+  {| operation_headers := headers;
+     operation_cpp := cpp;
+     operation_contract := EffectfulOperation (uses ReadCanonical args) ReturnValue [] |}.
+
+(** The identity on the argument [x], the arguments [before] and [after] it
+    ignored: an injection or coercion that has no C++ of its own. *)
+Definition pass_through {d : Declaration} (before : list string) (x : string) (after : list string)
+  : OperationMapping d :=
+  {| operation_headers := [];
+     operation_cpp := Structured (Arg x);
+     operation_contract :=
+       PureOperation (uses Ignore before ++ uses ReadCanonical [x] ++ uses Ignore after) ReturnValue [] |}.
+
+(** A value of no argument whose C++ is [cpp], text naming the operation's
+    type arguments [%tN]: a dictionary, which is a C++ type. *)
+Definition dictionary {d : Declaration} (headers : list string) (cpp : string) : OperationMapping d :=
+  {| operation_headers := headers;
+     operation_cpp := Expr cpp;
+     operation_contract := PureOperation [] ReturnValue [] |}.
+
+(** An abstract type mapped to [cpp]: read by value and copied bit by bit
+    where [copy] is [BitCopy], else read by [const] reference. *)
+Definition value_type {T : Type} (headers : list string) (cpp : TypeExpr) (copy : CopyModel)
+  : TypeMapping T :=
+  {| type_headers := headers;
+     type_cpp := cpp;
+     type_components := [];
+     type_copy := copy;
+     type_access :=
+       ReadOnlyValue (match copy with BitCopy => ReadByValue | _ => ReadByConstReference end);
+     type_views := NoViews T;
+     type_interface := AbstractInterface;
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+
+(** The constructor [d] of an event family, performed by the C++ [cpp],
+    [%aN] its field [N]. *)
+Definition event (d : Declaration) (cpp : string) : ConstructorMapping :=
+  {| ctor_source := d; ctor_build := Expr cpp; ctor_view := None |}.
+
+(** An event family: it has no C++ type, an event being performed where it
+    is triggered, so each constructor is the C++ that performs it
+    ([event]). *)
+Definition event_family {E : Type} (headers : list string) (ctors : list ConstructorMapping)
+  : TypeMapping E :=
+  {| type_headers := headers;
+     type_cpp := Name "";
+     type_components := [];
+     type_copy := UnknownCopy;
+     type_access := ReadOnlyValue ReadByConstReference;
+     type_views := NoViews E;
+     type_interface := AlgebraicInterface ctors;
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.

@@ -211,7 +211,7 @@ let declared_holdings params modes body =
 let read_back (p : Plan.t) (e : expr) : ty list =
   let rec paths (t : Plan.type_expr) =
     match t with
-    | Parameter i -> [(i, [])]
+    | Parameter i | Boxed (i, _) -> [(i, [])]
     | Apply (_, args) ->
       List.concat
         (List.mapi
@@ -246,7 +246,7 @@ let literal_view t (e : expr) : expr option =
   match e with
   | Literal (String s) when target_kind t = Plan.Read_view -> (
     let rec closed : Plan.type_expr -> bool = function
-      | Parameter _ -> false
+      | Parameter _ | Boxed _ -> false
       | Name _ | Verbatim _ -> true
       | Pointer t | Const t -> closed t
       | Apply (_, args) -> List.for_all (function Plan.Type t -> closed t | Plan.Value _ -> true) args

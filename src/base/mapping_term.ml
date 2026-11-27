@@ -227,6 +227,18 @@ let binop_text : Cpp.binop -> string = function
   | Shl -> "<<"
   | Shr -> ">>"
 
+let binop_precedence : Cpp.binop -> int = function
+  | Mul _ | Div | Mod -> 13
+  | Add _ | Sub _ -> 12
+  | Shl | Shr -> 11
+  | Less | Less_eq | Greater | Greater_eq -> 9
+  | Equal | Not_equal -> 8
+  | Bit_and -> 7
+  | Bit_xor -> 6
+  | Bit_or -> 5
+  | And -> 4
+  | Or -> 3
+
 let rec text (e : t) : string =
   let list es = String.concat ", " (List.map text es) in
   let types ts = match ts with [] -> "" | _ -> "<" ^ String.concat ", " (List.map type_text ts) ^ ">" in
@@ -236,7 +248,7 @@ let rec text (e : t) : string =
   | Bool_lit b -> if b then "true" else "false"
   | String_lit s -> "\"" ^ String.escaped s ^ "\""
   | Unop (o, a) -> "(" ^ (match o with Neg -> "-" | Not -> "!" | Bit_not -> "~") ^ text a ^ ")"
-  | Binop (o, a, b) -> "(" ^ text a ^ " " ^ binop_text o ^ " " ^ text b ^ ")"
+  | Binop (o, a, b) -> "(" ^ operand o ~right:false a ^ " " ^ binop_text o ^ " " ^ operand o ~right:true b ^ ")"
   | Cond (c, a, b) -> "(" ^ text c ^ " ? " ^ text a ^ " : " ^ text b ^ ")"
   | Convert (k, t, a) -> Cpp_ir.Integer_conversion.cast k ^ "<" ^ type_text t ^ ">(" ^ text a ^ ")"
   | Call (f, ts, args) -> f ^ types ts ^ "(" ^ list args ^ ")"
@@ -247,6 +259,16 @@ let rec text (e : t) : string =
   | Enum_value (t, x) -> type_text t ^ "::" ^ x
   | Verbatim s -> s
 
+(* An operand of [o], parenthesised (by [text]) unless it is an operator
+   binding tighter than [o], or as tight on the left. *)
+and operand o ~right e =
+  match e with
+  | Binop (o', a, b) ->
+    let p = binop_precedence o and p' = binop_precedence o' in
+    if p' > p || (p' = p && not right) then operand o' ~right:false a ^ " " ^ binop_text o' ^ " " ^ operand o' ~right:true b
+    else text e
+  | _ -> text e
+
 (* An argument's hole is parenthesised where a member access follows it
    ({!Cpp_ir.Written.spliced_in_parentheses}). *)
 and receiver = function
@@ -254,3 +276,10 @@ and receiver = function
   | (Unop _ | Binop _ | Cond _ | Convert _ | Call _ | Method _ | Member _ | Index _ | Build _ | Enum_value _) as e ->
     text e
   | e -> "(" ^ text e ^ ")"
+
+(* The text of a whole body: a template is spliced as an operand of the
+   lowest precedence, so its outermost operator needs no parentheses. *)
+let text e =
+  match e with
+  | Binop (o, a, b) -> operand o ~right:false a ^ " " ^ binop_text o ^ " " ^ operand o ~right:true b
+  | e -> text e

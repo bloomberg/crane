@@ -13,6 +13,7 @@ type type_expr =
   | Pointer of type_expr
   | Const of type_expr
   | Verbatim of string
+  | Boxed of int * type_expr
 
 and argument = Type of type_expr | Value of string
 
@@ -55,6 +56,7 @@ type t = {
   instance : GlobRef.t;
   head : GlobRef.t;
   canonical : type_expr;
+  transparent : int option;
   integer : Cpp_ir.Integer_type.t option;
   components : (string * int) list;
   component_binders : (string * int) list;
@@ -199,7 +201,7 @@ let starts_at text i s =
 
 (* [%stored(x)] spelled as the [%tN] of the parameter [x] is, and each hole
    [%h] of [renamed] as the text [renamed] gives it. *)
-let compile_template ?(renamed = []) ~fail ~stored text =
+let compile_template ?(renamed = []) ?(boxed = fun _ -> false) ~fail ~stored text =
   let n = String.length text in
   let b = Buffer.create n in
   let rec go i =
@@ -208,7 +210,7 @@ let compile_template ?(renamed = []) ~fail ~stored text =
       let close = try String.index_from text i ')' with Not_found -> n in
       let start = i + String.length "%stored(" in
       let name = String.trim (String.sub text start (max 0 (close - start))) in
-      Buffer.add_string b (Printf.sprintf "%%t%d" (stored name));
+      Buffer.add_string b (Printf.sprintf (if boxed name then "%%elem%d" else "%%t%d") (stored name));
       go (close + 1) )
     else
       match List.find_opt (fun (h, _) -> starts_at text i h) renamed with
@@ -235,6 +237,7 @@ let rec text_of_type_expr = function
   | Apply (s, args) ->
     s ^ "<" ^ String.concat ", " (List.map (function Type t -> text_of_type_expr t | Value v -> v) args) ^ ">"
   | Parameter i -> Printf.sprintf "%%t%d" i
+  | Boxed (i, _) -> Printf.sprintf "%%elem%d" i
   | Pointer t -> text_of_type_expr t ^ "*"
   | Const t -> "const " ^ text_of_type_expr t
 
@@ -297,8 +300,20 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     | Cpp.Bool -> Name "bool"
     | Cpp.Float64 -> Name "double"
     | Cpp.Result_type -> fail (Pp.strbrk "names ResultType, which only an operation's body can name.")
+    | Cpp.Boxed_component (x, w) -> Boxed (stored x, type_expr w)
+    | Cpp.Type_parameter _ -> fail (Pp.strbrk "names a TypeParameter, which only an operation's body can name; use SourceType.")
   in
   let template = compile_template ~fail ~stored in
+  (* A component the canonical type boxes is boxed wherever a constructor
+     names it, as the canonical type is. *)
+  let rec boxed_names = function
+    | Cpp.Boxed_component (x, _) -> [x]
+    | Cpp.Apply (_, args) -> List.concat_map (function Cpp.Type_arg t -> boxed_names t | Cpp.Value_arg _ -> []) args
+    | Cpp.Pointer t | Cpp.Const t -> boxed_names t
+    | _ -> []
+  in
+  let boxed_components = boxed_names m.type_cpp in
+  let build_template = compile_template ~boxed:(fun x -> List.mem x boxed_components) ~fail ~stored in
   (* A view's conversions are term templates of one value argument: the
      canonical value ([%value]) or the view ([%view]) is its [%a0]. *)
   let construction ~hole = function
@@ -340,8 +355,9 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
              in
              let build =
                match c.ctor_build with
-               | Expr e -> template e
-               | With_body (i, b) -> "%result = " ^ template i ^ "; " ^ template b
+               | Expr e -> build_template e
+               | With_body ("", b) -> build_template b
+               | With_body (i, b) -> "%result = " ^ build_template i ^ "; " ^ build_template b
                | Structured _ ->
                  fail (Pp.strbrk "builds a constructor with a Structured construction, which only an operation's body can be; use Expr.")
              in
@@ -363,12 +379,14 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
                        List.map
                          (fun (n, p) ->
                            (* [%ret], the projection's result: the field's
-                              type, where the plan spells it. *)
+                              type, where the plan spells it, else the type
+                              the match gives the field's binder (an
+                              existential's). *)
                            let template e =
                              let renamed =
                                match field_type n with
                                | Some t -> [("%ret", t)]
-                               | None -> []
+                               | None -> [("%ret", Printf.sprintf "%%b%dt%d" (snd source - 1) n)]
                              in
                              compile_template ~renamed ~fail ~stored e
                            in
@@ -407,6 +425,7 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     numerals;
     head;
     canonical = type_expr m.type_cpp;
+    transparent = (match m.type_cpp with Cpp.Source_type t -> parameter_of_type ids t | _ -> None);
     integer = (match m.type_cpp with Cpp.Int t -> Some t | _ -> None);
     components = List.map (fun (x, i) -> (x, position i)) components;
     component_binders = components;
@@ -479,8 +498,9 @@ let find g =
 
 (** {1 Queries} *)
 
-let instantiate (type p) (e : type_expr) (tys : p Cpp_ir.Type.t list) : p Cpp_ir.Type.t =
+let instantiate (type p) ?(boxed = fun _ -> false) (e : type_expr) (tys : p Cpp_ir.Type.t list) : p Cpp_ir.Type.t =
   let rec go : type_expr -> p Cpp_ir.Type.t = function
+    | Boxed (i, w) -> if boxed i then go w else go (Parameter i)
     | Name s -> External (s, [])
     | Apply (s, args) -> External (s, List.map (function Type t -> go t | Value v -> Cpp_ir.Type.External (v, [])) args)
     | Parameter i -> ( match List.nth_opt tys i with Some t -> t | None -> Any )
@@ -490,7 +510,31 @@ let instantiate (type p) (e : type_expr) (tys : p Cpp_ir.Type.t list) : p Cpp_ir
   in
   go e
 
-let cpp_type plan tys = instantiate plan.canonical tys
+let cpp_type ?boxed plan tys = instantiate ?boxed plan.canonical tys
+
+let boxing plan =
+  let rec find = function
+    | Boxed (i, w) -> Some (i, w)
+    | Apply (_, args) -> List.find_map (function Type t -> find t | Value _ -> None) args
+    | Pointer t | Const t -> find t
+    | Name _ | Parameter _ | Verbatim _ -> None
+  in
+  find plan.canonical
+
+let wrapper_text plan =
+  Option.map
+    (fun (i, w) ->
+      let rec element = function
+        | Parameter j when j = i -> Parameter 0
+        | Apply (s, args) -> Apply (s, List.map (function Type t -> Type (element t) | v -> v) args)
+        | Pointer t -> Pointer (element t)
+        | Const t -> Const (element t)
+        | t -> t
+      in
+      text_of_type_expr (element w))
+    (boxing plan)
+
+let drain_text plan = match plan.release with Drain_with s -> Some s | Ordinary_release -> None
 
 let view plan = function Read_view -> plan.views.read | Write_view -> plan.views.write
 
@@ -507,6 +551,7 @@ let match_instance (type p) (e : type_expr) (ty : p Cpp_ir.Type.t) : (int * p Cp
   let rec go (e : type_expr) (t : p Cpp_ir.Type.t) acc =
     match (e, t) with
     | Parameter i, t -> Some ((i, t) :: acc)
+    | Boxed (i, w), t -> ( match go w t acc with Some acc -> Some acc | None -> Some ((i, t) :: acc) )
     | Name s, External (s', []) | Verbatim s, External (s', []) when s = s' -> Some acc
     | Apply (s, args), External (s', ts) when s = s' && List.length args = List.length ts ->
       List.fold_left2

@@ -136,8 +136,17 @@ let rec expr_precedence (e : expr) =
   | Literal (Int n) when n < 0 -> 15
   | Literal (Integer (I32, v)) when Z.sign v < 0 && not (Z.equal v (fst (I.Integer_type.range I32))) -> 15
   | Numeral (_, n) when String.length n.text > 0 && n.text.[0] = '-' -> 15
+  | Foreign_text s when atomic_text s -> 16
   | Foreign _ | Foreign_text _ -> 0
   | _ -> 16
+
+(* Text that is one primary expression: a (qualified) name or number, or a
+   character literal. *)
+and atomic_text s =
+  let n = String.length s in
+  let name_char c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c = '_' || c = ':' in
+  (n > 0 && String.for_all name_char s)
+  || (n >= 3 && s.[0] = '\'' && s.[n - 1] = '\'' && not (String.contains (String.sub s 1 (n - 2)) '\''))
 
 (** The C++ source spelling of a unary prefix operator. *)
 let spell_unop : I.Unary_operator.t -> _ = function Not -> "!" | Address_of -> "&" | Negate -> "-" | Bit_not -> "~"
