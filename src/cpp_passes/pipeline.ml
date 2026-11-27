@@ -108,6 +108,14 @@ let dead_stores = Base.Pipeline_trace.pass "dead_stores" Erasure.drop_dead_store
     ({!Erasure.propagate_copies}). *)
 let copies = Base.Pipeline_trace.pass "copies" Erasure.propagate_copies
 
+(** A [return;] that ends a function's body, or a branch of the
+    conditional that ends it, is where control goes anyway; statements both
+    branches of an [if] end with are written once after it
+    ({!Branch_tails}).  After {!foreign}, which makes a match on a [bool]
+    the [if] it is. *)
+let trailing_returns = Base.Pipeline_trace.pass "trailing_returns" Erasure.drop_trailing_returns
+let common_suffixes = Base.Pipeline_trace.pass "common_suffixes" Erasure.hoist_common_suffixes
+
 let qualifiers = Base.Pipeline_trace.pass "qualifiers" Erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
 let pointer_slots u = Base.Pipeline_trace.pass "pointer_slots" (Erasure.lower_pointer_slots u)
@@ -223,7 +231,8 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     the way to the printer: what is left to it is to write the pieces.  The
     checks of what a declaration moves and borrows read the instantiated
     pieces, a pair projection's included.
-    A type qualifying a member in value position is spelled as the value it
+    A function's trailing [return;] is dropped, and what both branches of
+    an [if] end with is written once after it.  A type qualifying a member in value position is spelled as the value it
     names.  A pointer is written in the slot its pointee is held in.  A match field
     its branch does not read is marked, to be written [_].  Each
     match's computed scrutinee is declared, named, in front of it.  A
@@ -232,7 +241,7 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     initialiser holding a lambda that captures is invoked in place.  [u] is
     the unit the declaration is of. *)
 let instantiation_passes u =
-  [scrutinee_bindings; foreign; local_derefs; dead_stores; copies; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
+  [scrutinee_bindings; foreign; local_derefs; dead_stores; copies; trailing_returns; common_suffixes; qualifiers; pointer_slots u; unused_bindings; scrutinees; capture_scrutinees; narrow_captures; captures; initialisers]
 
 let pass_names =
   Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_plan.Context.detached)
