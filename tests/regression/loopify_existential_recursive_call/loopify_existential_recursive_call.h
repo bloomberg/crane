@@ -187,8 +187,8 @@ struct LoopifyExistentialRecursiveCall {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2 = void, typename F0, typename F1,
-            typename F2, typename F3, typename F4, typename F5>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3,
+            typename F4, typename F5>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
@@ -334,8 +334,8 @@ struct LoopifyExistentialRecursiveCall {
     return _result;
   }
 
-  template <typename T1, typename T2 = void, typename F0, typename F1,
-            typename F2, typename F3, typename F4, typename F5>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3,
+            typename F4, typename F5>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
@@ -481,104 +481,8 @@ struct LoopifyExistentialRecursiveCall {
     return _result;
   }
 
-  template <typename T1 = void> static crane::obj eval(const expr &e) {
-    // Explicit stack replaces the non-tail recursion of eval: _call frames are
-    // pending calls, _after frames resume a caller.
-    struct _call {
-      const expr *e;
-    };
-
-    struct _after_eval_in_FstE {};
-
-    struct _after_eval_in_Ite {
-      const expr *a1;
-      const expr *a2;
-    };
-
-    struct _after_eval_in_PairE {
-      const expr *b;
-    };
-
-    struct _after_eval_in_PairE_2 {
-      crane::obj _tmp4;
-    };
-
-    struct _after_eval_in_SuccE {};
-
-    using _frame = std::variant<_call, _after_eval_in_FstE, _after_eval_in_Ite,
-                                _after_eval_in_PairE, _after_eval_in_PairE_2,
-                                _after_eval_in_SuccE>;
-    crane::obj _result{};
-    crane::small_vector<_frame> _stack;
-    _stack.emplace_back(_call{&e});
-    while (!_stack.empty()) {
-      _frame &_popped = _stack.back();
-      if (std::holds_alternative<_call>(_popped)) {
-        auto _f = std::move(std::get<_call>(_popped));
-        _stack.pop_back();
-        const expr &e = *_f.e;
-        if (std::holds_alternative<typename expr::Lit>(e.v())) {
-          const auto &[a0] = std::get<typename expr::Lit>(e.v());
-          _result = std::move(a0);
-        } else if (std::holds_alternative<typename expr::Bl>(e.v())) {
-          const auto &[a0] = std::get<typename expr::Bl>(e.v());
-          _result = std::move(a0);
-        } else if (std::holds_alternative<typename expr::SuccE>(e.v())) {
-          const auto &[a0] = std::get<typename expr::SuccE>(e.v());
-          _stack.emplace_back(_after_eval_in_SuccE{});
-          _stack.emplace_back(_call{crane_raw(a0)});
-        } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
-          const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-          _stack.emplace_back(_after_eval_in_Ite{crane_raw(a1), crane_raw(a2)});
-          _stack.emplace_back(_call{crane_raw(a)});
-        } else if (std::holds_alternative<typename expr::PairE>(e.v())) {
-          const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-          _stack.emplace_back(_after_eval_in_PairE{crane_raw(b)});
-          _stack.emplace_back(_call{crane_raw(a)});
-        } else {
-          const auto &[a] = std::get<typename expr::FstE>(e.v());
-          _stack.emplace_back(_after_eval_in_FstE{});
-          _stack.emplace_back(_call{crane_raw(a)});
-        }
-      } else if (std::holds_alternative<_after_eval_in_FstE>(_popped)) {
-        auto _f = std::move(std::get<_after_eval_in_FstE>(_popped));
-        _stack.pop_back();
-        _result =
-            crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                std::move(_result))
-                .first;
-      } else if (std::holds_alternative<_after_eval_in_Ite>(_popped)) {
-        auto _f = std::move(std::get<_after_eval_in_Ite>(_popped));
-        _stack.pop_back();
-        const expr &a1 = *_f.a1;
-        const expr &a2 = *_f.a2;
-        if (crane::any_cast<bool>(std::move(_result))) {
-          _stack.emplace_back(_call{&a1});
-        } else {
-          _stack.emplace_back(_call{&a2});
-        }
-      } else if (std::holds_alternative<_after_eval_in_PairE>(_popped)) {
-        auto _f = std::move(std::get<_after_eval_in_PairE>(_popped));
-        _stack.pop_back();
-        const expr &b = *_f.b;
-        _stack.emplace_back(_after_eval_in_PairE_2{std::move(_result)});
-        _stack.emplace_back(_call{&b});
-      } else if (std::holds_alternative<_after_eval_in_PairE_2>(_popped)) {
-        auto _f = std::move(std::get<_after_eval_in_PairE_2>(_popped));
-        _stack.pop_back();
-        _result = std::make_pair(crane::obj(std::move(_f._tmp4)),
-                                 crane::obj(std::move(_result)));
-      } else {
-        auto _f = std::move(std::get<_after_eval_in_SuccE>(_popped));
-        _stack.pop_back();
-        _result = (crane::any_cast<uint64_t>(std::move(_result)) + 1);
-      }
-    }
-    return _result;
-  }
-
+  static crane::obj eval(const expr &e);
   static inline const expr sample = expr::fste(
       expr::paire(expr::succe(expr::lit(UINT64_C(3))), expr::bl(true)));
-  static inline const uint64_t run =
-      crane::any_cast<uint64_t>(eval<uint64_t>(sample));
+  static inline const uint64_t run = crane::any_cast<uint64_t>(eval(sample));
 };

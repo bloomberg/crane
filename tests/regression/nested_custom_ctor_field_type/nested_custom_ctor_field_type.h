@@ -208,7 +208,7 @@ template <typename ptr> using exc = Dvalue<ptr>;
 enum class FailE { FAIL };
 template <typename r> using CFGtop = std::shared_ptr<ITree<r>>;
 
-template <Params _tcI0, typename T1 = void>
+template <Params _tcI0>
 std::optional<exc<typename _tcI0::ptr>> exc_of_event(FailE) {
   return std::optional<Dvalue<typename _tcI0::ptr>>();
 }

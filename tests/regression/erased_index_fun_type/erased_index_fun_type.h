@@ -149,7 +149,7 @@ struct ErasedIndexFunType {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2 = void, typename F1>
+  template <typename T1, typename F1>
   static T1 ty_rect(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return f;
@@ -160,7 +160,7 @@ struct ErasedIndexFunType {
     }
   }
 
-  template <typename T1, typename T2 = void, typename F1>
+  template <typename T1, typename F1>
   static T1 ty_rec(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return f;
@@ -171,16 +171,7 @@ struct ErasedIndexFunType {
     }
   }
 
-  template <typename T1 = void> static crane::obj dflt(const ty &t) {
-    if (std::holds_alternative<typename ty::TN>(t.v())) {
-      return Nat::o();
-    } else {
-      const auto &[_, b0] = std::get<typename ty::TF>(t.v());
-      return crane_erase_fn(
-          [=, b0 = b0](const auto &) { return dflt<crane::obj>(*b0); });
-    }
-  }
-
+  static crane::obj dflt(const ty &t);
   static Nat ex(const Nat &x0_);
   static inline const Nat run =
       ex(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));

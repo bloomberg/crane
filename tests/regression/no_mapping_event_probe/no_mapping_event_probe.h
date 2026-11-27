@@ -135,7 +135,7 @@ struct NoMappingEventProbe {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2 = void, typename F0, typename F1>
+  template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
                                    const uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
@@ -149,9 +149,9 @@ struct NoMappingEventProbe {
     }
   }
 
-  template <typename T1, typename T2 = void, typename F0, typename F1>
+  template <typename T1, typename F0, typename F1>
   static T1 reproE_rec(F0 &&f, F1 &&f0, const reproE &r) {
-    return reproE_rect<T1, crane::obj>(f, f0, r);
+    return reproE_rect<T1>(f, f0, r);
   }
 
   static constexpr uint64_t cell_size = UINT64_C(42);

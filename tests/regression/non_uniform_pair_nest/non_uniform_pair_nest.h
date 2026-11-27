@@ -70,7 +70,7 @@ struct NonUniformPairNest {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2 = void, typename F0, typename F1>
+  template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 nest_rect(F0 &&f, F1 &&f0, const nest &n) {
     if (std::holds_alternative<typename nest::NZ>(n.v())) {
@@ -82,7 +82,7 @@ struct NonUniformPairNest {
     }
   }
 
-  template <typename T1, typename T2 = void, typename F0, typename F1>
+  template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 nest_rec(F0 &&f, F1 &&f0, const nest &n) {
     if (std::holds_alternative<typename nest::NZ>(n.v())) {
@@ -94,15 +94,7 @@ struct NonUniformPairNest {
     }
   }
 
-  template <typename T1 = void> static uint64_t size(const nest &n) {
-    if (std::holds_alternative<typename nest::NZ>(n.v())) {
-      return UINT64_C(1);
-    } else {
-      const auto &[a0] = std::get<typename nest::NS>(n.v());
-      return (UINT64_C(2) * size<crane::obj>(*a0));
-    }
-  }
-
-  static inline const uint64_t go = size<uint64_t>(
-      nest::ns(nest::nz(std::make_pair(UINT64_C(1), UINT64_C(2)))));
+  static uint64_t size(const nest &n);
+  static inline const uint64_t go =
+      size(nest::ns(nest::nz(std::make_pair(UINT64_C(1), UINT64_C(2)))));
 };

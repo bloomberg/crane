@@ -74,7 +74,7 @@ struct NestedTreePairLiteral {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2 = void, typename F0, typename F1>
+  template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
@@ -86,7 +86,7 @@ struct NestedTreePairLiteral {
     }
   }
 
-  template <typename T1, typename T2 = void, typename F0, typename F1>
+  template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
@@ -98,17 +98,9 @@ struct NestedTreePairLiteral {
     }
   }
 
-  template <typename T1 = void> static uint64_t size(const tree &t) {
-    if (std::holds_alternative<typename tree::Lf>(t.v())) {
-      return UINT64_C(1);
-    } else {
-      const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return (UINT64_C(2) * size<crane::obj>(*a0));
-    }
-  }
-
+  static uint64_t size(const tree &t);
   static inline const tree sample = tree::nd(tree::nd(
       tree::lf(std::make_pair(std::make_pair(UINT64_C(1), UINT64_C(2)),
                               std::make_pair(UINT64_C(3), UINT64_C(4))))));
-  static inline const uint64_t go = size<uint64_t>(sample);
+  static inline const uint64_t go = size(sample);
 };

@@ -152,7 +152,7 @@ struct NonUniformListNest {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2 = void, typename F0, typename F1>
+  template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 n2_rect(F0 &&f, F1 &&f0, const n2 &n) {
     if (std::holds_alternative<typename n2::Z2>(n.v())) {
@@ -164,7 +164,7 @@ struct NonUniformListNest {
     }
   }
 
-  template <typename T1, typename T2 = void, typename F0, typename F1>
+  template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 n2_rec(F0 &&f, F1 &&f0, const n2 &n) {
     if (std::holds_alternative<typename n2::Z2>(n.v())) {
@@ -176,15 +176,7 @@ struct NonUniformListNest {
     }
   }
 
-  template <typename T1 = void> static uint64_t depth(const n2 &x) {
-    if (std::holds_alternative<typename n2::Z2>(x.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0] = std::get<typename n2::S2>(x.v());
-      return (depth<crane::obj>(*a0) + 1);
-    }
-  }
-
-  static inline const uint64_t go = depth<uint64_t>(
+  static uint64_t depth(const n2 &x);
+  static inline const uint64_t go = depth(
       n2::s2(n2::z2(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()))));
 };

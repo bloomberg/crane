@@ -191,29 +191,8 @@ struct GadtEvalBranchType {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1 = void> static crane::obj eval(const expr &e) {
-    if (std::holds_alternative<typename expr::Lit>(e.v())) {
-      const auto &[a0] = std::get<typename expr::Lit>(e.v());
-      return a0;
-    } else if (std::holds_alternative<typename expr::Bl>(e.v())) {
-      const auto &[a0] = std::get<typename expr::Bl>(e.v());
-      return a0;
-    } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
-      const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      if (crane::any_cast<bool>(eval<bool>(*a))) {
-        return eval<crane::obj>(*a1);
-      } else {
-        return eval<crane::obj>(*a2);
-      }
-    } else {
-      const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-      return std::make_pair(crane::obj(eval<crane::obj>(*a)),
-                            crane::obj(eval<crane::obj>(*b)));
-    }
-  }
-
+  static crane::obj eval(const expr &e);
   static inline const std::pair<Nat, bool> run =
-      crane_any_cast<std::pair<Nat, bool>>(
-          eval<std::pair<Nat, bool>>(expr::paire(
-              expr::lit(Nat::s(Nat::s(Nat::s(Nat::o())))), expr::bl(true))));
+      crane_any_cast<std::pair<Nat, bool>>(eval(expr::paire(
+          expr::lit(Nat::s(Nat::s(Nat::s(Nat::o())))), expr::bl(true))));
 };

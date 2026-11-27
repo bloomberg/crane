@@ -21,16 +21,18 @@ struct MemSafetyProbe12 {
     static wrap wrap0(crane::obj a) { return {std::move(a)}; }
   };
 
-  template <typename T1, typename T2 = void, typename F0>
+  template <typename T1, typename F0>
   static T1 wrap_rect(F0 &&f, const wrap &w) {
     const auto &[a0] = w;
-    return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(a0)));
+    return crane_any_cast<T1>(
+        crane_call_erased(f, crane_any_cast<crane::obj>(a0)));
   }
 
-  template <typename T1, typename T2 = void, typename F0>
+  template <typename T1, typename F0>
   static T1 wrap_rec(F0 &&f, const wrap &w) {
     const auto &[a0] = w;
-    return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(a0)));
+    return crane_any_cast<T1>(
+        crane_call_erased(f, crane_any_cast<crane::obj>(a0)));
   }
 
   /// Unwrap extracts the value from wrap A.

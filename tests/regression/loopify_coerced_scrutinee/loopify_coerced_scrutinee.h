@@ -136,8 +136,7 @@ struct LoopifyCoercedScrutinee {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2 = void, typename F0, typename F1,
-            typename F2, typename F3>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const expr &e) {
@@ -237,8 +236,7 @@ struct LoopifyCoercedScrutinee {
     return _result;
   }
 
-  template <typename T1, typename T2 = void, typename F0, typename F1,
-            typename F2, typename F3>
+  template <typename T1, typename F0, typename F1, typename F2, typename F3>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const expr &e) {
@@ -338,72 +336,13 @@ struct LoopifyCoercedScrutinee {
     return _result;
   }
 
-  template <typename T1 = void> static crane::obj eval(const expr &e) {
-    // Explicit stack replaces the non-tail recursion of eval: _call frames are
-    // pending calls, _after frames resume a caller.
-    struct _call {
-      const expr *e;
-    };
-
-    struct _after_eval_in_Iszero {};
-
-    struct _after_eval_in_Ite {
-      const expr *a1;
-      const expr *a2;
-    };
-
-    using _frame =
-        std::variant<_call, _after_eval_in_Iszero, _after_eval_in_Ite>;
-    crane::obj _result{};
-    crane::small_vector<_frame> _stack;
-    _stack.emplace_back(_call{&e});
-    while (!_stack.empty()) {
-      _frame &_popped = _stack.back();
-      if (std::holds_alternative<_call>(_popped)) {
-        auto _f = std::move(std::get<_call>(_popped));
-        _stack.pop_back();
-        const expr &e = *_f.e;
-        if (std::holds_alternative<typename expr::Lit>(e.v())) {
-          const auto &[a0] = std::get<typename expr::Lit>(e.v());
-          _result = std::move(a0);
-        } else if (std::holds_alternative<typename expr::Bl>(e.v())) {
-          const auto &[a0] = std::get<typename expr::Bl>(e.v());
-          _result = std::move(a0);
-        } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
-          const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-          _stack.emplace_back(_after_eval_in_Ite{crane_raw(a1), crane_raw(a2)});
-          _stack.emplace_back(_call{crane_raw(a)});
-        } else {
-          const auto &[a0] = std::get<typename expr::Iszero>(e.v());
-          _stack.emplace_back(_after_eval_in_Iszero{});
-          _stack.emplace_back(_call{crane_raw(a0)});
-        }
-      } else if (std::holds_alternative<_after_eval_in_Iszero>(_popped)) {
-        auto _f = std::move(std::get<_after_eval_in_Iszero>(_popped));
-        _stack.pop_back();
-        _result = crane::any_cast<uint64_t>(std::move(_result)) == UINT64_C(0);
-      } else {
-        auto _f = std::move(std::get<_after_eval_in_Ite>(_popped));
-        _stack.pop_back();
-        const expr &a1 = *_f.a1;
-        const expr &a2 = *_f.a2;
-        if (crane::any_cast<bool>(std::move(_result))) {
-          _stack.emplace_back(_call{&a1});
-        } else {
-          _stack.emplace_back(_call{&a2});
-        }
-      }
-    }
-    return _result;
-  }
-
+  static crane::obj eval(const expr &e);
   /// n conditionals, each taking its else branch until the innermost.
   static expr nest(uint64_t n);
   static inline const uint64_t deep =
-      crane::any_cast<uint64_t>(eval<uint64_t>(nest(UINT64_C(50))));
-  static inline const uint64_t chosen =
-      crane::any_cast<uint64_t>(eval<uint64_t>(
-          expr::ite(expr::ite(expr::bl(false), expr::bl(false),
-                              expr::iszero(expr::lit(UINT64_C(0)))),
-                    expr::lit(UINT64_C(3)), expr::lit(UINT64_C(4)))));
+      crane::any_cast<uint64_t>(eval(nest(UINT64_C(50))));
+  static inline const uint64_t chosen = crane::any_cast<uint64_t>(
+      eval(expr::ite(expr::ite(expr::bl(false), expr::bl(false),
+                               expr::iszero(expr::lit(UINT64_C(0)))),
+                     expr::lit(UINT64_C(3)), expr::lit(UINT64_C(4)))));
 };

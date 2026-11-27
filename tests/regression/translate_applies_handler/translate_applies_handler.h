@@ -11,27 +11,13 @@ enum class AE;
 enum class BE;
 enum class AE { A0 };
 enum class BE { B0, B1 };
-
-template <typename T1 = void> BE relabel(AE) { return BE::B1; }
+BE relabel(AE _x);
 
 struct TranslateAppliesHandler {
   static std::shared_ptr<ITree<uint64_t>> t0();
   static std::shared_ptr<ITree<uint64_t>> relabelled();
   static std::shared_ptr<ITree<uint64_t>> injected();
-
-  template <typename T1 = void> constexpr static uint64_t which_b(BE e) {
-    switch (e) {
-    case BE::B0: {
-      return UINT64_C(0);
-    }
-    case BE::B1: {
-      return UINT64_C(1);
-    }
-    default:
-      std::unreachable();
-    }
-  }
-
+  static uint64_t which_b(BE e);
   static uint64_t which_side(const Sum1<AE, AE, crane::obj> &e);
   static uint64_t b_of(const std::shared_ptr<ITree<uint64_t>> &t);
   static uint64_t side_of(const std::shared_ptr<ITree<uint64_t>> &t);

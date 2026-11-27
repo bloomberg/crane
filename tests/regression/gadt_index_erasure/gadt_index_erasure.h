@@ -289,33 +289,13 @@ struct GadtIndexErasure {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1 = void> static crane::obj eval(const expr &e) {
-    if (std::holds_alternative<typename expr::Lit>(e.v())) {
-      const auto &[a0] = std::get<typename expr::Lit>(e.v());
-      return a0;
-    } else if (std::holds_alternative<typename expr::Bl>(e.v())) {
-      const auto &[a0] = std::get<typename expr::Bl>(e.v());
-      return a0;
-    } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
-      const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      if (crane::any_cast<bool>(eval<bool>(*a))) {
-        return eval<crane::obj>(*a1);
-      } else {
-        return eval<crane::obj>(*a2);
-      }
-    } else {
-      const auto &[a0, b0] = std::get<typename expr::Pair>(e.v());
-      return std::make_pair(crane::obj(eval<crane::obj>(*a0)),
-                            crane::obj(eval<crane::obj>(*b0)));
-    }
-  }
-
+  static crane::obj eval(const expr &e);
   /// The result is read out of the box at a pair type.
   static inline const uint64_t direct =
       crane_any_cast<std::pair<uint64_t, bool>>(
-          eval<std::pair<uint64_t, bool>>(expr::pair(expr::ite(
-              expr::bl(true), expr::lit(UINT64_C(3)), expr::lit(UINT64_C(4))),
-                                                     expr::bl(false))))
+          eval(expr::pair(expr::ite(expr::bl(true), expr::lit(UINT64_C(3)),
+                                    expr::lit(UINT64_C(4))),
+                          expr::bl(false))))
           .first;
   /// The evaluator is passed as a function value to map, which instantiates
   /// it at nat while its signature still returns std::any.
