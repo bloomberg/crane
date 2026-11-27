@@ -9,7 +9,6 @@ void EffectHigherOrder::greet_all(const List<std::string> &names) {
         return std::monostate{};
       },
       names);
-  return;
 }
 
 /// 6. Callback with env effect

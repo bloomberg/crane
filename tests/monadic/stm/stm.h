@@ -163,5 +163,4 @@ template <typename T1, typename F1>
 void STMDefs::modifyTVar(stm::TVar<T1> a, F1 &&f) {
   T1 val = stm::readTVar(a);
   stm::writeTVar(std::move(a), f(std::move(val)));
-  return;
 }

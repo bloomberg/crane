@@ -20,10 +20,7 @@ void EffectPoly::when_(bool b, std::monostate action) {
   if (b) {
     {
       action;
-      return;
     }
-  } else {
-    return;
   }
 }
 
@@ -32,7 +29,6 @@ void EffectPoly::test_when() {
     std::cout << std::string("guarded") << '\n';
     return std::monostate{};
   }());
-  return;
 }
 
 /// 4. Monadic unless
@@ -42,7 +38,6 @@ void EffectPoly::unless(bool b, std::monostate action) {
   } else {
     {
       action;
-      return;
     }
   }
 }
@@ -52,7 +47,6 @@ void EffectPoly::test_unless() {
     std::cout << std::string("unguarded") << '\n';
     return std::monostate{};
   }());
-  return;
 }
 
 /// 5. Monadic sequence of list of actions
@@ -64,7 +58,6 @@ void EffectPoly::sequence_void(const List<std::monostate> &actions) {
         std::get<typename List<std::monostate>::Cons>(actions.v());
     a0;
     sequence_void(*a1);
-    return;
   }
 }
 
@@ -80,7 +73,6 @@ void EffectPoly::test_sequence_void() {
             return std::monostate{};
           }(),
           List<std::monostate>::nil())));
-  return;
 }
 
 uint64_t EffectPoly::sum_with_logging(uint64_t acc, uint64_t n) {

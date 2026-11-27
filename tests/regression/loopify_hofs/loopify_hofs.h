@@ -1394,11 +1394,10 @@ struct LoopifyHofs {
                   std::get<typename List<uint64_t>::Cons>(_sv0.v());
               if (eq(a0, a00)) {
                 _stack.emplace_back(_after_group_by_eq_fuel_in_true{a0});
-                _stack.emplace_back(_call{crane_raw(a1), f});
               } else {
                 _stack.emplace_back(_after_group_by_eq_fuel_in_false{a0});
-                _stack.emplace_back(_call{crane_raw(a1), f});
               }
+              _stack.emplace_back(_call{crane_raw(a1), f});
             }
           }
         }

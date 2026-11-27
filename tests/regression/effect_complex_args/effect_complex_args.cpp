@@ -5,7 +5,6 @@ void EffectComplexArgs::set_prefixed(const std::string &prefix,
                                      const std::string &suffix,
                                      const std::string &value) {
   setenv((crane::string_capped(prefix + suffix)).c_str(), value.c_str(), 1);
-  return;
 }
 
 /// 2. set_env with concatenated value — complex expr as second arg
@@ -13,7 +12,6 @@ void EffectComplexArgs::set_with_value(const std::string &key,
                                        const std::string &prefix,
                                        const std::string &suffix) {
   setenv(key.c_str(), (crane::string_capped(prefix + suffix)).c_str(), 1);
-  return;
 }
 
 /// 3. get_env with concatenated name
@@ -30,7 +28,6 @@ EffectComplexArgs::get_prefixed(const std::string &prefix,
 void EffectComplexArgs::print_concat(const std::string &a,
                                      const std::string &b) {
   std::cout << crane::string_capped(a + b) << '\n';
-  return;
 }
 
 /// 5. Chained: build key, set env, then get env
@@ -51,7 +48,6 @@ void EffectComplexArgs::deep_concat(const std::string &a, const std::string &b,
                                     const std::string &c) {
   setenv((crane::string_capped(crane::string_capped(a + b) + c)).c_str(),
          std::string("value").c_str(), 1);
-  return;
 }
 
 /// 7. Effect result used in concatenation for another effect
@@ -74,5 +70,4 @@ void EffectComplexArgs::chain_with_concat(const std::string &name) {
 void EffectComplexArgs::unset_prefixed(const std::string &prefix,
                                        const std::string &suffix) {
   unsetenv((crane::string_capped(prefix + suffix)).c_str());
-  return;
 }

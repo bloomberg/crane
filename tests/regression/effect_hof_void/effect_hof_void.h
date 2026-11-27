@@ -15,7 +15,6 @@ struct EffectHofVoid {
     requires std::is_invocable_r_v<void, F0 &, const std::string &>
   static void apply_void(F0 &&f, const std::string &x0_) {
     f(x0_);
-    return;
   }
 
   /// 2. Apply a void callback then return a value
@@ -37,9 +36,6 @@ struct EffectHofVoid {
   static void apply_if(bool flag, F1 &&f, const std::string &x) {
     if (flag) {
       f(x);
-      return;
-    } else {
-      return;
     }
   }
 
@@ -50,7 +46,6 @@ struct EffectHofVoid {
   static void chain_void(F0 &&f, F1 &&g, const std::string &x) {
     f(x);
     g(x);
-    return;
   }
 
   /// 6. Apply a callback N times

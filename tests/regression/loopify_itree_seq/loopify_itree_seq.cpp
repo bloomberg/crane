@@ -95,7 +95,6 @@ void LoopifyItreeSeq::spin() {
   // variables.
   while (true) {
   }
-  return;
 }
 
 void LoopifyItreeSeq::forever(uint64_t) {
@@ -103,7 +102,6 @@ void LoopifyItreeSeq::forever(uint64_t) {
   // variables.
   while (true) {
   }
-  return;
 }
 
 uint64_t LoopifyItreeSeq::test_count_5() { return count_down(UINT64_C(5)); }

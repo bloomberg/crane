@@ -1,5 +1,74 @@
 #include "union_find.h"
 
+bool Coq_Pos::eq_dec(const Positive &p, const Positive &x0) {
+  // Explicit stack replaces the non-tail recursion of eq_dec: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
+    const Positive *x0;
+    const Positive *p;
+  };
+
+  struct _after_eq_dec_in_XI {};
+
+  struct _after_eq_dec_in_XO {};
+
+  using _frame = std::variant<_call, _after_eq_dec_in_XI, _after_eq_dec_in_XO>;
+  bool _result{};
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&x0, &p});
+  while (!_stack.empty()) {
+    _frame &_popped = _stack.back();
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
+      const Positive &x0 = *_f.x0;
+      const Positive &p = *_f.p;
+      if (std::holds_alternative<typename Positive::XI>(p.v())) {
+        const auto &[a0] = std::get<typename Positive::XI>(p.v());
+        if (std::holds_alternative<typename Positive::XI>(x0.v())) {
+          const auto &[a00] = std::get<typename Positive::XI>(x0.v());
+          _stack.emplace_back(_after_eq_dec_in_XI{});
+          _stack.emplace_back(_call{crane_raw(a00), crane_raw(a0)});
+        } else {
+          _result = false;
+        }
+      } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
+        const auto &[a0] = std::get<typename Positive::XO>(p.v());
+        if (std::holds_alternative<typename Positive::XO>(x0.v())) {
+          const auto &[a00] = std::get<typename Positive::XO>(x0.v());
+          _stack.emplace_back(_after_eq_dec_in_XO{});
+          _stack.emplace_back(_call{crane_raw(a00), crane_raw(a0)});
+        } else {
+          _result = false;
+        }
+      } else {
+        if (std::holds_alternative<typename Positive::XH>(x0.v())) {
+          _result = true;
+        } else {
+          _result = false;
+        }
+      }
+    } else if (std::holds_alternative<_after_eq_dec_in_XI>(_popped)) {
+      auto _f = std::move(std::get<_after_eq_dec_in_XI>(_popped));
+      _stack.pop_back();
+      if (_result) {
+        _result = true;
+      } else {
+        _result = false;
+      }
+    } else {
+      auto _f = std::move(std::get<_after_eq_dec_in_XO>(_popped));
+      _stack.pop_back();
+      if (_result) {
+        _result = true;
+      } else {
+        _result = false;
+      }
+    }
+  }
+  return _result;
+}
+
 Positive Pos::succ(const Positive &x) {
   // Builds the result front to back: _write points at the empty tail the next
   // cell fills.
@@ -516,75 +585,6 @@ bool Pos::eqb(const Positive &p, const Positive &q) {
   }
 }
 
-bool Coq_Pos::eq_dec(const Positive &p, const Positive &x0) {
-  // Explicit stack replaces the non-tail recursion of eq_dec: _call frames are
-  // pending calls, _after frames resume a caller.
-  struct _call {
-    const Positive *x0;
-    const Positive *p;
-  };
-
-  struct _after_eq_dec_in_XI {};
-
-  struct _after_eq_dec_in_XO {};
-
-  using _frame = std::variant<_call, _after_eq_dec_in_XI, _after_eq_dec_in_XO>;
-  bool _result{};
-  crane::small_vector<_frame> _stack;
-  _stack.emplace_back(_call{&x0, &p});
-  while (!_stack.empty()) {
-    _frame &_popped = _stack.back();
-    if (std::holds_alternative<_call>(_popped)) {
-      auto _f = std::move(std::get<_call>(_popped));
-      _stack.pop_back();
-      const Positive &x0 = *_f.x0;
-      const Positive &p = *_f.p;
-      if (std::holds_alternative<typename Positive::XI>(p.v())) {
-        const auto &[a0] = std::get<typename Positive::XI>(p.v());
-        if (std::holds_alternative<typename Positive::XI>(x0.v())) {
-          const auto &[a00] = std::get<typename Positive::XI>(x0.v());
-          _stack.emplace_back(_after_eq_dec_in_XI{});
-          _stack.emplace_back(_call{crane_raw(a00), crane_raw(a0)});
-        } else {
-          _result = false;
-        }
-      } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
-        const auto &[a0] = std::get<typename Positive::XO>(p.v());
-        if (std::holds_alternative<typename Positive::XO>(x0.v())) {
-          const auto &[a00] = std::get<typename Positive::XO>(x0.v());
-          _stack.emplace_back(_after_eq_dec_in_XO{});
-          _stack.emplace_back(_call{crane_raw(a00), crane_raw(a0)});
-        } else {
-          _result = false;
-        }
-      } else {
-        if (std::holds_alternative<typename Positive::XH>(x0.v())) {
-          _result = true;
-        } else {
-          _result = false;
-        }
-      }
-    } else if (std::holds_alternative<_after_eq_dec_in_XI>(_popped)) {
-      auto _f = std::move(std::get<_after_eq_dec_in_XI>(_popped));
-      _stack.pop_back();
-      if (_result) {
-        _result = true;
-      } else {
-        _result = false;
-      }
-    } else {
-      auto _f = std::move(std::get<_after_eq_dec_in_XO>(_popped));
-      _stack.pop_back();
-      if (_result) {
-        _result = true;
-      } else {
-        _result = false;
-      }
-    }
-  }
-  return _result;
-}
-
 Z BinInt::double_(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
@@ -960,17 +960,25 @@ bool Z_as_Int::ge_lt_dec(const Z &i, const Z &j) {
 
 Z Z_as_Int::i2z(Z n) { return n; }
 
-std::shared_ptr<crane::array_storage<node>> make_ST(STRefs, uint64_t n) {
+void init_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t n,
+             uint64_t i) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  while (true) {
+    if (i < n) {
+      a[i] = std::make_pair(i, UINT64_C(0));
+      i = (i + 1);
+    } else {
+      return;
+    }
+  }
+}
+
+std::shared_ptr<crane::array_storage<node>> make_ST(STRefs r, uint64_t n) {
   std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
       std::make_shared<crane::array_storage<std::pair<uint64_t, uint64_t>>>(
           crane::st::extent(n), std::make_pair(UINT64_C(0), UINT64_C(0)));
-  STMonad::template for_each_with<uint64_t, std::monostate>(
-      ListDef::seq(UINT64_C(0), n), std::monostate{},
-      [=](std::monostate, uint64_t i) {
-        std::span<std::pair<uint64_t, uint64_t>>{*a}[i] =
-            std::make_pair(i, UINT64_C(0));
-        return std::monostate{};
-      });
+  init_ST(r, std::span<std::pair<uint64_t, uint64_t>>{*a}, n, UINT64_C(0));
   return a;
 }
 
@@ -1033,14 +1041,11 @@ void union_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
     auto [_, ky] = a[ry];
     if (kx < ky) {
       a[rx] = std::make_pair(ry, kx);
-      return;
     } else if (ky < kx) {
       a[ry] = std::make_pair(rx, ky);
-      return;
     } else {
       a[ry] = std::make_pair(rx, ky);
       a[rx] = std::make_pair(rx, (kx + 1));
-      return;
     }
   }
 }
@@ -1266,31 +1271,4 @@ Comparison Datatypes::CompOpp(Comparison r) {
   default:
     std::unreachable();
   }
-}
-
-List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
-  // Builds the result front to back: _write points at the empty tail the next
-  // cell fills.
-  std::optional<List<uint64_t>> _root{};
-  std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  while (true) {
-    if (len <= 0) {
-      auto _value = List<uint64_t>::nil();
-      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-              : _root.emplace(std::move(_value)));
-      break;
-    } else {
-      uint64_t len0 = len - 1;
-      auto _cell = typename List<uint64_t>::Cons(start, nullptr);
-      List<uint64_t> &_node =
-          (_write ? *(*_write =
-                          std::make_shared<List<uint64_t>>(std::move(_cell)))
-                  : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-      len = len0;
-      start = (start + 1);
-      continue;
-    }
-  }
-  return std::move(*_root);
 }

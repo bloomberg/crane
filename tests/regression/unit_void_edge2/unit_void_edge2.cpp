@@ -2,17 +2,14 @@
 
 uint64_t UnitVoidEdge2::take_unit() { return UINT64_C(42); }
 
-void UnitVoidEdge2::opaque_unit(uint64_t) { return; }
+void UnitVoidEdge2::opaque_unit(uint64_t) {}
 
 uint64_t UnitVoidEdge2::let_use_as_arg(uint64_t n) {
   opaque_unit(n);
   return take_unit();
 }
 
-void UnitVoidEdge2::let_return_unit(uint64_t x0_) {
-  opaque_unit(x0_);
-  return;
-}
+void UnitVoidEdge2::let_return_unit(uint64_t x0_) { opaque_unit(x0_); }
 
 uint64_t UnitVoidEdge2::let_match_unit(uint64_t n) {
   opaque_unit(n);
@@ -30,20 +27,13 @@ uint64_t UnitVoidEdge2::let_use_in_if(uint64_t n, bool flag) {
   }
 }
 
-void UnitVoidEdge2::mono_bind_return() {
-  std::cout << std::string("hello");
-  return;
-}
+void UnitVoidEdge2::mono_bind_return() { std::cout << std::string("hello"); }
 
-void UnitVoidEdge2::mono_bind_rebind() {
-  std::cout << std::string("hi");
-  return;
-}
+void UnitVoidEdge2::mono_bind_rebind() { std::cout << std::string("hi"); }
 
 void UnitVoidEdge2::mono_chain() {
   std::cout << std::string("a");
   std::cout << std::string("b");
-  return;
 }
 
 uint64_t UnitVoidEdge2::mono_bind_match() {

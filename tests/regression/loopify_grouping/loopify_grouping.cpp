@@ -260,10 +260,8 @@ uint64_t LoopifyGrouping::count_elem(uint64_t x, const List<uint64_t> &l) {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         if (x == a0) {
           _stack.emplace_back(_after_count_elem_in_true{});
-          _stack.emplace_back(_call{crane_raw(a1)});
-        } else {
-          _stack.emplace_back(_call{crane_raw(a1)});
         }
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<_after_count_elem_in_true>(_popped));

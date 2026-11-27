@@ -226,7 +226,6 @@ template <typename K, typename V> struct SkipList {
   void add(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
            unsigned int newLevel) const {
     this->insert(ltK, eqK, k, v, newLevel);
-    return;
   }
 
   template <typename F0, typename F1>
@@ -758,7 +757,6 @@ template <typename K, typename V> struct SkipList {
             bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(newNode)));
     stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
         bsl::move(newNode)->forward[level], opt_to_ptr(bsl::move(oldNext)));
-    return;
   }
 
   template <typename T1, typename T2>
@@ -778,7 +776,6 @@ template <typename K, typename V> struct SkipList {
         level = level_;
       }
     }
-    return;
   }
 
   template <typename T1, typename T2>
@@ -801,7 +798,6 @@ template <typename K, typename V> struct SkipList {
         }
       }
     }
-    return;
   }
 
   template <typename T1, typename T2>
@@ -814,7 +810,6 @@ template <typename K, typename V> struct SkipList {
       SkipList<int, int>::template extendPath_aux<T1, T2>(
           bsl::move(path), bsl::move(head),
           (((needed - 1u) > needed ? 0 : (needed - 1u))), (currentMax + 1u));
-      return;
     }
   }
 
@@ -825,7 +820,6 @@ template <typename K, typename V> struct SkipList {
     unsigned int lvl = newNode->level;
     SkipList<int, int>::template linkNode_aux<T1, T2>(
         bsl::move(path), bsl::move(head), bsl::move(newNode), lvl);
-    return;
   }
 
   template <typename T1, typename T2>
@@ -837,7 +831,6 @@ template <typename K, typename V> struct SkipList {
             bsl::move(target)->forward[level]));
     stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
         bsl::move(pred)->forward[level], opt_to_ptr(bsl::move(targetNext)));
-    return;
   }
 
   template <typename T1, typename T2>
@@ -857,7 +850,6 @@ template <typename K, typename V> struct SkipList {
         level = level_;
       }
     }
-    return;
   }
 
   template <typename T1, typename T2>
@@ -866,7 +858,6 @@ template <typename K, typename V> struct SkipList {
     unsigned int lvl = target->level;
     SkipList<int, int>::template unlinkNode_aux<T1, T2>(bsl::move(path),
                                                         bsl::move(target), lvl);
-    return;
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
@@ -970,7 +961,6 @@ template <typename K, typename V> struct SkipList {
         lvl = lvl_;
       }
     }
-    return;
   }
 
   template <typename T1, typename T2>
@@ -979,7 +969,6 @@ template <typename K, typename V> struct SkipList {
                                     unsigned int lvl) {
     SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(
         bsl::move(head), bsl::move(node), lvl);
-    return;
   }
 
   template <typename T1, typename T2>

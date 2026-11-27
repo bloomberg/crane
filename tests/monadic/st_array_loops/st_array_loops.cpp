@@ -13,7 +13,6 @@ void StArrayLoops::zero_from(std::span<uint64_t> arr, uint64_t i, uint64_t n) {
       i = (i + 1);
     }
   }
-  return;
 }
 
 uint64_t StArrayLoops::sum_from(std::span<const uint64_t> arr, uint64_t i,

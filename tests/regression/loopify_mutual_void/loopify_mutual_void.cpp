@@ -24,7 +24,6 @@ void LoopifyMutualVoid::even_void(uint64_t n) {
       }
     }
   }
-  return;
 }
 
 void LoopifyMutualVoid::odd_void(uint64_t n) {
@@ -43,5 +42,4 @@ void LoopifyMutualVoid::odd_void(uint64_t n) {
       }
     }
   }
-  return;
 }

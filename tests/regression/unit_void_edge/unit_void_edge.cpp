@@ -1,6 +1,6 @@
 #include "unit_void_edge.h"
 
-void UnitVoidEdge::return_unit(uint64_t) { return; }
+void UnitVoidEdge::return_unit(uint64_t) {}
 
 void UnitVoidEdge::count_down(uint64_t n) {
   if (n <= 0) {
@@ -15,7 +15,6 @@ void UnitVoidEdge::count_down(uint64_t n) {
 void UnitVoidEdge::id_unit_fn(uint64_t) {
   {
     id<std::monostate>(std::monostate{});
-    return;
   }
 }
 
@@ -36,12 +35,9 @@ std::optional<std::monostate> UnitVoidEdge::return_some_tt(uint64_t n) {
   }
 }
 
-void UnitVoidEdge::unit_chain() { return; }
+void UnitVoidEdge::unit_chain() {}
 
-void UnitVoidEdge::helper_void(uint64_t _x) {
-  return_unit(_x);
-  return;
-}
+void UnitVoidEdge::helper_void(uint64_t _x) { return_unit(_x); }
 
 uint64_t UnitVoidEdge::use_helper(uint64_t n) { return n; }
 
@@ -49,16 +45,10 @@ uint64_t UnitVoidEdge::match_unit_nontail() { return UINT64_C(7); }
 
 void UnitVoidEdge::unit_to_unit_with_work() { return; }
 
-void UnitVoidEdge::seq_voids(uint64_t _x) {
-  return_unit(_x);
-  return;
-}
+void UnitVoidEdge::seq_voids(uint64_t _x) { return_unit(_x); }
 
 void UnitVoidEdge::conditional_unit(bool b) {
   if (b) {
-    return;
-  } else {
-    return;
   }
 }
 
@@ -72,9 +62,6 @@ uint64_t UnitVoidEdge::get_value(const UnitVoidEdge::tagged_nat &t) {
   return t.tn_value;
 }
 
-void UnitVoidEdge::make_callback(uint64_t n) {
-  return_unit(n);
-  return;
-}
+void UnitVoidEdge::make_callback(uint64_t n) { return_unit(n); }
 
-void UnitVoidEdge::dummy_bool_void(bool) { return; }
+void UnitVoidEdge::dummy_bool_void(bool) {}

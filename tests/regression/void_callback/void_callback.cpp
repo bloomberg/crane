@@ -1,6 +1,6 @@
 #include "void_callback.h"
 
-void VoidCallback::print_nat(uint64_t) { return; }
+void VoidCallback::print_nat(uint64_t) {}
 
 void VoidCallback::test_for_each_m() {
   for_each_m(
@@ -11,23 +11,17 @@ void VoidCallback::test_for_each_m() {
       List<uint64_t>::cons(
           UINT64_C(1),
           List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
-  return;
 }
 
 /// 3. Pure function returning unit, used in let
-void VoidCallback::side_effect_pure(uint64_t _x) {
-  print_nat(_x);
-  return;
-}
+void VoidCallback::side_effect_pure(uint64_t _x) { print_nat(_x); }
 
 /// 7. Void returning function in a match arm
 void VoidCallback::void_in_match(bool b) {
   if (b) {
     print_nat(UINT64_C(1));
-    return;
   } else {
     print_nat(UINT64_C(2));
-    return;
   }
 }
 

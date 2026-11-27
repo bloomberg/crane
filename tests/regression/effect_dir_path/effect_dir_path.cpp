@@ -31,7 +31,6 @@ void EffectDirPath::save_cwd() {
     return _ec ? std::string{} : _p.string();
   }();
   setenv(std::string("CWD").c_str(), std::move(cwd).c_str(), 1);
-  return;
 }
 
 /// 3. is_directory bool result used in conditional with effects in arms
@@ -56,7 +55,6 @@ void EffectDirPath::show_absolute(const std::string &path) {
     return _ec ? std::string{} : _r.string();
   }();
   std::cout << std::move(abs) << '\n';
-  return;
 }
 
 /// 5. Multiple bool effects composed
@@ -127,5 +125,4 @@ void EffectDirPath::cleanup(const std::string &path) {
     return !_ec;
   }();
   std::cout << std::string("cleaned up") << '\n';
-  return;
 }

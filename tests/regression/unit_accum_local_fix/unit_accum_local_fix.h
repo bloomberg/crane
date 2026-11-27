@@ -270,7 +270,6 @@ struct UnitAccumLocalFix {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       f(std::monostate{}, a0);
       each_unit(*a1, f);
-      return;
     }
   }
 

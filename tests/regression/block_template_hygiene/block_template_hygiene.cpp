@@ -83,7 +83,6 @@ void BlockTemplateHygiene::result_in_expr() {
   std::string name;
   std::getline(std::cin, name);
   std::cout << crane::string_capped(std::string("Hello, ") + name) << '\n';
-  return;
 }
 
 /// Test 8: Block template in a let-binding context (non-monadic).

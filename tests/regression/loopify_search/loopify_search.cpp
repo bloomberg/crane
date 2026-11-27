@@ -321,11 +321,12 @@ bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
         uint64_t mid_val = nth_impl(mid, _loop_l);
         if (target == mid_val) {
           return true;
-        } else if (target < mid_val) {
-          _loop_l = take_impl(mid, std::move(_loop_l));
-          fuel = f;
         } else {
-          _loop_l = drop_impl((mid + 1), std::move(_loop_l));
+          if (target < mid_val) {
+            _loop_l = take_impl(mid, std::move(_loop_l));
+          } else {
+            _loop_l = drop_impl((mid + 1), std::move(_loop_l));
+          }
           fuel = f;
         }
       }

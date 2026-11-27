@@ -10,7 +10,6 @@ uint64_t MonadicVoidEdge::bind_void_then_value() {
 void MonadicVoidEdge::bind_void_void() {
   std::cout << std::string("a") << '\n';
   std::cout << std::string("b") << '\n';
-  return;
 }
 
 /// 3. Let-binding the result of a monadic void call
@@ -23,10 +22,7 @@ uint64_t MonadicVoidEdge::let_bind_monadic_void() {
 }
 
 /// 4. Passing unit through a chain of binds
-void MonadicVoidEdge::unit_chain() {
-  std::monostate{};
-  return;
-}
+void MonadicVoidEdge::unit_chain() { std::monostate{}; }
 
 /// 5. Match on a value obtained from a bind
 uint64_t MonadicVoidEdge::match_after_bind() {
@@ -49,7 +45,6 @@ void MonadicVoidEdge::deeply_nested_void() {
   std::cout << std::string("2") << '\n';
   std::cout << std::string("3") << '\n';
   std::cout << std::string("4") << '\n';
-  return;
 }
 
 void MonadicVoidEdge::test_apply_effect() {
@@ -59,7 +54,6 @@ void MonadicVoidEdge::test_apply_effect() {
         return std::monostate{};
       },
       UINT64_C(5));
-  return;
 }
 
 /// 9. Monadic function returning option unit
@@ -101,7 +95,6 @@ uint64_t MonadicVoidEdge::mixed_binds() {
 void MonadicVoidEdge::sequence_effects(const std::monostate &e1,
                                        const std::monostate &) {
   e1;
-  return;
 }
 
 void MonadicVoidEdge::test_sequence() {
@@ -114,5 +107,4 @@ void MonadicVoidEdge::test_sequence() {
         std::cout << std::string("second") << '\n';
         return std::monostate{};
       }());
-  return;
 }

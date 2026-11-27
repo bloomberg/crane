@@ -118,7 +118,6 @@ struct MonadicVoidEdge {
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
   static void apply_effect(F0 &&f, uint64_t x0_) {
     f(x0_);
-    return;
   }
 
   static void test_apply_effect();

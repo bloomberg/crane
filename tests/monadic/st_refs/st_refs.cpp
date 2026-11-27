@@ -22,7 +22,6 @@ void swap(STRefs, uint64_t *v, uint64_t *w) {
   uint64_t b = *w;
   *v = b;
   *w = a;
-  return;
 }
 
 std::pair<uint64_t, uint64_t> swapped(STRefs r) {

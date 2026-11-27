@@ -24,7 +24,6 @@ void LoopifyUnitVoidRepro::loop(uint64_t x, uint64_t y,
       x = (x + cell_size);
     }
   }
-  return;
 }
 
 int LoopifyUnitVoidRepro::run() {

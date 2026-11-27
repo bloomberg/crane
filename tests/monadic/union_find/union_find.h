@@ -40,11 +40,11 @@ struct Datatypes {
   static Comparison CompOpp(Comparison r);
 };
 
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
-};
-
 struct Nat {};
+
+struct Coq_Pos {
+  static bool eq_dec(const Positive &p, const Positive &x0);
+};
 
 struct Pos {
   static Positive succ(const Positive &x);
@@ -56,10 +56,6 @@ struct Pos {
                                  const Positive &y);
   static Comparison compare(const Positive &x0_, const Positive &x1_);
   static bool eqb(const Positive &p, const Positive &q);
-};
-
-struct Coq_Pos {
-  static bool eq_dec(const Positive &p, const Positive &x0);
 };
 
 template <typename A> struct List {
@@ -470,11 +466,6 @@ struct BinInt {
 };
 
 enum class STRefs { BUILD_STREFS };
-
-struct STMonad {
-  template <typename T2, typename T3, typename F2>
-  static T3 for_each_with(const List<T2> &xs, const T3 &v, F2 &&f);
-};
 
 template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
@@ -3045,7 +3036,9 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-std::shared_ptr<crane::array_storage<node>> make_ST(STRefs _x, uint64_t n);
+void init_ST(STRefs r, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t n,
+             uint64_t i);
+std::shared_ptr<crane::array_storage<node>> make_ST(STRefs r, uint64_t n);
 uint64_t find_ST(STRefs r, std::span<std::pair<uint64_t, uint64_t>> a,
                  uint64_t fuel, uint64_t x);
 void union_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
@@ -3080,21 +3073,3 @@ struct UnionFind {
   static List<bool> union_find_ST(uint64_t x0_, const List<Op> &x1_);
   static List<bool> union_find_fun(uint64_t n, const List<Op> &ops);
 };
-
-template <typename T2, typename T3, typename F2>
-T3 STMonad::for_each_with(const List<T2> &xs, const T3 &v, F2 &&f) {
-  // Loop replaces the tail recursion: each recursive call updates the loop
-  // variables.
-  T3 _loop_v = v;
-  const List<T2> *_loop_xs = &xs;
-  while (true) {
-    if (std::holds_alternative<typename List<T2>::Nil>(_loop_xs->v())) {
-      return _loop_v;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T2>::Cons>(_loop_xs->v());
-      T3 v_ = f(_loop_v, a0);
-      _loop_v = std::move(v_);
-      _loop_xs = crane_raw(a1);
-    }
-  }
-}

@@ -56,12 +56,10 @@ void NonatomicRcThreadRace::test() {
   crane::thread t2 = crane::thread(worker, UINT64_C(200));
   std::move(t1).join();
   std::move(t2).join();
-  return;
 }
 
 void NonatomicRcThreadRace::run() {
   {
     test();
-    return;
   }
 }

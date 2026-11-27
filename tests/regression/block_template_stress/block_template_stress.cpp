@@ -68,7 +68,6 @@ void BlockTemplateStress::block_result_as_arg() {
   std::string s;
   std::getline(std::cin, s);
   std::cout << crane::string_capped(s + std::string(" read")) << '\n';
-  return;
 }
 
 /// 9. Block template with %a0 inside a fixpoint

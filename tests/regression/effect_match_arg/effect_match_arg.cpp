@@ -12,7 +12,6 @@ void EffectMatchArg::set_bool_value(bool flag, const std::string &key) {
         }
       }().c_str(),
       1);
-  return;
 }
 
 /// 2. Bool match as key argument to set_env
@@ -27,7 +26,6 @@ void EffectMatchArg::set_bool_key(bool flag, const std::string &value) {
       }().c_str(),
       value.c_str(),
       1);
-  return;
 }
 
 /// 3. Option match result as argument to set_env
@@ -44,7 +42,6 @@ void EffectMatchArg::set_option_value(const std::string &key,
         }
       }().c_str(),
       1);
-  return;
 }
 
 /// 4. Bool match as argument to print_endline — exercises << precedence
@@ -56,7 +53,6 @@ void EffectMatchArg::print_conditional(bool flag) {
       return "FALSE";
     }
   }() << '\n';
-  return;
 }
 
 /// 5. Bool match as argument to get_env

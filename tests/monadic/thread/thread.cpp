@@ -31,12 +31,10 @@ void threadtest::test(uint64_t m, uint64_t n) {
   crane::thread t2 = crane::thread(fun2, n);
   std::move(t1).join();
   std::move(t2).join();
-  return;
 }
 
 void threadtest::test_pure(uint64_t m, uint64_t n) {
   {
     test(m, n);
-    return;
   }
 }

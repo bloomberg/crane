@@ -80,7 +80,6 @@ LoopifySearchOpt::longest_run_fuel(uint64_t fuel, const List<uint64_t> &current,
           if (a0 == a00) {
             _loop_l = crane_raw(a1);
             _loop_current = List<uint64_t>::cons(a0, std::move(_loop_current));
-            fuel = fuel_;
           } else {
             uint64_t len_curr = _loop_current.length();
             uint64_t len_best = _loop_best.length();
@@ -93,8 +92,8 @@ LoopifySearchOpt::longest_run_fuel(uint64_t fuel, const List<uint64_t> &current,
             _loop_l = crane_raw(a1);
             _loop_best = std::move(new_best);
             _loop_current = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-            fuel = fuel_;
           }
+          fuel = fuel_;
         }
       }
     }

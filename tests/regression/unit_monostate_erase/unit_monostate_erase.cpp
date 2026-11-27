@@ -14,7 +14,6 @@ void UnitMonostateErase::seq_if(bool b) {
     }
   }();
   std::cout << std::string("done") << '\n';
-  return;
 }
 
 /// --- Example 2: sequenced if where both branches are effects ---
@@ -31,7 +30,6 @@ void UnitMonostateErase::seq_if_both(bool b) {
     }
   }();
   std::cout << std::string("done") << '\n';
-  return;
 }
 
 void UnitMonostateErase::match_unit_tail(UnitMonostateErase::Color c) {
@@ -53,7 +51,6 @@ void UnitMonostateErase::match_unit_tail(UnitMonostateErase::Color c) {
         std::unreachable();
       }
     }();
-    return;
   }
 }
 
@@ -77,7 +74,6 @@ void UnitMonostateErase::match_then_next(UnitMonostateErase::Color c) {
     }
   }();
   std::cout << std::string("after match") << '\n';
-  return;
 }
 
 /// --- Example 5: chained sequenced ifs ---
@@ -99,7 +95,6 @@ void UnitMonostateErase::chained_ifs(bool b1, bool b2) {
     }
   }();
   std::cout << std::string("end") << '\n';
-  return;
 }
 
 /// --- Example 6: nested match-in-match ---
@@ -138,5 +133,4 @@ void UnitMonostateErase::nested_matches(UnitMonostateErase::Color c1,
     }
   }();
   std::cout << std::string("end") << '\n';
-  return;
 }

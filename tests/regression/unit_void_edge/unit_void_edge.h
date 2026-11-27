@@ -106,7 +106,6 @@ struct UnitVoidEdge {
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
   static void apply_unit_fn(F0 &&f, uint64_t x0_) {
     f(x0_);
-    return;
   }
 
   template <typename F0> static uint64_t map_to_unit(F0 &&, uint64_t) {
@@ -149,7 +148,6 @@ struct UnitVoidEdge {
 
   template <typename F0> static void apply_and_discard(F0 &&f, uint64_t x0_) {
     apply_unit_fn(f, x0_);
-    return;
   }
 
   static inline const std::monostate test_apply_discard = []() {
@@ -175,9 +173,7 @@ struct UnitVoidEdge {
   }();
 
   template <typename F0, typename F1>
-  static void multi_void_callbacks(F0 &&, F1 &&, uint64_t, bool) {
-    return;
-  }
+  static void multi_void_callbacks(F0 &&, F1 &&, uint64_t, bool) {}
 
   static void dummy_bool_void(bool _x);
   static inline const std::monostate test_multi_cb = []() {

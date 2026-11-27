@@ -21,7 +21,6 @@ int64_t EffectDeepCompose::timed_env_op(const std::string &name,
 /// 2. Function using only console from inside bigE
 void EffectDeepCompose::just_greet() {
   std::cout << std::string("hello from bigE") << '\n';
-  return;
 }
 
 /// 3. Function using env + console but not clock
@@ -30,7 +29,6 @@ void EffectDeepCompose::env_with_log(const std::string &name,
   std::cout << std::string("setting env...") << '\n';
   setenv(name.c_str(), value.c_str(), 1);
   std::cout << std::string("done") << '\n';
-  return;
 }
 
 /// 4. Read env, print result
