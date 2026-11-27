@@ -19,10 +19,7 @@
 # event, carrier, itreeF, promoted) is let through whatever declaration it
 # is in and needs no line here; this list holds what is not recognised so.
 
-# erased (40): an erased or boxed component: the value or the slot types an erased part (a handler, a rank-2 callable, a box) that the other states
-CraneTestsMonadic.st_array_helpers.StArrayHelpers	flip_list	destination	unrelated	(ITree.Core.ITreeDefinition.itree, 0)<erased,ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.bool, 0)<>>>	ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.bool, 0)<>>
-CraneTestsMonadic.st_array_helpers.StArrayHelpers	helpers_list	destination	unrelated	(ITree.Core.ITreeDefinition.itree, 0)<erased,ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.nat, 0)<>>>	ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.nat, 0)<>>
-CraneTestsMonadic.st_array_helpers.StArrayHelpers	regrow_list	destination	unrelated	(ITree.Core.ITreeDefinition.itree, 0)<erased,ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.nat, 0)<>>>	ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.nat, 0)<>>
+# erased (37): an erased or boxed component: the value or the slot types an erased part (a handler, a rank-2 callable, a box) that the other states
 CraneTestsRegression.class_type_constructor_param.ClassTypeConstructorParam	go	argument	unbox	erased	app(CraneTestsRegression.class_type_constructor_param.ClassTypeConstructorParam.ClassTypeConstructorParam.IdC<>)<(Corelib.Init.Datatypes.nat, 0)<>>
 CraneTestsRegression.erased_index_fun_type.ErasedIndexFunType	dflt	destination	box	deduced generic lambda	any
 CraneTestsRegression.handler_case_has_no_name.HandlerCaseHasNoName	h	destination	unbox	erased	(ITree.Core.ITreeDefinition.itree, 0)<CraneTestsRegression.handler_case_has_no_name.HandlerCaseHasNoName.Eff<opaque>,opaque>
@@ -102,7 +99,7 @@ CraneTestsRegression.todo_inline_custom_poly_id.TodoInlineCustomPolyId	test_valu
 CraneTestsRegression.todo_inline_custom_poly_id.TodoInlineCustomPolyId	test_value	destination	unrelated	T1	(Corelib.Init.Datatypes.nat, 0)<>
 CraneTestsRegression.undeducible_tt_return.UndeducibleTtReturn	use	destination	unrelated	app(T3)<ns (Corelib.Init.Datatypes.nat, 0)<>>	(Corelib.Init.Datatypes.option, 0)<ns (Corelib.Init.Datatypes.nat, 0)<>>
 
-# other (9): a value type synthesised wrong: a dead branch, a match result, a section alias
+# other (7): a value type synthesised wrong: a dead branch, a match result, a section alias
 CraneTestsRegression.any_cast_dangling_pair_ref.AnyCastDanglingPairRef	swap_pair	destination	unrelated	(Corelib.Init.Datatypes.prod, 0)<>	(Corelib.Init.Datatypes.prod, 0)<any,any>
 CraneTestsRegression.any_cast_dangling_pair_ref.AnyCastDanglingPairRef	use_both	destination	unrelated	(Corelib.Init.Datatypes.prod, 0)<>	(Corelib.Init.Datatypes.prod, 0)<any,any>
 CraneTestsRegression.class_arg_in_method.ClassArgInMethod	use	argument	unrelated	ns (CraneTestsRegression.class_arg_in_method.ClassArgInMethod.memory_bit, 0)<>	(CraneTestsRegression.class_arg_in_method.ClassArgInMethod.Params, 0)<>
@@ -110,8 +107,6 @@ CraneTestsRegression.erased_list_cons.ErasedListCons	run_entry	destination	unrel
 CraneTestsRegression.eta_partial_app_drops_targs.EtaPartialAppDropsTargs	run	destination	unrelated	(CraneTestsRegression.eta_partial_app_drops_targs.EtaPartialAppDropsTargs.Mon, 0)<(Corelib.Init.Datatypes.option, 0)<ns (Corelib.Init.Datatypes.list, 0)<ns (Corelib.Init.Datatypes.nat, 0)<>>>>	(Corelib.Init.Datatypes.option, 0)<ns (Corelib.Init.Datatypes.list, 0)<ns (Corelib.Init.Datatypes.nat, 0)<>>>
 CraneTestsRegression.fwd_decl_before_concept.Use	use	destination	unrelated	(ExtLib.Structures.Monad.Monad, 0)<(Corelib.Init.Datatypes.option, 0)<(Corelib.Init.Datatypes.bool, 0)<>>>	(Corelib.Init.Datatypes.option, 0)<(Corelib.Init.Datatypes.bool, 0)<>>
 CraneTestsRegression.hkt_partial_app_instance.HktPartialAppInstance	ex	argument	unrelated	(Corelib.Init.Datatypes.prod, 0)<(Corelib.Init.Datatypes.bool, 0)<>,ns (Corelib.Init.Datatypes.nat, 0)<>>	CraneTestsRegression.hkt_partial_app_instance.HktPartialAppInstance.HktPartialAppInstance.pf<(Corelib.Init.Datatypes.bool, 0)<>>
-CraneTestsRegression.structural_spans.StructuralSpans	scenario	destination	unrelated	(Corelib.Init.Datatypes.prod, 0)<(Corelib.Init.Datatypes.prod, 0)<(Corelib.Init.Datatypes.prod, 0)<ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.nat, 0)<>>,(Corelib.Init.Datatypes.nat, 0)<>>,(Corelib.Init.Datatypes.nat, 0)<>>,ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.nat, 0)<>>>	(ITree.Core.ITreeDefinition.itree, 0)<ns (ITree.Events.Exception.exceptE, 0)<ns (Crane.Monads.Error.Err, 0)<>>,(Corelib.Init.Datatypes.prod, 0)<(Corelib.Init.Datatypes.prod, 0)<(Corelib.Init.Datatypes.prod, 0)<ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.nat, 0)<>>,(Corelib.Init.Datatypes.nat, 0)<>>,(Corelib.Init.Datatypes.nat, 0)<>>,ns (Corelib.Init.Datatypes.list, 0)<(Corelib.Init.Datatypes.nat, 0)<>>>>
-CraneTestsRegression.type_args_extraction.TypeArgsExtraction	double_n	destination	unrelated	(Corelib.Init.Datatypes.nat, 0)<>	(ITree.Core.ITreeDefinition.itree, 0)<erased,(Corelib.Init.Datatypes.nat, 0)<>>
 
 # loopify census only (1): pairs only scripts/loopify-census.sh reaches, with
 # Loopify on everywhere; a plain census does not hit them, so

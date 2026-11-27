@@ -335,7 +335,7 @@ anything else fails extraction:
   [`unit_tests/typed_fit_allowlist.txt`](../unit_tests/typed_fit_allowlist.txt)
   keyed by (library, declaration, position, verdict, from, into), for the
   classes not yet recognised by structure. The list may only shrink. Open
-  (81): erased 40, callable 12, other 9, carrier 7 (carriers not of the
+  (76): erased 37, callable 12, other 7, carrier 7 (carriers not of the
   `app(M)<A>` shape -- `Functor_M<...>`, an instance struct -- or whose
   callable argument is grouped otherwise), promoted 5,
   tvar 5, stateT 2, and one loopify-census pair.
