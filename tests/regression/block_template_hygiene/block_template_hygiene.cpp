@@ -7,7 +7,7 @@ std::string BlockTemplateHygiene::same_name_twice() {
   std::getline(std::cin, _x);
   std::string s;
   std::getline(std::cin, s);
-  return crane::string_capped(s + std::string(" (second)"));
+  return (s + std::string(" (second)")).substr(0, 16777211);
 }
 
 /// Test 2: Three consecutive get_line calls, all named s.
@@ -19,7 +19,7 @@ std::string BlockTemplateHygiene::same_name_thrice() {
   std::getline(std::cin, _x0);
   std::string s;
   std::getline(std::cin, s);
-  return crane::string_capped(s + std::string(" (third)"));
+  return (s + std::string(" (third)")).substr(0, 16777211);
 }
 
 /// Test 3: get_line with bind name s — the exact variable name that the old
@@ -31,7 +31,7 @@ std::string BlockTemplateHygiene::same_name_thrice() {
 std::string BlockTemplateHygiene::shadow_internal_name() {
   std::string s;
   std::getline(std::cin, s);
-  return crane::string_capped(s + std::string("!"));
+  return (s + std::string("!")).substr(0, 16777211);
 }
 
 /// Test 4: Multiple different block templates in the same scope.
@@ -46,7 +46,7 @@ std::string BlockTemplateHygiene::interleaved_templates() {
   std::cout << b << '\n';
   std::string c;
   std::getline(std::cin, c);
-  return crane::string_capped(a + crane::string_capped(b + c));
+  return (a + (b + c).substr(0, 16777211)).substr(0, 16777211);
 }
 
 /// Test 5: Block template with %a0 argument alongside %result.
@@ -57,7 +57,7 @@ std::string BlockTemplateHygiene::block_with_args() {
     std::ifstream _f(std::string("data.txt"));
     std::getline(_f, s);
   };
-  return crane::string_capped(s + std::string(" read"));
+  return (s + std::string(" read")).substr(0, 16777211);
 }
 
 /// Test 6: Multiple block templates with %a0, same binder name.
@@ -73,7 +73,7 @@ std::string BlockTemplateHygiene::block_with_args_same_name() {
     std::ifstream _f(std::string("b.txt"));
     std::getline(_f, s);
   };
-  return crane::string_capped(s + std::string(" done"));
+  return (s + std::string(" done")).substr(0, 16777211);
 }
 
 /// Test 7: Block template result used as an argument to another call.
@@ -82,7 +82,7 @@ std::string BlockTemplateHygiene::block_with_args_same_name() {
 void BlockTemplateHygiene::result_in_expr() {
   std::string name;
   std::getline(std::cin, name);
-  std::cout << crane::string_capped(std::string("Hello, ") + name) << '\n';
+  std::cout << (std::string("Hello, ") + name).substr(0, 16777211) << '\n';
 }
 
 /// Test 8: Block template in a let-binding context (non-monadic).
@@ -93,8 +93,9 @@ std::string BlockTemplateHygiene::let_after_block() {
   std::getline(std::cin, first);
   std::string last;
   std::getline(std::cin, last);
-  std::string full = crane::string_capped(
-      first + crane::string_capped(std::string(" ") + last));
+  std::string full =
+      (first + (std::string(" ") + last).substr(0, 16777211)).substr(0,
+                                                                     16777211);
   return full;
 }
 
@@ -104,7 +105,7 @@ std::string BlockTemplateHygiene::let_after_block() {
 std::string BlockTemplateHygiene::bind_named_result() {
   std::string result;
   std::getline(std::cin, result);
-  return crane::string_capped(result + std::string("!"));
+  return (result + std::string("!")).substr(0, 16777211);
 }
 
 /// Test 10: get_line bound to the name _r — the internal IIFE
@@ -113,7 +114,7 @@ std::string BlockTemplateHygiene::bind_named_result() {
 std::string BlockTemplateHygiene::bind_named_underscore_r() {
   std::string r_;
   std::getline(std::cin, r_);
-  return crane::string_capped(r_ + std::string("!"));
+  return (r_ + std::string("!")).substr(0, 16777211);
 }
 
 /// Test 11: Block template in pure expression position (not in bind).

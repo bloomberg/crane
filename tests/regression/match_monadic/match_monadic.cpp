@@ -25,7 +25,7 @@ std::string MatchMonadic::conditional_read(bool b) {
   if (b) {
     std::string line;
     std::getline(std::cin, line);
-    return crane::string_capped(std::string("got: ") + line);
+    return (std::string("got: ") + line).substr(0, 16777211);
   } else {
     return "skipped";
   }
@@ -89,7 +89,7 @@ std::string MatchMonadic::match_then_bind(uint64_t n) {
   }
   std::string line;
   std::getline(std::cin, line);
-  return crane::string_capped(tag + line);
+  return (tag + line).substr(0, 16777211);
 }
 
 /// 7. Match inside a bind continuation
@@ -119,6 +119,6 @@ std::string MatchMonadic::multi_match(bool a, bool b) {
   } else {
     y = "b";
   }
-  std::cout << crane::string_capped(x + y) << '\n';
-  return crane::string_capped(x + y);
+  std::cout << (x + y).substr(0, 16777211) << '\n';
+  return (x + y).substr(0, 16777211);
 }

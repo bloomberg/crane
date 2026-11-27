@@ -1,6 +1,5 @@
 #pragma once
 
-#include <crane_string.h>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>

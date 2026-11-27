@@ -69,8 +69,8 @@ std::string EffectOptionString::nested_option(const std::string &n1,
     }();
     if (r2.has_value()) {
       const std::string &v2 = *r2;
-      return crane::string_capped(v1 +
-                                  crane::string_capped(std::string("/") + v2));
+      return (v1 + (std::string("/") + v2).substr(0, 16777211)).substr(0,
+                                                                       16777211);
     } else {
       return v1;
     }

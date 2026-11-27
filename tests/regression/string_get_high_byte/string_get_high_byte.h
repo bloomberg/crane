@@ -3,7 +3,7 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include <atomic>
-#include <crane_string.h>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -170,15 +170,35 @@ struct Uint63Axioms {
 
 struct StringGetHighByte {
   static inline const std::string accented = "\303\251";
-  static inline const uint64_t first_code = BinInt::to_nat(
-      Uint63Axioms::to_Z(crane::string_get(accented, INT64_C(0))));
+  static inline const uint64_t first_code =
+      BinInt::to_nat(Uint63Axioms::to_Z(
+          static_cast<std::int64_t>(
+              static_cast<std::size_t>(INT64_C(0)) <
+              accented.size() ? static_cast<unsigned char>(accented[
+                                    static_cast<std::size_t>(INT64_C(0))])
+                              : 0)));
   static inline const bool high_above_low =
-      crane::string_get(std::string_view("a"), INT64_C(0)) <
-      crane::string_get(accented, INT64_C(0));
+      static_cast<std::int64_t>(
+          static_cast<std::size_t>(INT64_C(0)) <
+          std::string_view("a").size() ? static_cast<unsigned char>(
+                                             std::string_view("a")[
+                                                 static_cast<std::size_t>(
+                                                     INT64_C(0))])
+                                       : 0) <
+      static_cast<std::int64_t>(static_cast<std::size_t>(INT64_C(0)) <
+                                accented.size() ? static_cast<unsigned char>(
+                                                      accented[static_cast<
+                                                          std::size_t>(
+                                                          INT64_C(0))])
+                                                : 0);
   /// A char63 is any int: one above 255 keeps its value.
-  static inline const int64_t wide = crane::any_cast<int64_t>(
-      static_cast<int64_t>(
-          (static_cast<uint64_t>(crane::string_get(accented, INT64_C(0))) +
+  static inline const int64_t wide =
+      crane::any_cast<int64_t>(static_cast<int64_t>(
+          (static_cast<uint64_t>(static_cast<std::int64_t>(
+               static_cast<std::size_t>(INT64_C(0)) <
+               accented.size() ? static_cast<unsigned char>(accented[
+                                     static_cast<std::size_t>(INT64_C(0))])
+                               : 0)) +
            static_cast<uint64_t>(INT64_C(100))) &
           0x7FFFFFFFFFFFFFFFULL));
   static inline const uint64_t wide_code =

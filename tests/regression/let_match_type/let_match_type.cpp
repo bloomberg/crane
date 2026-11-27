@@ -20,7 +20,7 @@ std::string LetMatchType::let_match_string(uint64_t n) {
     uint64_t _x = n - 1;
     s = "nonzero";
   }
-  return crane::string_capped(s + s);
+  return (s + s).substr(0, 16777211);
 }
 
 /// 3. let-bound option match

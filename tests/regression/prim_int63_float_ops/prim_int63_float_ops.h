@@ -3,10 +3,12 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
+#include <algorithm>
 #include <atomic>
-#include <crane_float.h>
+#include <cmath>
 #include <crane_int63.h>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -214,68 +216,141 @@ struct PrimInt63FloatOps {
   static bool fcmp_is(Float_comparison c, Float_comparison d);
   static inline const double nan = (0x0p+0 / 0x0p+0);
   static inline const List<bool> float_checks = List<bool>::cons(
-      fcmp_is(crane::float_compare<Float_comparison>(0x1p+0, 0x1p+1),
+      fcmp_is(static_cast<Float_comparison>(
+          0x1p+0 < 0x1p+1 ? 1 : 0x1p+0 > 0x1p+1 ? 2 : 0x1p+0 == 0x1p+1 ? 0 : 3),
               Float_comparison::FLT),
       List<bool>::cons(
-          fcmp_is(crane::float_compare<Float_comparison>(0x1p+1, 0x1p+0),
+          fcmp_is(static_cast<Float_comparison>(
+              0x1p+1 < 0x1p+0 ? 1
+                              : 0x1p+1 > 0x1p+0 ? 2 : 0x1p+1 == 0x1p+0 ? 0 : 3),
                   Float_comparison::FGT),
           List<bool>::cons(
-              fcmp_is(crane::float_compare<Float_comparison>(0x0p+0, (-0x0p+0)),
+              fcmp_is(static_cast<Float_comparison>(
+                  0x0p+0 < (-0x0p+0)
+                      ? 1
+                      : 0x0p+0 > (-0x0p+0) ? 2 : 0x0p+0 == (-0x0p+0) ? 0 : 3),
                       Float_comparison::FEQ),
               List<bool>::cons(
-                  fcmp_is(crane::float_compare<Float_comparison>(nan, 0x1p+0),
+                  fcmp_is(static_cast<Float_comparison>(
+                      nan < 0x1p+0 ? 1
+                                   : nan > 0x1p+0 ? 2 : nan == 0x1p+0 ? 0 : 3),
                           Float_comparison::FNOTCOMPARABLE),
                   List<bool>::cons(
-                      crane::float_normfr_mantissa(0x1.8p-1) ==
+                      (std::fabs(0x1.8p-1) >= 0.5 &&
+                       std::fabs(0x1.8p-1) < 1.0 ? static_cast<std::int64_t>(
+                                                       std::ldexp(
+                                                           std::fabs(0x1.8p-1),
+                                                           53))
+                                                 : 0) ==
                       INT64_C(6755399441055744),
                       List<bool>::cons(
-                          crane::float_normfr_mantissa((-0x1p-1)) ==
+                          (std::fabs((-0x1p-1)) >= 0.5 &&
+                           std::fabs((-0x1p-1)) < 1.0 ? static_cast<
+                                                            std::int64_t>(
+                                                            std::ldexp(
+                                                                std::fabs(
+                                                                    (-0x1p-1)),
+                                                                53))
+                                                      : 0) ==
                           INT64_C(4503599627370496),
                           List<bool>::cons(
-                              crane::float_normfr_mantissa(0x1p+1) ==
+                              (std::fabs(0x1p+1) >= 0.5 &&
+                               std::fabs(0x1p+1) < 1.0 ? static_cast<
+                                                             std::int64_t>(
+                                                             std::ldexp(
+                                                                 std::fabs(
+                                                                     0x1p+1),
+                                                                 53))
+                                                       : 0) ==
                               INT64_C(0),
                               List<bool>::cons(
-                                  (crane::float_frshiftexp<
-                                       std::pair<double, int64_t>>(0x1.8p+1))
+                                  ((std::isfinite(0x1.8p+1) &&
+                                    0x1.8p+1 != 0.0
+                                        ? std::pair<double, int64_t>{
+                                              std::scalbn(
+                                                  0x1.8p+1,
+                                                  -(std::ilogb(0x1.8p+1) + 1)),
+                                              static_cast<std::int64_t>(
+                                                  std::ilogb(0x1.8p+1)) +
+                                              2102}
+                                        : std::pair<double, int64_t>{0x1.8p+1,
+                                                                     0}))
                                       .first ==
                                   0x1.8p-1,
                                   List<bool>::cons(
-                                      (
-                                          crane::float_frshiftexp<
-                                              std::pair<double, int64_t>>(
-                                              0x1.8p+1))
+                                      ((std::isfinite(0x1.8p+1) &&
+                                        0x1.8p+1 != 0.0
+                                            ? std::pair<double, int64_t>{
+                                                  std::scalbn(
+                                                      0x1.8p+1,
+                                                      -(std::ilogb(0x1.8p+1) +
+                                                        1)),
+                                                  static_cast<std::int64_t>(
+                                                      std::ilogb(0x1.8p+1)) +
+                                                  2102}
+                                            : std::pair<double, int64_t>{
+                                                  0x1.8p+1, 0}))
                                           .second ==
                                       INT64_C(2103),
                                       List<bool>::cons(
-                                          (crane::float_frshiftexp<
-                                               std::pair<double, int64_t>>(
-                                               0x0p+0))
+                                          ((std::isfinite(0x0p+0) &&
+                                            0x0p+0 != 0.0
+                                                ? std::pair<double, int64_t>{
+                                                      std::scalbn(
+                                                          0x0p+0,
+                                                          -(std::ilogb(0x0p+0) +
+                                                            1)),
+                                                      static_cast<std::int64_t>(
+                                                          std::ilogb(0x0p+0)) +
+                                                      2102}
+                                                : std::pair<double, int64_t>{
+                                                      0x0p+0, 0}))
                                               .second ==
                                           INT64_C(0),
                                           List<bool>::cons(
-                                              crane::float_ldshiftexp(
-                                                  0x1.8p-1, INT64_C(2103)) ==
+                                              std::ldexp(
+                                                  0x1.8p-1,
+                                                  static_cast<int>(
+                                                      std::min<std::int64_t>(
+                                                          INT64_C(2103), 4202) -
+                                                      2101)) ==
                                               0x1.8p+1,
                                               List<bool>::cons(
-                                                  crane::float_ldshiftexp(
-                                                      0x1p+0, max) ==
-                                                  crane::float_ldshiftexp(
-                                                      0x1p+0, INT64_C(4202)),
+                                                  std::ldexp(
+                                                      0x1p+0,
+                                                      static_cast<int>(std::min<
+                                                          std::int64_t>(max,
+                                                                        4202) -
+                                                                       2101)) ==
+                                                  std::ldexp(
+                                                      0x1p+0,
+                                                      static_cast<int>(std::min<
+                                                          std::int64_t>(
+                                                          INT64_C(4202), 4202) -
+                                                                       2101)),
                                                   List<bool>::cons(
-                                                      crane::float_next_up(
-                                                          0x1p+0) ==
+                                                      std::nextafter(
+                                                          0x1p+0,
+                                                          std::numeric_limits<
+                                                              double>::infinity()) ==
                                                       0x1.0000000000001p+0,
                                                       List<bool>::cons(
-                                                          crane::float_next_down(
-                                                              0x1p+0) ==
+                                                          std::nextafter(
+                                                              0x1p+0,
+                                                              -std::numeric_limits<
+                                                                  double>::infinity()) ==
                                                           0x1.fffffffffffffp-1,
                                                           List<bool>::cons(
-                                                              crane::float_next_down(
-                                                                  0x0p+0) <
+                                                              std::nextafter(
+                                                                  0x0p+0,
+                                                                  -std::numeric_limits<
+                                                                      double>::infinity()) <
                                                               0x0p+0,
                                                               List<bool>::cons(
-                                                                  crane::float_next_up(
-                                                                      (-0x1.fffffffffffffp+1023)) ==
+                                                                  std::nextafter(
+                                                                      (-0x1.fffffffffffffp+1023),
+                                                                      std::numeric_limits<
+                                                                          double>::infinity()) ==
                                                                   (-0x1.ffffffffffffep+1023),
                                                                   List<bool>::nil()))))))))))))))));
   static uint64_t count_true(const List<bool> &l);

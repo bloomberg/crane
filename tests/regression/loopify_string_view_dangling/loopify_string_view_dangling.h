@@ -4,7 +4,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
-#include <crane_string.h>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -293,8 +293,10 @@ struct LoopifyStringViewDangling {
   static uint64_t i2n(int64_t i);
   static int64_t n2i(uint64_t n);
   static uint64_t drop_each(const List<bool> &l, std::string_view s);
-  static inline const uint64_t result = drop_each(
-      List<bool>::cons(true, List<bool>::cons(true, List<bool>::nil())),
-      crane::string_capped(std::string("abcdefghijklmnopqrstuvwxyz") +
-                           std::string("0123456789")));
+  static inline const uint64_t result =
+      drop_each(
+          List<bool>::cons(true, List<bool>::cons(true, List<bool>::nil())),
+          (std::string("abcdefghijklmnopqrstuvwxyz") +
+           std::string("0123456789"))
+              .substr(0, 16777211));
 };

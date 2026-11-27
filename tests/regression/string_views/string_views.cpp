@@ -6,19 +6,32 @@ int64_t StringViews::size_of(std::string_view x0_) {
 
 std::string StringViews::describe(const std::string &name,
                                   std::string greeting) {
-  std::string whole = crane::string_capped(
-      greeting + crane::string_capped(std::string(", ") + name));
+  std::string whole =
+      (greeting + (std::string(", ") + name).substr(0, 16777211)).substr(
+                                           0, 16777211);
   if (static_cast<int64_t>((std::string_view{name}).size()) < INT64_C(1)) {
     return greeting;
   } else {
-    return crane::string_capped(
-        whole +
-        crane::string_sub(std::string_view{name}, INT64_C(0), INT64_C(1)));
+    return (whole +
+            (static_cast<std::size_t>(INT64_C(0)) <=
+             (std::string_view{name}).size() ? std::string((
+                                                   std::string_view{name})
+                                                               .substr(
+                                                   static_cast<std::size_t>(
+                                                       INT64_C(0)),
+                                                   static_cast<std::size_t>(
+                                                       INT64_C(1))))
+                                             : std::string()))
+               .substr(0, 16777211);
   }
 }
 
 int64_t StringViews::initial(std::string_view s) {
-  return crane::string_get(s, INT64_C(0));
+  return static_cast<std::int64_t>(static_cast<std::size_t>(INT64_C(0)) <
+                                   s.size() ? static_cast<unsigned char>(
+                                                  s[static_cast<std::size_t>(
+                                                      INT64_C(0))])
+                                            : 0);
 }
 
 int64_t StringViews::c_size(const std::string &x0_) {
@@ -46,7 +59,7 @@ int64_t StringViews::prefix_size(std::string_view s) {
 int64_t StringViews::joined_prefix_size(const std::string &a,
                                         const std::string &b) {
   return static_cast<int64_t>(
-      ((std::string_view{crane::string_capped(a + b)}).substr(0,
+      ((std::string_view{(a + b).substr(0, 16777211)}).substr(0,
                                                               INT64_C(3)))
           .size());
 }
@@ -55,6 +68,6 @@ int64_t StringViews::outer(const std::string &s) {
   return static_cast<int64_t>(
       (static_cast<uint64_t>(size_of(std::string_view{s})) +
        static_cast<uint64_t>(
-           size_of(std::string_view{crane::string_capped(s + s)}))) &
+           size_of(std::string_view{(s + s).substr(0, 16777211)}))) &
       0x7FFFFFFFFFFFFFFFULL);
 }

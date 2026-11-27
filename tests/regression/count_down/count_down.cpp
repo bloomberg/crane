@@ -25,7 +25,7 @@ void CountDown::two_prints(uint64_t n) {
     } else {
       uint64_t n_ = n - 1;
       std::cout <<
-      crane::string_capped(std::string("step ") + std::to_string(n)) << '\n';
+      (std::string("step ") + std::to_string(n)).substr(0, 16777211) << '\n';
       std::cout << std::string("---") << '\n';
       n = n_;
     }
@@ -43,7 +43,7 @@ void CountDown::echo_loop(uint64_t n) {
       uint64_t n_ = n - 1;
       std::string line;
       std::getline(std::cin, line);
-      std::cout << crane::string_capped(std::string("echo: ") + line) << '\n';
+      std::cout << (std::string("echo: ") + line).substr(0, 16777211) << '\n';
       n = n_;
     }
   }
@@ -60,7 +60,7 @@ void CountDown::announce(uint64_t n) {
     } else {
       uint64_t n_ = n - 1;
       std::cout <<
-      crane::string_capped(std::string("counting ") + std::to_string(n)) <<
+      (std::string("counting ") + std::to_string(n)).substr(0, 16777211) <<
       '\n';
       n = n_;
     }
@@ -92,7 +92,7 @@ void CountDown::run_fixpoint() {
 
 /// Helper: compare two strings
 bool CountDown::string_eq(std::string_view s1, std::string_view s2) {
-  switch (static_cast<Comparison>(crane::string_compare(s1, s2))) {
+  switch (static_cast<Comparison>((s1 < s2) + 2 * (s1 > s2))) {
   case Comparison::EQ: {
     return true;
   }
@@ -125,7 +125,7 @@ void CountDown::co_two_prints() {
     if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       return;
     } else {
-      std::cout << crane::string_capped(std::string("got: ") + line) << '\n';
+      std::cout << (std::string("got: ") + line).substr(0, 16777211) << '\n';
       std::cout << std::string("---") << '\n';
     }
   }
@@ -140,7 +140,7 @@ void CountDown::co_echo_loop() {
     if (string_eq(std::string_view{line}, std::string_view("quit"))) {
       return;
     } else {
-      std::cout << crane::string_capped(std::string("echo: ") + line) << '\n';
+      std::cout << (std::string("echo: ") + line).substr(0, 16777211) << '\n';
     }
   }
 }
@@ -156,7 +156,7 @@ void CountDown::co_announce(uint64_t round) {
       return;
     } else {
       std::cout <<
-      crane::string_capped(std::string("round ") + std::to_string(round)) <<
+      (std::string("round ") + std::to_string(round)).substr(0, 16777211) <<
       '\n';
       round = (round + 1);
     }

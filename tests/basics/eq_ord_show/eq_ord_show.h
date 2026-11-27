@@ -1,7 +1,6 @@
 #pragma once
 
 #include <concepts>
-#include <crane_string.h>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -114,17 +113,17 @@ template <typename _tcI0, typename _tcI1, typename _tcI2, typename T1>
   requires Show<_tcI0, T1> && Ord<_tcI1, T1> && Eq<_tcI2, T1>
 std::string show_comparison(const T1 &x, const T1 &y) {
   if (_tcI1::lt(x, y)) {
-    return crane::string_capped(
-        crane::string_capped(_tcI0::show(x) + std::string(" < ")) +
-        _tcI0::show(y));
+    return ((_tcI0::show(x) + std::string(" < ")).substr(0, 16777211) +
+            _tcI0::show(y))
+               .substr(0, 16777211);
   } else if (_tcI2::eqb(x, y)) {
-    return crane::string_capped(
-        crane::string_capped(_tcI0::show(x) + std::string(" = ")) +
-        _tcI0::show(y));
+    return ((_tcI0::show(x) + std::string(" = ")).substr(0, 16777211) +
+            _tcI0::show(y))
+               .substr(0, 16777211);
   } else {
-    return crane::string_capped(
-        crane::string_capped(_tcI0::show(x) + std::string(" > ")) +
-        _tcI0::show(y));
+    return ((_tcI0::show(x) + std::string(" > ")).substr(0, 16777211) +
+            _tcI0::show(y))
+               .substr(0, 16777211);
   }
 }
 

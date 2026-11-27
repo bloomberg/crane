@@ -1,7 +1,6 @@
 #pragma once
 
 #include <conslist.h>
-#include <crane_string.h>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -110,7 +109,7 @@ struct BakeReadableImage {
   static inline const std::string all_labels =
       List::template fold_left<std::string, rose>(
           [](const std::string &acc,
-             const rose &r) { return crane::string_capped(acc + labels(r)); },
+             const rose &r) { return (acc + labels(r)).substr(0, 16777211); },
           forest,
           "");
   static inline const uint64_t blue_count = []() {

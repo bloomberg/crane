@@ -977,7 +977,8 @@ void init_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t n,
 std::shared_ptr<crane::array_storage<node>> make_ST(STRefs r, uint64_t n) {
   std::shared_ptr<crane::array_storage<node>> a =
       std::make_shared<crane::array_storage<std::pair<uint64_t, uint64_t>>>(
-          crane::st::extent(n), std::make_pair(UINT64_C(0), UINT64_C(0)));
+          static_cast<std::size_t>(n),
+          std::make_pair(UINT64_C(0), UINT64_C(0)));
   init_ST(r, std::span{*a}, n, UINT64_C(0));
   return a;
 }

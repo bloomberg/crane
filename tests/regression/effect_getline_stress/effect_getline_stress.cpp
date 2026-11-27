@@ -72,7 +72,7 @@ std::string EffectGetlineStress::concat_two_lines() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return crane::string_capped(a + b);
+  return (a + b).substr(0, 16777211);
 }
 
 /// 7. get_line inside a monadic map

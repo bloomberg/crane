@@ -77,8 +77,8 @@ uint64_t exec(STRefs r,
 /// variables.
 std::pair<uint64_t, List<uint64_t>> run(STRefs r, uint64_t n, const Stmt &s) {
   std::shared_ptr<crane::array_storage<uint64_t>> vars =
-      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(n),
-                                                       UINT64_C(0));
+      std::make_shared<crane::array_storage<uint64_t>>(
+          static_cast<std::size_t>(n), UINT64_C(0));
   uint64_t steps = exec(r, vars, s);
   return std::make_pair(
       steps, crane::st::elems<List<uint64_t>>(std::span{std::as_const(*vars)}));

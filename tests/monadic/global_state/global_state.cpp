@@ -67,7 +67,7 @@ GlobalStateTests::counter_next_mine(const std::shared_ptr<uint64_t> &ctr) {
 std::string GlobalStateTests::gensym(const std::shared_ptr<uint64_t> &counter0,
                                      const std::string &prefix) {
   uint64_t v = counter_next_mine(counter0);
-  return crane::string_capped(prefix + std::to_string(v));
+  return (prefix + std::to_string(v)).substr(0, 16777211);
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {

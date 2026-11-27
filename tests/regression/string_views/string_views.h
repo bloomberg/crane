@@ -1,6 +1,6 @@
 #pragma once
 
-#include <crane_string.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <string>

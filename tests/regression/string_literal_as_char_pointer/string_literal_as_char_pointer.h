@@ -5,7 +5,6 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
-#include <crane_string.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -426,7 +425,7 @@ struct StringLiteralAsCharPointer {
     } else {
       if (List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()).existsb(
               [](uint64_t) { return true; })) {
-        return crane::string_capped(std::string("a") + std::string("b"));
+        return (std::string("a") + std::string("b")).substr(0, 16777211);
       } else {
         return std::string("cde");
       }

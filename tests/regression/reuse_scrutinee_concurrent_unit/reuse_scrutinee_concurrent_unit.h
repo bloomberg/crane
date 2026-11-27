@@ -3,8 +3,8 @@
 #include "crane_fn.h"
 #include "shared_block.h"
 #include <atomic>
-#include <crane_thread.h>
 #include <cstdint>
+#include <future>
 #include <iostream>
 #include <memory>
 #include <string>

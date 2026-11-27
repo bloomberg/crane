@@ -3,8 +3,8 @@
 /// for_each_with at B := unit, unfolded below into a local fixpoint.
 uint64_t UnitAccumLocalFix::fill(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> a =
-      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(n),
-                                                       UINT64_C(0));
+      std::make_shared<crane::array_storage<uint64_t>>(
+          static_cast<std::size_t>(n), UINT64_C(0));
   [&]() {
     auto for_each_with =
         [](const List<uint64_t> &xs, std::monostate,
@@ -38,8 +38,8 @@ uint64_t UnitAccumLocalFix::fill(uint64_t n) {
 
 uint64_t UnitAccumLocalFix::fill_top(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> a =
-      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(n),
-                                                       UINT64_C(0));
+      std::make_shared<crane::array_storage<uint64_t>>(
+          static_cast<std::size_t>(n), UINT64_C(0));
   each_unit(ListDef::seq(UINT64_C(0), n), [=](std::monostate, uint64_t i) {
     std::span{*a}[i] = (i * UINT64_C(3));
     return std::monostate{};

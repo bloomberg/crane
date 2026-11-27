@@ -47,10 +47,10 @@ std::pair<uint64_t, uint64_t> bump_each(STRefs) {
 std::pair<List<uint64_t>, List<uint64_t>> fill_each(STRefs) {
   std::shared_ptr<crane::array_storage<uint64_t>> a =
       std::make_shared<crane::array_storage<uint64_t>>(
-          crane::st::extent(UINT64_C(3)), UINT64_C(0));
+          static_cast<std::size_t>(UINT64_C(3)), UINT64_C(0));
   std::shared_ptr<crane::array_storage<uint64_t>> b =
       std::make_shared<crane::array_storage<uint64_t>>(
-          crane::st::extent(UINT64_C(2)), UINT64_C(0));
+          static_cast<std::size_t>(UINT64_C(2)), UINT64_C(0));
   auto fill = [](uint64_t i, uint64_t n, std::span<uint64_t> arr_view) -> void {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.

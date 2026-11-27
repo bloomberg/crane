@@ -11,7 +11,7 @@ std::string BakeReadableImage::labels(const BakeReadableImage::rose &r) {
   return List::template fold_left<std::string, BakeReadableImage::rose>(
       [](const std::string &acc,
          const BakeReadableImage::rose &k) {
-        return crane::string_capped(acc + labels(k));
+        return (acc + labels(k)).substr(0, 16777211);
       },
       kids,
       label);

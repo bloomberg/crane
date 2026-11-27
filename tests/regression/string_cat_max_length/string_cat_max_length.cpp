@@ -5,6 +5,6 @@ std::string StringCatMaxLength::double_(uint64_t n, std::string s) {
     return s;
   } else {
     uint64_t m = n - 1;
-    return double_(m, crane::string_capped(s + s));
+    return double_(m, (s + s).substr(0, 16777211));
   }
 }

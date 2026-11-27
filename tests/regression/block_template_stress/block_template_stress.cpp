@@ -17,7 +17,7 @@ std::string BlockTemplateStress::conditional_read(bool do_read) {
   if (do_read) {
     std::string s;
     std::getline(std::cin, s);
-    return crane::string_capped(s + std::string("!"));
+    return (s + std::string("!")).substr(0, 16777211);
   } else {
     return "skipped";
   }
@@ -35,18 +35,18 @@ std::string BlockTemplateStress::branch_read(uint64_t choice) {
   if (choice <= 0) {
     std::string a;
     std::getline(std::cin, a);
-    return crane::string_capped(std::string("zero: ") + a);
+    return (std::string("zero: ") + a).substr(0, 16777211);
   } else {
     uint64_t n = choice - 1;
     if (n <= 0) {
       std::string b;
       std::getline(std::cin, b);
-      return crane::string_capped(std::string("one: ") + b);
+      return (std::string("one: ") + b).substr(0, 16777211);
     } else {
       uint64_t _x = n - 1;
       std::string c;
       std::getline(std::cin, c);
-      return crane::string_capped(std::string("other: ") + c);
+      return (std::string("other: ") + c).substr(0, 16777211);
     }
   }
 }
@@ -66,7 +66,7 @@ void BlockTemplateStress::block_result_as_arg() {
   std::cin >> _x;
   std::string s;
   std::getline(std::cin, s);
-  std::cout << crane::string_capped(s + std::string(" read")) << '\n';
+  std::cout << (s + std::string(" read")).substr(0, 16777211) << '\n';
 }
 
 /// 9. Block template with %a0 inside a fixpoint
@@ -92,10 +92,10 @@ std::string BlockTemplateStress::interleaved_void() {
   std::cout << std::string("Enter name:") << '\n';
   std::string name;
   std::getline(std::cin, name);
-  std::cout << crane::string_capped(std::string("Hello, ") + name) << '\n';
+  std::cout << (std::string("Hello, ") + name).substr(0, 16777211) << '\n';
   std::cout << std::string("Enter age:") << '\n';
   std::string age;
   std::getline(std::cin, age);
-  return crane::string_capped(name +
-                              crane::string_capped(std::string(" is ") + age));
+  return (name + (std::string(" is ") + age).substr(0, 16777211)).substr(
+                                            0, 16777211);
 }

@@ -56,10 +56,22 @@ void ReuseSummaryConcurrentUnit::worker(uint64_t n) {
 }
 
 void ReuseSummaryConcurrentUnit::test() {
-  crane::thread t1 = crane::thread(worker, UINT64_C(20));
-  crane::thread t2 = crane::thread(worker, UINT64_C(20));
-  std::move(t1).join();
-  std::move(t2).join();
+  std::shared_future<void> t1 =
+      std::async(
+          std::launch::async,
+          [](auto f, auto a) { f(std::move(a)); },
+          worker,
+          UINT64_C(20))
+          .share();
+  std::shared_future<void> t2 =
+      std::async(
+          std::launch::async,
+          [](auto f, auto a) { f(std::move(a)); },
+          worker,
+          UINT64_C(20))
+          .share();
+  std::move(t1).wait();
+  std::move(t2).wait();
 }
 
 void ReuseSummaryConcurrentUnit::run() {

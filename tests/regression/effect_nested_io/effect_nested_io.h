@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <crane_string.h>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>

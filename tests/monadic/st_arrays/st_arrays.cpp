@@ -3,7 +3,7 @@
 uint64_t array_simp_fixed_init(STRefs) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
-          crane::st::extent(UINT64_C(6)), UINT64_C(5));
+          static_cast<std::size_t>(UINT64_C(6)), UINT64_C(5));
   return std::span{std::as_const(*arr)}[UINT64_C(1)];
 }
 

@@ -164,14 +164,30 @@ uint64_t LoopifyStringViewDangling::drop_each(const List<bool> &l,
   const List<bool> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<bool>::Nil>(_loop_l->v())) {
+      auto _once1 = n2i(UINT64_C(0));
       return (
           (i2n(static_cast<int64_t>((std::string_view{_loop_s}).size())) *
            UINT64_C(1000)) +
-          i2n(crane::string_get(std::string_view{_loop_s}, n2i(UINT64_C(0)))));
+          i2n(static_cast<std::int64_t>(static_cast<std::size_t>(_once1) <
+                                        (std::string_view{_loop_s}).size()
+                                            ? static_cast<unsigned char>(
+                                                  std::string_view{_loop_s}[
+                                                      static_cast<std::size_t>(
+                                                          _once1)])
+                                            : 0)));
     } else {
       const auto &[_, a1] = std::get<typename List<bool>::Cons>(_loop_l->v());
-      _loop_s = crane::string_sub(std::string_view{_loop_s}, n2i(UINT64_C(1)),
-                                  n2i(UINT64_C(100)));
+      auto _once2 = n2i(UINT64_C(1));
+      _loop_s =
+          (static_cast<std::size_t>(_once2) <=
+           (std::string_view{_loop_s}).size() ? std::string((
+                                                    std::string_view{_loop_s})
+                                                                .substr(
+                                                    static_cast<std::size_t>(
+                                                        _once2),
+                                                    static_cast<std::size_t>(
+                                                        n2i(UINT64_C(100)))))
+                                              : std::string());
       _loop_l = crane_raw(a1);
     }
   }

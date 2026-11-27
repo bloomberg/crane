@@ -2,7 +2,7 @@
 
 /// Inner module defines a helper that returns a value
 void EffectCrossModule::Inner::greet(const std::string &name) {
-  std::cout << crane::string_capped(std::string("Hello, ") + name) << '\n';
+  std::cout << (std::string("Hello, ") + name).substr(0, 16777211) << '\n';
 }
 
 std::string EffectCrossModule::Inner::ask_name() {

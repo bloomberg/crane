@@ -27,10 +27,22 @@ void threadtest::fun2(uint64_t n) {
 }
 
 void threadtest::test(uint64_t m, uint64_t n) {
-  crane::thread t1 = crane::thread(fun1, m);
-  crane::thread t2 = crane::thread(fun2, n);
-  std::move(t1).join();
-  std::move(t2).join();
+  std::shared_future<void> t1 =
+      std::async(
+          std::launch::async,
+          [](auto f, auto a) { f(std::move(a)); },
+          fun1,
+          m)
+          .share();
+  std::shared_future<void> t2 =
+      std::async(
+          std::launch::async,
+          [](auto f, auto a) { f(std::move(a)); },
+          fun2,
+          n)
+          .share();
+  std::move(t1).wait();
+  std::move(t2).wait();
 }
 
 void threadtest::test_pure(uint64_t m, uint64_t n) {

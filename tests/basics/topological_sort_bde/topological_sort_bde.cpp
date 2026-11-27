@@ -12,7 +12,6 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
-#include <crane_string.h>
 
 namespace BloombergLP {}
 
