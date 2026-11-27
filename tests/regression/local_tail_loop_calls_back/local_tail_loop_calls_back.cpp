@@ -22,9 +22,9 @@ LocalTailLoopCallsBack::find(const LocalTailLoopCallsBack::tree &t,
             if (_loop_k0 == UINT64_C(0)) {
               return find(a0, _loop_k0);
             } else {
-              _loop_k0 = (((_loop_k0 - UINT64_C(1)) > _loop_k0
-                               ? 0
-                               : (_loop_k0 - UINT64_C(1))));
+              _loop_k0 =
+                  (_loop_k0 - UINT64_C(1) > _loop_k0 ? 0
+                                                     : _loop_k0 - UINT64_C(1));
               _loop_ts = crane_raw(a1);
             }
           }

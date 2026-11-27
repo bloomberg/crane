@@ -34,7 +34,7 @@ uint64_t PatternImpossible::nested_match(const PatternImpossible::nested &n) {
               _sv1.v())) {
         const auto &[a01] =
             std::get<typename PatternImpossible::nested::Leaf>(_sv1.v());
-        return (a00 + a01);
+        return a00 + a01;
       } else {
         return UINT64_C(0);
       }
@@ -103,7 +103,7 @@ PatternImpossible::multi_arg_pattern(const PatternImpossible::nested &n) {
                   _sv3.v())) {
             const auto &[a03] =
                 std::get<typename PatternImpossible::nested::Leaf>(_sv3.v());
-            return ((a00 + a02) + a03);
+            return a00 + a02 + a03;
           } else {
             return UINT64_C(0);
           }

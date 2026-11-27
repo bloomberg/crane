@@ -371,11 +371,11 @@ struct LocalFixCaptureInFoldLambda {
                   a = [&]() {
                     if (std::holds_alternative<typename tree::Leaf>(
                             _self_val.v())) {
-                      return (a0 + a);
+                      return a0 + a;
                     } else {
                       const auto &[_, a10, _] =
                           std::get<typename tree::Node>(_self_val.v());
-                      return (a10 + a);
+                      return a10 + a;
                     }
                   }();
                   _loop_l = crane_raw(a1);
@@ -403,7 +403,7 @@ struct LocalFixCaptureInFoldLambda {
                                     _self_val.v()) ? List<uint64_t>::nil()
                                                    : List<uint64_t>::nil());
             if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
-              return (acc + UINT64_C(1));
+              return acc + UINT64_C(1);
             } else {
               return UINT64_C(0);
             }
@@ -628,8 +628,7 @@ struct LocalFixCaptureInFoldLambda {
           auto _f = std::move(std::get<_after_tree_obs_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          auto _once1 =
-              (((_f._tmp2 * UINT64_C(7)) + a1) + (_result * UINT64_C(3)));
+          auto _once1 = _f._tmp2 * UINT64_C(7) + a1 + _result * UINT64_C(3);
           _result = (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
         }
       }

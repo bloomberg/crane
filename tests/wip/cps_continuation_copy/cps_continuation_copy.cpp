@@ -37,7 +37,7 @@ uint64_t CpsContinuationCopy::sumk(const List<uint64_t> &l,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       const List<uint64_t> &a1_value = *a1;
-      _loop_k = [=](uint64_t s) { return _loop_k((a0 + s)); };
+      _loop_k = [=](uint64_t s) { return _loop_k(a0 + s); };
       _loop_l = &a1_value;
     }
   }

@@ -42,7 +42,7 @@ uint64_t sum_signum(uint64_t n) {
       } else {
         here = UINT64_C(1);
       }
-      _result = (_result + here);
+      _result = _result + here;
     }
   }
   return _result;

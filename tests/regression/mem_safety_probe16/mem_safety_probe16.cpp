@@ -35,7 +35,7 @@ MemSafetyProbe16::sum_list(const MemSafetyProbe16::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -122,7 +122,7 @@ uint64_t MemSafetyProbe16::apply_fns(
       auto _f = std::move(std::get<_after_apply_fns_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(x) + _result);
+      _result = a0(x) + _result;
     }
   }
   return _result;
@@ -148,7 +148,7 @@ uint64_t MemSafetyProbe16::compose_summers(
           _loop_trees->v());
       const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> &a1_value = *a1;
       _loop_acc =
-          [=, a0 = a0](uint64_t n) { return _loop_acc((a0.tree_sum() + n)); };
+          [=, a0 = a0](uint64_t n) { return _loop_acc(a0.tree_sum() + n); };
       _loop_trees = &a1_value;
     }
   }
@@ -176,7 +176,7 @@ MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t, uint64_t n) {
       uint64_t n_ = n - 1;
       auto _cell = typename MemSafetyProbe16::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t x) { return ((t.tree_sum() + x) + n); },
+          [=](uint64_t x) { return t.tree_sum() + x + n; },
           nullptr);
       MemSafetyProbe16::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe16::mylist<
@@ -204,11 +204,11 @@ uint64_t MemSafetyProbe16::nested_match_closure(
         std::get<typename MemSafetyProbe16::tree::Node>(t.v());
     if (std::holds_alternative<
             typename MemSafetyProbe16::mylist<uint64_t>::Mynil>(l.v())) {
-      return (a1 + n);
+      return a1 + n;
     } else {
       const auto &[a00, _] =
           std::get<typename MemSafetyProbe16::mylist<uint64_t>::Mycons>(l.v());
-      return ((((a0->tree_sum() + a2->tree_sum()) + a1) + a00) + n);
+      return a0->tree_sum() + a2->tree_sum() + a1 + a00 + n;
     }
   }
 }

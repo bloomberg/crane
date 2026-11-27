@@ -87,9 +87,9 @@ struct LiftedLambdaNested {
       crane::fn<uint64_t(uint64_t)> outer = [=, x = std::move(x)](uint64_t) {
         crane::fn<uint64_t(uint64_t)> inner =
             [=, x = x](uint64_t) { return depth(x); };
-        return (inner(UINT64_C(0)) + depth(x));
+        return inner(UINT64_C(0)) + depth(x);
       };
-      return (outer(UINT64_C(0)) + outer(UINT64_C(1)));
+      return outer(UINT64_C(0)) + outer(UINT64_C(1));
     }();
   }();
 };

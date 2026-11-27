@@ -251,7 +251,7 @@ RamOps::state_preserve RamOps::execute_write(const RamOps::state_preserve &s,
 bool RamOps::ram_addr_disjointb(uint64_t b1, uint64_t c1, uint64_t r1,
                                 uint64_t i1, uint64_t b2, uint64_t c2,
                                 uint64_t r2, uint64_t i2) {
-  return !((((b1 == b2 && c1 == c2) && r1 == r2) && i1 == i2));
+  return !(((((b1 == b2) && (c1 == c2)) && (r1 == r2)) && (i1 == i2)));
 }
 
 RamOps::bank_nested_bank RamOps::get_bank0(const RamOps::state_nested_bank &s) {

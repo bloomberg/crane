@@ -154,11 +154,7 @@ struct Dim10TowerProofChainCase {
   static inline const bool dim10_P_cutoff_matches =
       dim10_P_cutoff == UINT64_C(10);
   static inline const uint64_t dim10_dimension_checksum =
-      (((((((((dim10_p0_dim + dim10_p4_dim) + dim10_p9_dim) + dim10_p10_dim) +
-            dim10_d0_dim) +
-           dim10_d4_dim) +
-          dim10_d9_dim) +
-         dim10_d10_dim) +
-        dim10_layers_cutoff) +
-       dim10_P_cutoff);
+      dim10_p0_dim + dim10_p4_dim + dim10_p9_dim + dim10_p10_dim +
+      dim10_d0_dim + dim10_d4_dim + dim10_d9_dim + dim10_d10_dim +
+      dim10_layers_cutoff + dim10_P_cutoff;
 };

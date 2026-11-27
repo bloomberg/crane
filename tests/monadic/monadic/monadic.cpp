@@ -14,7 +14,7 @@ std::optional<uint64_t> Monadic::safe_sub(uint64_t n, uint64_t m) {
   if (n < m) {
     return std::optional<uint64_t>();
   } else {
-    return std::make_optional<uint64_t>((((n - m) > n ? 0 : (n - m))));
+    return std::make_optional<uint64_t>((n - m > n ? 0 : n - m));
   }
 }
 
@@ -41,7 +41,7 @@ Monadic::fib_state(uint64_t n) {
               [](std::pair<uint64_t, uint64_t> pat) {
                 const auto &[a, b] = pat;
                 return state_put<std::pair<uint64_t, uint64_t>>(
-                    std::make_pair(b, (a + b)));
+                    std::make_pair(b, a + b));
               });
         });
       },

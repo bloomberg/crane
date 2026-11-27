@@ -94,7 +94,7 @@ uint64_t LoopifyNameHygiene::locals(uint64_t n) {
       _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
-        _result = ((stack_ + result_) + self_);
+        _result = stack_ + result_ + self_;
       } else {
         uint64_t k = n - 1;
         _stack.emplace_back(_after_locals_in_S{});

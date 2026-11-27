@@ -1,7 +1,7 @@
 #include "numeral_edge.h"
 
 /// 6. Numeral as function argument
-uint64_t NumeralEdge::take_nat(uint64_t n) { return (n + UINT64_C(1)); }
+uint64_t NumeralEdge::take_nat(uint64_t n) { return n + UINT64_C(1); }
 
 /// 10. Numeral in match
 uint64_t NumeralEdge::classify(uint64_t n) {

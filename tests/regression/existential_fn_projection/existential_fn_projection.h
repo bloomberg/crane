@@ -54,7 +54,7 @@ struct ExistentialFnProjection {
           crane::obj(),
           crane_erase_fn([](const crane::obj &_any_x) -> uint64_t {
             uint64_t x = crane::any_cast<uint64_t>(_any_x);
-            return (crane::any_cast<uint64_t>(x) + UINT64_C(1));
+            return crane::any_cast<uint64_t>(x) + UINT64_C(1);
           }));
   static inline const uint64_t measured = crane::any_cast<uint64_t>(
       crane::any_cast<crane::fn<crane::obj(crane::obj)>>(measurer.projT2())(

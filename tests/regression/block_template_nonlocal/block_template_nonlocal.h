@@ -13,13 +13,13 @@ struct BlockTemplateNonlocal {
     uint64_t _r;
     std::cin >> _r;
     return _r;
-  }() + UINT64_C(42));
+  }()) + UINT64_C(42);
   /// Two pure block templates in same expression
   static inline const uint64_t two_pure_blocks = ([]() -> uint64_t {
     uint64_t _r;
     std::cin >> _r;
     return _r;
-  }() + []() -> uint64_t {
+  }()) + ([]() -> uint64_t {
     uint64_t _r;
     std::cin >> _r;
     return _r;

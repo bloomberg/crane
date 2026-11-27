@@ -117,7 +117,7 @@ struct Helper {
 
 struct AnonLiftNameCollision {
   static inline const uint64_t run = []() {
-    return (Helper::count + []() {
+    return Helper::count + []() {
       auto f_impl = [](auto &_self_f, const List<uint64_t> &l) -> uint64_t {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           return UINT64_C(0);
@@ -131,6 +131,6 @@ struct AnonLiftNameCollision {
             return f_impl(f_impl, l);
           };
       return f(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
-    }());
+    }();
   }();
 };

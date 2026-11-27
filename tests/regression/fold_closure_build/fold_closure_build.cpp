@@ -16,7 +16,7 @@ FoldClosureBuild::compose_adders(const FoldClosureBuild::mylist<uint64_t> &l,
                                  uint64_t x0_) {
   return fold_left<crane::fn<uint64_t(uint64_t)>, uint64_t>(
       [](crane::fn<uint64_t(uint64_t)> acc, uint64_t h) {
-        return [=, acc = std::move(acc)](uint64_t x) { return acc((h + x)); };
+        return [=, acc = std::move(acc)](uint64_t x) { return acc(h + x); };
       },
       [](uint64_t x) { return x; },
       l)(x0_);
@@ -31,7 +31,7 @@ FoldClosureBuild::collect_adders(const FoldClosureBuild::mylist<uint64_t> &l) {
       [](const FoldClosureBuild::mylist<crane::fn<uint64_t(uint64_t)>> &acc,
          uint64_t h) {
         return mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-            [=](uint64_t x) { return (h + x); },
+            [=](uint64_t x) { return h + x; },
             acc);
       },
       mylist<crane::fn<uint64_t(uint64_t)>>::mynil(),
@@ -47,7 +47,7 @@ uint64_t FoldClosureBuild::apply_all(
   } else {
     const auto &[a0, a1] = std::get<typename FoldClosureBuild::mylist<
         crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
-    return (a0(x) + apply_all(*a1, x));
+    return a0(x) + apply_all(*a1, x);
   }
 }
 

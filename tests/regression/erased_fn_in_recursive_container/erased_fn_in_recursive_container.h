@@ -227,7 +227,7 @@ struct ErasedFnInRecursiveContainer {
     const auto &[_, a1] = std::get<typename rose<T1>::Node>(x.v());
     const List<rose<T1>> &a1_value = *a1;
     return (a1_value.template fold_left<uint64_t>(
-                [](uint64_t a, const rose<T1> &y) { return (a + size<T1>(y)); },
+                [](uint64_t a, const rose<T1> &y) { return a + size<T1>(y); },
                 UINT64_C(0)) +
             1);
   }

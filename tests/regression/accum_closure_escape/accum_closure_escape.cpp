@@ -17,7 +17,7 @@ AccumClosureEscape::build_adders(
         std::get<typename AccumClosureEscape::mylist<uint64_t>::Mycons>(l.v());
     const AccumClosureEscape::mylist<uint64_t> &a1_value = *a1;
     return build_adders(a1_value, mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-                                      [=](uint64_t x) { return (a0 + x); },
+                                      [=](uint64_t x) { return a0 + x; },
                                       std::move(acc)));
   }
 }
@@ -46,7 +46,7 @@ uint64_t AccumClosureEscape::apply_all_sum(
   } else {
     const auto &[a0, a1] = std::get<typename AccumClosureEscape::mylist<
         crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
-    return (a0(x) + apply_all_sum(*a1, x));
+    return a0(x) + apply_all_sum(*a1, x);
   }
 }
 
@@ -64,7 +64,7 @@ uint64_t AccumClosureEscape::compose_from_list(
     const AccumClosureEscape::mylist<uint64_t> &a1_value = *a1;
     return compose_from_list(
         a1_value,
-        [=, acc = acc](uint64_t x) { return acc((a0 + x)); },
+        [=, acc = acc](uint64_t x) { return acc(a0 + x); },
         x0_);
   }
 }

@@ -9,8 +9,8 @@ uint64_t
 SrcWrrRomPortRoundtrip::get_reg_pair(const SrcWrrRomPortRoundtrip::state &s,
                                      uint64_t r) {
   auto _once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
-  uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
-  return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
+  uint64_t base = (r - _once1 > r ? 0 : r - _once1);
+  return get_reg(s, base) * UINT64_C(16) + get_reg(s, base + UINT64_C(1));
 }
 
 SrcWrrRomPortRoundtrip::state

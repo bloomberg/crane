@@ -47,7 +47,7 @@ uint64_t ParUnitNotConcurrent::sum(const ParUnitNotConcurrent::tree &t) {
       auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + a1) + _result);
+      _result = _f._tmp2 + a1 + _result;
     }
   }
   return _result;
@@ -156,7 +156,7 @@ uint64_t ParUnitNotConcurrent::churn(uint64_t k,
 }
 
 uint64_t ParUnitNotConcurrent::work(uint64_t k) {
-  return (churn(k, shared) + sum(mk(UINT64_C(3000))));
+  return churn(k, shared) + sum(mk(UINT64_C(3000)));
 }
 
 uint64_t ParUnitNotConcurrent::race(uint64_t k) {
@@ -172,5 +172,5 @@ uint64_t ParUnitNotConcurrent::race(uint64_t k) {
   uint64_t y = std::move(b).get();
   uint64_t z = std::move(c).get();
   uint64_t w = std::move(d).get();
-  return (((x + y) + z) + w);
+  return x + y + z + w;
 }

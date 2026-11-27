@@ -63,8 +63,8 @@ MutualFixEscape::make_count_pair(uint64_t base) {
           return base;
         } else {
           uint64_t n_ = n - 1;
-          return (UINT64_C(1) +
-                  _self_count_odd(_self_count_even, _self_count_odd, n_));
+          return UINT64_C(1) +
+                 _self_count_odd(_self_count_even, _self_count_odd, n_);
         }
       };
   auto count_odd_impl =
@@ -72,11 +72,11 @@ MutualFixEscape::make_count_pair(uint64_t base) {
           uint64_t n)
            -> uint64_t {
         if (n <= 0) {
-          return (base * UINT64_C(2));
+          return base * UINT64_C(2);
         } else {
           uint64_t n_ = n - 1;
-          return (UINT64_C(1) +
-                  _self_count_even(_self_count_even, _self_count_odd, n_));
+          return UINT64_C(1) +
+                 _self_count_even(_self_count_even, _self_count_odd, n_);
         }
       };
   auto count_even =
@@ -96,8 +96,8 @@ MutualFixEscape::make_count_pair(uint64_t base) {
           return base;
         } else {
           uint64_t n_ = n - 1;
-          return (UINT64_C(1) +
-                  _self_count_odd0(_self_count_even0, _self_count_odd0, n_));
+          return UINT64_C(1) +
+                 _self_count_odd0(_self_count_even0, _self_count_odd0, n_);
         }
       };
   auto count_odd0_impl =
@@ -105,11 +105,11 @@ MutualFixEscape::make_count_pair(uint64_t base) {
           uint64_t n)
            -> uint64_t {
         if (n <= 0) {
-          return (base * UINT64_C(2));
+          return base * UINT64_C(2);
         } else {
           uint64_t n_ = n - 1;
-          return (UINT64_C(1) +
-                  _self_count_even0(_self_count_even0, _self_count_odd0, n_));
+          return UINT64_C(1) +
+                 _self_count_even0(_self_count_even0, _self_count_odd0, n_);
         }
       };
   auto count_even0 =

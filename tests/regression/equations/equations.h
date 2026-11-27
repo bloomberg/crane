@@ -39,12 +39,12 @@ struct Equations {
       auto _once1 = (n0 + 1);
       auto _once2 = (n + 1);
       return gcd0(std::make_pair(
-          (n + 1), (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2)))));
+          (n + 1), (_once1 - _once2 > _once1 ? 0 : _once1 - _once2)));
     } else {
       auto _once3 = (n + 1);
       auto _once4 = (n0 + 1);
       return gcd0(std::make_pair(
-          (((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4))), (n0 + 1)));
+          (_once3 - _once4 > _once3 ? 0 : _once3 - _once4), (n0 + 1)));
     }
   }
 
@@ -59,7 +59,7 @@ struct Equations {
         return (n1 + 1);
       } else {
         uint64_t n2 = n0 - 1;
-        return gcd_clause_3(n1, n2, (n1 + 1) < (n2 + 1), gcd0);
+        return gcd_clause_3(n1, n2, ((n1 + 1)) < ((n2 + 1)), gcd0);
       }
     }
   }
@@ -301,10 +301,11 @@ struct Equations {
           } else {
             const auto &[n1, n2, hind0] =
                 std::get<typename gcd_graph::Gcd_graph_refinement_3>(g.v());
-            return f1(n1, n2, *hind0,
-                      _self_f5(_self_f4, _self_f5, n1, n2, (n1 + 1) < (n2 + 1),
-                               gcd_unfold_clause_3(n1, n2, (n1 + 1) < (n2 + 1)),
-                               *hind0));
+            return f1(
+                n1, n2, *hind0,
+                _self_f5(_self_f4, _self_f5, n1, n2, ((n1 + 1)) < ((n2 + 1)),
+                         gcd_unfold_clause_3(n1, n2, ((n1 + 1)) < ((n2 + 1))),
+                         *hind0));
           }
         };
     auto f5_impl =
@@ -321,17 +322,16 @@ struct Equations {
             auto _once2 = (n1 + 1);
             auto _once3 = (n00 + 1);
             auto _once4 = (n1 + 1);
-            return f2(n1, n00, *hind0,
-                      _self_f4(_self_f4, _self_f5,
-                               std::make_pair((n1 + 1),
-                                              (((_once3 - _once4) >
-                                                _once3 ? 0
-                                                       : (_once3 - _once4)))),
-                               gcd(std::make_pair(
-                                   (n1 + 1), (((_once1 - _once2) >
-                                               _once1 ? 0
-                                                      : (_once1 - _once2))))),
-                               *hind0));
+            return f2(
+                n1, n00, *hind0,
+                _self_f4(_self_f4, _self_f5,
+                         std::make_pair(
+                             (n1 + 1),
+                             (_once3 - _once4 > _once3 ? 0 : _once3 - _once4)),
+                         gcd(std::make_pair(
+                             (n1 + 1),
+                             (_once1 - _once2 > _once1 ? 0 : _once1 - _once2))),
+                         *hind0));
           } else {
             const auto &[n1, n00, hind0] = std::get<
                 typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(
@@ -342,15 +342,14 @@ struct Equations {
             auto _once8 = (n00 + 1);
             return f3(
                 n1, n00, *hind0,
-                _self_f4(
-                    _self_f4, _self_f5,
-                    std::make_pair(
-                        (((_once7 - _once8) > _once7 ? 0 : (_once7 - _once8))),
-                        (n00 + 1)),
-                    gcd(std::make_pair(
-                        (((_once5 - _once6) > _once5 ? 0 : (_once5 - _once6))),
-                        (n00 + 1))),
-                    *hind0));
+                _self_f4(_self_f4, _self_f5,
+                         std::make_pair(
+                             (_once7 - _once8 > _once7 ? 0 : _once7 - _once8),
+                             (n00 + 1)),
+                         gcd(std::make_pair(
+                             (_once5 - _once6 > _once5 ? 0 : _once5 - _once6),
+                             (n00 + 1))),
+                         *hind0));
           }
         };
     auto f4 =
@@ -390,10 +389,11 @@ struct Equations {
           } else {
             const auto &[n1, n2, hind0] =
                 std::get<typename gcd_graph::Gcd_graph_refinement_3>(g.v());
-            return f1(n1, n2, *hind0,
-                      _self_f5(_self_f4, _self_f5, n1, n2, (n1 + 1) < (n2 + 1),
-                               gcd_unfold_clause_3(n1, n2, (n1 + 1) < (n2 + 1)),
-                               *hind0));
+            return f1(
+                n1, n2, *hind0,
+                _self_f5(_self_f4, _self_f5, n1, n2, ((n1 + 1)) < ((n2 + 1)),
+                         gcd_unfold_clause_3(n1, n2, ((n1 + 1)) < ((n2 + 1))),
+                         *hind0));
           }
         };
     auto f5_impl =
@@ -410,17 +410,16 @@ struct Equations {
             auto _once2 = (n1 + 1);
             auto _once3 = (n00 + 1);
             auto _once4 = (n1 + 1);
-            return f2(n1, n00, *hind0,
-                      _self_f4(_self_f4, _self_f5,
-                               std::make_pair((n1 + 1),
-                                              (((_once3 - _once4) >
-                                                _once3 ? 0
-                                                       : (_once3 - _once4)))),
-                               gcd(std::make_pair(
-                                   (n1 + 1), (((_once1 - _once2) >
-                                               _once1 ? 0
-                                                      : (_once1 - _once2))))),
-                               *hind0));
+            return f2(
+                n1, n00, *hind0,
+                _self_f4(_self_f4, _self_f5,
+                         std::make_pair(
+                             (n1 + 1),
+                             (_once3 - _once4 > _once3 ? 0 : _once3 - _once4)),
+                         gcd(std::make_pair(
+                             (n1 + 1),
+                             (_once1 - _once2 > _once1 ? 0 : _once1 - _once2))),
+                         *hind0));
           } else {
             const auto &[n1, n00, hind0] = std::get<
                 typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(
@@ -431,15 +430,14 @@ struct Equations {
             auto _once8 = (n00 + 1);
             return f3(
                 n1, n00, *hind0,
-                _self_f4(
-                    _self_f4, _self_f5,
-                    std::make_pair(
-                        (((_once7 - _once8) > _once7 ? 0 : (_once7 - _once8))),
-                        (n00 + 1)),
-                    gcd(std::make_pair(
-                        (((_once5 - _once6) > _once5 ? 0 : (_once5 - _once6))),
-                        (n00 + 1))),
-                    *hind0));
+                _self_f4(_self_f4, _self_f5,
+                         std::make_pair(
+                             (_once7 - _once8 > _once7 ? 0 : _once7 - _once8),
+                             (n00 + 1)),
+                         gcd(std::make_pair(
+                             (_once5 - _once6 > _once5 ? 0 : _once5 - _once6),
+                             (n00 + 1))),
+                         *hind0));
           }
         };
     auto f4 =
@@ -512,7 +510,7 @@ struct Equations {
     if (refine) {
       return (collatz_steps0(Nat::div2(n)) + 1);
     } else {
-      return (collatz_steps0(((UINT64_C(3) * n) + UINT64_C(1))) + 1);
+      return (collatz_steps0(UINT64_C(3) * n + UINT64_C(1)) + 1);
     }
   }
 
@@ -798,8 +796,8 @@ struct Equations {
                 c.v());
             return f3(
                 n0, *hind0,
-                _self_f4(_self_f4, _self_f5, ((UINT64_C(3) * n0) + UINT64_C(1)),
-                         collatz_steps(((UINT64_C(3) * n0) + UINT64_C(1))),
+                _self_f4(_self_f4, _self_f5, UINT64_C(3) * n0 + UINT64_C(1),
+                         collatz_steps(UINT64_C(3) * n0 + UINT64_C(1)),
                          *hind0));
           }
         };
@@ -863,8 +861,8 @@ struct Equations {
                 c.v());
             return f3(
                 n0, *hind0,
-                _self_f4(_self_f4, _self_f5, ((UINT64_C(3) * n0) + UINT64_C(1)),
-                         collatz_steps(((UINT64_C(3) * n0) + UINT64_C(1))),
+                _self_f4(_self_f4, _self_f5, UINT64_C(3) * n0 + UINT64_C(1),
+                         collatz_steps(UINT64_C(3) * n0 + UINT64_C(1)),
                          *hind0));
           }
         };

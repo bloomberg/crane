@@ -165,7 +165,7 @@ struct SigClosureWitnessFit {
     return hd_or<crane::fn<crane::fn<List<uint64_t>(uint64_t)>(uint64_t)>>(
         [](uint64_t k) {
           return [=](uint64_t n) {
-            return ListDef::template repeat<uint64_t>(UINT64_C(0), (n + k));
+            return ListDef::template repeat<uint64_t>(UINT64_C(0), n + k);
           };
         },
         List<crane::fn<crane::fn<List<uint64_t>(uint64_t)>(uint64_t)>>::nil())(

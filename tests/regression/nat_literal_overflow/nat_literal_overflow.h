@@ -7,5 +7,5 @@ struct NatLiteralOverflow {
   /// The largest one that does still comes through exactly.
   static constexpr uint64_t max64 = UINT64_C(18446744073709551615);
   static constexpr uint64_t small = UINT64_C(5);
-  static inline const uint64_t total = (small + small);
+  static inline const uint64_t total = small + small;
 };

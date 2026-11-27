@@ -494,7 +494,7 @@ struct InstanceForwardsDicts {
   static inline const exp<uint64_t> e1 =
       TFunctor_exp<Endo_tag, Endo_nat, Endo_op, Endo_cmp,
                    Endo_flag>::template tfmap<uint64_t, uint64_t>(
-          [](uint64_t n) { return (n + UINT64_C(10)); },
+          [](uint64_t n) { return n + UINT64_C(10); },
           e0);
   static uint64_t sum_exp(const exp<uint64_t> &e);
   static inline const uint64_t result = sum_exp(e1);

@@ -29,7 +29,7 @@ uint64_t pow(uint64_t n, uint64_t m) {
     return UINT64_C(1);
   } else {
     uint64_t m0 = m - 1;
-    return (n * pow(n, m0));
+    return n * pow(n, m0);
   }
 }
 
@@ -344,7 +344,7 @@ uint64_t gcd(uint64_t a, uint64_t b) {
   }
 }
 
-uint64_t square(uint64_t n) { return (n * n); }
+uint64_t square(uint64_t n) { return n * n; }
 
 uint64_t sqrt_iter(uint64_t k, uint64_t p, uint64_t q, uint64_t r) {
   if (k <= 0) {
@@ -411,7 +411,7 @@ uint64_t shiftl(uint64_t a, uint64_t n) {
   } else {
     uint64_t n0 = n - 1;
     auto _once1 = shiftl(a, n0);
-    return (_once1 + _once1);
+    return _once1 + _once1;
   }
 }
 

@@ -10,7 +10,7 @@ struct Lambda {
   static uint64_t make_adder(uint64_t x0_, uint64_t x1_);
   static inline const uint64_t with_let = []() {
     uint64_t x = UINT64_C(5);
-    return (x * UINT64_C(2));
+    return x * UINT64_C(2);
   }();
 
   template <typename F0>
@@ -20,7 +20,7 @@ struct Lambda {
   }
 
   static inline const uint64_t use_apply =
-      apply_fn([](uint64_t x) { return (x + UINT64_C(1)); }, UINT64_C(5));
+      apply_fn([](uint64_t x) { return x + UINT64_C(1); }, UINT64_C(5));
   static inline const uint64_t test_simple = simple_lambda(UINT64_C(5));
   static inline const uint64_t test_multi = multi_arg(UINT64_C(3), UINT64_C(4));
   static inline const uint64_t test_nested =

@@ -8,6 +8,6 @@ uint64_t RcAssignFromOwnChild::total(const RcAssignFromOwnChild::chain &c) {
   } else {
     const auto &[a0, a1] =
         std::get<typename RcAssignFromOwnChild::chain::Link>(c.v());
-    return (a0 + total(*a1));
+    return a0 + total(*a1);
   }
 }

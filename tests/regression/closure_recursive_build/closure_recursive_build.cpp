@@ -50,6 +50,6 @@ ClosureRecursiveBuild::apply_all_sum(const ClosureRecursiveBuild::fn_list &fl,
   } else {
     const auto &[a0, a1] =
         std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl.v());
-    return (a0(x) + apply_all_sum(*a1, x));
+    return a0(x) + apply_all_sum(*a1, x);
   }
 }

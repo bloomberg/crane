@@ -26,7 +26,7 @@ struct FixDirectReturn {
       }
     };
     auto add = [&](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
-    return (x0_(add(UINT64_C(0))) + add(UINT64_C(1)));
+    return x0_(add(UINT64_C(0))) + add(UINT64_C(1));
   }
 
   /// test1: make_callback(42)(fun x => x) = id(42) + 43 = 85.
@@ -34,7 +34,7 @@ struct FixDirectReturn {
       make_callback(UINT64_C(42), [](uint64_t x) { return x; });
   /// test2: make_callback(10)(fun x => x * 2) = 20 + 11 = 31.
   static inline const uint64_t test2 =
-      make_callback(UINT64_C(10), [](uint64_t x) { return (x * UINT64_C(2)); });
+      make_callback(UINT64_C(10), [](uint64_t x) { return x * UINT64_C(2); });
   /// test3: Nested — use the closure from make_callback inside another
   /// make_callback.
   static inline const uint64_t test3 = []() {

@@ -168,10 +168,9 @@ struct MemSafetyProbe17 {
             const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             uint64_t local_weight =
-                ((((a0->qtree_sum() + (UINT64_C(2) * a1->qtree_sum())) +
-                   (UINT64_C(3) * a2)) +
-                  (UINT64_C(4) * a3->qtree_sum())) +
-                 (UINT64_C(5) * a4->qtree_sum()));
+                a0->qtree_sum() + UINT64_C(2) * a1->qtree_sum() +
+                UINT64_C(3) * a2 + UINT64_C(4) * a3->qtree_sum() +
+                UINT64_C(5) * a4->qtree_sum();
             _stack.emplace_back(_after_weighted_sum_in_QNode{
                 crane_raw(a1), crane_raw(a3), crane_raw(a4), local_weight});
             _stack.emplace_back(_call{crane_raw(a0)});
@@ -214,8 +213,7 @@ struct MemSafetyProbe17 {
               std::move(std::get<_after_weighted_sum_in_QNode_4>(_popped));
           _stack.pop_back();
           uint64_t local_weight = _f.local_weight;
-          _result =
-              ((((local_weight + _f._tmp4) + _f._tmp3) + _f._tmp2) + _result);
+          _result = local_weight + _f._tmp4 + _f._tmp3 + _f._tmp2 + _result;
         }
       }
       return _result;
@@ -343,7 +341,7 @@ struct MemSafetyProbe17 {
           uint64_t a3 = _f.a3;
           uint64_t a20 = _f.a20;
           _result =
-              qtree::qnode(std::move(_f._tmp4), std::move(_f._tmp3), (a3 + a20),
+              qtree::qnode(std::move(_f._tmp4), std::move(_f._tmp3), a3 + a20,
                            std::move(_f._tmp2), std::move(_result));
         }
       }
@@ -538,8 +536,7 @@ struct MemSafetyProbe17 {
         } else {
           auto _f = std::move(std::get<_after_qtree_size_in_QNode_4>(_popped));
           _stack.pop_back();
-          _result =
-              ((((UINT64_C(1) + _f._tmp4) + _f._tmp3) + _f._tmp2) + _result);
+          _result = UINT64_C(1) + _f._tmp4 + _f._tmp3 + _f._tmp2 + _result;
         }
       }
       return _result;
@@ -647,7 +644,7 @@ struct MemSafetyProbe17 {
           } else {
             m2 = dc;
           }
-          _result = (UINT64_C(1) + (m1 <= m2 ? m2 : m1));
+          _result = UINT64_C(1) + (m1 <= m2 ? m2 : m1);
         }
       }
       return _result;
@@ -743,7 +740,7 @@ struct MemSafetyProbe17 {
           auto _f = std::move(std::get<_after_qtree_sum_in_QNode_4>(_popped));
           _stack.pop_back();
           uint64_t a2 = _f.a2;
-          _result = ((((_f._tmp4 + _f._tmp3) + a2) + _f._tmp2) + _result);
+          _result = _f._tmp4 + _f._tmp3 + a2 + _f._tmp2 + _result;
         }
       }
       return _result;
@@ -1118,6 +1115,6 @@ struct MemSafetyProbe17 {
                                   qtree::qleaf(), qtree::qleaf()),
         qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
                      qtree::qleaf(), qtree::qleaf()));
-    return (sum_list(qtree_flatten(t)) + t.qtree_sum());
+    return sum_list(qtree_flatten(t)) + t.qtree_sum();
   }();
 };

@@ -5,7 +5,7 @@ uint64_t CPS::fact_cps(uint64_t n, const crane::fn<uint64_t(uint64_t)> &k) {
     return k(UINT64_C(1));
   } else {
     uint64_t n_ = n - 1;
-    return fact_cps(n_, [=, k = k](uint64_t r) { return k(((n_ + 1) * r)); });
+    return fact_cps(n_, [=, k = k](uint64_t r) { return k(((n_ + 1)) * r); });
   }
 }
 
@@ -23,7 +23,7 @@ uint64_t CPS::fib_cps(uint64_t n, const crane::fn<uint64_t(uint64_t)> &k) {
     } else {
       uint64_t n_ = n1 - 1;
       return fib_cps(n_, [=, k = k](uint64_t a) {
-        return fib_cps(n1, [=, k = k](uint64_t b) { return k((a + b)); });
+        return fib_cps(n1, [=, k = k](uint64_t b) { return k(a + b); });
       });
     }
   }
@@ -44,7 +44,7 @@ uint64_t CPS::tree_sum_cps(const CPS::tree &t,
     const CPS::tree &a1_value = *a1;
     return tree_sum_cps(a0_value, [=, a1_value = a1_value, k = k](uint64_t sl) {
       return tree_sum_cps(a1_value,
-                          [=, k = k](uint64_t sr) { return k((sl + sr)); });
+                          [=, k = k](uint64_t sr) { return k(sl + sr); });
     });
   }
 }
@@ -60,7 +60,7 @@ uint64_t CPS::sum_cps(const List<uint64_t> &l,
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     const List<uint64_t> &a1_value = *a1;
-    return sum_cps(a1_value, [=, k = k](uint64_t r) { return k((a0 + r)); });
+    return sum_cps(a1_value, [=, k = k](uint64_t r) { return k(a0 + r); });
   }
 }
 

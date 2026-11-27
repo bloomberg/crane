@@ -59,6 +59,6 @@ struct DepMatchUnitPair {
 
   static std::pair<uint64_t, uint64_t> get(const tg &t);
   static inline const uint64_t go =
-      (get(tg::tp(UINT64_C(1), UINT64_C(2))).first +
-       get(tg::tp(UINT64_C(1), UINT64_C(2))).second);
+      get(tg::tp(UINT64_C(1), UINT64_C(2))).first +
+      get(tg::tp(UINT64_C(1), UINT64_C(2))).second;
 };

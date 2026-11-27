@@ -8,6 +8,7 @@
 #include <concepts>
 #include <crane_itree.h>
 #include <crane_st.h>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -2162,7 +2163,7 @@ template <Int I, OrderedType X> struct Raw {
         const auto &[a00, a10, a20, a30, _] =
             std::get<typename tree<T1>::Node>(m2.v());
         auto [m2_, xd] = remove_min<T1>(*a00, a10, a20, *a30);
-        return join<T1>(m1, std::move(xd).first, std::move(xd).second,
+        return join<T1>(m1, std::move(xd.first), std::move(xd.second),
                         std::move(m2_));
       }
     }

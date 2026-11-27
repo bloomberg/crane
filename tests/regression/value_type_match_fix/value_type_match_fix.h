@@ -65,10 +65,10 @@ struct ValueTypeMatchFix {
   static inline const uint64_t test2 = []() {
     std::optional<crane::fn<uint64_t(uint64_t)>> o = make_adder_from_triple(
         triple::mktriple(UINT64_C(100), UINT64_C(200), UINT64_C(300)));
-    uint64_t noise = (UINT64_C(42) + UINT64_C(13));
+    uint64_t noise = UINT64_C(42) + UINT64_C(13);
     if (o.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *o;
-      return (f(UINT64_C(0)) + noise);
+      return f(UINT64_C(0)) + noise;
     } else {
       return UINT64_C(999);
     }

@@ -17,10 +17,10 @@ struct OuterMemberShadowedByNested {
   struct Sub {
     static uint64_t f(uint64_t n);
     static inline const uint64_t k =
-        (OuterMemberShadowedByNested::k + UINT64_C(1));
+        OuterMemberShadowedByNested::k + UINT64_C(1);
   };
 
-  static inline const uint64_t shadowed = (Sub::f(UINT64_C(3)) + Sub::k);
+  static inline const uint64_t shadowed = Sub::f(UINT64_C(3)) + Sub::k;
 
   struct Node {
     static constexpr uint64_t bonus = UINT64_C(7);
@@ -151,7 +151,7 @@ struct OuterMemberShadowedByNested {
           auto _f = std::move(std::get<_after_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -252,9 +252,9 @@ struct OuterMemberShadowedByNested {
 
   static reader read_with(tree t);
   static inline const uint64_t with_bonus =
-      (tree::node(tree::leaf(), UINT64_C(1), tree::leaf()).sum() + []() {
+      tree::node(tree::leaf(), UINT64_C(1), tree::leaf()).sum() + []() {
         const auto &_sv = read_with(tree::leaf());
         const auto &[a0] = _sv;
         return a0(UINT64_C(0));
-      }());
+      }();
 };

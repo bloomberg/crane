@@ -5,7 +5,7 @@ uint64_t EtaArg::cost(const List<uint64_t> &xs) {
 }
 
 uint64_t EtaArg::step(uint64_t k, uint64_t acc, uint64_t x) {
-  return ((acc + x) + k);
+  return acc + x + k;
 }
 
 uint64_t EtaArg::total(const List<uint64_t> &xs) {

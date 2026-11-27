@@ -112,10 +112,10 @@ struct ErasedLetNotResultType {
         return S::size(x, a0);
       } else if (std::holds_alternative<typename result::Ambig>(r.v())) {
         const auto &[a0] = std::get<typename result::Ambig>(r.v());
-        return (UINT64_C(100) + S::size(x, a0));
+        return UINT64_C(100) + S::size(x, a0);
       } else {
         const auto &[a0] = std::get<typename result::Reject>(r.v());
-        return (UINT64_C(1000) + a0);
+        return UINT64_C(1000) + a0;
       }
     }
   };
@@ -129,10 +129,10 @@ struct ErasedLetNotResultType {
 
   using P = Parser<Syms>;
   static inline const uint64_t run =
-      ((P::measure(UINT64_C(3),
-                   P::finish(UINT64_C(3), UINT64_C(3), true, UINT64_C(7))) +
-        P::measure(UINT64_C(3),
-                   P::finish(UINT64_C(3), UINT64_C(3), false, UINT64_C(7)))) +
-       P::measure(UINT64_C(3),
-                  P::finish(UINT64_C(3), UINT64_C(4), true, UINT64_C(7))));
+      P::measure(UINT64_C(3),
+                 P::finish(UINT64_C(3), UINT64_C(3), true, UINT64_C(7))) +
+      P::measure(UINT64_C(3),
+                 P::finish(UINT64_C(3), UINT64_C(3), false, UINT64_C(7))) +
+      P::measure(UINT64_C(3),
+                 P::finish(UINT64_C(3), UINT64_C(4), true, UINT64_C(7)));
 };

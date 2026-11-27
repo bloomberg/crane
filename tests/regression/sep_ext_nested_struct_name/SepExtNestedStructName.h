@@ -113,7 +113,7 @@ public:
 [[gnu::used]] inline const Tree sample =
     Tree::node(Tree::node(Tree::leaf(), UINT64_C(1)), UINT64_C(2));
 const uint64_t total =
-    (sample.depth() + NestedLib::Sub::size(NestedLib::Sub::Tree::node(
-                          NestedLib::Sub::Tree::leaf(), UINT64_C(0),
-                          NestedLib::Sub::Tree::leaf())));
+    sample.depth() + NestedLib::Sub::size(NestedLib::Sub::Tree::node(
+                         NestedLib::Sub::Tree::leaf(), UINT64_C(0),
+                         NestedLib::Sub::Tree::leaf()));
 } // namespace SepExtNestedStructName

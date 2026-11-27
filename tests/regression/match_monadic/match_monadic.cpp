@@ -74,7 +74,7 @@ uint64_t MatchMonadic::tree_sum(const Tree<uint64_t> &t) {
     std::cout << std::string("visiting") << '\n';
     uint64_t sl = tree_sum(*a0);
     uint64_t sr = tree_sum(*a2);
-    return ((sl + a1) + sr);
+    return sl + a1 + sr;
   }
 }
 
@@ -96,7 +96,7 @@ std::string MatchMonadic::match_then_bind(uint64_t n) {
 int64_t MatchMonadic::bind_then_match() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
+  int64_t len = static_cast<int64_t>(std::string_view{line}.size());
   if (len == INT64_C(0)) {
     std::cout << std::string("empty") << '\n';
     return INT64_C(0);

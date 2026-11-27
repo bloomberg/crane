@@ -186,7 +186,7 @@ uint64_t LoopifyOperandMatchCall::size(const LoopifyOperandMatchCall::tree &t) {
     } else {
       auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + _result);
+      _result = _f._tmp2 + _result;
     }
   }
   return _result;

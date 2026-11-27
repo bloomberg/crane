@@ -6,7 +6,7 @@ uint64_t NestedMatchClosure::tree_sum(const NestedMatchClosure::tree &t) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
-    return ((tree_sum(*a0) + a1) + tree_sum(*a2));
+    return tree_sum(*a0) + a1 + tree_sum(*a2);
   }
 }
 
@@ -24,11 +24,11 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
     if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
             a0_value.v())) {
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-          crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return (a1 + x); }));
+          crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return a1 + x; }));
     } else {
       const auto &[_, a10, _] =
           std::get<typename NestedMatchClosure::tree::Node>(a0_value.v());
-      uint64_t combined = (a1 + a10);
+      uint64_t combined = a1 + a10;
       auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
         if (x <= 0) {
           return combined;
@@ -68,7 +68,7 @@ NestedMatchClosure::make_deep_combiner(const NestedMatchClosure::tree &t) {
       } else {
         const auto &[_, a11, _] =
             std::get<typename NestedMatchClosure::tree::Node>(a00_value.v());
-        uint64_t total = ((a1 + a10) + a11);
+        uint64_t total = a1 + a10 + a11;
         auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
           if (x <= 0) {
             return total;
@@ -106,7 +106,7 @@ NestedMatchClosure::make_param_combiner(const NestedMatchClosure::tree &t,
                                                       uint64_t x)
              -> uint64_t {
           if (x <= 0) {
-            return (((base + a1) + tree_sum(a0_value)) + tree_sum(a2_value));
+            return base + a1 + tree_sum(a0_value) + tree_sum(a2_value);
           } else {
             uint64_t x_ = x - 1;
             return (_self_go(_self_go, x_) + 1);

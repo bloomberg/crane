@@ -173,13 +173,12 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
       uint64_t value = _f.value;
       _stack.emplace_back(_after_knapsack_fuel_in_false_2{value, _result});
       _stack.emplace_back(_call{
-          &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-          fuel_});
+          &a1, (capacity - weight > capacity ? 0 : capacity - weight), fuel_});
     } else {
       auto _f = std::move(std::get<_after_knapsack_fuel_in_false_2>(_popped));
       _stack.pop_back();
       uint64_t value = _f.value;
-      _result = std::max(_f._tmp2, (value + _result));
+      _result = std::max(_f._tmp2, value + _result);
     }
   }
   return _result;
@@ -188,7 +187,7 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
 uint64_t
 LoopifySearchOpt::knapsack(uint64_t capacity,
                            const List<std::pair<uint64_t, uint64_t>> &items) {
-  return knapsack_fuel((items.length() * capacity), capacity, items);
+  return knapsack_fuel(items.length() * capacity, capacity, items);
 }
 
 bool LoopifySearchOpt::subset_sum_fuel(uint64_t fuel, uint64_t target,
@@ -251,7 +250,7 @@ bool LoopifySearchOpt::subset_sum_fuel(uint64_t fuel, uint64_t target,
       const List<uint64_t> &a1 = *_f.a1;
       _stack.emplace_back(_after_subset_sum_fuel_in_false_2{_result});
       _stack.emplace_back(
-          _call{&a1, (((target - a0) > target ? 0 : (target - a0))), fuel_});
+          _call{&a1, (target - a0 > target ? 0 : target - a0), fuel_});
     } else {
       auto _f = std::move(std::get<_after_subset_sum_fuel_in_false_2>(_popped));
       _stack.pop_back();
@@ -262,7 +261,7 @@ bool LoopifySearchOpt::subset_sum_fuel(uint64_t fuel, uint64_t target,
 }
 
 bool LoopifySearchOpt::subset_sum(uint64_t target, const List<uint64_t> &l) {
-  return subset_sum_fuel((l.length() * target), target, l);
+  return subset_sum_fuel(l.length() * target, target, l);
 }
 
 std::pair<uint64_t, uint64_t>
@@ -300,11 +299,10 @@ LoopifySearchOpt::majority(const List<uint64_t> &l) {
       uint64_t a0 = _f.a0;
       auto [cand, count] = std::move(_result);
       if (a0 == cand) {
-        _result = std::make_pair(cand, (count + UINT64_C(1)));
+        _result = std::make_pair(cand, count + UINT64_C(1));
       } else if (UINT64_C(0) < count) {
         _result = std::make_pair(
-            cand,
-            (((count - UINT64_C(1)) > count ? 0 : (count - UINT64_C(1)))));
+            cand, (count - UINT64_C(1) > count ? 0 : count - UINT64_C(1)));
       } else {
         _result = std::make_pair(a0, UINT64_C(1));
       }
@@ -444,7 +442,7 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                   }
                 }
               };
-          right = drop((mid + UINT64_C(1)), _loop_l);
+          right = drop(mid + UINT64_C(1), _loop_l);
           if (target < mid_val) {
             _loop_l = std::move(left);
             fuel = fuel_;

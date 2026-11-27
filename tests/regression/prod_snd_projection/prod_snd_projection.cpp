@@ -5,6 +5,6 @@ uint64_t ProdSndProjection::depth(const ProdSndProjection::t &x) {
     return UINT64_C(0);
   } else {
     const auto &[a0] = std::get<typename ProdSndProjection::t::N>(x.v());
-    return (depth((*a0).second) + 1);
+    return (depth(a0->second) + 1);
   }
 }

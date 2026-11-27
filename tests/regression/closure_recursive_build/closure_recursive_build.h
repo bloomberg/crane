@@ -107,7 +107,7 @@ struct ClosureRecursiveBuild {
   /// build_adders(5), noise, then apply_first(fns, 0) = 5.
   static inline const uint64_t test3 = []() {
     fn_list fns = build_adders(UINT64_C(5));
-    uint64_t noise = ((UINT64_C(99) + UINT64_C(88)) + UINT64_C(77));
-    return (apply_first(std::move(fns), UINT64_C(0)) + noise);
+    uint64_t noise = UINT64_C(99) + UINT64_C(88) + UINT64_C(77);
+    return apply_first(std::move(fns), UINT64_C(0)) + noise;
   }();
 };

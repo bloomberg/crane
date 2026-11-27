@@ -139,7 +139,7 @@ struct LoopifyMethodLocalFix {
           } else {
             const auto &[a0, a1] = std::get<typename tree::Node>(_sv.v());
             _loop_self = crane_raw(a0);
-            n = (n + a1);
+            n = n + a1;
           }
         }
       }

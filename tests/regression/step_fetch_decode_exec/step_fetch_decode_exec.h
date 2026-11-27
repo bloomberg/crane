@@ -166,7 +166,7 @@ struct StepFetchDecodeExec {
             List<uint64_t>::cons(
                 UINT64_C(6),
                 List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil())))});
-    return (s1.acc + s1.pc);
+    return s1.acc + s1.pc;
   }();
 };
 

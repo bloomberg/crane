@@ -8,14 +8,12 @@ uint64_t Coercions::bool_to_nat(bool b) {
   }
 }
 
-uint64_t Coercions::add_bool(uint64_t n, bool b) {
-  return (n + bool_to_nat(b));
-}
+uint64_t Coercions::add_bool(uint64_t n, bool b) { return n + bool_to_nat(b); }
 
 uint64_t Coercions::double_wrapped(const Coercions::Wrapper &w) {
-  return (w.unwrap + w.unwrap);
+  return w.unwrap + w.unwrap;
 }
 
 uint64_t Coercions::add_boolbox(uint64_t n, const Coercions::BoolBox &bb) {
-  return (n + bool_to_nat(bb.unbox));
+  return n + bool_to_nat(bb.unbox);
 }

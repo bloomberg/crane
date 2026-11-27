@@ -287,6 +287,7 @@ struct LocalFixNontailFunctionResult {
   static List<pt> h6a(uint64_t n, const tree &x0_);
   static List<pt> h6b(uint64_t n, const tree &x0_);
   static List<pt> k1(uint64_t n, const tree &x0_);
-  static inline const uint64_t t2 = (h6a(UINT64_C(3), tree::leaf()).length() +
-                                     k1(UINT64_C(2), tree::leaf()).length());
+  static inline const uint64_t t2 =
+      h6a(UINT64_C(3), tree::leaf()).length() +
+      k1(UINT64_C(2), tree::leaf()).length();
 };

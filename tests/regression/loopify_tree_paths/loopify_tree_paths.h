@@ -308,7 +308,7 @@ struct LoopifyTreePaths {
           auto _f = std::move(std::get<_after_max_path_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = (a1 + std::max(_f._tmp2, _result));
+          _result = a1 + std::max(_f._tmp2, _result);
         }
       }
       return _result;
@@ -357,7 +357,7 @@ struct LoopifyTreePaths {
             }
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            uint64_t new_acc = (acc + a1);
+            uint64_t new_acc = acc + a1;
             _stack.emplace_back(
                 _after_find_path_sum_in_Node{a1, crane_raw(a2), new_acc});
             _stack.emplace_back(_call{crane_raw(a0), new_acc});
@@ -439,7 +439,7 @@ struct LoopifyTreePaths {
             }
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            uint64_t new_acc = (acc + a1);
+            uint64_t new_acc = acc + a1;
             _stack.emplace_back(
                 _after_count_paths_sum_aux_in_Node{crane_raw(a2), new_acc});
             _stack.emplace_back(_call{crane_raw(a0), new_acc});
@@ -457,7 +457,7 @@ struct LoopifyTreePaths {
           auto _f = std::move(
               std::get<_after_count_paths_sum_aux_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         }
       }
       return _result;

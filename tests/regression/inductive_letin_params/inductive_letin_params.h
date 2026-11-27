@@ -188,7 +188,7 @@ struct InductiveLetinParams {
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
   static inline const uint64_t sample_sum =
       sample.tri_rest().template fold_left<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
           sample.tri_first());
 
   /// A let-in after the type parameters, in a recursive inductive.

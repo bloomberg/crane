@@ -13,7 +13,7 @@ uint64_t AssocPairList::count(const AssocPairList::t &x) {
               [](uint64_t a,
                  const std::pair<uint64_t,
                                  AssocPairList::t> &p) {
-                return (a + count(p.second));
+                return a + count(p.second);
               },
               UINT64_C(0)) +
           1);

@@ -116,7 +116,7 @@ struct BakeReadableImage {
     return []() {
       auto count_impl = [](auto &_self_count, rose r) -> uint64_t {
         auto &[_, shade, kids] = std::get<typename rose::Rose0>(r.v_mut());
-        return ([&]() {
+        return [&]() {
           switch (std::move(shade)) {
           case Color::BLUE: {
             return UINT64_C(1);
@@ -126,13 +126,11 @@ struct BakeReadableImage {
           }
           }
         }() +
-                List::template fold_left<uint64_t, rose>(
-                    [=](uint64_t n,
-                        const rose &k) {
-                      return (n + _self_count(_self_count, k));
-                    },
-                    std::move(kids),
-                    UINT64_C(0)));
+         List::template fold_left<uint64_t, rose>(
+             [=](uint64_t n,
+                 const rose &k) { return n + _self_count(_self_count, k); },
+             std::move(kids),
+             UINT64_C(0));
       };
       auto count =
           [=, count_impl = std::move(count_impl)](rose r) -> uint64_t {
@@ -140,9 +138,7 @@ struct BakeReadableImage {
           };
       return List::template fold_left<uint64_t, rose>(
           [=, count = std::move(count)](uint64_t n,
-                                        const rose &r) {
-            return (n + count(r));
-          },
+                                        const rose &r) { return n + count(r); },
           forest,
           UINT64_C(0));
     }();

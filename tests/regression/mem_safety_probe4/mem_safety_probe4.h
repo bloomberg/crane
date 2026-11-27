@@ -140,7 +140,7 @@ struct MemSafetyProbe4 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -153,15 +153,15 @@ struct MemSafetyProbe4 {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
-          return (a1 + x);
+          return a1 + x;
         } else {
           const auto &[_, a10, _] = std::get<typename tree::Node>(_sv0.v());
           auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
-            return (a10 + x);
+            return a10 + x;
           } else {
             const auto &[_, a11, _] = std::get<typename tree::Node>(_sv1.v());
-            return (((a10 + a11) + a1) + x);
+            return a10 + a11 + a1 + x;
           }
         }
       }

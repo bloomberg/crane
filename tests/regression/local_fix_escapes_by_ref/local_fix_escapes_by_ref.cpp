@@ -26,7 +26,7 @@ LocalFixEscapesByRef::run(const List<uint64_t> &l) {
   return map_monad_acc<uint64_t, uint64_t>(
       [](uint64_t x) {
         return st<uint64_t>{[=](uint64_t s) {
-          return res<uint64_t>::res0((s + 1), (UINT64_C(2) * x));
+          return res<uint64_t>::res0((s + 1), UINT64_C(2) * x);
         }};
       },
       l)
@@ -42,10 +42,9 @@ bool LocalFixEscapesByRef::check() {
               UINT64_C(3),
               List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
   const auto &[s, a] = _sv;
-  return (
-      s == UINT64_C(4) &&
-      a.template fold_left<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          UINT64_C(0)) ==
-      UINT64_C(20));
+  return ((s == UINT64_C(4)) &&
+          (a.template fold_left<uint64_t>(
+               [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
+               UINT64_C(0)) ==
+           UINT64_C(20)));
 }

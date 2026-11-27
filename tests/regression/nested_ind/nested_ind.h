@@ -242,7 +242,7 @@ struct NestedInd {
           auto _f =
               std::move(std::get<_after_custom_list_length_in_Ccons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -672,7 +672,7 @@ struct NestedInd {
             return UINT64_C(0);
           } else {
             const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
-            return (a00.expr_size() + _self_aux(_self_aux, *a10));
+            return a00.expr_size() + _self_aux(_self_aux, *a10);
           }
         };
         auto aux =
@@ -689,7 +689,7 @@ struct NestedInd {
             return UINT64_C(0);
           } else {
             const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
-            return (a00.expr_size() + _self_aux(_self_aux, *a10));
+            return a00.expr_size() + _self_aux(_self_aux, *a10);
           }
         };
         auto aux =
@@ -714,7 +714,7 @@ struct NestedInd {
               } else {
                 const auto &[a00, a10] =
                     std::get<typename List<expr>::Cons>(l.v());
-                return (a00.eval() + _self_sum_all(_self_sum_all, *a10));
+                return a00.eval() + _self_sum_all(_self_sum_all, *a10);
               }
             };
         const List<expr> &_lc1_l = *a0;
@@ -728,7 +728,7 @@ struct NestedInd {
               } else {
                 const auto &[a00, a10] =
                     std::get<typename List<expr>::Cons>(l.v());
-                return (a00.eval() * _self_prod_all(_self_prod_all, *a10));
+                return a00.eval() * _self_prod_all(_self_prod_all, *a10);
               }
             };
         const List<expr> &_lc2_l = *a0;
@@ -782,7 +782,7 @@ struct NestedInd {
   static inline const uint64_t test_depth_nested = test_nested.expr_depth();
   static inline const List<uint64_t> test_literals = test_nested.literals();
   static inline const uint64_t test_doubled =
-      test_nested.lit_map([](uint64_t n) { return (n * UINT64_C(2)); }).eval();
+      test_nested.lit_map([](uint64_t n) { return n * UINT64_C(2); }).eval();
   static inline const std::pair<std::pair<
       std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<
           std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>,

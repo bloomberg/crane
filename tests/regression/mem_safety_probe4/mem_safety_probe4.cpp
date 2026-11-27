@@ -88,7 +88,7 @@ uint64_t MemSafetyProbe4::add_through(
       auto _f = std::move(std::get<_after_add_through_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
-      _result = (_result + f(UINT64_C(0)));
+      _result = _result + f(UINT64_C(0));
     }
   }
   return _result;
@@ -142,7 +142,7 @@ uint64_t MemSafetyProbe4::double_partial(
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
       crane::fn<uint64_t(uint64_t)> g = std::move(_f.g);
-      _result = (f(_result) + g(UINT64_C(0)));
+      _result = f(_result) + g(UINT64_C(0));
     }
   }
   return _result;
@@ -194,7 +194,7 @@ uint64_t MemSafetyProbe4::weighted_sum(
       _stack.pop_back();
       uint64_t w = _f.w;
       crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
-      _result = (f(w) + _result);
+      _result = f(w) + _result;
     }
   }
   return _result;
@@ -275,7 +275,7 @@ uint64_t MemSafetyProbe4::mysum(const MemSafetyProbe4::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_mysum_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;

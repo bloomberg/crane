@@ -39,5 +39,5 @@ uint64_t ReuseScrutinee::right_val(const ReuseScrutinee::tree &t) {
 
 /// Sum of left and right subtree values.
 uint64_t ReuseScrutinee::subtree_sum(const ReuseScrutinee::tree &t) {
-  return (left_val(t) + right_val(t));
+  return left_val(t) + right_val(t);
 }

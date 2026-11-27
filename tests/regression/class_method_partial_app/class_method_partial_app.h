@@ -153,7 +153,7 @@ concept Sz = requires {
 
 struct ClassMethodPartialApp {
   struct SzNat {
-    constexpr static uint64_t sz(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t sz(uint64_t a0, uint64_t a1) { return a0 + a1; }
   };
 
   static_assert(Sz<SzNat, uint64_t>);
@@ -165,6 +165,6 @@ struct ClassMethodPartialApp {
               List<crane::fn<uint64_t(uint64_t)>>::nil()))
           .template fold_right<uint64_t>(
           [](const crane::fn<uint64_t(uint64_t)> &f,
-             uint64_t n) { return (f(UINT64_C(1)) + n); },
+             uint64_t n) { return f(UINT64_C(1)) + n; },
           UINT64_C(0));
 };

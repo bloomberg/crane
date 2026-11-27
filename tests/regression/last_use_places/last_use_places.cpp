@@ -7,7 +7,7 @@ std::pair<Big, Big> LastUsePlaces::split(uint64_t n) {
 /// Each member of the dead local q read once: both move.
 std::pair<Big, Big> LastUsePlaces::swap_fields(uint64_t n) {
   std::pair<Big, Big> q = split(n);
-  return std::make_pair(std::move(q).second, std::move(q).first);
+  return std::make_pair(std::move(q.second), std::move(q.first));
 }
 
 /// b read twice, whole: neither read may move.

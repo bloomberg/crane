@@ -264,7 +264,7 @@ struct MutualRecursion {
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename forest<T1>::Trees>(f.v());
-      return (tree_size<T1>(*a0) + forest_size<T1>(*a1));
+      return tree_size<T1>(*a0) + forest_size<T1>(*a1);
     }
   }
 

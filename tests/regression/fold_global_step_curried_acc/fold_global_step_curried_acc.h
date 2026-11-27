@@ -143,7 +143,7 @@ struct FoldGlobalStepCurriedAcc {
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t>
   static uint64_t step2(F0 &&acc, uint64_t x, uint64_t y) {
-    return acc((x + y));
+    return acc(x + y);
   }
 
   static uint64_t t2(const List<uint64_t> &l);

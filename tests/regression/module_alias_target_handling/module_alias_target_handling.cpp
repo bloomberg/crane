@@ -556,7 +556,7 @@ unsigned int Coq_Pos::pred_N(unsigned int x) {
 
 unsigned int Coq_Pos::pow(unsigned int x, unsigned int x0_) {
   return iter<unsigned int>(
-      [=](unsigned int _x0) -> unsigned int { return (x * _x0); },
+      [=](unsigned int _x0) -> unsigned int { return x * _x0; },
       1u,
       x0_);
 }
@@ -590,10 +590,10 @@ unsigned int Coq_Pos::size(unsigned int p) {
     return 1u;
   } else if (p % 2u != 0u) {
     unsigned int p0 = (p - 1u) / 2u;
-    return (size(p0) + 1u);
+    return size(p0) + 1u;
   } else {
     unsigned int p0 = p / 2u;
-    return (size(p0) + 1u);
+    return size(p0) + 1u;
   }
 }
 
@@ -644,7 +644,7 @@ unsigned int Coq_Pos::gcdn(uint64_t n, unsigned int a, unsigned int b) {
 }
 
 unsigned int Coq_Pos::gcd(unsigned int a, unsigned int b) {
-  return gcdn((size_nat(a) + size_nat(b)), a, b);
+  return gcdn(size_nat(a) + size_nat(b), a, b);
 }
 
 std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
@@ -669,13 +669,13 @@ Coq_Pos::ggcdn(uint64_t n, unsigned int a, unsigned int b) {
         case Comparison::LT: {
           auto [g, p] = ggcdn(n0, (b_ > a_ ? b_ - a_ : 1u), a);
           const auto &[ba, aa] = p;
-          return std::make_pair(g, std::make_pair(aa, (aa + (2u * ba))));
+          return std::make_pair(g, std::make_pair(aa, aa + ((2u * ba))));
           break;
         }
         case Comparison::GT: {
           auto [g, p] = ggcdn(n0, (a_ > b_ ? a_ - b_ : 1u), b);
           const auto &[ab, bb] = p;
-          return std::make_pair(g, std::make_pair((bb + (2u * ab)), bb));
+          return std::make_pair(g, std::make_pair(bb + ((2u * ab)), bb));
           break;
         }
         default:
@@ -707,7 +707,7 @@ Coq_Pos::ggcdn(uint64_t n, unsigned int a, unsigned int b) {
 
 std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
 Coq_Pos::ggcd(unsigned int a, unsigned int b) {
-  return ggcdn((size_nat(a) + size_nat(b)), a, b);
+  return ggcdn(size_nat(a) + size_nat(b), a, b);
 }
 
 unsigned int Coq_Pos::shiftl(unsigned int p, unsigned int n) {
@@ -778,34 +778,34 @@ unsigned int Coq_Pos::of_uint_acc(const Uint &d, unsigned int acc) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D0>(d.v());
-    return of_uint_acc(*a0, (10u * acc));
+    return of_uint_acc(*a0, 10u * acc);
   } else if (std::holds_alternative<typename Uint::D1>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D1>(d.v());
-    return of_uint_acc(*a0, (1u + (10u * acc)));
+    return of_uint_acc(*a0, 1u + 10u * acc);
   } else if (std::holds_alternative<typename Uint::D2>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D2>(d.v());
-    return of_uint_acc(*a0, (2u + (10u * acc)));
+    return of_uint_acc(*a0, 2u + 10u * acc);
   } else if (std::holds_alternative<typename Uint::D3>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D3>(d.v());
-    return of_uint_acc(*a0, (3u + (10u * acc)));
+    return of_uint_acc(*a0, 3u + 10u * acc);
   } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D4>(d.v());
-    return of_uint_acc(*a0, (4u + (10u * acc)));
+    return of_uint_acc(*a0, 4u + 10u * acc);
   } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D5>(d.v());
-    return of_uint_acc(*a0, (5u + (10u * acc)));
+    return of_uint_acc(*a0, 5u + 10u * acc);
   } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D6>(d.v());
-    return of_uint_acc(*a0, (6u + (10u * acc)));
+    return of_uint_acc(*a0, 6u + 10u * acc);
   } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D7>(d.v());
-    return of_uint_acc(*a0, (7u + (10u * acc)));
+    return of_uint_acc(*a0, 7u + 10u * acc);
   } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D8>(d.v());
-    return of_uint_acc(*a0, (8u + (10u * acc)));
+    return of_uint_acc(*a0, 8u + 10u * acc);
   } else {
     const auto &[a0] = std::get<typename Uint::D9>(d.v());
-    return of_uint_acc(*a0, (9u + (10u * acc)));
+    return of_uint_acc(*a0, 9u + 10u * acc);
   }
 }
 
@@ -850,52 +850,52 @@ unsigned int Coq_Pos::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D10>(d.v());
-    return of_hex_uint_acc(*a0, (16u * acc));
+    return of_hex_uint_acc(*a0, 16u * acc);
   } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D11>(d.v());
-    return of_hex_uint_acc(*a0, (1u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 1u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
-    return of_hex_uint_acc(*a0, (2u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 2u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D13>(d.v());
-    return of_hex_uint_acc(*a0, (3u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 3u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D14>(d.v());
-    return of_hex_uint_acc(*a0, (4u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 4u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D15>(d.v());
-    return of_hex_uint_acc(*a0, (5u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 5u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D16>(d.v());
-    return of_hex_uint_acc(*a0, (6u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 6u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D17>(d.v());
-    return of_hex_uint_acc(*a0, (7u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 7u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return of_hex_uint_acc(*a0, (8u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 8u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
-    return of_hex_uint_acc(*a0, (9u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 9u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Da>(d.v());
-    return of_hex_uint_acc(*a0, (10u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 10u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Db>(d.v());
-    return of_hex_uint_acc(*a0, (11u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 11u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
-    return of_hex_uint_acc(*a0, (12u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 12u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
-    return of_hex_uint_acc(*a0, (13u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 13u + 16u * acc);
   } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::De>(d.v());
-    return of_hex_uint_acc(*a0, (14u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 14u + 16u * acc);
   } else {
     const auto &[a0] = std::get<typename Uint0::Df>(d.v());
-    return of_hex_uint_acc(*a0, (15u + (16u * acc)));
+    return of_hex_uint_acc(*a0, 15u + 16u * acc);
   }
 }
 
@@ -988,7 +988,7 @@ unsigned int N::succ_pos(unsigned int n) {
     return 1u;
   } else {
     unsigned int p = n;
-    return (p + 1u);
+    return p + 1u;
   }
 }
 
@@ -1012,20 +1012,20 @@ std::pair<unsigned int, unsigned int> N::pos_div_eucl(unsigned int a,
   } else if (a % 2u != 0u) {
     unsigned int a_ = (a - 1u) / 2u;
     auto [q, r] = pos_div_eucl(a_, b);
-    unsigned int r_ = (r * 2u + 1u);
+    unsigned int r_ = r * 2u + 1u;
     if (b <= r_) {
-      return std::make_pair((q * 2u + 1u), (r_ >= b ? r_ - b : 0u));
+      return std::make_pair(q * 2u + 1u, (r_ >= b ? r_ - b : 0u));
     } else {
-      return std::make_pair((q * 2u), r_);
+      return std::make_pair(q * 2u, r_);
     }
   } else {
     unsigned int a_ = a / 2u;
     auto [q, r] = pos_div_eucl(a_, b);
-    unsigned int r_ = (r * 2u);
+    unsigned int r_ = r * 2u;
     if (b <= r_) {
-      return std::make_pair((q * 2u + 1u), (r_ >= b ? r_ - b : 0u));
+      return std::make_pair(q * 2u + 1u, (r_ >= b ? r_ - b : 0u));
     } else {
-      return std::make_pair((q * 2u), r_);
+      return std::make_pair(q * 2u, r_);
     }
   }
 }
@@ -1255,7 +1255,7 @@ unsigned int N::shiftl_nat(unsigned int a, uint64_t n) {
     return a;
   } else {
     uint64_t n0 = n - 1;
-    return (shiftl_nat(a, n0) * 2u);
+    return shiftl_nat(a, n0) * 2u;
   }
 }
 
@@ -1447,7 +1447,7 @@ unsigned int N::sqrt_up(unsigned int a) {
   switch (
       (0u < a ? Comparison::LT : (a < 0u ? Comparison::GT : Comparison::EQ))) {
   case Comparison::LT: {
-    return (sqrt((a == 0u ? 0u : a - 1u)) + 1u);
+    return sqrt((a == 0u ? 0u : a - 1u)) + 1u;
   }
   default: {
     return 0u;
@@ -1459,7 +1459,7 @@ unsigned int N::log2_up(unsigned int a) {
   switch (
       (1u < a ? Comparison::LT : (a < 1u ? Comparison::GT : Comparison::EQ))) {
   case Comparison::LT: {
-    return (log2((a == 0u ? 0u : a - 1u)) + 1u);
+    return log2((a == 0u ? 0u : a - 1u)) + 1u;
   }
   default: {
     return 0u;
@@ -1469,12 +1469,12 @@ unsigned int N::log2_up(unsigned int a) {
 
 unsigned int N::Private_NLcmProp::lcm(unsigned int a, unsigned int b) {
   auto _once1 = gcd(a, b);
-  return (a * (_once1 == 0u ? 0u : b / _once1));
+  return a * (_once1 == 0u ? 0u : b / _once1);
 }
 
 unsigned int N::lcm(unsigned int a, unsigned int b) {
   auto _once1 = gcd(a, b);
-  return (a * (_once1 == 0u ? 0u : b / _once1));
+  return a * (_once1 == 0u ? 0u : b / _once1);
 }
 
 Reflect N::eqb_spec(unsigned int x, unsigned int y) {

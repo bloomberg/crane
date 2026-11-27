@@ -119,7 +119,7 @@ bool skiplist_test::stm_test_minimum() {
     if (minOpt.has_value()) {
       const std::pair<uint64_t, uint64_t> &p = *minOpt;
       const auto &[k, v] = p;
-      return (k == UINT64_C(3) && v == UINT64_C(30));
+      return ((k == UINT64_C(3)) && (v == UINT64_C(30)));
     } else {
       return false;
     }
@@ -184,7 +184,7 @@ bool skiplist_test::stm_test_popFront() {
   if (pop1.has_value()) {
     const std::pair<uint64_t, uint64_t> &p = *pop1;
     const auto &[k, v] = p;
-    c1 = (k == UINT64_C(3) && v == UINT64_C(30));
+    c1 = ((k == UINT64_C(3)) && (v == UINT64_C(30)));
   } else {
     c1 = false;
   }
@@ -192,7 +192,7 @@ bool skiplist_test::stm_test_popFront() {
   if (pop2.has_value()) {
     const std::pair<uint64_t, uint64_t> &p = *pop2;
     const auto &[k, v] = p;
-    c2 = (k == UINT64_C(5) && v == UINT64_C(50));
+    c2 = ((k == UINT64_C(5)) && (v == UINT64_C(50)));
   } else {
     c2 = false;
   }
@@ -451,18 +451,13 @@ uint64_t skiplist_test::run_tests() {
   bool r11 = test_bounds();
   bool r12 = test_removeAll();
   bool r13 = test_bde_api();
-  uint64_t passed = (((((((((((((r1 ? UINT64_C(1) : UINT64_C(0)) +
-                                (r2 ? UINT64_C(1) : UINT64_C(0))) +
-                               (r3 ? UINT64_C(1) : UINT64_C(0))) +
-                              (r4 ? UINT64_C(1) : UINT64_C(0))) +
-                             (r5 ? UINT64_C(1) : UINT64_C(0))) +
-                            (r6 ? UINT64_C(1) : UINT64_C(0))) +
-                           (r7 ? UINT64_C(1) : UINT64_C(0))) +
-                          (r8 ? UINT64_C(1) : UINT64_C(0))) +
-                         (r9 ? UINT64_C(1) : UINT64_C(0))) +
-                        (r10 ? UINT64_C(1) : UINT64_C(0))) +
-                       (r11 ? UINT64_C(1) : UINT64_C(0))) +
-                      (r12 ? UINT64_C(1) : UINT64_C(0))) +
-                     (r13 ? UINT64_C(1) : UINT64_C(0)));
+  uint64_t passed =
+      (r1 ? UINT64_C(1) : UINT64_C(0)) + (r2 ? UINT64_C(1) : UINT64_C(0)) +
+      (r3 ? UINT64_C(1) : UINT64_C(0)) + (r4 ? UINT64_C(1) : UINT64_C(0)) +
+      (r5 ? UINT64_C(1) : UINT64_C(0)) + (r6 ? UINT64_C(1) : UINT64_C(0)) +
+      (r7 ? UINT64_C(1) : UINT64_C(0)) + (r8 ? UINT64_C(1) : UINT64_C(0)) +
+      (r9 ? UINT64_C(1) : UINT64_C(0)) + (r10 ? UINT64_C(1) : UINT64_C(0)) +
+      (r11 ? UINT64_C(1) : UINT64_C(0)) + (r12 ? UINT64_C(1) : UINT64_C(0)) +
+      (r13 ? UINT64_C(1) : UINT64_C(0));
   return passed;
 }

@@ -86,7 +86,7 @@ LoopifyComputedScrutineeTemp::walk(uint64_t n,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       LoopifyComputedScrutineeTemp::lst l = std::move(_f.l);
-      _result = ((a0 + hd(std::move(l))) + _result);
+      _result = a0 + hd(std::move(l)) + _result;
     }
   }
   return _result;

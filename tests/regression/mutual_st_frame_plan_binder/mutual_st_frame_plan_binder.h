@@ -610,9 +610,7 @@ struct MutualStFramePlanBinder {
   struct mon_nat {
     constexpr static uint64_t munit() { return UINT64_C(0); }
 
-    constexpr static uint64_t mop(uint64_t a0, uint64_t a1) {
-      return (a0 + a1);
-    }
+    constexpr static uint64_t mop(uint64_t a0, uint64_t a1) { return a0 + a1; }
   };
 
   static_assert(Mon<mon_nat, uint64_t>);

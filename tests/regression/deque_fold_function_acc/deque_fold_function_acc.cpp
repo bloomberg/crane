@@ -7,7 +7,7 @@ uint64_t DequeFoldFunctionAcc::compose_all(const std::deque<uint64_t> &l,
     return _a;
   }(
       [](crane::fn<uint64_t(uint64_t)> acc, uint64_t k) {
-        return [=, acc = std::move(acc)](uint64_t x) { return (acc(x) + k); };
+        return [=, acc = std::move(acc)](uint64_t x) { return acc(x) + k; };
       },
       l,
       crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }))(x0_);
@@ -22,13 +22,13 @@ uint64_t DequeFoldFunctionAcc::compose_right(const std::deque<uint64_t> &l,
     return _a;
   }(
       [](uint64_t k, crane::fn<uint64_t(uint64_t)> acc) {
-        return [=, acc = std::move(acc)](uint64_t x) { return (acc(x) * k); };
+        return [=, acc = std::move(acc)](uint64_t x) { return acc(x) * k; };
       },
       crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }),
       l)(x0_);
 }
 
-uint64_t DequeFoldFunctionAcc::twice(uint64_t x) { return (x + x); }
+uint64_t DequeFoldFunctionAcc::twice(uint64_t x) { return x + x; }
 
 uint64_t DequeFoldFunctionAcc::compose_glob(const std::deque<uint64_t> &l,
                                             uint64_t x0_) {
@@ -37,7 +37,7 @@ uint64_t DequeFoldFunctionAcc::compose_glob(const std::deque<uint64_t> &l,
     return _a;
   }(
       [](crane::fn<uint64_t(uint64_t)> acc, uint64_t k) {
-        return [=, acc = std::move(acc)](uint64_t x) { return (acc(x) + k); };
+        return [=, acc = std::move(acc)](uint64_t x) { return acc(x) + k; };
       },
       l,
       crane::fn<uint64_t(uint64_t)>(twice))(x0_);
@@ -52,7 +52,7 @@ DequeFoldFunctionAcc::adders(const std::deque<uint64_t> &l) {
     return _r;
   }(
       [](uint64_t k) {
-        return [=](uint64_t x) { return (x + k); };
+        return [=](uint64_t x) { return x + k; };
       },
       l);
 }

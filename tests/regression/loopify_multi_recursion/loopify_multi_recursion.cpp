@@ -50,7 +50,7 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
         } else {
           _stack.emplace_back(_after_mixed_arith_fuel_in_false{n, fuel_});
           _stack.emplace_back(
-              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+              _call{(n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)), fuel_});
         }
       }
     } else if (
@@ -62,7 +62,7 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
       _stack.emplace_back(_after_mixed_arith_fuel_in_false_2{n, fuel_,
                                                              _result});
       _stack.emplace_back(
-          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
+          _call{(n - UINT64_C(2) > n ? 0 : n - UINT64_C(2)), fuel_});
     } else if (
             std::holds_alternative<_after_mixed_arith_fuel_in_false_2>(_popped)) {
       auto _f =
@@ -73,19 +73,19 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
       _stack.emplace_back(_after_mixed_arith_fuel_in_false_3{_f._tmp3,
                                                              _result});
       _stack.emplace_back(
-          _call{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
+          _call{(n - UINT64_C(3) > n ? 0 : n - UINT64_C(3)), fuel_});
     } else {
       auto _f =
           std::move(std::get<_after_mixed_arith_fuel_in_false_3>(_popped));
       _stack.pop_back();
-      _result = ((_f._tmp3 * _f._tmp2) + _result);
+      _result = _f._tmp3 * _f._tmp2 + _result;
     }
   }
   return _result;
 }
 
 uint64_t LoopifyMultiRecursion::mixed_arith(uint64_t n) {
-  return mixed_arith_fuel((n * UINT64_C(3)), n);
+  return mixed_arith_fuel(n * UINT64_C(3), n);
 }
 
 bool LoopifyMultiRecursion::bool_or_chain_fuel(uint64_t fuel, uint64_t n,
@@ -128,7 +128,7 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(uint64_t fuel, uint64_t n,
         } else {
           _stack.emplace_back(_after_bool_or_chain_fuel_in_false{n, fuel_});
           _stack.emplace_back(
-              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+              _call{(n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)), fuel_});
         }
       }
     } else if (
@@ -140,20 +140,20 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(uint64_t fuel, uint64_t n,
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(_after_bool_or_chain_fuel_in_false_2{n, _result});
       _stack.emplace_back(
-          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
+          _call{(n - UINT64_C(2) > n ? 0 : n - UINT64_C(2)), fuel_});
     } else {
       auto _f =
           std::move(std::get<_after_bool_or_chain_fuel_in_false_2>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = ((n == target || _f._tmp2) || _result);
+      _result = (((n == target) || _f._tmp2) || _result);
     }
   }
   return _result;
 }
 
 uint64_t LoopifyMultiRecursion::bool_or_chain(uint64_t n, uint64_t target) {
-  if (bool_or_chain_fuel((n * UINT64_C(2)), n, target)) {
+  if (bool_or_chain_fuel(n * UINT64_C(2), n, target)) {
     return UINT64_C(1);
   } else {
     return UINT64_C(0);
@@ -198,7 +198,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(uint64_t fuel, uint64_t n) {
         } else {
           _stack.emplace_back(_after_bool_and_chain_fuel_in_false{n, fuel_});
           _stack.emplace_back(
-              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+              _call{(n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)), fuel_});
         }
       }
     } else if (std::holds_alternative<_after_bool_and_chain_fuel_in_false>(
@@ -210,7 +210,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(uint64_t fuel, uint64_t n) {
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(_after_bool_and_chain_fuel_in_false_2{_result});
       _stack.emplace_back(
-          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
+          _call{(n - UINT64_C(2) > n ? 0 : n - UINT64_C(2)), fuel_});
     } else {
       auto _f =
           std::move(std::get<_after_bool_and_chain_fuel_in_false_2>(_popped));
@@ -222,7 +222,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(uint64_t fuel, uint64_t n) {
 }
 
 uint64_t LoopifyMultiRecursion::bool_and_chain(uint64_t n) {
-  if (bool_and_chain_fuel((n * UINT64_C(2)), n)) {
+  if (bool_and_chain_fuel(n * UINT64_C(2), n)) {
     return UINT64_C(1);
   } else {
     return UINT64_C(0);
@@ -317,7 +317,7 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
       auto _f =
           std::move(std::get<_after_quad_count_leaves_in_QQuad_4>(_popped));
       _stack.pop_back();
-      _result = (((_f._tmp4 + _f._tmp3) + _f._tmp2) + _result);
+      _result = _f._tmp4 + _f._tmp3 + _f._tmp2 + _result;
     }
   }
   return _result;
@@ -402,8 +402,8 @@ LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
     } else {
       auto _f = std::move(std::get<_after_quad_depth_in_QQuad_4>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::max(std::max(_f._tmp4, _f._tmp3),
-                                        std::max(_f._tmp2, _result)));
+      _result = UINT64_C(1) + std::max(std::max(_f._tmp4, _f._tmp3),
+                                       std::max(_f._tmp2, _result));
     }
   }
   return _result;
@@ -465,7 +465,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel, uint64_t n) {
         } else {
           _stack.emplace_back(_after_hofstadter_q_fuel_in_false{n, fuel_});
           _stack.emplace_back(
-              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+              _call{(n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)), fuel_});
         }
       }
     } else if (
@@ -477,7 +477,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel, uint64_t n) {
       uint64_t q1 = _result;
       _stack.emplace_back(_after_hofstadter_q_fuel_in_false_2{n, fuel_, q1});
       _stack.emplace_back(
-          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
+          _call{(n - UINT64_C(2) > n ? 0 : n - UINT64_C(2)), fuel_});
     } else if (std::holds_alternative<_after_hofstadter_q_fuel_in_false_2>(
                    _popped)) {
       auto _f =
@@ -488,7 +488,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel, uint64_t n) {
       uint64_t q1 = _f.q1;
       uint64_t q2 = _result;
       _stack.emplace_back(_after_hofstadter_q_fuel_in_false_3{n, fuel_, q2});
-      _stack.emplace_back(_call{(((n - q1) > n ? 0 : (n - q1))), fuel_});
+      _stack.emplace_back(_call{(n - q1 > n ? 0 : n - q1), fuel_});
     } else if (std::holds_alternative<_after_hofstadter_q_fuel_in_false_3>(
                    _popped)) {
       auto _f =
@@ -498,17 +498,17 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel, uint64_t n) {
       uint64_t fuel_ = _f.fuel_;
       uint64_t q2 = _f.q2;
       _stack.emplace_back(_after_hofstadter_q_fuel_in_false_4{_result});
-      _stack.emplace_back(_call{(((n - q2) > n ? 0 : (n - q2))), fuel_});
+      _stack.emplace_back(_call{(n - q2 > n ? 0 : n - q2), fuel_});
     } else {
       auto _f =
           std::move(std::get<_after_hofstadter_q_fuel_in_false_4>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + _result);
+      _result = _f._tmp2 + _result;
     }
   }
   return _result;
 }
 
 uint64_t LoopifyMultiRecursion::hofstadter_q(uint64_t n) {
-  return hofstadter_q_fuel(((n * n) + UINT64_C(1)), n);
+  return hofstadter_q_fuel(n * n + UINT64_C(1), n);
 }

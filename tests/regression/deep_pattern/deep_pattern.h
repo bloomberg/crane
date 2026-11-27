@@ -113,9 +113,9 @@ struct DeepPattern {
             return UINT64_C(0);
           }
         }();
-        uint64_t c = (a + b);
-        uint64_t d = (c * UINT64_C(2));
-        return (d + UINT64_C(1));
+        uint64_t c = a + b;
+        uint64_t d = c * UINT64_C(2);
+        return d + UINT64_C(1);
       }
     }
 
@@ -221,7 +221,7 @@ struct DeepPattern {
             return UINT64_C(0);
           }
         }();
-        return (x + y);
+        return x + y;
       }
     }
 
@@ -230,13 +230,13 @@ struct DeepPattern {
         const auto &[a0] = std::get<typename tree::Leaf>(this->v());
         if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
           const auto &[a00] = std::get<typename tree::Leaf>(t2.v());
-          return (a0 + a00);
+          return a0 + a00;
         } else {
           const auto &[a00, _] = std::get<typename tree::Node>(t2.v());
           auto &&_sv1 = *a00;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             const auto &[a01] = std::get<typename tree::Leaf>(_sv1.v());
-            return (a0 + a01);
+            return a0 + a01;
           } else {
             return UINT64_C(0);
           }
@@ -251,7 +251,7 @@ struct DeepPattern {
             const auto &[a01] = std::get<typename tree::Leaf>(_sv1.v());
             if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
               const auto &[a02] = std::get<typename tree::Leaf>(t2.v());
-              return (a00 + a02);
+              return a00 + a02;
             } else {
               const auto &[a02, a12] = std::get<typename tree::Node>(t2.v());
               auto &&_sv3 = *a02;
@@ -260,7 +260,7 @@ struct DeepPattern {
                 auto &&_sv4 = *a12;
                 if (std::holds_alternative<typename tree::Leaf>(_sv4.v())) {
                   const auto &[a04] = std::get<typename tree::Leaf>(_sv4.v());
-                  return (((a00 + a01) + a03) + a04);
+                  return a00 + a01 + a03 + a04;
                 } else {
                   return UINT64_C(0);
                 }
@@ -271,7 +271,7 @@ struct DeepPattern {
           } else {
             if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
               const auto &[a02] = std::get<typename tree::Leaf>(t2.v());
-              return (a00 + a02);
+              return a00 + a02;
             } else {
               return UINT64_C(0);
             }
@@ -294,7 +294,7 @@ struct DeepPattern {
           auto &&_sv1 = *a1;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             const auto &[a01] = std::get<typename tree::Leaf>(_sv1.v());
-            return (a00 + a01);
+            return a00 + a01;
           } else {
             const auto &[a01, a11] = std::get<typename tree::Node>(_sv1.v());
             auto &&_sv2 = *a01;
@@ -303,7 +303,7 @@ struct DeepPattern {
               auto &&_sv3 = *a11;
               if (std::holds_alternative<typename tree::Leaf>(_sv3.v())) {
                 const auto &[a03] = std::get<typename tree::Leaf>(_sv3.v());
-                return ((a00 + a02) + a03);
+                return a00 + a02 + a03;
               } else {
                 return UINT64_C(0);
               }
@@ -322,7 +322,7 @@ struct DeepPattern {
               auto &&_sv3 = *a1;
               if (std::holds_alternative<typename tree::Leaf>(_sv3.v())) {
                 const auto &[a03] = std::get<typename tree::Leaf>(_sv3.v());
-                return ((a01 + a02) + a03);
+                return a01 + a02 + a03;
               } else {
                 const auto &[a03, a13] =
                     std::get<typename tree::Node>(_sv3.v());
@@ -332,7 +332,7 @@ struct DeepPattern {
                   auto &&_sv5 = *a13;
                   if (std::holds_alternative<typename tree::Leaf>(_sv5.v())) {
                     const auto &[a05] = std::get<typename tree::Leaf>(_sv5.v());
-                    return (((a01 + a02) + a04) + a05);
+                    return a01 + a02 + a04 + a05;
                   } else {
                     return UINT64_C(0);
                   }
@@ -357,7 +357,7 @@ struct DeepPattern {
                   auto &&_sv5 = *a1;
                   if (std::holds_alternative<typename tree::Leaf>(_sv5.v())) {
                     const auto &[a05] = std::get<typename tree::Leaf>(_sv5.v());
-                    return (((a02 + a03) + a04) + a05);
+                    return a02 + a03 + a04 + a05;
                   } else {
                     return UINT64_C(0);
                   }

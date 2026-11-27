@@ -636,7 +636,7 @@ struct LoopifyStructures {
         } else {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_4>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 + (_f._tmp3 + (_f._tmp2 + _result)));
+          _result = _f._tmp4 + (_f._tmp3 + (_f._tmp2 + _result));
         }
       }
       return _result;

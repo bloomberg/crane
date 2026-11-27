@@ -35,7 +35,7 @@ MemSafetyProbe13::sum_list(const MemSafetyProbe13::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -120,7 +120,7 @@ MemSafetyProbe13::tree_vals_and_fns(const MemSafetyProbe13::tree &t) {
       auto [rvals, rfns] = std::move(_result);
       crane::fn<uint64_t(uint64_t)> f =
           [=, a0_value = a0_value, a2_value = a2_value](uint64_t n) {
-            return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
+            return a0_value.tree_sum() + a2_value.tree_sum() + n;
           };
       _result = std::make_pair(
           mylist<uint64_t>::mycons(a1, lvals.app(std::move(rvals))),
@@ -186,7 +186,7 @@ MemSafetyProbe13::depth_fns(const MemSafetyProbe13::tree &t,
           std::get<typename MemSafetyProbe13::tree::Node>(_loop_t->v());
       const MemSafetyProbe13::tree &a0_value = *a0;
       crane::fn<uint64_t(uint64_t)> f =
-          [=](uint64_t n) { return ((parent_val + a1) + n); };
+          [=](uint64_t n) { return parent_val + a1 + n; };
       auto _cell = typename MemSafetyProbe13::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(std::move(f), nullptr);
       MemSafetyProbe13::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
@@ -258,7 +258,7 @@ MemSafetyProbe13::tree_to_ftree(const MemSafetyProbe13::tree &t) {
       uint64_t a1 = _f.a1;
       _result = ftree::fnode(
           std::move(_f._tmp2),
-          [=](uint64_t n) { return (a1 + n); },
+          [=](uint64_t n) { return a1 + n; },
           std::move(_result));
     }
   }
@@ -320,7 +320,7 @@ MemSafetyProbe13::flatten_tree_fns(const MemSafetyProbe13::tree &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       _result = _f._tmp2.app(mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-          [=](uint64_t n) { return (a1 + n); },
+          [=](uint64_t n) { return a1 + n; },
           std::move(_result)));
     }
   }

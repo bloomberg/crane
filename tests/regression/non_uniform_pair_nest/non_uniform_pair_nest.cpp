@@ -5,6 +5,6 @@ uint64_t NonUniformPairNest::size(const NonUniformPairNest::nest &n) {
     return UINT64_C(1);
   } else {
     const auto &[a0] = std::get<typename NonUniformPairNest::nest::NS>(n.v());
-    return (UINT64_C(2) * size(*a0));
+    return UINT64_C(2) * size(*a0);
   }
 }

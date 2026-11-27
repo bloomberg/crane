@@ -19,7 +19,7 @@ uint64_t BoxedElementConcept::size(const BoxedElementConcept::rose &r) {
           } else {
             const BoxedElementConcept::rose &k = l.front();
             auto t = l.tail();
-            return (size(k) + _self_go(_self_go, std::move(t)));
+            return size(k) + _self_go(_self_go, std::move(t));
           }
         };
     auto go =
@@ -34,7 +34,7 @@ uint64_t BoxedElementConcept::Forest::count(
     const crane::list<crane::box<BoxedElementConcept::rose>> &l) {
   return List::template fold_left<uint64_t, BoxedElementConcept::rose>(
       [](uint64_t n,
-         const BoxedElementConcept::rose &r) { return (n + size(r)); },
+         const BoxedElementConcept::rose &r) { return n + size(r); },
       l,
       UINT64_C(0));
 }

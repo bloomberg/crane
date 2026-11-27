@@ -9,7 +9,7 @@ uint64_t double_n(uint64_t n) {
       } else {
         uint64_t x = n0 - 1;
         uint64_t x_ = __self(x);
-        return (UINT64_C(2) + x_);
+        return UINT64_C(2) + x_;
       }
     };
     return __self(n);

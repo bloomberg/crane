@@ -9,7 +9,7 @@ uint64_t DrainOptionPairField::depth(const DrainOptionPairField::t &x) {
   const auto &[a0] = std::get<typename DrainOptionPairField::t::C>(x.v());
   if ((*a0).has_value()) {
     const std::pair<DrainOptionPairField::t, uint64_t> &p = *(*a0);
-    return (UINT64_C(1) + depth(p.first));
+    return UINT64_C(1) + depth(p.first);
   } else {
     return UINT64_C(0);
   }

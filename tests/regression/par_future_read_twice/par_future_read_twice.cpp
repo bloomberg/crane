@@ -1,13 +1,13 @@
 #include "par_future_read_twice.h"
 
-uint64_t ParFutureReadTwice::sq(uint64_t n) { return (n * n); }
+uint64_t ParFutureReadTwice::sq(uint64_t n) { return n * n; }
 
 uint64_t ParFutureReadTwice::twice(uint64_t n) {
   std::shared_future<uint64_t> t =
       std::async(std::launch::async, sq, n).share();
   uint64_t a = t.get();
   uint64_t b = std::move(t).get();
-  return (a + b);
+  return a + b;
 }
 
 List<std::shared_future<uint64_t>>
@@ -33,6 +33,6 @@ ParFutureReadTwice::join_all(const List<std::shared_future<uint64_t>> &l) {
         std::get<typename List<std::shared_future<uint64_t>>::Cons>(l.v());
     uint64_t a = a0.get();
     uint64_t b = join_all(*a1);
-    return (a + b);
+    return a + b;
   }
 }

@@ -160,7 +160,7 @@ struct SharedUptrEscape {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -244,7 +244,7 @@ struct SharedUptrEscape {
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     tree sub = t.extract_subtree(UINT64_C(0));
-    return (sub.tree_sum() + sub.tree_sum());
+    return sub.tree_sum() + sub.tree_sum();
   }();
 
   /// Pattern 3: Build a value, pass to a function that returns it
@@ -277,6 +277,6 @@ struct SharedUptrEscape {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     wrapper w = wrap_tree(std::move(t));
     auto &[a0] = w;
-    return (a0.tree_sum() + a0.tree_sum());
+    return a0.tree_sum() + a0.tree_sum();
   }();
 };

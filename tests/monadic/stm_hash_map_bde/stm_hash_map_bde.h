@@ -152,10 +152,10 @@ template <typename K, typename V> struct CHT {
     auto _cs = p.first;
     if (_cs.has_value()) {
       const V &_x = *_cs;
-      stm::writeTVar(bsl::move(b), bsl::move(p).second);
-      return bsl::move(p).first;
+      stm::writeTVar(bsl::move(b), bsl::move(p.second));
+      return bsl::move(p.first);
     } else {
-      return bsl::move(p).first;
+      return bsl::move(p.first);
     }
   }
 
@@ -257,9 +257,9 @@ template <typename K, typename V> struct CHT {
         bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>> q =
             CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, *d_a1);
         return bsl::pair<bsl::optional<T2>, List<bsl::pair<T1, T2>>>(
-            bsl::move(q).first,
+            bsl::move(q.first),
             List<bsl::pair<T1, T2>>::cons(bsl::pair<T1, T2>(k_, v_),
-                                          bsl::move(q).second));
+                                          bsl::move(q.second)));
       }
     }
   }

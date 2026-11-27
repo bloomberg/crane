@@ -139,7 +139,7 @@ struct MemSafetyProbe5 {
         } else {
           auto _f = std::move(std::get<_after_tree_size_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp2) + _result);
+          _result = UINT64_C(1) + _f._tmp2 + _result;
         }
       }
       return _result;

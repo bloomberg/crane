@@ -6,11 +6,10 @@
 /// std::function<uint64_t(uint64_t)>.
 uint64_t EtaClosureFirstClass::mkclosure(uint64_t n, uint64_t x0_) {
   List<uint64_t> big = ListDef::template repeat<uint64_t>(n, UINT64_C(100));
-  return (
-      x0_ +
-      big.template fold_left<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          UINT64_C(0)));
+  return x0_ +
+         big.template fold_left<uint64_t>(
+             [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
+             UINT64_C(0));
 }
 
 uint64_t EtaClosureFirstClass::run(uint64_t k) {

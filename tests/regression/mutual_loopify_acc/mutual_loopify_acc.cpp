@@ -24,7 +24,7 @@ uint64_t MutualLoopifyAcc::tsum(uint64_t acc, const MutualLoopifyAcc::tree &t) {
       if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(t.v())) {
         const auto &[a0] =
             std::get<typename MutualLoopifyAcc::tree::Leaf>(t.v());
-        _result = (acc + a0);
+        _result = acc + a0;
       } else {
         const auto &[a0] =
             std::get<typename MutualLoopifyAcc::tree::Node>(t.v());
@@ -95,7 +95,7 @@ uint64_t MutualLoopifyAcc::fsum(uint64_t acc,
       if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(t.v())) {
         const auto &[a0] =
             std::get<typename MutualLoopifyAcc::tree::Leaf>(t.v());
-        _result = (acc0 + a0);
+        _result = acc0 + a0;
       } else {
         const auto &[a0] =
             std::get<typename MutualLoopifyAcc::tree::Node>(t.v());

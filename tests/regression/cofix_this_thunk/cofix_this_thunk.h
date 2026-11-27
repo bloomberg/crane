@@ -224,7 +224,7 @@ public:
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      return (a0 + sum(*a1));
+      return a0 + sum(*a1);
     }
   }
 

@@ -20,7 +20,7 @@ struct StateMonadTypeSynonym {
                      std::type_identity_t<crane::fn<st<T2>(T1)>> f) {
     return [=, f = std::move(f), m = std::move(m)](uint64_t s) {
       std::pair<T1, uint64_t> p = m(s);
-      return crane::apply2(f, std::move(p).first, std::move(p).second);
+      return crane::apply2(f, std::move(p.first), std::move(p.second));
     };
   }
 
@@ -33,7 +33,7 @@ struct StateMonadTypeSynonym {
       static const auto bind_1 =
           crane::immortal(bind<uint64_t, uint64_t>(tick, [](uint64_t a) {
             return bind<uint64_t, uint64_t>(
-                tick, [=](uint64_t b) { return ret<uint64_t>((a + b)); });
+                tick, [=](uint64_t b) { return ret<uint64_t>(a + b); });
           }));
       return bind_1(eta0_);
     };

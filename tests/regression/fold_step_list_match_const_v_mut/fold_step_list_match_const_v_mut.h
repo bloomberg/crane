@@ -268,17 +268,16 @@ struct FoldStepListMatchConstVMut {
                 };
               },
               [](List<bool>) { return List<int64_t>::nil(); });
-      auto _once5 = ([&]() {
+      auto _once5 = [&]() {
         List<int64_t> w63 = w62(List<bool>::nil());
         return w63.template fold_left<uint64_t>(
             [](uint64_t w65, int64_t e) {
               auto _once3 =
                   (e < 0 ? static_cast<int64_t>(-static_cast<uint64_t>(e)) : e);
-              auto _once4 =
-                  ((w65 * UINT64_C(3)) +
-                   ((static_cast<uint64_t>(_once3 < 0 ? 0 : _once3) *
-                     UINT64_C(2)) +
-                    (e < INT64_C(0) ? UINT64_C(1) : UINT64_C(0))));
+              auto _once4 = w65 * UINT64_C(3) +
+                            (static_cast<uint64_t>(_once3 < 0 ? 0 : _once3) *
+                             UINT64_C(2) +
+                             (e < INT64_C(0) ? UINT64_C(1) : UINT64_C(0)));
               return (UINT64_C(10007) ? _once4 % UINT64_C(10007) : _once4);
             },
             UINT64_C(1));
@@ -288,15 +287,14 @@ struct FoldStepListMatchConstVMut {
             [](uint64_t w65, int64_t e) {
               auto _once1 =
                   (e < 0 ? static_cast<int64_t>(-static_cast<uint64_t>(e)) : e);
-              auto _once2 =
-                  ((w65 * UINT64_C(3)) +
-                   ((static_cast<uint64_t>(_once1 < 0 ? 0 : _once1) *
-                     UINT64_C(2)) +
-                    (e < INT64_C(0) ? UINT64_C(1) : UINT64_C(0))));
+              auto _once2 = w65 * UINT64_C(3) +
+                            (static_cast<uint64_t>(_once1 < 0 ? 0 : _once1) *
+                             UINT64_C(2) +
+                             (e < INT64_C(0) ? UINT64_C(1) : UINT64_C(0)));
               return (UINT64_C(10007) ? _once2 % UINT64_C(10007) : _once2);
             },
             UINT64_C(1));
-      }());
+      }();
       return (UINT64_C(10007) ? _once5 % UINT64_C(10007) : _once5);
     }();
   }();

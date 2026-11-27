@@ -14,9 +14,9 @@ uint64_t LoopifySequences::alternate_sum(uint64_t sign, uint64_t acc,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t new_acc;
       if (sign == UINT64_C(1)) {
-        new_acc = (acc + a0);
+        new_acc = acc + a0;
       } else {
-        new_acc = (((acc - a0) > acc ? 0 : (acc - a0)));
+        new_acc = (acc - a0 > acc ? 0 : acc - a0);
       }
       uint64_t new_sign;
       if (sign == UINT64_C(1)) {
@@ -71,7 +71,7 @@ List<uint64_t> LoopifySequences::collatz_list_fuel(uint64_t fuel, uint64_t n) {
           _stack.emplace_back(_call{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
         } else {
           _stack.emplace_back(_after_collatz_list_fuel_in_false{n});
-          _stack.emplace_back(_call{((UINT64_C(3) * n) + UINT64_C(1)), f});
+          _stack.emplace_back(_call{UINT64_C(3) * n + UINT64_C(1), f});
         }
       }
     } else if (
@@ -111,7 +111,7 @@ List<uint64_t> LoopifySequences::run_sum_aux(uint64_t acc,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      uint64_t new_acc = (acc + a0);
+      uint64_t new_acc = acc + a0;
       auto _cell = typename List<uint64_t>::Cons(new_acc, nullptr);
       List<uint64_t> &_node =
           (_write ? *(*_write =
@@ -150,7 +150,7 @@ List<uint64_t> LoopifySequences::rotate_left_fuel(uint64_t fuel, uint64_t n,
           const auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l.v());
           _loop_l = a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
-          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
           fuel = f;
         }
       }
@@ -175,7 +175,7 @@ uint64_t LoopifySequences::sum_acc(uint64_t acc, const List<uint64_t> &l) {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       _loop_l = crane_raw(a1);
-      acc = (acc + a0);
+      acc = acc + a0;
     }
   }
 }
@@ -294,7 +294,7 @@ LoopifySequences::string_chain_fuel(uint64_t fuel, const List<uint64_t> &s,
         } else {
           _stack.emplace_back(_after_string_chain_fuel_in_false{});
           _stack.emplace_back(
-              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), f});
+              _call{(n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)), f});
         }
       }
     } else {
@@ -366,7 +366,7 @@ List<uint64_t> LoopifySequences::differences(const List<uint64_t> &l) {
         const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         auto _cell = typename List<uint64_t>::Cons(
-            (((a00 - a0) > a00 ? 0 : (a00 - a0))), nullptr);
+            (a00 - a0 > a00 ? 0 : a00 - a0), nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
@@ -411,7 +411,7 @@ List<uint64_t> LoopifySequences::replace_at(uint64_t idx, uint64_t value,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        idx = (((idx - UINT64_C(1)) > idx ? 0 : (idx - UINT64_C(1))));
+        idx = (idx - UINT64_C(1) > idx ? 0 : idx - UINT64_C(1));
         continue;
       }
     }
@@ -830,7 +830,7 @@ bool LoopifySequences::elem(uint64_t x, const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_elem_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (x == a0 || _result);
+      _result = ((x == a0) || _result);
     }
   }
   return _result;
@@ -1028,7 +1028,7 @@ List<uint64_t> LoopifySequences::remove_if_sum_even(const List<uint64_t> &l) {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t next = head_or(UINT64_C(0), *a1);
-      if ((UINT64_C(2) ? (a0 + next) % UINT64_C(2) : (a0 + next)) ==
+      if ((UINT64_C(2) ? (a0 + next) % UINT64_C(2) : a0 + next) ==
           UINT64_C(0)) {
         _loop_l = crane_raw(a1);
         continue;
@@ -1145,7 +1145,7 @@ List<uint64_t> LoopifySequences::between(uint64_t lo, uint64_t hi,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if ((lo <= a0 && a0 <= hi)) {
+      if (((lo <= a0) && (a0 <= hi))) {
         auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =

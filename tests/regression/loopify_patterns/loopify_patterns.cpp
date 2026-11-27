@@ -27,8 +27,8 @@ uint64_t LoopifyPatterns::multi_let(uint64_t n) {
         _result = UINT64_C(0);
       } else {
         uint64_t m = n - 1;
-        uint64_t b = (m * UINT64_C(2));
-        uint64_t c = (b + UINT64_C(3));
+        uint64_t b = m * UINT64_C(2);
+        uint64_t c = b + UINT64_C(3);
         _stack.emplace_back(_after_multi_let_in_S{c});
         _stack.emplace_back(_call{m});
       }
@@ -36,7 +36,7 @@ uint64_t LoopifyPatterns::multi_let(uint64_t n) {
       auto _f = std::move(std::get<_after_multi_let_in_S>(_popped));
       _stack.pop_back();
       uint64_t c = _f.c;
-      _result = (c + _result);
+      _result = c + _result;
     }
   }
   return _result;
@@ -66,9 +66,9 @@ uint64_t LoopifyPatterns::nested_if_fuel(uint64_t fuel, uint64_t n) {
               n = m;
             }
           } else {
-            n = (m == UINT64_C(0)
-                     ? UINT64_C(0)
-                     : (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))));
+            n = (m == UINT64_C(0) ? UINT64_C(0)
+                                  : (m - UINT64_C(1) > m ? 0
+                                                         : m - UINT64_C(1)));
           }
           fuel = f;
         }
@@ -111,7 +111,7 @@ uint64_t LoopifyPatterns::deep_nest(uint64_t n) {
     } else {
       auto _f = std::move(std::get<_after_deep_nest_in_S>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + (UINT64_C(1) + (UINT64_C(1) + _result)));
+      _result = UINT64_C(1) + (UINT64_C(1) + (UINT64_C(1) + _result));
     }
   }
   return _result;
@@ -161,7 +161,7 @@ bool LoopifyPatterns::bool_chain_fuel(uint64_t fuel, uint64_t n,
         } else {
           _stack.emplace_back(_after_bool_chain_fuel_in_false{n, f});
           _stack.emplace_back(
-              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), f});
+              _call{(n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)), f});
         }
       }
     } else if (std::holds_alternative<_after_bool_chain_fuel_in_false>(_popped)) {
@@ -170,8 +170,8 @@ bool LoopifyPatterns::bool_chain_fuel(uint64_t fuel, uint64_t n,
       uint64_t n = _f.n;
       uint64_t f = _f.f;
       _stack.emplace_back(_after_bool_chain_fuel_in_false_2{_result});
-      _stack.emplace_back(
-          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), f});
+      _stack.emplace_back(_call{(n - UINT64_C(2) > n ? 0 : n - UINT64_C(2)),
+                                f});
     } else {
       auto _f = std::move(std::get<_after_bool_chain_fuel_in_false_2>(_popped));
       _stack.pop_back();
@@ -276,7 +276,7 @@ LoopifyPatterns::tuple_constr(uint64_t n) {
       uint64_t n = _f.n;
       auto [p, c] = std::move(_result);
       const auto &[a, b] = p;
-      _result = std::make_pair(std::make_pair((a + 1), (b + n)), (c + (n * n)));
+      _result = std::make_pair(std::make_pair((a + 1), b + n), c + n * n);
     }
   }
   return _result;
@@ -298,8 +298,8 @@ LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<uint64_t> &l,
       const auto &[a0, a1] = std::get<
           typename LoopifyPatterns::list<uint64_t>::Cons>(_loop_l->v());
       a_count = (a_count + 1);
-      a_prod = (a_prod * a0);
-      a_sum = (a_sum + a0);
+      a_prod = a_prod * a0;
+      a_sum = a_sum + a0;
       _loop_l = crane_raw(a1);
     }
   }
@@ -356,10 +356,10 @@ LoopifyPatterns::guard_accum(uint64_t acc,
           typename LoopifyPatterns::list<uint64_t>::Cons>(_loop_l->v());
       if (UINT64_C(100) < a0) {
         _loop_l = crane_raw(a1);
-        acc = (acc * UINT64_C(2));
+        acc = acc * UINT64_C(2);
       } else if (UINT64_C(50) < a0) {
         _loop_l = crane_raw(a1);
-        acc = (acc + a0);
+        acc = acc + a0;
       } else if (UINT64_C(0) < a0) {
         _loop_l = crane_raw(a1);
         acc = (acc + 1);
@@ -392,7 +392,7 @@ LoopifyPatterns::cons_computed(uint64_t n,
           typename LoopifyPatterns::list<uint64_t>::Cons>(_loop_l->v());
       uint64_t next_n;
       if (UINT64_C(0) < n) {
-        next_n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+        next_n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
       } else {
         next_n = n;
       }
@@ -501,12 +501,12 @@ uint64_t LoopifyPatterns::alternating_ops(uint64_t n) {
       auto _f = std::move(std::get<_after_alternating_ops_in_false>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = ((n * UINT64_C(2)) + _result);
+      _result = n * UINT64_C(2) + _result;
     } else {
       auto _f = std::move(std::get<_after_alternating_ops_in_true>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = (n + _result);
+      _result = n + _result;
     }
   }
   return _result;
@@ -604,7 +604,7 @@ uint64_t LoopifyPatterns::nested_pattern(const LoopifyPatterns::list<
       uint64_t c = _f.c;
       uint64_t a = _f.a;
       uint64_t b = _f.b;
-      _result = (a + (b + (c + _result)));
+      _result = a + (b + (c + _result));
     }
   }
   return _result;
@@ -644,7 +644,7 @@ uint64_t LoopifyPatterns::let_nested(uint64_t n) {
       auto _f = std::move(std::get<_after_let_nested_in_S>(_popped));
       _stack.pop_back();
       uint64_t a = _f.a;
-      _result = (a + _result);
+      _result = a + _result;
     }
   }
   return _result;
@@ -865,7 +865,7 @@ LoopifyPatterns::quad_sum_pattern(const LoopifyPatterns::list<uint64_t> &l) {
           auto &&_sv1 = *a10;
           if (std::holds_alternative<
                   typename LoopifyPatterns::list<uint64_t>::Nil>(_sv1.v())) {
-            _result = (a0 + a00);
+            _result = a0 + a00;
           } else {
             const auto &[a01, a11] =
                 std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
@@ -873,7 +873,7 @@ LoopifyPatterns::quad_sum_pattern(const LoopifyPatterns::list<uint64_t> &l) {
             auto &&_sv2 = *a11;
             if (std::holds_alternative<
                     typename LoopifyPatterns::list<uint64_t>::Nil>(_sv2.v())) {
-              _result = (a0 + (a00 + a01));
+              _result = a0 + (a00 + a01);
             } else {
               const auto &[a02, a12] =
                   std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
@@ -892,7 +892,7 @@ LoopifyPatterns::quad_sum_pattern(const LoopifyPatterns::list<uint64_t> &l) {
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
       uint64_t a02 = _f.a02;
-      _result = ((a0 + a00) + ((a01 + a02) + _result));
+      _result = a0 + a00 + (a01 + a02 + _result);
     }
   }
   return _result;
@@ -936,11 +936,11 @@ LoopifyPatterns::multi_guard(const LoopifyPatterns::list<uint64_t> &l) {
       uint64_t a0 = _f.a0;
       uint64_t rest = _result;
       if (UINT64_C(10) < a0) {
-        _result = (a0 + rest);
+        _result = a0 + rest;
       } else if (UINT64_C(0) < a0) {
         _result = rest;
       } else {
-        _result = (UINT64_C(1) + rest);
+        _result = UINT64_C(1) + rest;
       }
     }
   }
@@ -1081,9 +1081,9 @@ uint64_t LoopifyPatterns::sum_if_positive_else_double(
       uint64_t a0 = _f.a0;
       uint64_t rest = _result;
       if (a0 == UINT64_C(0)) {
-        _result = ((UINT64_C(2) * a0) + rest);
+        _result = UINT64_C(2) * a0 + rest;
       } else {
-        _result = (a0 + rest);
+        _result = a0 + rest;
       }
     }
   }
@@ -1214,7 +1214,7 @@ uint64_t LoopifyPatterns::four_elem(const LoopifyPatterns::list<uint64_t> &l) {
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
       uint64_t a02 = _f.a02;
-      _result = (a0 + (a00 + (a01 + (a02 + _result))));
+      _result = a0 + (a00 + (a01 + (a02 + _result)));
     }
   }
   return _result;

@@ -83,24 +83,23 @@ struct SharedArrayVec {
                   crane::list<
                       crane::shared_array<crane::shared_array<uint64_t>>>{})));
   static inline const uint64_t result =
-      (((vec_nth<uint64_t>(vec_nth<crane::shared_array<uint64_t>>(
-             table, UINT64_C(1), crane::shared_array<uint64_t>{}),
-                           UINT64_C(1), UINT64_C(0)) +
-         vec_nth<uint64_t>(vec_nth<crane::shared_array<uint64_t>>(
-             table, UINT64_C(2), crane::shared_array<uint64_t>{}),
-                           UINT64_C(0), UINT64_C(100))) +
-        vec_sum(vec_nth<crane::shared_array<uint64_t>>(
-            table, UINT64_C(0), crane::shared_array<uint64_t>{}))) +
-       List::template fold_left<
-           uint64_t, crane::shared_array<crane::shared_array<uint64_t>>>(
-           [](uint64_t acc,
-              const crane::shared_array<crane::shared_array<uint64_t>> &t) {
-             return (acc +
-                     vec_sum(vec_nth<crane::shared_array<uint64_t>>(
-                         t, UINT64_C(0), crane::shared_array<uint64_t>{})));
-           },
-           copies,
-           UINT64_C(0)));
+      vec_nth<uint64_t>(vec_nth<crane::shared_array<uint64_t>>(
+          table, UINT64_C(1), crane::shared_array<uint64_t>{}),
+                        UINT64_C(1), UINT64_C(0)) +
+      vec_nth<uint64_t>(vec_nth<crane::shared_array<uint64_t>>(
+          table, UINT64_C(2), crane::shared_array<uint64_t>{}),
+                        UINT64_C(0), UINT64_C(100)) +
+      vec_sum(vec_nth<crane::shared_array<uint64_t>>(
+          table, UINT64_C(0), crane::shared_array<uint64_t>{})) +
+      List::template fold_left<
+          uint64_t, crane::shared_array<crane::shared_array<uint64_t>>>(
+          [](uint64_t acc,
+             const crane::shared_array<crane::shared_array<uint64_t>> &t) {
+            return acc + vec_sum(vec_nth<crane::shared_array<uint64_t>>(
+                             t, UINT64_C(0), crane::shared_array<uint64_t>{}));
+          },
+          copies,
+          UINT64_C(0));
 };
 
 template <typename T1, typename T2, typename F0>

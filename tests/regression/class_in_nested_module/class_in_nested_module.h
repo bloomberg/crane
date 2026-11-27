@@ -27,7 +27,7 @@ struct ClassInNestedModule {
   template <typename _tcI0, typename T1>
     requires Show<_tcI0, T1>
   static uint64_t use(const T1 &x) {
-    return (_tcI0::sz(x) + _tcI0::tag());
+    return _tcI0::sz(x) + _tcI0::tag();
   }
 
   static inline const uint64_t run = use<Cls::SN, uint64_t>(UINT64_C(5));

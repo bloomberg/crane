@@ -413,7 +413,7 @@ struct LoopifyPredicates {
         if (p(a0)) {
           return std::make_optional<uint64_t>(idx);
         } else {
-          idx = (idx + UINT64_C(1));
+          idx = idx + UINT64_C(1);
           _loop_l = crane_raw(a1);
         }
       }
@@ -450,11 +450,11 @@ struct LoopifyPredicates {
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-          idx = (idx + UINT64_C(1));
+          idx = idx + UINT64_C(1);
           _loop_l = crane_raw(a1);
           continue;
         } else {
-          idx = (idx + UINT64_C(1));
+          idx = idx + UINT64_C(1);
           _loop_l = crane_raw(a1);
           continue;
         }

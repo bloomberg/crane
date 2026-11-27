@@ -6,17 +6,17 @@ NestedMod::Outer::Inner::area(const NestedMod::Outer::Inner::shape &s) {
           s.v())) {
     const auto &[a0] =
         std::get<typename NestedMod::Outer::Inner::shape::Circle>(s.v());
-    return ((a0 * a0) * UINT64_C(3));
+    return a0 * a0 * UINT64_C(3);
   } else if (
       std::holds_alternative<typename NestedMod::Outer::Inner::shape::Square>(
           s.v())) {
     const auto &[a0] =
         std::get<typename NestedMod::Outer::Inner::shape::Square>(s.v());
-    return (a0 * a0);
+    return a0 * a0;
   } else {
     const auto &[a0, a1, _] =
         std::get<typename NestedMod::Outer::Inner::shape::Triangle>(s.v());
-    return (UINT64_C(2) ? (a0 * a1) / UINT64_C(2) : 0);
+    return (UINT64_C(2) ? a0 * a1 / UINT64_C(2) : 0);
   }
 }
 
@@ -25,13 +25,13 @@ NestedMod::Outer::shape_with_color(const NestedMod::Outer::Inner::shape &s,
                                    NestedMod::Outer::Color c) {
   switch (c) {
   case Color::RED: {
-    return (Inner::area(s) + UINT64_C(100));
+    return Inner::area(s) + UINT64_C(100);
   }
   case Color::GREEN: {
-    return (Inner::area(s) + UINT64_C(200));
+    return Inner::area(s) + UINT64_C(200);
   }
   case Color::BLUE: {
-    return (Inner::area(s) + UINT64_C(300));
+    return Inner::area(s) + UINT64_C(300);
   }
   default:
     std::unreachable();

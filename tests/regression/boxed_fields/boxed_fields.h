@@ -207,25 +207,24 @@ struct BoxedFields {
     uint64_t weight() const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0, a1] = std::get<typename shape::Circle>(this->v());
-        return ((a0->px() + a0->py()) + a1);
+        return a0->px() + a0->py() + a1;
       } else if (std::holds_alternative<typename shape::Poly>(this->v())) {
         const auto &[a0] = std::get<typename shape::Poly>(this->v());
         const List<point> &a0_value = *a0;
         return a0_value.template fold_left<uint64_t>(
-            [](uint64_t acc,
-               const point &p) { return ((acc + p.px()) + p.py()); },
+            [](uint64_t acc, const point &p) { return acc + p.px() + p.py(); },
             UINT64_C(0));
       } else {
         const auto &[a0, a1] = std::get<typename shape::Tagged>(this->v());
         const auto &[n, p] = (*a1);
-        return ((n + p.px()) + [&]() -> uint64_t {
+        return n + p.px() + [&]() -> uint64_t {
           if ((*a0).has_value()) {
             const point &q = *(*a0);
             return q.py();
           } else {
             return UINT64_C(0);
           }
-        }());
+        }();
       }
     }
   };
@@ -330,7 +329,7 @@ struct BoxedFields {
             const auto &_sv1 = *a00;
             const auto &[a01, a11] = _sv1;
             auto _cell = typename scene::Layer(std::make_shared<shape>(
-                shape::circle(point::pt((a01 + d), a11), a10)),
+                shape::circle(point::pt(a01 + d, a11), a10)),
                                                nullptr);
             scene &_node =
                 (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
@@ -398,7 +397,7 @@ struct BoxedFields {
           auto _f = std::move(std::get<_after_total_in_Layer>(_popped));
           _stack.pop_back();
           std::shared_ptr<shape> a0 = std::move(_f.a0);
-          _result = (a0->weight() + _result);
+          _result = a0->weight() + _result;
         }
       }
       return _result;
@@ -520,6 +519,6 @@ struct BoxedFields {
   static inline const tagged<uint64_t> light =
       tagged<uint64_t>::tag(UINT64_C(2), UINT64_C(40));
   static inline const uint64_t heavy_total =
-      (heavy.tag_of() + heavy.untag().total());
-  static inline const uint64_t light_total = (light.tag_of() + light.untag());
+      heavy.tag_of() + heavy.untag().total();
+  static inline const uint64_t light_total = light.tag_of() + light.untag();
 };

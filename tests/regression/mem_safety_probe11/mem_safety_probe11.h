@@ -138,7 +138,7 @@ struct MemSafetyProbe11 {
         } else {
           auto _f = std::move(std::get<_after_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -279,7 +279,7 @@ struct MemSafetyProbe11 {
         return tree::node(tree::leaf(), n, tree::leaf());
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return tree::node(crane::shared_child(a0), (a1 + n),
+        return tree::node(crane::shared_child(a0), a1 + n,
                           crane::shared_child(a2));
       }
     }
@@ -293,11 +293,11 @@ struct MemSafetyProbe11 {
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
-          return (a1 + n);
+          return a1 + n;
         } else {
           const auto &[a00, _] =
               std::get<typename mylist<uint64_t>::Mycons>(l.v());
-          return ((((a0->tree_sum() + a2->tree_sum()) + a00) + a1) + n);
+          return a0->tree_sum() + a2->tree_sum() + a00 + a1 + n;
         }
       }
     }
@@ -349,7 +349,7 @@ struct MemSafetyProbe11 {
           auto _f = std::move(std::get<_after_tree_depth_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t dl = _f.dl;
-          _result = (UINT64_C(1) + (dl <= _result ? _result : dl));
+          _result = UINT64_C(1) + (dl <= _result ? _result : dl);
         }
       }
       return _result;
@@ -404,7 +404,7 @@ struct MemSafetyProbe11 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;

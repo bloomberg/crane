@@ -5,4 +5,4 @@
 /// expression's own type as its trailing return type, and for a const-
 /// qualified scalar that is -> const uint64_t, which -Wignored-qualifiers
 /// rejects under -Werror.
-uint64_t DeepExprConstReturn::f(uint64_t n) { return (n + UINT64_C(1)); }
+uint64_t DeepExprConstReturn::f(uint64_t n) { return n + UINT64_C(1); }

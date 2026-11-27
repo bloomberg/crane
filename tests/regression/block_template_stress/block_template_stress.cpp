@@ -27,7 +27,7 @@ std::string BlockTemplateStress::conditional_read(bool do_read) {
 uint64_t BlockTemplateStress::read_and_add() {
   uint64_t n;
   std::cin >> n;
-  return (n + UINT64_C(1));
+  return n + UINT64_C(1);
 }
 
 /// 4. Block template used in multiple match arms
@@ -57,7 +57,7 @@ uint64_t BlockTemplateStress::read_two_nats() {
   std::cin >> a;
   uint64_t b;
   std::cin >> b;
-  return (a + b);
+  return a + b;
 }
 
 /// 6. Block template result fed to another function
@@ -96,6 +96,6 @@ std::string BlockTemplateStress::interleaved_void() {
   std::cout << std::string("Enter age:") << '\n';
   std::string age;
   std::getline(std::cin, age);
-  return (name + (std::string(" is ") + age).substr(0, 16777211)).substr(
-                                            0, 16777211);
+  return (name + ((std::string(" is ") + age).substr(0, 16777211))).substr(
+                                             0, 16777211);
 }

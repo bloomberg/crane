@@ -35,7 +35,7 @@ uint64_t MemSafetyProbe10::sum_fns(
       auto _f = std::move(std::get<_after_sum_fns_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(UINT64_C(0)) + _result);
+      _result = a0(UINT64_C(0)) + _result;
     }
   }
   return _result;
@@ -61,7 +61,7 @@ MemSafetyProbe10::chain_adders(const MemSafetyProbe10::mylist<uint64_t> &l,
           std::get<typename MemSafetyProbe10::mylist<uint64_t>::Mycons>(
               _loop_l->v());
       const MemSafetyProbe10::mylist<uint64_t> &a1_value = *a1;
-      _loop_acc = [=](uint64_t n) { return _loop_acc((a0 + n)); };
+      _loop_acc = [=](uint64_t n) { return _loop_acc(a0 + n); };
       _loop_l = &a1_value;
     }
   }
@@ -95,14 +95,14 @@ MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
           MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
           typename MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>::Mycons(
               [=, a0_value = a0_value](uint64_t n) {
-                return (a0_value.tree_sum() + n);
+                return a0_value.tree_sum() + n;
               },
               nullptr));
       auto _cell2 = std::make_shared<
           MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
           typename MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>::Mycons(
               [=, a2_value = a2_value](uint64_t n) {
-                return (a2_value.tree_sum() + n);
+                return a2_value.tree_sum() + n;
               },
               nullptr));
       std::get<
@@ -111,7 +111,7 @@ MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
           .a1 = std::move(_cell2);
       auto _cell = typename MemSafetyProbe10::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t n) { return (a1 + n); },
+          [=](uint64_t n) { return a1 + n; },
           std::move(_cell1));
       MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe10::mylist<
@@ -140,9 +140,9 @@ uint64_t MemSafetyProbe10::choose_fn(std::optional<bool> o, uint64_t v,
   if (o.has_value()) {
     const bool &b = *o;
     if (b) {
-      return (v + n);
+      return v + n;
     } else {
-      return (v * n);
+      return v * n;
     }
   } else {
     return n;
@@ -154,8 +154,8 @@ uint64_t MemSafetyProbe10::choose_fn(std::optional<bool> o, uint64_t v,
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 MemSafetyProbe10::pair_with_fn(uint64_t n) {
   return std::make_pair(
-      crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return (n + x); }),
-      (n * UINT64_C(2)));
+      crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return n + x; }),
+      n * UINT64_C(2));
 }
 
 /// TEST 7: Mutually recursive functions using a fixpoint
@@ -198,12 +198,12 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
             MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>>(
             typename MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>>::Mycons(
                 [=, a0_value = a0_value, a2_value = a2_value](uint64_t n) {
-                  return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
+                  return a0_value.tree_sum() + a2_value.tree_sum() + n;
                 },
                 nullptr));
         auto _cell = typename MemSafetyProbe10::mylist<
             crane::fn<uint64_t(uint64_t)>>::Mycons(
-            [=](uint64_t n) { return (a1 + n); },
+            [=](uint64_t n) { return a1 + n; },
             std::move(_cell1));
         MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
             (_write ? *(*_write = std::make_shared<MemSafetyProbe10::mylist<

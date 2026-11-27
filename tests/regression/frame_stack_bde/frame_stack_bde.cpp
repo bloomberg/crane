@@ -18,6 +18,6 @@ unsigned int FrameStackBde::sum(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         bsl::get<typename List<unsigned int>::Cons>(l.v());
-    return (d_a0 + sum(*d_a1));
+    return d_a0 + sum(*d_a1);
   }
 }

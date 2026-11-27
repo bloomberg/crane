@@ -299,7 +299,7 @@ struct LoopifySorting {
   template <typename F0>
   static List<uint64_t> merge_by(F0 &&cmp, const List<uint64_t> &l1,
                                  const List<uint64_t> &l2) {
-    return merge_by_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), cmp,
+    return merge_by_fuel(len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2), cmp,
                          l1, l2);
   }
 

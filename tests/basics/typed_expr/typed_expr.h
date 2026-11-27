@@ -238,8 +238,8 @@ inline crane::obj Expr::eval(Ty _x) const {
     } else if (std::holds_alternative<_after_eval_in_EAdd_2>(_popped)) {
       auto _f = std::move(std::get<_after_eval_in_EAdd_2>(_popped));
       _stack.pop_back();
-      _result = (crane::any_cast<uint64_t>(std::move(_f._tmp2)) +
-                 crane::any_cast<uint64_t>(std::move(_result)));
+      _result = crane::any_cast<uint64_t>(std::move(_f._tmp2)) +
+                crane::any_cast<uint64_t>(std::move(_result));
     } else if (std::holds_alternative<_after_eval_in_EEq>(_popped)) {
       auto _f = std::move(std::get<_after_eval_in_EEq>(_popped));
       _stack.pop_back();

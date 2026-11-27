@@ -197,11 +197,11 @@ struct DenFnResultNotCast {
     return val_rect<T1>(f, v);
   }
 
-  static inline const uint64_t result = (
+  static inline const uint64_t result =
       val::V_(ty::tfun(ty::tnat(), ty::tnat()),
               crane_erase_fn([](uint64_t x) { return (x + 1); }))
           .app(UINT64_C(4)) +
       val::V_(ty::tfun(ty::tnat(), ty::tnat()),
-              crane_erase_fn([](uint64_t x) { return (x * UINT64_C(2)); }))
-          .app(UINT64_C(4)));
+              crane_erase_fn([](uint64_t x) { return x * UINT64_C(2); }))
+          .app(UINT64_C(4));
 };

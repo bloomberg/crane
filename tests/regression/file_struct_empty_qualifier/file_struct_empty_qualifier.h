@@ -175,14 +175,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct Monad0 {
-  template <Monad _tcI0, typename T2>
-  static typename _tcI0::template m<T2> ret(const T2 &x);
-  template <Monad _tcI0, typename T2, typename T3, typename F1>
-  static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
-                                             F1 &&x0);
-};
-
 struct Positive {
   // TYPES
   struct XI {
@@ -288,6 +280,14 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+};
+
+struct Monad0 {
+  template <Monad _tcI0, typename T2>
+  static typename _tcI0::template m<T2> ret(const T2 &x);
+  template <Monad _tcI0, typename T2, typename T3, typename F1>
+  static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
+                                             F1 &&x0);
 };
 
 struct Monad_option {

@@ -122,6 +122,6 @@ struct AliasArrowBranchLambda {
 
   static st<uint64_t> g(bool b, const List<uint64_t> &x0_);
   static inline const uint64_t result =
-      (g(true, List<uint64_t>::nil())(UINT64_C(0)).first +
-       g(false, List<uint64_t>::nil())(UINT64_C(0)).first);
+      g(true, List<uint64_t>::nil())(UINT64_C(0)).first +
+      g(false, List<uint64_t>::nil())(UINT64_C(0)).first;
 };

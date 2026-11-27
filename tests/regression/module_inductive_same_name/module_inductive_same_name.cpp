@@ -18,5 +18,5 @@ uint64_t ModuleInductiveSameName::Color_Mod::v(
 }
 
 uint64_t ModuleInductiveSameName::run(uint64_t k) {
-  return (Color_Mod::v(Color_Mod::Color::R) + k);
+  return Color_Mod::v(Color_Mod::Color::R) + k;
 }

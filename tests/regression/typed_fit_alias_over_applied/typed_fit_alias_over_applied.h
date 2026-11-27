@@ -33,7 +33,7 @@ struct TypedFitAliasOverApplied {
     // Built on the first call and immortal: every thread reads it without
     // touching its counts.
     static const auto sbind_1 = crane::immortal(sbind<uint64_t, uint64_t>(
-        sget, [](uint64_t n) { return sret<uint64_t>((n + UINT64_C(2))); }));
+        sget, [](uint64_t n) { return sret<uint64_t>(n + UINT64_C(2)); }));
     return sbind_1(eta0_);
   };
   static inline const bool run = f2(UINT64_C(5)).first;

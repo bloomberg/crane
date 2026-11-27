@@ -145,7 +145,7 @@ struct MemSafetyProbe20 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -294,8 +294,8 @@ struct MemSafetyProbe20 {
   static inline const uint64_t test_pair_if = []() {
     std::pair<wrapped, uint64_t> p = pair_from_if(
         tree::node(tree::leaf(), UINT64_C(15), tree::leaf()), true);
-    wrapped w = std::move(p).first;
-    uint64_t v = std::move(p).second;
+    wrapped w = std::move(p.first);
+    uint64_t v = std::move(p.second);
     return w.unwrap(v);
   }();
   /// TEST 4: Wrapped closure captured in a locally-constructed tree.
@@ -309,7 +309,7 @@ struct MemSafetyProbe20 {
   static inline const uint64_t test_double_unwrap = []() {
     wrapped w =
         wrap_if(tree::node(tree::leaf(), UINT64_C(7), tree::leaf()), true);
-    return (w.unwrap(UINT64_C(1)) + w.unwrap(UINT64_C(2)));
+    return w.unwrap(UINT64_C(1)) + w.unwrap(UINT64_C(2));
   }();
   /// TEST 6: Nested wrapped closure: wrapped inside a pair inside if.
   static wrapped nested_wrap(tree t, bool b1, bool b2);

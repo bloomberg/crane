@@ -19,19 +19,19 @@ StepFetchDecodeExec::execute(const StepFetchDecodeExec::state &s,
                              const StepFetchDecodeExec::instruction &i) {
   if (std::holds_alternative<typename StepFetchDecodeExec::instruction::NOP>(
           i.v())) {
-    return state{s.acc, (s.pc + UINT64_C(1)), s.rom};
+    return state{s.acc, s.pc + UINT64_C(1), s.rom};
   } else {
     const auto &[a0] =
         std::get<typename StepFetchDecodeExec::instruction::ADD_ACC>(i.v());
-    auto _once1 = (s.acc + a0);
+    auto _once1 = s.acc + a0;
     return state{(UINT64_C(16) ? _once1 % UINT64_C(16) : _once1),
-                 (s.pc + UINT64_C(2)), s.rom};
+                 s.pc + UINT64_C(2), s.rom};
   }
 }
 
 StepFetchDecodeExec::state
 StepFetchDecodeExec::step(const StepFetchDecodeExec::state &s) {
   uint64_t b1 = fetch_byte(s, s.pc);
-  uint64_t b2 = fetch_byte(s, (s.pc + UINT64_C(1)));
+  uint64_t b2 = fetch_byte(s, s.pc + UINT64_C(1));
   return execute(s, decode(b1, b2));
 }

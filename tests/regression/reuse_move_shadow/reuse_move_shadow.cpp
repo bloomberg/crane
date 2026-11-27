@@ -4,7 +4,7 @@ uint64_t ReuseMoveShadow::tree_sum(const ReuseMoveShadow::tree &t) {
   if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(t.v())) {
     const auto &[a0, a1, a2] =
         std::get<typename ReuseMoveShadow::tree::Node>(t.v());
-    return ((a0 + tree_sum(*a1)) + tree_sum(*a2));
+    return a0 + tree_sum(*a1) + tree_sum(*a2);
   } else {
     return UINT64_C(0);
   }

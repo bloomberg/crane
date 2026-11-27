@@ -37,7 +37,7 @@ LazyDirectLayer::tree LazyDirectLayer::ask(uint64_t n, uint64_t acc) {
     return Ret(acc);
   } else {
     uint64_t m = n - 1;
-    return Vis(m, [=](uint64_t a) { return ask(m, (acc + a)); });
+    return Vis(m, [=](uint64_t a) { return ask(m, acc + a); });
   }
 }
 

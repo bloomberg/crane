@@ -56,29 +56,29 @@ struct ErasedFieldDangle {
   static inline const uint64_t test_unbox_nested = []() {
     std::pair<uint64_t, uint64_t> p =
         nested_box.template unbox<std::pair<uint64_t, uint64_t>>();
-    return (p.first + p.second);
+    return p.first + p.second;
   }();
   /// Use unboxed value in a computation
   static inline const uint64_t test_unbox_compute = []() {
     uint64_t x = box::mkbox(UINT64_C(10)).template unbox<uint64_t>();
     uint64_t y = box::mkbox(UINT64_C(20)).template unbox<uint64_t>();
-    return (x + y);
+    return x + y;
   }();
   /// Chain unbox through multiple let bindings
   static inline const uint64_t test_chain_unbox = []() {
     box b1 = box::mkbox(UINT64_C(5));
     box b2 =
-        box::mkbox((crane::any_cast<uint64_t>(b1.template unbox<uint64_t>()) +
-                    UINT64_C(10)));
+        box::mkbox(crane::any_cast<uint64_t>(b1.template unbox<uint64_t>()) +
+                   UINT64_C(10));
     box b3 =
-        box::mkbox((crane::any_cast<uint64_t>(b2.template unbox<uint64_t>()) +
-                    UINT64_C(20)));
+        box::mkbox(crane::any_cast<uint64_t>(b2.template unbox<uint64_t>()) +
+                   UINT64_C(20));
     return b3.template unbox<uint64_t>();
   }();
   /// Pass unboxed value to a higher-order function
   static inline const uint64_t test_hof_unbox = []() {
     box b = box::mkbox(crane::fn<uint64_t(uint64_t)>(
-        [](uint64_t x) { return (x * UINT64_C(2)); }));
+        [](uint64_t x) { return x * UINT64_C(2); }));
     return b.template unbox<crane::fn<uint64_t(uint64_t)>>()(UINT64_C(21));
   }();
 
@@ -115,7 +115,7 @@ struct ErasedFieldDangle {
     exists_box e = exists_box::pack(
         UINT64_C(7),
         crane::fn<uint64_t(crane::obj)>([](const crane::obj &x) -> uint64_t {
-          return (crane::any_cast<uint64_t>(x) * crane::any_cast<uint64_t>(x));
+          return crane::any_cast<uint64_t>(x) * crane::any_cast<uint64_t>(x);
         }));
     return e.run_exists();
   }();

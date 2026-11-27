@@ -532,12 +532,12 @@ struct RamOps {
                                  uint64_t i1, uint64_t b2, uint64_t c2,
                                  uint64_t r2, uint64_t i2);
   static inline const uint64_t test_addr_disjoint_bool =
-      ((ram_addr_disjointb(UINT64_C(0), UINT64_C(1), UINT64_C(2), UINT64_C(3),
-                           UINT64_C(0), UINT64_C(1), UINT64_C(2),
-                           UINT64_C(3)) ? UINT64_C(1) : UINT64_C(0)) +
-       (ram_addr_disjointb(UINT64_C(0), UINT64_C(1), UINT64_C(2), UINT64_C(3),
-                           UINT64_C(0), UINT64_C(1), UINT64_C(2),
-                           UINT64_C(4)) ? UINT64_C(1) : UINT64_C(0)));
+      (ram_addr_disjointb(UINT64_C(0), UINT64_C(1), UINT64_C(2), UINT64_C(3),
+                          UINT64_C(0), UINT64_C(1), UINT64_C(2),
+                          UINT64_C(3)) ? UINT64_C(1) : UINT64_C(0)) +
+      (ram_addr_disjointb(UINT64_C(0), UINT64_C(1), UINT64_C(2), UINT64_C(3),
+                          UINT64_C(0), UINT64_C(1), UINT64_C(2),
+                          UINT64_C(4)) ? UINT64_C(1) : UINT64_C(0));
 
   struct reg_nested_bank {
     List<uint64_t> status_;
@@ -601,7 +601,7 @@ struct RamOps {
 
   static uint64_t score(Item x);
   static inline const uint64_t test_accessor_namespace =
-      (score(Item::S_) + score(Item::S_0));
+      score(Item::S_) + score(Item::S_0);
   static inline const std::pair<
       std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<
           std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>,

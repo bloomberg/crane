@@ -95,10 +95,10 @@ struct OppositePropertyTransferTraceCase {
   static inline const PreStableCategory sample_category = PreStableCategory{
       UINT64_C(7),
       UINT64_C(4),
-      [](uint64_t x) { return (x + UINT64_C(10)); },
-      [](uint64_t x) { return (x + UINT64_C(3)); },
-      [](uint64_t x) { return (x + UINT64_C(20)); },
-      [](uint64_t x) { return (x + UINT64_C(5)); }};
+      [](uint64_t x) { return x + UINT64_C(10); },
+      [](uint64_t x) { return x + UINT64_C(3); },
+      [](uint64_t x) { return x + UINT64_C(20); },
+      [](uint64_t x) { return x + UINT64_C(5); }};
   static inline const is_right_semi_stable sample_right_stable =
       RightStableWitness{UINT64_C(6), UINT64_C(11)};
   static inline const satisfies_triangle_2 sample_triangle2 =
@@ -117,8 +117,6 @@ struct OppositePropertyTransferTraceCase {
       sample_right_property.rp_value;
   static inline const uint64_t sample_result_tag = sample_right_property.rp_tag;
   static inline const uint64_t sample_checksum =
-      ((((sample_opposite_tag + sample_opposite_loop_value) +
-         sample_result_seed) +
-        sample_result_value) +
-       sample_result_tag);
+      sample_opposite_tag + sample_opposite_loop_value + sample_result_seed +
+      sample_result_value + sample_result_tag;
 };

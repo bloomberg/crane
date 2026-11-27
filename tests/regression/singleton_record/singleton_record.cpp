@@ -14,7 +14,7 @@ uint64_t SingletonRecord::unwrap(const SingletonRecord::wrapper &w) {
 
 SingletonRecord::wrapper
 SingletonRecord::double_wrapped(const SingletonRecord::wrapper &w) {
-  return wrapper{(UINT64_C(2) * w.value)};
+  return wrapper{UINT64_C(2) * w.value};
 }
 
 uint64_t SingletonRecord::apply_wrapped(const SingletonRecord::fn_wrapper &w,

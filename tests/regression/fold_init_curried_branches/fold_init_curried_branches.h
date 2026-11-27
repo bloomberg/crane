@@ -117,5 +117,5 @@ public:
 
 struct FoldInitCurriedBranches {
   static uint64_t pick(uint64_t n);
-  static inline const uint64_t t_1 = (pick(UINT64_C(0)) + pick(UINT64_C(1)));
+  static inline const uint64_t t_1 = pick(UINT64_C(0)) + pick(UINT64_C(1));
 };

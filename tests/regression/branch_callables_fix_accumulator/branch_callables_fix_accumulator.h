@@ -160,5 +160,5 @@ struct BranchCallablesFixAccumulator {
   };
 
   static uint64_t pick(bool b);
-  static inline const uint64_t t_1 = (pick(true) + pick(false));
+  static inline const uint64_t t_1 = pick(true) + pick(false);
 };

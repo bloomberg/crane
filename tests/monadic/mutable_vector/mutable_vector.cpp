@@ -10,7 +10,7 @@ int64_t MutableVectorTest::test1(int64_t) {
   int64_t y = std::move(v).size();
   return static_cast<int64_t>(
       (static_cast<uint64_t>(x) - static_cast<uint64_t>(y)) &
-      0x7FFFFFFFFFFFFFFFULL);
+      UINT64_C(9223372036854775807));
 }
 
 std::vector<int64_t> MutableVectorTest::test2(int64_t) {

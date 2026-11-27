@@ -32,7 +32,7 @@ uint64_t LoopifyNumericMisc::sum_abs(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_abs_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -68,7 +68,8 @@ uint64_t LoopifyNumericMisc::alternating_ops(uint64_t n) {
         _result = UINT64_C(0);
       } else {
         uint64_t n_ = n - 1;
-        if ((UINT64_C(2) ? (n_ + 1) % UINT64_C(2) : (n_ + 1)) == UINT64_C(0)) {
+        if ((UINT64_C(2) ? ((n_ + 1)) % UINT64_C(2) : (n_ + 1)) ==
+            UINT64_C(0)) {
           _stack.emplace_back(_after_alternating_ops_in_true{n_});
         } else {
           _stack.emplace_back(_after_alternating_ops_in_false{n_});
@@ -79,12 +80,12 @@ uint64_t LoopifyNumericMisc::alternating_ops(uint64_t n) {
       auto _f = std::move(std::get<_after_alternating_ops_in_false>(_popped));
       _stack.pop_back();
       uint64_t n_ = _f.n_;
-      _result = (((n_ + 1) * UINT64_C(2)) + _result);
+      _result = ((n_ + 1)) * UINT64_C(2) + _result;
     } else {
       auto _f = std::move(std::get<_after_alternating_ops_in_true>(_popped));
       _stack.pop_back();
       uint64_t n_ = _f.n_;
-      _result = ((n_ + 1) + _result);
+      _result = ((n_ + 1)) + _result;
     }
   }
   return _result;
@@ -121,7 +122,7 @@ uint64_t LoopifyNumericMisc::count_even(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_count_even_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -158,7 +159,7 @@ uint64_t LoopifyNumericMisc::count_odd(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_count_odd_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -196,7 +197,7 @@ uint64_t LoopifyNumericMisc::product(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_product_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 * _result);
+      _result = a0 * _result;
     }
   }
   return _result;
@@ -234,7 +235,7 @@ uint64_t LoopifyNumericMisc::sum_of_squares(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_of_squares_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = ((a0 * a0) + _result);
+      _result = a0 * a0 + _result;
     }
   }
   return _result;

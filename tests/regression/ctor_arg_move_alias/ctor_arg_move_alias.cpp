@@ -44,7 +44,7 @@ uint64_t CtorArgMoveAlias::osum(
     const auto &[a0, a1] = std::get<
         typename CtorArgMoveAlias::mylist<CtorArgMoveAlias::inner>::Mycons>(
         o.v());
-    return (a0.isum() + osum(*a1));
+    return a0.isum() + osum(*a1);
   }
 }
 
@@ -73,7 +73,7 @@ uint64_t CtorArgMoveAlias::run(uint64_t n) {
   if (std::holds_alternative<typename CtorArgMoveAlias::pack::Pack0>(_sv.v())) {
     const auto &[a0, a1] =
         std::get<typename CtorArgMoveAlias::pack::Pack0>(_sv.v());
-    return (a1 + a0.isum());
+    return a1 + a0.isum();
   } else {
     const auto &[a0] =
         std::get<typename CtorArgMoveAlias::pack::PList>(_sv.v());

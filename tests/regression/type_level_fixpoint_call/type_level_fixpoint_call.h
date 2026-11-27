@@ -12,7 +12,7 @@
 struct TypeLevelFixpointCall {
   using ty = crane::obj;
   static inline const ty v1 =
-      crane_erase_fn([](uint64_t n) { return (n + UINT64_C(1)); });
+      crane_erase_fn([](uint64_t n) { return n + UINT64_C(1); });
   static inline const uint64_t go = crane::any_cast<uint64_t>(
       crane::any_cast<crane::fn<crane::obj(crane::obj)>>(v1)(
           crane::obj(UINT64_C(4))));

@@ -34,7 +34,7 @@ uint64_t LoopifyReuseCursorTurns::sum(const LoopifyReuseCursorTurns::lst &l) {
       auto _f = std::move(std::get<_after_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -104,7 +104,7 @@ LoopifyReuseCursorTurns::skip_sums(uint64_t seen,
         auto _rs = crane::reuse_step(_own, _uniq, a1);
         *_write = crane::make_rc_reusing_unchecked(
             std::move(_rs.token),
-            typename LoopifyReuseCursorTurns::lst::Cons((a0 + seen), nullptr));
+            typename LoopifyReuseCursorTurns::lst::Cons(a0 + seen, nullptr));
         _write =
             &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
                 (*_write)->v_mut())
@@ -113,7 +113,7 @@ LoopifyReuseCursorTurns::skip_sums(uint64_t seen,
         _loop_l = _own.get();
         continue;
       } else {
-        auto _read = (seen + sum(*a1));
+        auto _read = seen + sum(*a1);
         auto _rs = crane::reuse_step(_own, _uniq, a1);
         seen = _read;
         _own = std::move(_rs.next);
@@ -236,11 +236,11 @@ LoopifyReuseCursorTurns::scale(uint64_t acc, LoopifyReuseCursorTurns::lst l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_loop_l->v());
-      auto _read = (acc + a0);
+      auto _read = acc + a0;
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token),
-          typename LoopifyReuseCursorTurns::lst::Cons((a0 * acc), nullptr));
+          typename LoopifyReuseCursorTurns::lst::Cons(a0 * acc, nullptr));
       _write =
           &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
               (*_write)->v_mut())

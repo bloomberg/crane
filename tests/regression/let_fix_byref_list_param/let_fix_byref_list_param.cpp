@@ -5,7 +5,7 @@ uint64_t LetFixByrefListParam::count_elements(const List<uint64_t> &xs) {
     return UINT64_C(0);
   } else {
     const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
-    return (UINT64_C(1) + count_elements(*a1));
+    return UINT64_C(1) + count_elements(*a1);
   }
 }
 
@@ -21,7 +21,7 @@ uint64_t LetFixByrefListParam::sum_with_acc(const List<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
-      _lc1_loop_acc = (_lc1_loop_acc + a0);
+      _lc1_loop_acc = _lc1_loop_acc + a0;
       _lc1_loop_xs = crane_raw(a1);
     }
   }

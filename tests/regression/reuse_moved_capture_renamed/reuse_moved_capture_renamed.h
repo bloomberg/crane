@@ -101,7 +101,7 @@ struct ReuseMovedCaptureRenamed {
         return x;
       } else {
         const auto &[_, a1, _] = std::get<typename tree::Node>(this->v());
-        return (a1 + x);
+        return a1 + x;
       }
     }
 

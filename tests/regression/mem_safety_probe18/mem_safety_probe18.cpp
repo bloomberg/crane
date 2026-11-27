@@ -35,7 +35,7 @@ MemSafetyProbe18::sum_list(const MemSafetyProbe18::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -139,7 +139,7 @@ uint64_t MemSafetyProbe18::sum_tree_list(
       auto _f = std::move(std::get<_after_sum_tree_list_in_Mycons>(_popped));
       _stack.pop_back();
       MemSafetyProbe18::tree a0 = std::move(_f.a0);
-      _result = (a0.tree_sum() + _result);
+      _result = a0.tree_sum() + _result;
     }
   }
   return _result;

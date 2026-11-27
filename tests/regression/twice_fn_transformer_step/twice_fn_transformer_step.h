@@ -24,6 +24,6 @@ struct TwiceFnTransformerStep {
               };
             },
             [](crane::fn<uint64_t(uint64_t)> h) { return h; }),
-        [](uint64_t n) { return (n * UINT64_C(10)); })(UINT64_C(1));
+        [](uint64_t n) { return n * UINT64_C(10); })(UINT64_C(1));
   }();
 };

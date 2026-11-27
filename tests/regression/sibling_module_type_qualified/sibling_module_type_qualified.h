@@ -40,5 +40,5 @@ struct SiblingModuleTypeQualified {
   static uint64_t f(const Lib::t &x);
   static uint64_t g(const Lib::Inner::u &y);
   static inline const uint64_t run =
-      (f(Lib::t::c(UINT64_C(1))) + g(Lib::Inner::u::d(UINT64_C(2))));
+      f(Lib::t::c(UINT64_C(1))) + g(Lib::Inner::u::d(UINT64_C(2)));
 };

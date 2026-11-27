@@ -39,6 +39,6 @@ MutualRecursion::forest_sum(const MutualRecursion::forest<uint64_t> &f) {
   } else {
     const auto &[a0, a1] =
         std::get<typename MutualRecursion::forest<uint64_t>::Trees>(f.v());
-    return (tree_sum(*a0) + forest_sum(*a1));
+    return tree_sum(*a0) + forest_sum(*a1);
   }
 }

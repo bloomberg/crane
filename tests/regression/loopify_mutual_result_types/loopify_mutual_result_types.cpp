@@ -43,7 +43,7 @@ LoopifyMutualResultTypes::dbl_e(const LoopifyMutualResultTypes::e &x) {
               x.v())) {
         const auto &[n0] =
             std::get<typename LoopifyMutualResultTypes::e::Leaf>(x.v());
-        _result = e::leaf((UINT64_C(2) * n0));
+        _result = e::leaf(UINT64_C(2) * n0);
       } else if (
           std::holds_alternative<typename LoopifyMutualResultTypes::e::Add>(
               x.v())) {
@@ -131,7 +131,7 @@ LoopifyMutualResultTypes::dbl_md(const LoopifyMutualResultTypes::md &m) {
                 _sv0.v())) {
           const auto &[n0] =
               std::get<typename LoopifyMutualResultTypes::e::Leaf>(_sv0.v());
-          _result = md::mconst(e::leaf((UINT64_C(2) * n0)));
+          _result = md::mconst(e::leaf(UINT64_C(2) * n0));
         } else if (
             std::holds_alternative<typename LoopifyMutualResultTypes::e::Add>(
                 _sv0.v())) {
@@ -276,7 +276,7 @@ uint64_t LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &x) {
     } else if (std::holds_alternative<_after_sum_e_in_Add_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_in_Add_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp4 + _result);
+      _result = _f._tmp4 + _result;
     } else if (std::holds_alternative<_after_sum_md_entry_in_MPair>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_entry_in_MPair>(_popped));
       _stack.pop_back();
@@ -286,7 +286,7 @@ uint64_t LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &x) {
     } else if (std::holds_alternative<_after_sum_md_entry_in_MPair_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_entry_in_MPair_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp6 + _result);
+      _result = _f._tmp6 + _result;
     } else if (std::holds_alternative<_after_sum_md_entry_in_MPair_3>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_entry_in_MPair_3>(_popped));
       _stack.pop_back();
@@ -296,7 +296,7 @@ uint64_t LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &x) {
     } else {
       auto _f = std::move(std::get<_after_sum_md_entry_in_MPair_4>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + _result);
+      _result = _f._tmp2 + _result;
     }
   }
   return _result;
@@ -414,7 +414,7 @@ LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) {
     } else if (std::holds_alternative<_after_sum_e_entry_in_Add_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp4 + _result);
+      _result = _f._tmp4 + _result;
     } else if (std::holds_alternative<_after_sum_e_entry_in_Add_3>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add_3>(_popped));
       _stack.pop_back();
@@ -424,7 +424,7 @@ LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) {
     } else if (std::holds_alternative<_after_sum_e_entry_in_Add_4>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add_4>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + _result);
+      _result = _f._tmp2 + _result;
     } else if (std::holds_alternative<_after_sum_md_in_MPair>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_in_MPair>(_popped));
       _stack.pop_back();
@@ -434,7 +434,7 @@ LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) {
     } else {
       auto _f = std::move(std::get<_after_sum_md_in_MPair_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp6 + _result);
+      _result = _f._tmp6 + _result;
     }
   }
   return _result;

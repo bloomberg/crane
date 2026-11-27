@@ -128,7 +128,7 @@ struct LocalFixInlinedFnJoin {
           };
         }
       }();
-      return (w(UINT64_C(0)) + w(UINT64_C(1)));
+      return w(UINT64_C(0)) + w(UINT64_C(1));
     }();
   }();
 };

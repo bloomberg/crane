@@ -36,12 +36,12 @@ uint64_t RecordErasedProofFieldsCase::tag_code(
     const auto &[a0] =
         std::get<typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(
             t.v());
-    return (UINT64_C(10) + kind_code(a0));
+    return UINT64_C(10) + kind_code(a0);
   } else {
     const auto &[a0] =
         std::get<typename RecordErasedProofFieldsCase::StoredTag::TagSecondary>(
             t.v());
-    return (UINT64_C(20) + kind_code(a0));
+    return UINT64_C(20) + kind_code(a0);
   }
 }
 
@@ -119,6 +119,6 @@ uint64_t RecordErasedProofFieldsCase::trace_checksum_of(
     const RecordErasedProofFieldsCase::PrimaryRecord &primary,
     const RecordErasedProofFieldsCase::ErasedProofRecord &erased) {
   return trace_codes_of(primary, erased).template fold_left<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
       UINT64_C(0));
 }

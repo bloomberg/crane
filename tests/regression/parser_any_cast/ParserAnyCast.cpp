@@ -36,7 +36,7 @@ uint64_t ParserAnyCast::get_a_value(
 uint64_t ParserAnyCast::sum_a_entries(
     const Datatypes::List<Specif::SigT<ParserAnyCast::Tag, crane::obj>> &es) {
   return List::template fold_left<uint64_t, ParserAnyCast::entry>(
-      [](uint64_t acc, const auto &e) { return (acc + get_a_value(e)); },
+      [](uint64_t acc, const auto &e) { return acc + get_a_value(e); },
       es,
       UINT64_C(0));
 }

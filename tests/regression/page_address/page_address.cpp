@@ -9,10 +9,10 @@ uint64_t PageAddress::page_of(uint64_t p) {
 }
 
 uint64_t PageAddress::page_base(uint64_t p) {
-  return (page_of(p) * UINT64_C(256));
+  return page_of(p) * UINT64_C(256);
 }
 
 uint64_t PageAddress::branch_target(uint64_t pc, uint64_t off) {
-  return (page_base(addr12_of_nat((pc + UINT64_C(2)))) +
-          (UINT64_C(256) ? off % UINT64_C(256) : off));
+  return page_base(addr12_of_nat(pc + UINT64_C(2))) +
+         (UINT64_C(256) ? off % UINT64_C(256) : off);
 }

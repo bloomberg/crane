@@ -11,5 +11,5 @@ uint64_t ModtypeLocalTypeRef::S::lookup(std::pair<uint64_t, uint64_t> e,
 
 ModtypeLocalTypeRef::point
 ModtypeLocalTypeRef::T::shift(const ModtypeLocalTypeRef::point &p, uint64_t d) {
-  return point{(p.px + d), p.py};
+  return point{p.px + d, p.py};
 }

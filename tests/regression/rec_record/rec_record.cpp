@@ -6,6 +6,6 @@ uint64_t RecRecord::rlist_sum(const RecRecord::rlist<uint64_t> &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename RecRecord::rlist<uint64_t>::Rcons>(l.v());
-    return (a0 + rlist_sum(*a1));
+    return a0 + rlist_sum(*a1);
   }
 }

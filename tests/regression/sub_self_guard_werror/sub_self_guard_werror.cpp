@@ -20,6 +20,6 @@ unsigned int SubSelfGuardWerror::k(const List<uint64_t> &l, unsigned int acc) {
     return 0u;
   } else {
     const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    return k(*a1, (acc + 1u));
+    return k(*a1, acc + 1u);
   }
 }

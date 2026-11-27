@@ -8,7 +8,7 @@ uint64_t LetMatchType::let_match_nat(bool b) {
   } else {
     x = UINT64_C(0);
   }
-  return (x + x);
+  return x + x;
 }
 
 /// 2. let-bound nat match returning string — TRIGGERS std::any bug
@@ -32,7 +32,7 @@ uint64_t LetMatchType::let_match_option(std::optional<uint64_t> o) {
   } else {
     x = UINT64_C(0);
   }
-  return (x + UINT64_C(1));
+  return x + UINT64_C(1);
 }
 
 /// 4. let-bound nested bool match
@@ -64,7 +64,7 @@ uint64_t LetMatchType::multi_let_match(bool a, bool b) {
   } else {
     y = UINT64_C(0);
   }
-  return (x + y);
+  return x + y;
 }
 
 /// 6. let-bound match used in function argument
@@ -76,7 +76,7 @@ uint64_t LetMatchType::let_match_in_arg(uint64_t n) {
     uint64_t n_ = n - 1;
     x = n_;
   }
-  return (x + x);
+  return x + x;
 }
 
 /// 7. let-bound match in monadic context

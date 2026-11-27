@@ -533,15 +533,8 @@ struct DeepPatterns {
           pair<uint64_t, uint64_t>::pair0(UINT64_C(1), UINT64_C(2)),
           pair<uint64_t, uint64_t>::pair0(UINT64_C(3), UINT64_C(4))));
   static inline const uint64_t t =
-      ((((((((((((test_deep_some + test_deep_none) + test_deep_pair) +
-                test_shape_3) +
-               test_shape_long) +
-              test_deep_sum) +
-             test_complex) +
-            test_guarded) +
-           test_pair_list) +
-          test_two_one) +
-         test_two_many) +
-        test_triple) +
-       test_wildcard);
+      test_deep_some + test_deep_none + test_deep_pair + test_shape_3 +
+      test_shape_long + test_deep_sum + test_complex + test_guarded +
+      test_pair_list + test_two_one + test_two_many + test_triple +
+      test_wildcard;
 };

@@ -126,7 +126,7 @@ struct DepRecord {
   struct nat_magma {
     using carrier = uint64_t;
 
-    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return a0 + a1; }
   };
 
   static_assert(Magma<nat_magma>);
@@ -143,9 +143,7 @@ struct DepRecord {
   struct nat_monoid {
     using m_carrier = uint64_t;
 
-    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) {
-      return (a0 + a1);
-    }
+    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) { return a0 + a1; }
 
     constexpr static uint64_t m_id() { return UINT64_C(0); }
   };
@@ -155,9 +153,7 @@ struct DepRecord {
   struct nat_mul_monoid {
     using m_carrier = uint64_t;
 
-    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) {
-      return (a0 * a1);
-    }
+    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) { return a0 * a1; }
 
     constexpr static uint64_t m_id() { return UINT64_C(1); }
   };

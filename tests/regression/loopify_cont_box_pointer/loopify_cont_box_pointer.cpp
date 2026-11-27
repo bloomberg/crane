@@ -11,7 +11,7 @@ LoopifyContBoxPointer::tree LoopifyContBoxPointer::build(uint64_t n) {
 LoopifyContBoxPointer::reader
 LoopifyContBoxPointer::read_with(LoopifyContBoxPointer::tree t) {
   return reader::reader0(
-      [=, t = std::move(t)](uint64_t x) { return (x + t.sum()); });
+      [=, t = std::move(t)](uint64_t x) { return x + t.sum(); });
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {

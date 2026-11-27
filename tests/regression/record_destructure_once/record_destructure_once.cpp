@@ -9,6 +9,6 @@ RecordDestructureOnce::triple RecordDestructureOnce::count(uint64_t n) {
     uint64_t a = std::move(_cs).t_steps;
     uint64_t b = std::move(_cs).t_twice;
     uint64_t c = std::move(_cs).t_zero;
-    return triple{(a + 1), (b + UINT64_C(2)), c};
+    return triple{(a + 1), b + UINT64_C(2), c};
   }
 }

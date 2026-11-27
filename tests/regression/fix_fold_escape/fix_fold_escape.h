@@ -150,7 +150,7 @@ struct FixFoldEscape {
         collect_adders(List<uint64_t>::cons(
             UINT64_C(100),
             List<uint64_t>::cons(UINT64_C(200), List<uint64_t>::nil())));
-    uint64_t noise = ((UINT64_C(55) + UINT64_C(44)) + UINT64_C(33));
-    return (apply_head(std::move(fns), UINT64_C(0)) + noise);
+    uint64_t noise = UINT64_C(55) + UINT64_C(44) + UINT64_C(33);
+    return apply_head(std::move(fns), UINT64_C(0)) + noise;
   }();
 };

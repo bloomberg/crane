@@ -17,7 +17,7 @@ uint64_t LocalFixReturnsFunction::t(const List<uint64_t> &l) {
   const List<uint64_t> *_lc1_loop_l0 = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_lc1_loop_l0->v())) {
-      return (_lc1_x0_ + UINT64_C(1));
+      return _lc1_x0_ + UINT64_C(1);
     } else {
       const auto &[_, a1] =
           std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
@@ -77,7 +77,7 @@ LocalFixReturnsFunction::h(uint64_t n, std::optional<uint64_t> x0_) {
                     _loop_l.v_mut())) {
               if (x0_0.has_value()) {
                 const uint64_t &y = *x0_0;
-                return std::make_optional<uint64_t>((y + acc));
+                return std::make_optional<uint64_t>(y + acc);
               } else {
                 return std::make_optional<uint64_t>(acc);
               }

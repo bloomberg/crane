@@ -186,7 +186,7 @@ struct LoopifyContBoxPointer {
           auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;

@@ -249,7 +249,7 @@ struct NestedClassStateArg {
     return run_st<FusedS<typename _tcI0::ptr>>(
         [](const std::pair<St<typename _tcI0::ptr>,
                            std::pair<List<Nat>,
-                                     Nat>> &st) { return (st.second).second; },
+                                     Nat>> &st) { return st.second.second; },
         s);
   }
 

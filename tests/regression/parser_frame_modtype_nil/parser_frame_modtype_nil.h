@@ -67,8 +67,8 @@ template <SymbolTypes Ty> struct DefsFn {
       const frame &f = frs.front();
       std::deque<frame> frs_ = std::deque<frame>(frs.begin() + 1, frs.end());
       const auto &[_, _, suf0] = f;
-      return (static_cast<uint64_t>(suf0.size()) +
-              tail_lengths(std::move(frs_)));
+      return (static_cast<uint64_t>(suf0.size())) +
+             tail_lengths(std::move(frs_));
     }
   }
 };
@@ -84,7 +84,7 @@ template <T D> struct ParserFn {
                              std::deque<typename D::Defs::frame>> &s) {
     const auto &[f, frs] = s;
     const auto &[_, _, suf0] = f;
-    return (static_cast<uint64_t>(suf0.size()) + D::Defs::tail_lengths(frs));
+    return (static_cast<uint64_t>(suf0.size())) + D::Defs::tail_lengths(frs);
   }
 
   static uint64_t parse(typename D::SymTy::symbol x) {

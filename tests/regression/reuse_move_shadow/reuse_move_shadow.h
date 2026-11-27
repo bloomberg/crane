@@ -157,6 +157,6 @@ struct ReuseMoveShadow {
     tree t = tree::node(UINT64_C(7),
                         tree::node(UINT64_C(8), tree::leaf(), tree::leaf()),
                         tree::node(UINT64_C(9), tree::leaf(), tree::leaf()));
-    return (tree_sum(dup_left(t, true)) + tree_sum(t));
+    return tree_sum(dup_left(t, true)) + tree_sum(t);
   }();
 };

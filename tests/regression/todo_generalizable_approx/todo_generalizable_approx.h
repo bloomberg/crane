@@ -13,6 +13,6 @@ struct TodoGeneralizableApprox {
 
   static uint64_t double_then_add(uint64_t x);
   static inline const uint64_t test1 =
-      apply_twice([](uint64_t n) { return (n + UINT64_C(1)); }, UINT64_C(5));
+      apply_twice([](uint64_t n) { return n + UINT64_C(1); }, UINT64_C(5));
   static inline const uint64_t test2 = double_then_add(UINT64_C(3));
 };

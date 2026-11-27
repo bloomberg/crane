@@ -42,7 +42,7 @@ FixEscapeMatch::make_fn_from_pair(const List<uint64_t> &l) {
           std::get<typename List<uint64_t>::Cons>(a1_value.v());
       auto combine_impl = [=](auto &_self_combine, uint64_t x) -> uint64_t {
         if (x <= 0) {
-          return (a0 + a00);
+          return a0 + a00;
         } else {
           uint64_t x_ = x - 1;
           return (_self_combine(_self_combine, x_) + 1);

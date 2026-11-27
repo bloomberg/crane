@@ -65,7 +65,7 @@ struct MonadClassTypeConstructor {
   static inline const Opt<uint64_t> prog =
       MOpt::template mbind<uint64_t, uint64_t>(
           MOpt::template mret<uint64_t>(UINT64_C(20)), [](uint64_t a) {
-            return MOpt::template mret<uint64_t>((a + UINT64_C(22)));
+            return MOpt::template mret<uint64_t>(a + UINT64_C(22));
           });
   static inline const uint64_t go = []() -> uint64_t {
     if (prog.has_value()) {

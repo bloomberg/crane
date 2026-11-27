@@ -57,7 +57,7 @@ TypedMappingAlgebraic::lengths(const List<std::optional<uint64_t>> &l) {
   return l.template fold_left<uint64_t>(
       [](uint64_t acc,
          std::optional<uint64_t> m) {
-        return (acc + maybe_default<uint64_t>(m, UINT64_C(0)));
+        return acc + maybe_default<uint64_t>(m, UINT64_C(0));
       },
       UINT64_C(0));
 }

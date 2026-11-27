@@ -65,7 +65,7 @@ uint64_t LoopifyPartnerTailAndInvoked::walk(uint64_t n) {
     } else if (std::holds_alternative<_after_step_entry_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_step_entry_in_false>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     } else if (std::holds_alternative<_after_walk_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_walk_in_S>(_popped));
       _stack.pop_back();
@@ -130,7 +130,7 @@ uint64_t LoopifyPartnerTailAndInvoked::step(uint64_t n) {
     } else if (std::holds_alternative<_after_step_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_step_in_false>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     } else {
       auto _f = std::move(std::get<_after_walk_entry_in_S>(_popped));
       _stack.pop_back();

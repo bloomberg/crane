@@ -105,7 +105,7 @@ std::string EffectWorkflow::env_or_create(const std::string &name,
 int64_t EffectWorkflow::read_length() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
+  int64_t len = static_cast<int64_t>(std::string_view{line}.size());
   return len;
 }
 

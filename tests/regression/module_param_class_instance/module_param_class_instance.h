@@ -32,7 +32,7 @@ concept CARRIER = requires {
 struct ModuleParamClassInstance {
   template <CARRIER C> struct Doubler {
     static uint64_t twice(typename C::t x) {
-      return (C::inst::weigh(x) + C::inst::weigh(x));
+      return C::inst::weigh(x) + C::inst::weigh(x);
     }
 
     static const uint64_t &on_sample() {
@@ -53,5 +53,5 @@ struct ModuleParamClassInstance {
   };
 
   using D = Doubler<NatC>;
-  static inline const uint64_t total = (D::on_sample() + D::twice(UINT64_C(7)));
+  static inline const uint64_t total = D::on_sample() + D::twice(UINT64_C(7));
 };

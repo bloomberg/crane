@@ -309,7 +309,7 @@ struct MapPartialApp {
                                    List<uint64_t>::nil()))
               .template map<uint64_t>(
               [=, f2 = std::move(f2)](uint64_t v) { return tree_sum(f2(v)); });
-      return (sum_list(std::move(r1)) + sum_list(std::move(r2)));
+      return sum_list(std::move(r1)) + sum_list(std::move(r2));
     }();
   }();
 };

@@ -119,9 +119,9 @@ struct ComposedFnDefaultRegroup {
               crane::fn<uint64_t(bool, uint64_t)> cf =
                   [](bool b, uint64_t n) -> uint64_t {
                     if (b) {
-                      return (n + UINT64_C(1));
+                      return n + UINT64_C(1);
                     } else {
-                      return (n + UINT64_C(5));
+                      return n + UINT64_C(5);
                     }
                   };
               crane::fn<bool(crane::fn<uint64_t(uint64_t)>)> cg =

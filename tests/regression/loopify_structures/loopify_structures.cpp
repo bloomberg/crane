@@ -69,7 +69,7 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
           std::move(std::get<_after_sum_nested_list_fuel_in_Elem>(_popped));
       _stack.pop_back();
       uint64_t a00 = _f.a00;
-      _result = (a00 + _result);
+      _result = a00 + _result;
     } else if (std::holds_alternative<_after_sum_nested_list_fuel_in_NList>(
                    _popped)) {
       auto _f =
@@ -83,7 +83,7 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
       auto _f =
           std::move(std::get<_after_sum_nested_list_fuel_in_NList_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp3 + _result);
+      _result = _f._tmp3 + _result;
     }
   }
   return _result;

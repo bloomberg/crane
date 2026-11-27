@@ -145,7 +145,7 @@ struct LocalFixFnResultJoin {
           }
         }
       }();
-      return (f(UINT64_C(1)) + f(UINT64_C(2)));
+      return f(UINT64_C(1)) + f(UINT64_C(2));
     }();
   }();
 };

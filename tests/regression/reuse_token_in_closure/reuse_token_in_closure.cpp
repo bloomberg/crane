@@ -6,7 +6,7 @@ uint64_t ReuseTokenInClosure::suml(const ReuseTokenInClosure::lst &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename ReuseTokenInClosure::lst::Cons>(l.v());
-    return (a0 + suml(*a1));
+    return a0 + suml(*a1);
   }
 }
 

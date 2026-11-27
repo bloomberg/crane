@@ -14,13 +14,13 @@ struct LetIn {
   static inline const uint64_t let_with_add = []() {
     uint64_t x = UINT64_C(3);
     uint64_t y = UINT64_C(4);
-    return (x + y);
+    return x + y;
   }();
   static constexpr uint64_t shadowed_let = UINT64_C(3);
   static uint64_t let_in_fun(uint64_t n);
   static inline const uint64_t let_fun = []() {
     uint64_t x = UINT64_C(5);
-    return (x + UINT64_C(1));
+    return x + UINT64_C(1);
   }();
 
   template <typename A, typename B> struct pair {
@@ -79,7 +79,7 @@ struct LetIn {
     uint64_t a = UINT64_C(1);
     uint64_t b = UINT64_C(2);
     uint64_t c = UINT64_C(3);
-    return (a + (b + c));
+    return a + (b + c);
   }();
   static inline const uint64_t test_simple = simple_let;
   static inline const uint64_t test_nested = nested_let;

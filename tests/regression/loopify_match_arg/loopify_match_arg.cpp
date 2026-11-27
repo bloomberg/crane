@@ -41,7 +41,7 @@ uint64_t LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell> &xs) {
     } else {
       auto _f = std::move(std::get<_after_count_dots_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -80,7 +80,7 @@ uint64_t LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) {
     } else {
       auto _f = std::move(std::get<_after_my_length_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;

@@ -37,7 +37,7 @@ uint64_t LoopifyNumericSequences::collatz_length_fuel(uint64_t fuel,
                                     fuel_});
         } else {
           _stack.emplace_back(_after_collatz_length_fuel_in_false{});
-          _stack.emplace_back(_call{((UINT64_C(3) * n) + UINT64_C(1)), fuel_});
+          _stack.emplace_back(_call{UINT64_C(3) * n + UINT64_C(1), fuel_});
         }
       }
     } else if (std::holds_alternative<_after_collatz_length_fuel_in_false>(
@@ -45,19 +45,19 @@ uint64_t LoopifyNumericSequences::collatz_length_fuel(uint64_t fuel,
       auto _f =
           std::move(std::get<_after_collatz_length_fuel_in_false>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     } else {
       auto _f =
           std::move(std::get<_after_collatz_length_fuel_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
 }
 
 uint64_t LoopifyNumericSequences::collatz_length(uint64_t n) {
-  return collatz_length_fuel((n * UINT64_C(100)), n);
+  return collatz_length_fuel(n * UINT64_C(100), n);
 }
 
 List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(uint64_t fuel,
@@ -97,7 +97,7 @@ List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(uint64_t fuel,
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        n = ((UINT64_C(3) * n) + UINT64_C(1));
+        n = UINT64_C(3) * n + UINT64_C(1);
         fuel = fuel_;
         continue;
       }
@@ -107,7 +107,7 @@ List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(uint64_t fuel,
 }
 
 List<uint64_t> LoopifyNumericSequences::collatz_sequence(uint64_t n) {
-  return collatz_sequence_fuel((n * UINT64_C(100)), n);
+  return collatz_sequence_fuel(n * UINT64_C(100), n);
 }
 
 uint64_t LoopifyNumericSequences::tribonacci_fuel(uint64_t fuel, uint64_t n) {
@@ -160,7 +160,7 @@ uint64_t LoopifyNumericSequences::tribonacci_fuel(uint64_t fuel, uint64_t n) {
         } else {
           _stack.emplace_back(_after_tribonacci_fuel_in_false{n, fuel_});
           _stack.emplace_back(
-              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+              _call{(n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)), fuel_});
         }
       }
     } else if (std::holds_alternative<_after_tribonacci_fuel_in_false>(_popped)) {
@@ -170,7 +170,7 @@ uint64_t LoopifyNumericSequences::tribonacci_fuel(uint64_t fuel, uint64_t n) {
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(_after_tribonacci_fuel_in_false_2{n, fuel_, _result});
       _stack.emplace_back(
-          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
+          _call{(n - UINT64_C(2) > n ? 0 : n - UINT64_C(2)), fuel_});
     } else if (
             std::holds_alternative<_after_tribonacci_fuel_in_false_2>(_popped)) {
       auto _f = std::move(std::get<_after_tribonacci_fuel_in_false_2>(_popped));
@@ -179,18 +179,18 @@ uint64_t LoopifyNumericSequences::tribonacci_fuel(uint64_t fuel, uint64_t n) {
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(_after_tribonacci_fuel_in_false_3{_f._tmp3, _result});
       _stack.emplace_back(
-          _call{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
+          _call{(n - UINT64_C(3) > n ? 0 : n - UINT64_C(3)), fuel_});
     } else {
       auto _f = std::move(std::get<_after_tribonacci_fuel_in_false_3>(_popped));
       _stack.pop_back();
-      _result = ((_f._tmp3 + _f._tmp2) + _result);
+      _result = _f._tmp3 + _f._tmp2 + _result;
     }
   }
   return _result;
 }
 
 uint64_t LoopifyNumericSequences::tribonacci(uint64_t n) {
-  return tribonacci_fuel((n * UINT64_C(3)), n);
+  return tribonacci_fuel(n * UINT64_C(3), n);
 }
 
 uint64_t LoopifyNumericSequences::staircase_fuel(uint64_t fuel, uint64_t n) {
@@ -241,7 +241,7 @@ uint64_t LoopifyNumericSequences::staircase_fuel(uint64_t fuel, uint64_t n) {
         } else {
           _stack.emplace_back(_after_staircase_fuel_in_false{n, fuel_});
           _stack.emplace_back(
-              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+              _call{(n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)), fuel_});
         }
       }
     } else if (std::holds_alternative<_after_staircase_fuel_in_false>(_popped)) {
@@ -251,7 +251,7 @@ uint64_t LoopifyNumericSequences::staircase_fuel(uint64_t fuel, uint64_t n) {
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(_after_staircase_fuel_in_false_2{n, fuel_, _result});
       _stack.emplace_back(
-          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
+          _call{(n - UINT64_C(2) > n ? 0 : n - UINT64_C(2)), fuel_});
     } else if (
             std::holds_alternative<_after_staircase_fuel_in_false_2>(_popped)) {
       auto _f = std::move(std::get<_after_staircase_fuel_in_false_2>(_popped));
@@ -260,18 +260,18 @@ uint64_t LoopifyNumericSequences::staircase_fuel(uint64_t fuel, uint64_t n) {
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(_after_staircase_fuel_in_false_3{_f._tmp3, _result});
       _stack.emplace_back(
-          _call{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
+          _call{(n - UINT64_C(3) > n ? 0 : n - UINT64_C(3)), fuel_});
     } else {
       auto _f = std::move(std::get<_after_staircase_fuel_in_false_3>(_popped));
       _stack.pop_back();
-      _result = ((_f._tmp3 + _f._tmp2) + _result);
+      _result = _f._tmp3 + _f._tmp2 + _result;
     }
   }
   return _result;
 }
 
 uint64_t LoopifyNumericSequences::staircase(uint64_t n) {
-  return staircase_fuel((n * UINT64_C(3)), n);
+  return staircase_fuel(n * UINT64_C(3), n);
 }
 
 uint64_t LoopifyNumericSequences::digitsum_fuel(uint64_t fuel, uint64_t n) {
@@ -313,14 +313,14 @@ uint64_t LoopifyNumericSequences::digitsum_fuel(uint64_t fuel, uint64_t n) {
       auto _f = std::move(std::get<_after_digitsum_fuel_in_false>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = ((UINT64_C(10) ? n % UINT64_C(10) : n) + _result);
+      _result = (UINT64_C(10) ? n % UINT64_C(10) : n) + _result;
     }
   }
   return _result;
 }
 
 uint64_t LoopifyNumericSequences::digitsum(uint64_t n) {
-  return digitsum_fuel((n + UINT64_C(1)), n);
+  return digitsum_fuel(n + UINT64_C(1), n);
 }
 
 uint64_t LoopifyNumericSequences::dec_to_bin_fuel(uint64_t fuel, uint64_t n) {
@@ -362,15 +362,14 @@ uint64_t LoopifyNumericSequences::dec_to_bin_fuel(uint64_t fuel, uint64_t n) {
       auto _f = std::move(std::get<_after_dec_to_bin_fuel_in_false>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result =
-          ((UINT64_C(2) ? n % UINT64_C(2) : n) + (UINT64_C(10) * _result));
+      _result = (UINT64_C(2) ? n % UINT64_C(2) : n) + UINT64_C(10) * _result;
     }
   }
   return _result;
 }
 
 uint64_t LoopifyNumericSequences::dec_to_bin(uint64_t n) {
-  return dec_to_bin_fuel((n + UINT64_C(1)), n);
+  return dec_to_bin_fuel(n + UINT64_C(1), n);
 }
 
 uint64_t LoopifyNumericSequences::alternate_sum(bool sign, uint64_t acc,
@@ -386,12 +385,12 @@ uint64_t LoopifyNumericSequences::alternate_sum(bool sign, uint64_t acc,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (sign) {
         _loop_l = crane_raw(a1);
-        acc = (acc + a0);
+        acc = acc + a0;
         sign = false;
       } else {
         if (a0 <= acc) {
           _loop_l = crane_raw(a1);
-          acc = (((acc - a0) > acc ? 0 : (acc - a0)));
+          acc = (acc - a0 > acc ? 0 : acc - a0);
         } else {
           _loop_l = crane_raw(a1);
           acc = UINT64_C(0);
@@ -436,7 +435,7 @@ uint64_t LoopifyNumericSequences::sum_divisors_aux(uint64_t n, uint64_t d) {
       auto _f = std::move(std::get<_after_sum_divisors_aux_in_true>(_popped));
       _stack.pop_back();
       uint64_t d = _f.d;
-      _result = (d + _result);
+      _result = d + _result;
     }
   }
   return _result;
@@ -446,7 +445,6 @@ uint64_t LoopifyNumericSequences::sum_divisors(uint64_t n) {
   if (n <= UINT64_C(1)) {
     return UINT64_C(0);
   } else {
-    return sum_divisors_aux(n,
-                            (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))));
+    return sum_divisors_aux(n, (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)));
   }
 }

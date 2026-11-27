@@ -37,11 +37,11 @@ unsigned int Pos::add_carry(unsigned int x, unsigned int y) {
 }
 
 unsigned int NIntTest::add_test(unsigned int x0_, unsigned int x1_) {
-  return (x0_ + x1_);
+  return x0_ + x1_;
 }
 
 unsigned int NIntTest::mul_test(unsigned int x0_, unsigned int x1_) {
-  return (x0_ * x1_);
+  return x0_ * x1_;
 }
 
 unsigned int NIntTest::sub_test(unsigned int x0_, unsigned int x1_) {
@@ -64,13 +64,13 @@ bool NIntTest::leb_test(unsigned int x0_, unsigned int x1_) {
   return x0_ <= x1_;
 }
 
-unsigned int NIntTest::succ_test(unsigned int x0_) { return (x0_ + 1u); }
+unsigned int NIntTest::succ_test(unsigned int x0_) { return x0_ + 1u; }
 
 unsigned int NIntTest::pred_test(unsigned int x0_) {
   return (x0_ == 0u ? 0u : x0_ - 1u);
 }
 
-unsigned int NIntTest::double_test(unsigned int x0_) { return (x0_ * 2u); }
+unsigned int NIntTest::double_test(unsigned int x0_) { return x0_ * 2u; }
 
 bool NIntTest::is_zero(unsigned int n) {
   if (n == 0u) {
@@ -82,7 +82,7 @@ bool NIntTest::is_zero(unsigned int n) {
 }
 
 unsigned int NIntTest::pos_add(unsigned int x0_, unsigned int x1_) {
-  return (x0_ + x1_);
+  return x0_ + x1_;
 }
 
-unsigned int NIntTest::pos_succ(unsigned int x0_) { return (x0_ + 1u); }
+unsigned int NIntTest::pos_succ(unsigned int x0_) { return x0_ + 1u; }

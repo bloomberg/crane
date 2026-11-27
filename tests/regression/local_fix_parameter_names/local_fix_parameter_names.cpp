@@ -13,7 +13,7 @@ uint64_t LocalFixParameterNames::walk2(uint64_t f, const List<uint64_t> &x0_) {
   auto g_impl =
       [&](auto &_self_f0, auto &_self_g, const List<uint64_t> &f1) -> uint64_t {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(f1.v())) {
-          return (f + UINT64_C(1));
+          return f + UINT64_C(1);
         } else {
           const auto &[_, a10] =
               std::get<typename List<uint64_t>::Cons>(f1.v());

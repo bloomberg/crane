@@ -69,8 +69,8 @@ std::string EffectOptionString::nested_option(const std::string &n1,
     }();
     if (r2.has_value()) {
       const std::string &v2 = *r2;
-      return (v1 + (std::string("/") + v2).substr(0, 16777211)).substr(0,
-                                                                       16777211);
+      return (v1 + ((std::string("/") + v2).substr(0, 16777211))).substr(
+                                            0, 16777211);
     } else {
       return v1;
     }
@@ -104,7 +104,7 @@ int64_t EffectOptionString::option_int(const std::string &name) {
   int64_t len;
   if (r.has_value()) {
     const std::string &v = *r;
-    len = static_cast<int64_t>((std::string_view{v}).size());
+    len = static_cast<int64_t>(std::string_view{v}.size());
   } else {
     len = INT64_C(0);
   }

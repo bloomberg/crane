@@ -20,5 +20,5 @@ uint64_t IifeNameClash::double_get(const IifeNameClash::wrapper &w1,
       return UINT64_C(0);
     }
   }();
-  return (x + y);
+  return x + y;
 }

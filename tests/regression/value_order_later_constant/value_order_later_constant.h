@@ -608,7 +608,7 @@ struct ValueOrderLaterConstant {
     }() ? List<List<uint64_t>>::nil() : List<List<uint64_t>>::nil()));
     return w36.template fold_left<uint64_t>(
         [](uint64_t w38, uint64_t e) {
-          auto _once1 = ((w38 * UINT64_C(3)) + e);
+          auto _once1 = w38 * UINT64_C(3) + e;
           return (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
         },
         UINT64_C(1));

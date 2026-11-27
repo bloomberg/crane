@@ -71,7 +71,7 @@ LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst &l) {
       auto _f = std::move(std::get<_after_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -98,7 +98,7 @@ LoopifyReuseBoolQualified::incr(LoopifyReuseBoolQualified::lst l) {
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token), typename LoopifyReuseBoolQualified::lst::Cons(
-                                    (a0 + UINT64_C(1)), nullptr));
+                                    a0 + UINT64_C(1), nullptr));
       _write =
           &std::get<typename LoopifyReuseBoolQualified::lst::Cons>(
               (*_write)->v_mut())

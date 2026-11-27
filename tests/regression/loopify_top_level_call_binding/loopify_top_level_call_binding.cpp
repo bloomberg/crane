@@ -85,11 +85,11 @@ LoopifyTopLevelCallBinding::csum(const LoopifyTopLevelCallBinding::cell &c) {
       auto _f = std::move(std::get<_after_go>(_popped));
       _stack.pop_back();
       LoopifyTopLevelCallBinding::cell c = std::move(_f.c);
-      _result = (key(std::move(c)) + _result);
+      _result = key(std::move(c)) + _result;
     } else {
       auto _f = std::move(std::get<_after_go_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + _result);
+      _result = _f._tmp2 + _result;
     }
   }
   return _result;

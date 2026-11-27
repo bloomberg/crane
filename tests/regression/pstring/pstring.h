@@ -162,7 +162,7 @@ struct PString {
       return "[]";
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      return ((p(a0) + std::string("::")).substr(0, 16777211) +
+      return (((p(a0) + std::string("::")).substr(0, 16777211)) +
               list_to_string<T1>(p, *a1))
                  .substr(0, 16777211);
     }

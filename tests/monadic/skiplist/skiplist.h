@@ -731,13 +731,13 @@ template <typename K, typename V> struct SkipList {
   static void extendPath(SkipPath<T1, T2> path,
                          std::shared_ptr<SkipNode<T1, T2>> head,
                          uint64_t needed, uint64_t currentMax) {
-    if (needed <= (currentMax + 1)) {
+    if (needed <= ((currentMax + 1))) {
       return;
     } else {
       SkipList<int, int>::template extendPath_aux<T1, T2>(
           std::move(path), std::move(head),
-          (((needed - UINT64_C(1)) > needed ? 0 : (needed - UINT64_C(1)))),
-          (currentMax + UINT64_C(1)));
+          (needed - UINT64_C(1) > needed ? 0 : needed - UINT64_C(1)),
+          currentMax + UINT64_C(1));
     }
   }
 
@@ -1001,7 +1001,7 @@ template <typename K, typename V> struct SkipList {
     auto _once1 = 16u;
     std::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
         dummyKey, dummyVal,
-        (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
+        (_once1 - UINT64_C(1) > _once1 ? 0 : _once1 - UINT64_C(1)));
     stm::TVar<uint64_t> lvlTV = stm::newTVar<uint64_t>(UINT64_C(0));
     stm::TVar<uint64_t> lenTV = stm::newTVar<uint64_t>(UINT64_C(0));
     return SkipList<T1, T2>{std::move(headNode), 16u, std::move(lvlTV),

@@ -98,7 +98,7 @@ Positive Coq_Pos::mul(const Positive &x, Positive y) {
 
 uint64_t Pos::to_nat(const Positive &x) {
   return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
       x,
       UINT64_C(1));
 }
@@ -448,11 +448,11 @@ bool AsciiAsChar::check() {
                                          (true ? 16 : 0) | (true ? 32 : 0) |
                                          (true ? 64 : 0) |
                                          (false ? 128 : 0))))) &&
-                Ascii0::nat_of_ascii(static_cast<char>(
-                    (true ? 1 : 0) | (false ? 2 : 0) | (false ? 4 : 0) |
-                    (false ? 8 : 0) | (false ? 16 : 0) | (false ? 32 : 0) |
-                    (true ? 64 : 0) | (false ? 128 : 0))) ==
-                UINT64_C(65));
+                (Ascii0::nat_of_ascii(static_cast<char>(
+                     (true ? 1 : 0) | (false ? 2 : 0) | (false ? 4 : 0) |
+                     (false ? 8 : 0) | (false ? 16 : 0) | (false ? 32 : 0) |
+                     (true ? 64 : 0) | (false ? 128 : 0))) ==
+                 UINT64_C(65)));
       }
       default: {
         return false;

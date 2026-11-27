@@ -154,7 +154,7 @@ struct SplicePartnerOtherInstance {
   template <typename T1, typename F0>
   static uint64_t g(F0 &&h, const T1 &x, uint64_t n) {
     if (n <= 0) {
-      return (h(x) + UINT64_C(1));
+      return h(x) + UINT64_C(1);
     } else {
       uint64_t m = n - 1;
       return f<T1>(h, x, m);

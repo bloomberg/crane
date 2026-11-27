@@ -231,7 +231,7 @@ struct RegisterPairOps {
   static inline const bool test_set_reg_affects_pair_high =
       get_reg_pair(set_reg(sample_pair_high, UINT64_C(2), UINT64_C(13)),
                    UINT64_C(2)) ==
-      ((UINT64_C(13) * UINT64_C(16)) + get_reg(sample_pair_high, UINT64_C(3)));
+      UINT64_C(13) * UINT64_C(16) + get_reg(sample_pair_high, UINT64_C(3));
   static inline const state sample_pair_low = state{List<uint64_t>::cons(
       UINT64_C(2),
       List<uint64_t>::cons(
@@ -247,7 +247,7 @@ struct RegisterPairOps {
   static inline const bool test_set_reg_affects_pair_low =
       get_reg_pair(set_reg(sample_pair_low, UINT64_C(3), UINT64_C(12)),
                    UINT64_C(3)) ==
-      ((get_reg(sample_pair_low, UINT64_C(2)) * UINT64_C(16)) + UINT64_C(12));
+      get_reg(sample_pair_low, UINT64_C(2)) * UINT64_C(16) + UINT64_C(12);
   static inline const state sample_idempotent = state{List<uint64_t>::cons(
       UINT64_C(0),
       List<uint64_t>::cons(

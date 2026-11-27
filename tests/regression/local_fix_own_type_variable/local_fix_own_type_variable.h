@@ -189,10 +189,10 @@ struct LocalFixOwnTypeVariable {
 
   template <typename T1, typename T2>
   static uint64_t h(const T1 &a, const T2 &b) {
-    return ((h_crane_go<T1>(
-                 List<T1>::cons(a, List<T1>::cons(a, List<T1>::nil())), b) +
-             h_crane_go<T1>(List<T2>::cons(b, List<T2>::nil()), b)) +
-            h_crane_go<T1>(List<bool>::cons(true, List<bool>::nil()), b));
+    return h_crane_go<T1>(List<T1>::cons(a, List<T1>::cons(a, List<T1>::nil())),
+                          b) +
+           h_crane_go<T1>(List<T2>::cons(b, List<T2>::nil()), b) +
+           h_crane_go<T1>(List<bool>::cons(true, List<bool>::nil()), b);
   }
 
   static inline const uint64_t v = h<uint64_t, bool>(UINT64_C(1), false);

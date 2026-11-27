@@ -20,7 +20,7 @@ struct GeneratedMemberNameCollision {
 
     uint64_t unbox() const {
       const auto &[clone_0, v_mut_1] = *this;
-      return (clone_0 + v_mut_1);
+      return clone_0 + v_mut_1;
     }
 
     template <typename T1, typename F0> T1 boxed_rec(F0 &&f) const {

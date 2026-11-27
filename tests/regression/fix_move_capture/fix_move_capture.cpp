@@ -6,7 +6,7 @@ uint64_t FixMoveCapture::length(const FixMoveCapture::mylist &l) {
   } else {
     const auto &[_, a1] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
-    return (UINT64_C(1) + length(*a1));
+    return UINT64_C(1) + length(*a1);
   }
 }
 
@@ -16,7 +16,7 @@ uint64_t FixMoveCapture::sum(const FixMoveCapture::mylist &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
-    return (a0 + sum(*a1));
+    return a0 + sum(*a1);
   }
 }
 
@@ -46,12 +46,12 @@ uint64_t FixMoveCapture::f(FixMoveCapture::mylist l) {
       return sum(l);
     } else {
       uint64_t m = n - 1;
-      return (UINT64_C(1) + _self_go(_self_go, m));
+      return UINT64_C(1) + _self_go(_self_go, m);
     }
   };
   auto go = [&](uint64_t n) -> uint64_t { return go_impl(go_impl, n); };
   FixMoveCapture::mylist t = dup_head(l);
-  return (go(UINT64_C(3)) + length(std::move(t)));
+  return go(UINT64_C(3)) + length(std::move(t));
 }
 
 /// Even simpler: use the fixpoint, then pass l to a consuming
@@ -63,10 +63,10 @@ uint64_t FixMoveCapture::f2(FixMoveCapture::mylist l) {
       return sum(l);
     } else {
       uint64_t m = n - 1;
-      return (UINT64_C(1) + _self_go(_self_go, m));
+      return UINT64_C(1) + _self_go(_self_go, m);
     }
   };
   auto go = [&](uint64_t n) -> uint64_t { return go_impl(go_impl, n); };
   uint64_t result_g = go(UINT64_C(3));
-  return (result_g + length(dup_head(l)));
+  return result_g + length(dup_head(l));
 }

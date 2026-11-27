@@ -6,6 +6,7 @@
 #include <concepts>
 #include <crane_itree.h>
 #include <crane_st.h>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <span>

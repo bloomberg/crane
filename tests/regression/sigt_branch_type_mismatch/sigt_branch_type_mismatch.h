@@ -52,7 +52,7 @@ struct SigtBranchTypeMismatch {
       SigT<bool, crane::obj>::existt(
           false, crane_erase_fn([](const crane::obj &_any_n) {
             uint64_t n = crane::any_cast<uint64_t>(_any_n);
-            return (n + UINT64_C(7));
+            return n + UINT64_C(7);
           }));
   static inline const uint64_t go = []() {
     const auto &_sv = pack;

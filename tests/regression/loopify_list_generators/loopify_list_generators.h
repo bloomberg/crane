@@ -215,7 +215,7 @@ struct LoopifyListGenerators {
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        idx = (idx + UINT64_C(1));
+        idx = idx + UINT64_C(1);
         n = n_;
         continue;
       }
@@ -265,7 +265,7 @@ struct LoopifyListGenerators {
               auto _f = std::move(std::get<_after_go_in_S>(_popped));
               _stack.pop_back();
               uint64_t i = _f.i;
-              _result = List<uint64_t>::cons(f((((n - i) > n ? 0 : (n - i)))),
+              _result = List<uint64_t>::cons(f((n - i > n ? 0 : n - i)),
                                              std::move(_result));
             }
           }

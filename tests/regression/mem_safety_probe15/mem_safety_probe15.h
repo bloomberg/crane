@@ -104,7 +104,7 @@ struct MemSafetyProbe15 {
     uint64_t two_pass() const {
       mylist<uint64_t> vals = flatten(*this);
       mylist<uint64_t> sums = subtree_sums(*this);
-      return (sum_list(std::move(vals)) + sum_list(std::move(sums)));
+      return sum_list(std::move(vals)) + sum_list(std::move(sums));
     }
 
     /// TEST 4: Tree zipping — combine two trees into one.
@@ -175,7 +175,7 @@ struct MemSafetyProbe15 {
           uint64_t a1 = _f.a1;
           uint64_t a10 = _f.a10;
           _result =
-              tree::node(std::move(_f._tmp2), (a1 + a10), std::move(_result));
+              tree::node(std::move(_f._tmp2), a1 + a10, std::move(_result));
         }
       }
       return _result;
@@ -286,7 +286,7 @@ struct MemSafetyProbe15 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -525,7 +525,7 @@ struct MemSafetyProbe15 {
         } else {
           auto _f = std::move(std::get<_after_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -678,7 +678,7 @@ struct MemSafetyProbe15 {
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
     mylist<uint64_t> l2 = l.template map_list<uint64_t>(
-        [](uint64_t x) { return (x + UINT64_C(1)); });
+        [](uint64_t x) { return x + UINT64_C(1); });
     return sum_list(std::move(l2));
   }();
   /// TEST 9: Build a large tree and verify all values are preserved.

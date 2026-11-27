@@ -66,7 +66,7 @@ uint64_t LoopifyMutualFrameUntypedBinder::tree_obs(
       auto _f = std::move(std::get<_after_tree_obs_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      auto _once1 = (((_f._tmp2 * UINT64_C(7)) + a1) + (_result * UINT64_C(3)));
+      auto _once1 = _f._tmp2 * UINT64_C(7) + a1 + _result * UINT64_C(3);
       _result = (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
     }
   }
@@ -99,7 +99,7 @@ LoopifyMutualFrameUntypedBinder::h1b(uint64_t n12,
         return tree::node(tree::leaf(), UINT64_C(11), tree::leaf());
       }
     }());
-    return (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2)));
+    return (_once1 - _once2 > _once1 ? 0 : _once1 - _once2);
   } else {
     uint64_t m15 = n12 - 1;
     auto _once3 = [&]() {

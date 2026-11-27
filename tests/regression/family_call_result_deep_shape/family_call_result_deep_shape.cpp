@@ -10,9 +10,10 @@ uint64_t FamilyCallResultDeepShape::sz(const FamilyCallResultDeepShape::ty &t,
           t.v())) {
     const auto &[a0, a1] =
         std::get<typename FamilyCallResultDeepShape::ty::TPair>(t.v());
-    return (
-        sz(*a0, crane::any_cast<std::pair<crane::obj, crane::obj>>(n).first) +
-        sz(*a1, crane::any_cast<std::pair<crane::obj, crane::obj>>(n).second));
+    return sz(*a0,
+              crane::any_cast<std::pair<crane::obj, crane::obj>>(n).first) +
+           sz(*a1,
+              crane::any_cast<std::pair<crane::obj, crane::obj>>(n).second);
   } else {
     const auto &[a0] =
         std::get<typename FamilyCallResultDeepShape::ty::TList>(t.v());
@@ -22,7 +23,7 @@ uint64_t FamilyCallResultDeepShape::sz(const FamilyCallResultDeepShape::ty &t,
                .template fold_left<uint64_t>(
         [=, a0_value = a0_value](uint64_t acc,
                                  FamilyCallResultDeepShape::den x) {
-          return (acc + sz(a0_value, std::move(x)));
+          return acc + sz(a0_value, std::move(x));
         },
         UINT64_C(0));
   }

@@ -57,7 +57,7 @@ uint64_t UnusedLetLocalFixWerror::h(uint64_t s) {
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-        _loop_acc = (a0 + _loop_acc);
+        _loop_acc = a0 + _loop_acc;
         _loop_l = crane_raw(a1);
       }
     }

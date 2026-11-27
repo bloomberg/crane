@@ -121,6 +121,6 @@ struct LocalFixAliasUntypedApply {
   };
   static inline const uint64_t result = []() -> uint64_t {
     auto [a, s] = f(UINT64_C(3));
-    return ((a * UINT64_C(100)) + s);
+    return a * UINT64_C(100) + s;
   }();
 };

@@ -4,7 +4,7 @@
 uint64_t BlockTemplateTypes::test_read_nat() {
   uint64_t n;
   std::cin >> n;
-  return (n + UINT64_C(1));
+  return n + UINT64_C(1);
 }
 
 /// %result inferred as bool, with unsigned int in same scope.
@@ -29,7 +29,7 @@ uint64_t BlockTemplateTypes::test_parse_nat() {
   std::getline(std::cin, s);
   uint64_t n;
   n = static_cast<unsigned int>(std::stoul(std::move(s)));
-  return (n + UINT64_C(2));
+  return n + UINT64_C(2);
 }
 
 /// Three different block template types in one function:
@@ -57,5 +57,5 @@ uint64_t BlockTemplateTypes::test_nat_arith() {
   std::cin >> a;
   uint64_t b;
   std::cin >> b;
-  return (a + b);
+  return a + b;
 }

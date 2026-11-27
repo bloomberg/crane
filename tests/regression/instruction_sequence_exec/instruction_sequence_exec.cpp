@@ -12,7 +12,7 @@ InstructionSequenceExec::state InstructionSequenceExec::execute(
   } else {
     const auto &[a0] =
         std::get<typename InstructionSequenceExec::instruction::ADD_ACC>(i.v());
-    return state{s.pc_, (s.acc_ + a0)};
+    return state{s.pc_, s.acc_ + a0};
   }
 }
 

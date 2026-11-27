@@ -28,5 +28,5 @@ struct IdentNamedUint64 {
   }
 
   static uint64_t uint64_t_(uint64_t n);
-  static inline const uint64_t go = (uint64_t_(UINT64_C(1)) + UINT64_C(2));
+  static inline const uint64_t go = uint64_t_(UINT64_C(1)) + UINT64_C(2);
 };

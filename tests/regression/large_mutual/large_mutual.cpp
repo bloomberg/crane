@@ -10,7 +10,7 @@ uint64_t LargeMutual::expr_size(const LargeMutual::expr &e) {
   } else if (std::holds_alternative<typename LargeMutual::expr::ECond>(e.v())) {
     const auto &[a0, a1, a2] =
         std::get<typename LargeMutual::expr::ECond>(e.v());
-    return (((bexpr_size(*a0) + expr_size(*a1)) + expr_size(*a2)) + 1);
+    return ((bexpr_size(*a0) + expr_size(*a1) + expr_size(*a2)) + 1);
   } else {
     return UINT64_C(1);
   }
@@ -46,7 +46,7 @@ uint64_t LargeMutual::stmt_size(const LargeMutual::stmt &s) {
     return ((stmt_size(*a0) + stmt_size(*a1)) + 1);
   } else if (std::holds_alternative<typename LargeMutual::stmt::SIf>(s.v())) {
     const auto &[a0, a1, a2] = std::get<typename LargeMutual::stmt::SIf>(s.v());
-    return (((bexpr_size(*a0) + stmt_size(*a1)) + stmt_size(*a2)) + 1);
+    return ((bexpr_size(*a0) + stmt_size(*a1) + stmt_size(*a2)) + 1);
   } else if (std::holds_alternative<typename LargeMutual::stmt::SWhile>(s.v())) {
     const auto &[a0, a1] = std::get<typename LargeMutual::stmt::SWhile>(s.v());
     return ((bexpr_size(*a0) + stmt_size(*a1)) + 1);

@@ -21,9 +21,8 @@ std::string EffectRecursiveList::fold_effect(const List<std::string> &xs,
     const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
     std::cout << a0 << '\n';
     return fold_effect(
-        *a1,
-        (acc + (std::string(" ") + a0).substr(0, 16777211)).substr(0,
-                                                                   16777211));
+        *a1, (acc + ((std::string(" ") + a0).substr(0, 16777211))).substr(
+                                             0, 16777211));
   }
 }
 

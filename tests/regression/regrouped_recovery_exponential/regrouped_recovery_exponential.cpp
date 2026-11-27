@@ -13,7 +13,7 @@ uint64_t RegroupedRecoveryExponential::lvl(uint64_t d) {
                   Datatypes::id(crane_erase_fn([&]() {
                     uint64_t m = lvl(d_);
                     return [=](const crane::fn<uint64_t(uint64_t)> &c,
-                               uint64_t n) { return (c(n) + m); };
+                               uint64_t n) { return c(n) + m; };
                   }())));
           return [=, _rg = std::move(_rg)](crane::fn<uint64_t(uint64_t)> _rg0_0) {
             return [=, _rg = _rg](uint64_t _rg1_0) {

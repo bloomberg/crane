@@ -113,7 +113,7 @@ struct MemSafetyProbe25 {
               } else {
                 const auto &[a0, a1, a2] =
                     std::get<typename tree::Node>(_self_val.v());
-                return (((x + a0->tree_sum()) + a1) + a2->tree_sum());
+                return x + a0->tree_sum() + a1 + a2->tree_sum();
               }
             }));
       } else {
@@ -132,7 +132,7 @@ struct MemSafetyProbe25 {
             } else {
               const auto &[a0, a1, _] =
                   std::get<typename tree::Node>(_self_val.v());
-              return ((x + a0->tree_sum()) + a1);
+              return x + a0->tree_sum() + a1;
             }
           };
       return std::make_pair(std::move(f), this->tree_sum());
@@ -147,10 +147,10 @@ struct MemSafetyProbe25 {
         const auto &[a0, a1, _] = std::get<typename tree::Node>(this->v());
         auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
-          return (x + a1);
+          return x + a1;
         } else {
           const auto &[a00, a10, _] = std::get<typename tree::Node>(_sv0.v());
-          return (((x + a00->tree_sum()) + a10) + a1);
+          return x + a00->tree_sum() + a10 + a1;
         }
       }
     }
@@ -163,10 +163,10 @@ struct MemSafetyProbe25 {
       } else {
         const auto &[a0, a1, _] = std::get<typename tree::Node>(this->v());
         if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
-          return (x + a1);
+          return x + a1;
         } else {
           const auto &[_, a10, a20] = std::get<typename tree::Node>(t2.v());
-          return (((x + a0->tree_sum()) + a10) + a20->tree_sum());
+          return x + a0->tree_sum() + a10 + a20->tree_sum();
         }
       }
     }
@@ -185,10 +185,10 @@ struct MemSafetyProbe25 {
         const tree &a2_value = *a2;
         return std::make_pair(
             crane::fn<uint64_t(uint64_t)>([=, a0_value = a0_value](uint64_t x) {
-              return (x + a0_value.tree_sum());
+              return x + a0_value.tree_sum();
             }),
             crane::fn<uint64_t(uint64_t)>([=, a2_value = a2_value](uint64_t x) {
-              return (x + a2_value.tree_sum());
+              return x + a2_value.tree_sum();
             }));
       }
     }
@@ -201,7 +201,7 @@ struct MemSafetyProbe25 {
         return x;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return (((x + a0->tree_sum()) + a1) + a2->tree_sum());
+        return x + a0->tree_sum() + a1 + a2->tree_sum();
       }
     }
 
@@ -209,7 +209,7 @@ struct MemSafetyProbe25 {
     /// The closure body calls tree_sum on t. If t is passed by const ref
     /// and the closure uses &, t's binding dangles when function returns.
     /// The test calls the closure AFTER the tree temporary is destroyed.
-    uint64_t make_sum_fn(uint64_t x) const { return (x + this->tree_sum()); }
+    uint64_t make_sum_fn(uint64_t x) const { return x + this->tree_sum(); }
 
     uint64_t tree_sum() const {
       const tree *_self = this;
@@ -260,7 +260,7 @@ struct MemSafetyProbe25 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -353,7 +353,7 @@ struct MemSafetyProbe25 {
                    tree::node(tree::leaf(), UINT64_C(11),
                               tree::leaf()))
             .pair_closures();
-    return (p.first(UINT64_C(100)) + p.second(UINT64_C(200)));
+    return p.first(UINT64_C(100)) + p.second(UINT64_C(200));
   }();
   static inline const uint64_t test_nested_match_closure =
       tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
@@ -522,7 +522,7 @@ struct MemSafetyProbe25 {
                    tree::node(tree::leaf(), UINT64_C(9),
                               tree::leaf()))
             .match_then_pair();
-    return (p.first(UINT64_C(100)) + p.second);
+    return p.first(UINT64_C(100)) + p.second;
   }();
   static inline const uint64_t test_match_closure_opt = []() -> uint64_t {
     auto _cs =

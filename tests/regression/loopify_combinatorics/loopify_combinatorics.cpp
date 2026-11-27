@@ -248,7 +248,7 @@ uint64_t LoopifyCombinatorics::factorial_impl(uint64_t n) {
       auto _f = std::move(std::get<_after_factorial_impl_in_S>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = (n * _result);
+      _result = n * _result;
     }
   }
   return _result;
@@ -549,7 +549,7 @@ bool LoopifyCombinatorics::elem(uint64_t x, const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_elem_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (x == a0 || _result);
+      _result = ((x == a0) || _result);
     }
   }
   return _result;

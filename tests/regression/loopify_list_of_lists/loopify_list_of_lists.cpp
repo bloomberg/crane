@@ -229,7 +229,7 @@ uint64_t LoopifyListOfLists::list_len(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_list_len_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -268,7 +268,7 @@ uint64_t LoopifyListOfLists::total_length(const List<List<uint64_t>> &ll) {
       auto _f = std::move(std::get<_after_total_length_in_Cons>(_popped));
       _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = (list_len(std::move(a0)) + _result);
+      _result = list_len(std::move(a0)) + _result;
     }
   }
   return _result;

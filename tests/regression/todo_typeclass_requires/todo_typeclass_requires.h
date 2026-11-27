@@ -19,7 +19,7 @@ struct TodoTypeclassRequires {
   template <typename _tcI0, typename T1>
     requires Numeric<_tcI0, T1>
   static uint64_t double_val(const T1 &x) {
-    return (_tcI0::to_nat_val(x) + _tcI0::to_nat_val(x));
+    return _tcI0::to_nat_val(x) + _tcI0::to_nat_val(x);
   }
 
   static inline const uint64_t test_result =

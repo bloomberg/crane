@@ -8,7 +8,7 @@ uint64_t DequeFoldCurriedAcc::g(const std::deque<uint64_t> &l, uint64_t x0_,
   }(
       [](uint64_t k, crane::fn<uint64_t(uint64_t, bool)> acc) {
         return [=, acc = std::move(acc)](uint64_t x,
-                                         bool b) { return acc((x + k), b); };
+                                         bool b) { return acc(x + k, b); };
       },
       crane::fn<uint64_t(uint64_t, bool)>([](uint64_t x, bool b) -> uint64_t {
         if (b) {

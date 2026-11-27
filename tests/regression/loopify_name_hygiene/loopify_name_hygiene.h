@@ -132,5 +132,5 @@ struct LoopifyNameHygiene {
   static constexpr uint64_t self_ = UINT64_C(3);
   static uint64_t locals(uint64_t n);
   static inline const uint64_t run =
-      (depth(mk(UINT64_C(5))) + locals(UINT64_C(10)));
+      depth(mk(UINT64_C(5))) + locals(UINT64_C(10));
 };

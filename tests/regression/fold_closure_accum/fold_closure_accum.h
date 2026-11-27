@@ -282,11 +282,11 @@ struct FoldClosureAccum {
           trees.template fold_right<crane::fn<uint64_t(uint64_t)>>(
               [](tree t, crane::fn<uint64_t(uint64_t)> acc) {
                 return [=, acc = std::move(acc), t = std::move(t)](uint64_t x) {
-                  return (acc(x) + tree_sum(t));
+                  return acc(x) + tree_sum(t);
                 };
               },
               [](uint64_t x) { return x; });
-      return (f(UINT64_C(0)) + f(UINT64_C(100)));
+      return f(UINT64_C(0)) + f(UINT64_C(100));
     }();
   }();
 };

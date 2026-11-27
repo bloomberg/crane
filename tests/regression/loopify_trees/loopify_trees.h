@@ -457,7 +457,7 @@ struct LoopifyTrees {
         } else {
           auto _f = std::move(std::get<_after_count_leaves_in_Node_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         }
       }
       return _result;
@@ -1041,7 +1041,7 @@ struct LoopifyTrees {
           auto _f = std::move(std::get<_after_ternary_sum_in_TNode_3>(_popped));
           _stack.pop_back();
           uint64_t a3 = _f.a3;
-          _result = (a3 + (_f._tmp3 + (_f._tmp2 + _result)));
+          _result = a3 + (_f._tmp3 + (_f._tmp2 + _result));
         }
       }
       return _result;
@@ -1240,7 +1240,7 @@ struct LoopifyTrees {
     /// rose_sum t sums all values in a rose tree.
     uint64_t rose_sum() const {
       const auto &[a0, a1] = std::get<typename rose::RNode>(this->v());
-      return (a0 + sum_rose_list_fuel(UINT64_C(1000), *a1));
+      return a0 + sum_rose_list_fuel(UINT64_C(1000), *a1);
     }
 
     template <typename T1, typename F0> T1 rose_rec(F0 &&f) const {
@@ -1678,7 +1678,7 @@ struct LoopifyTrees {
         } else {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_4>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 + (_f._tmp3 + (_f._tmp2 + _result)));
+          _result = _f._tmp4 + (_f._tmp3 + (_f._tmp2 + _result));
         }
       }
       return _result;
@@ -1939,9 +1939,8 @@ struct LoopifyTrees {
             } else {
               _stack.emplace_back(
                   _after_count_paths_simple_in_false{n, crane_raw(a1)});
-              _stack.emplace_back(
-                  _call{crane_raw(a0),
-                        (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+              _stack.emplace_back(_call{
+                  crane_raw(a0), (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1))});
             }
           }
         } else if (std::holds_alternative<_after_count_paths_simple_in_false>(
@@ -1953,12 +1952,12 @@ struct LoopifyTrees {
           const simple_tree &a1 = *_f.a1;
           _stack.emplace_back(_after_count_paths_simple_in_false_2{_result});
           _stack.emplace_back(
-              _call{_f.a1, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+              _call{_f.a1, (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1))});
         } else {
           auto _f = std::move(
               std::get<_after_count_paths_simple_in_false_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         }
       }
       return _result;
@@ -2015,7 +2014,7 @@ struct LoopifyTrees {
           auto _f =
               std::move(std::get<_after_simple_tree_sum_in_SNode_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         }
       }
       return _result;

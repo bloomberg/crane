@@ -36,13 +36,13 @@ struct Rank2AliasDefinitionAsValue {
 
   static uint64_t unbox(const box<uint64_t> &b);
   static inline const uint64_t result =
-      ((csum(crane_erase_fn<crane::obj>(
-            [](crane::fn<crane::obj(uint64_t, crane::obj)> _ec0,
-               crane::obj _ec1) { return cnil<uint64_t>(_ec0, _ec1); })) +
-        fsum(crane_erase_fn<crane::obj>(
-            [](crane::fn<crane::obj(uint64_t, crane::obj)> _ec0,
-               crane::obj _ec1) { return fnil(_ec0, _ec1); }))) +
-       unbox(crane_convert<
-           crane::fn<crane::obj(crane::fn<crane::obj(uint64_t)>)>>(
-           [](crane::fn<crane::obj(uint64_t)> _ec0) { return bnat(_ec0); })));
+      csum(crane_erase_fn<crane::obj>(
+          [](crane::fn<crane::obj(uint64_t, crane::obj)> _ec0,
+             crane::obj _ec1) { return cnil<uint64_t>(_ec0, _ec1); })) +
+      fsum(crane_erase_fn<crane::obj>(
+          [](crane::fn<crane::obj(uint64_t, crane::obj)> _ec0,
+             crane::obj _ec1) { return fnil(_ec0, _ec1); })) +
+      unbox(
+          crane_convert<crane::fn<crane::obj(crane::fn<crane::obj(uint64_t)>)>>(
+              [](crane::fn<crane::obj(uint64_t)> _ec0) { return bnat(_ec0); }));
 };

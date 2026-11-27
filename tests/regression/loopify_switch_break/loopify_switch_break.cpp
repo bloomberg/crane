@@ -26,12 +26,12 @@ uint64_t LoopifySwitchBreak::eval_ops(
       const auto &[t, v] = a0;
       switch (t) {
       case Tag::ADD: {
-        acc = (acc + v);
+        acc = acc + v;
         _loop_ops = crane_raw(a1);
         break;
       }
       case Tag::MUL: {
-        acc = (acc * v);
+        acc = acc * v;
         _loop_ops = crane_raw(a1);
         break;
       }
@@ -79,7 +79,7 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        acc = (acc + v);
+        acc = acc + v;
         _loop_ops = crane_raw(a1);
         continue;
         break;
@@ -91,7 +91,7 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        acc = (acc * v);
+        acc = acc * v;
         _loop_ops = crane_raw(a1);
         continue;
         break;

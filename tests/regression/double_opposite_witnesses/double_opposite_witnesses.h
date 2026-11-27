@@ -160,7 +160,7 @@ struct DoubleOppositeWitnessesCase {
 
     static crane::obj compose(uint64_t, uint64_t, uint64_t, crane::obj f,
                               crane::obj g) {
-      return (crane::any_cast<uint64_t>(f) + crane::any_cast<uint64_t>(g));
+      return crane::any_cast<uint64_t>(f) + crane::any_cast<uint64_t>(g);
     }
   };
 

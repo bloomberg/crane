@@ -260,7 +260,7 @@ struct ReuseNonatomicConstVMut {
       w = go(List<tree>::nil(), List<bool>::nil());
       return w.template fold_left<uint64_t>(
           [](uint64_t a,
-             bool e) { return (a + (e ? UINT64_C(1) : UINT64_C(2))); },
+             bool e) { return a + (e ? UINT64_C(1) : UINT64_C(2)); },
           UINT64_C(1));
     }();
   }();

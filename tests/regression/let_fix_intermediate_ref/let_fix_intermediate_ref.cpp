@@ -22,7 +22,7 @@ uint64_t LetFixIntermediateRef::sum_heads(const List<List<uint64_t>> &ll) {
           return a00;
         }
       }();
-      _lc1_loop_acc = (_lc1_loop_acc + hd);
+      _lc1_loop_acc = _lc1_loop_acc + hd;
       _lc1_loop_xss = crane_raw(a1);
     }
   }
@@ -38,7 +38,7 @@ uint64_t LetFixIntermediateRef::zip_sum(const List<uint64_t> &l1,
       return UINT64_C(0);
     } else {
       const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l2.v());
-      return ((a0 + a00) + zip_sum(*a1, *a10));
+      return a0 + a00 + zip_sum(*a1, *a10);
     }
   }
 }

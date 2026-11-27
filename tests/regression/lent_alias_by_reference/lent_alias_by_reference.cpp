@@ -48,7 +48,7 @@ uint64_t LentAliasByReference::bag_sum(const List<uint64_t> &b) {
       auto _f = std::move(std::get<_after_bag_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -98,7 +98,7 @@ uint64_t LentAliasByReference::dot(const List<uint64_t> &a,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      _result = ((a0 * a00) + _result);
+      _result = a0 * a00 + _result;
     }
   }
   return _result;

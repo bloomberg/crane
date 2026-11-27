@@ -21,12 +21,12 @@ uint64_t SingleThreadedHeap::size(const SingleThreadedHeap::tree &t) {
   } else {
     const auto &[a0, _, a2] =
         crane::get<typename SingleThreadedHeap::tree::Node>(t.v());
-    return ((UINT64_C(1) + size(*a0)) + size(*a2));
+    return UINT64_C(1) + size(*a0) + size(*a2);
   }
 }
 
 uint64_t SingleThreadedHeap::adder(uint64_t x0_, uint64_t x1_) {
-  return (x0_ + x1_);
+  return x0_ + x1_;
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {

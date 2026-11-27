@@ -216,7 +216,7 @@ struct TailrecReorderProbe {
         auto _f = std::move(std::get<_after_mylist_sum_in_Mycons>(_popped));
         _stack.pop_back();
         auto a0 = std::move(_f.a0);
-        _result = (f(a0) + _result);
+        _result = f(a0) + _result;
       }
     }
     return _result;
@@ -238,8 +238,8 @@ struct TailrecReorderProbe {
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil()))),
                              mylist<uint64_t>::mynil(),
                              mylist<uint64_t>::mynil());
-    return (mylist_sum<uint64_t>([](uint64_t x) { return x; }, std::move(a)) +
-            mylist_sum<uint64_t>([](uint64_t x) { return x; }, std::move(b)));
+    return mylist_sum<uint64_t>([](uint64_t x) { return x; }, std::move(a)) +
+           mylist_sum<uint64_t>([](uint64_t x) { return x; }, std::move(b));
   }();
   /// Tail-recursive function where the recursive argument is a COMPLEX
   /// expression involving multiple pattern variables.

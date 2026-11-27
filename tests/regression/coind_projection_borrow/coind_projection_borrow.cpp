@@ -15,5 +15,5 @@ CoindProjectionBorrow::third(const CoindProjectionBorrow::Stream::stream &s) {
 /// Projections whose receiver is a parameter, an lvalue.
 uint64_t
 CoindProjectionBorrow::sum_two(const CoindProjectionBorrow::Stream::stream &s) {
-  return (s.hd() + s.tl().hd());
+  return s.hd() + s.tl().hd();
 }

@@ -186,7 +186,7 @@ struct NestedListFnSlotFit {
                .template fold_left<uint64_t>(
         [](uint64_t a,
            const crane::fn<uint64_t(uint64_t)> &f) {
-          return (a + f(UINT64_C(6)));
+          return a + f(UINT64_C(6));
         },
         UINT64_C(0));
   }();

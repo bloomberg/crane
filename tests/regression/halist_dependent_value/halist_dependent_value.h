@@ -300,7 +300,7 @@ struct HalistDependentValue {
               UINT64_C(2),
               List<crane::obj>::cons(UINT64_C(3), List<crane::obj>::nil())))),
       m1);
-  static inline const uint64_t run = ([]() -> uint64_t {
+  static inline const uint64_t run = []() -> uint64_t {
     auto _cs = HAList0::halist_lookup(keyEq, Key::KNAT, m2);
     if (_cs.has_value()) {
       const auto &n = *_cs;
@@ -316,7 +316,7 @@ struct HalistDependentValue {
     } else {
       return UINT64_C(0);
     }
-  }());
+  }();
 };
 
 template <typename T1>

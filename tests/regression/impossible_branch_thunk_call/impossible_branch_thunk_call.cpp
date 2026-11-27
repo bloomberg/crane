@@ -25,8 +25,8 @@ ImpossibleBranchThunkCall::len(const ImpossibleBranchThunkCall::tagged &t) {
 }
 
 uint64_t ImpossibleBranchThunkCall::run(uint64_t k) {
-  return (val(tagged::tn((k + UINT64_C(3)))) +
-          len(tagged::tl(List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))));
+  return val(tagged::tn(k + UINT64_C(3))) +
+         len(tagged::tl(List<uint64_t>::cons(
+             UINT64_C(1),
+             List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))));
 }

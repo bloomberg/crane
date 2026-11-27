@@ -171,12 +171,12 @@ struct NestedCurriedInstantiation {
                 crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>::cons(
                 [](crane::fn<uint64_t(uint64_t)> g) {
                   return [=, g = std::move(g)](uint64_t n) {
-                    return (g(n) + UINT64_C(1));
+                    return g(n) + UINT64_C(1);
                   };
                 },
                 List<crane::fn<crane::fn<uint64_t(uint64_t)>(
                     crane::fn<uint64_t(uint64_t)>)>>::nil())),
-        [](uint64_t n) { return (n * UINT64_C(2)); })(UINT64_C(3));
+        [](uint64_t n) { return n * UINT64_C(2); })(UINT64_C(3));
   }();
   /// No transformer needed: a two-argument element, bool -> nat -> nat, at an
   /// instantiation map reads as bool -> (nat -> nat).
@@ -193,7 +193,7 @@ struct NestedCurriedInstantiation {
                 [](bool b) {
                   return [=](uint64_t n) -> uint64_t {
                     if (b) {
-                      return (n * UINT64_C(10));
+                      return n * UINT64_C(10);
                     } else {
                       return n;
                     }
@@ -203,7 +203,7 @@ struct NestedCurriedInstantiation {
                .template fold_left<uint64_t>(
         [](uint64_t a,
            const crane::fn<uint64_t(uint64_t)> &f) {
-          return (a + f(UINT64_C(4)));
+          return a + f(UINT64_C(4));
         },
         UINT64_C(0));
   }();
@@ -222,12 +222,12 @@ struct NestedCurriedInstantiation {
                 crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>,
                uint64_t e) {
               return [=](crane::fn<uint64_t(uint64_t)> g) {
-                return [=, g = std::move(g)](uint64_t n) { return (g(n) + e); };
+                return [=, g = std::move(g)](uint64_t n) { return g(n) + e; };
               };
             },
             [](crane::fn<uint64_t(uint64_t)> g) {
               return [=, g = std::move(g)](uint64_t n) {
-                return (g(n) + UINT64_C(1));
+                return g(n) + UINT64_C(1);
               };
             }),
         [](uint64_t n) { return n; })(UINT64_C(3));

@@ -4,7 +4,7 @@ uint64_t ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
   if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
     const auto &[_, a1] =
         std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
-    return (UINT64_C(1) + length(*a1));
+    return UINT64_C(1) + length(*a1);
   } else {
     return UINT64_C(0);
   }

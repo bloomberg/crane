@@ -13,7 +13,7 @@
 std::optional<crane::fn<uint64_t(uint64_t)>>
 ValueTypeMatchFix::make_adder_from_triple(const ValueTypeMatchFix::triple &t) {
   const auto &[a0, a1, a2] = t;
-  uint64_t base = ((a0 + a1) + a2);
+  uint64_t base = a0 + a1 + a2;
   auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return base;

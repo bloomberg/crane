@@ -6,7 +6,7 @@ uint64_t NestedPartialApp::tree_sum(const NestedPartialApp::tree &t) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename NestedPartialApp::tree::Node>(t.v());
-    return ((tree_sum(*a0) + a1) + tree_sum(*a2));
+    return tree_sum(*a0) + a1 + tree_sum(*a2);
   }
 }
 
@@ -21,5 +21,5 @@ NestedPartialApp::build_node(const NestedPartialApp::tree &t1, uint64_t n,
 uint64_t NestedPartialApp::quad_fn(const NestedPartialApp::tree &a, uint64_t b,
                                    uint64_t c,
                                    const NestedPartialApp::tree &d) {
-  return (((tree_sum(a) + b) + c) + tree_sum(d));
+  return tree_sum(a) + b + c + tree_sum(d);
 }

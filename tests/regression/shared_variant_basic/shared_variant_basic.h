@@ -244,8 +244,7 @@ struct SharedVariantBasic {
                                            UINT64_C(9),
                                            List<uint64_t>::nil())))))))
                                                     .template fold_left<tree>(
-      [](const tree &t,
-         uint64_t k) { return insert(k, (k * UINT64_C(10)), t); },
+      [](const tree &t, uint64_t k) { return insert(k, k * UINT64_C(10), t); },
       tree::leaf()));
   static inline const tree t1 =
       crane::immortal(insert(UINT64_C(4), UINT64_C(44), t0));
@@ -259,7 +258,7 @@ struct SharedVariantBasic {
         auto _cs2 = find(UINT64_C(9), t1);
         if (_cs2.has_value()) {
           const uint64_t &c = *_cs2;
-          return ((((a + b) + c) + size(t0)) + size(t1));
+          return a + b + c + size(t0) + size(t1);
         } else {
           return UINT64_C(0);
         }
@@ -279,7 +278,7 @@ struct SharedVariantBasic {
               List<uint64_t>::cons(UINT64_C(3),
                                    List<uint64_t>::nil()))))
           .template fold_left<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
           UINT64_C(0));
   static uint64_t long_result(uint64_t n);
 };

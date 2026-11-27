@@ -100,6 +100,6 @@ struct FixAccMatchNoneErased {
   static std::pair<std::optional<std::string>, uint64_t>
   run(const List<uint64_t> &n);
   static inline const uint64_t result =
-      (run(List<uint64_t>::nil()).second +
-       run(List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil())).second);
+      run(List<uint64_t>::nil()).second +
+      run(List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil())).second;
 };

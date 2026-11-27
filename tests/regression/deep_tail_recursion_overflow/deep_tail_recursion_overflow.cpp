@@ -55,7 +55,7 @@ DeepTailRecursionOverflow::total_of(const DeepTailRecursionOverflow::chain &c) {
       auto _f = std::move(std::get<_after_total_of_in_Link>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = (a1 + _result);
+      _result = a1 + _result;
     }
   }
   return _result;

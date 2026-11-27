@@ -6,7 +6,7 @@ uint64_t JmsBblRoundtrip::addr12_of_nat(uint64_t n) {
 
 JmsBblRoundtrip::state
 JmsBblRoundtrip::execute_jms(const JmsBblRoundtrip::state &s, uint64_t addr) {
-  return state{addr12_of_nat(addr), addr12_of_nat((s.pc + UINT64_C(2))), true};
+  return state{addr12_of_nat(addr), addr12_of_nat(s.pc + UINT64_C(2)), true};
 }
 
 JmsBblRoundtrip::state

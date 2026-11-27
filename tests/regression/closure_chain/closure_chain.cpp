@@ -6,7 +6,7 @@ uint64_t ClosureChain::tree_sum(const ClosureChain::tree &t) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename ClosureChain::tree::Node>(t.v());
-    return ((tree_sum(*a0) + a1) + tree_sum(*a2));
+    return tree_sum(*a0) + a1 + tree_sum(*a2);
   }
 }
 
@@ -23,9 +23,9 @@ uint64_t ClosureChain::tree_sum(const ClosureChain::tree &t) {
 uint64_t ClosureChain::make_chain(uint64_t n, const ClosureChain::tree &t,
                                   uint64_t x0_) {
   if (n <= 0) {
-    return (tree_sum(t) + x0_);
+    return tree_sum(t) + x0_;
   } else {
     uint64_t n_ = n - 1;
-    return make_chain(n_, t, (x0_ + UINT64_C(1)));
+    return make_chain(n_, t, x0_ + UINT64_C(1));
   }
 }

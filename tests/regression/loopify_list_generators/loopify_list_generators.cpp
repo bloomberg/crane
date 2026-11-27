@@ -49,7 +49,7 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(uint64_t fuel, uint64_t n,
 
 List<uint64_t> LoopifyListGenerators::cycle(uint64_t n,
                                             const List<uint64_t> &l) {
-  return cycle_fuel((n * l.length()), n, l);
+  return cycle_fuel(n * l.length(), n, l);
 }
 
 List<uint64_t> LoopifyListGenerators::range(uint64_t start, uint64_t count) {
@@ -72,7 +72,7 @@ List<uint64_t> LoopifyListGenerators::range(uint64_t start, uint64_t count) {
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       count = count_;
-      start = (start + UINT64_C(1));
+      start = start + UINT64_C(1);
       continue;
     }
   }
@@ -175,7 +175,7 @@ LoopifyListGenerators::enumerate_aux(uint64_t idx, const List<uint64_t> &l) {
               _node.v_mut())
               .l;
       _loop_l = crane_raw(a1);
-      idx = (idx + UINT64_C(1));
+      idx = idx + UINT64_C(1);
       continue;
     }
   }

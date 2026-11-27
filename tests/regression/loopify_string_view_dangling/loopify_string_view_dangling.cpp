@@ -66,7 +66,7 @@ Positive Pos::pred_double(const Positive &x) {
 
 uint64_t Pos::to_nat(const Positive &x) {
   return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
       x,
       UINT64_C(1));
 }
@@ -165,29 +165,27 @@ uint64_t LoopifyStringViewDangling::drop_each(const List<bool> &l,
   while (true) {
     if (std::holds_alternative<typename List<bool>::Nil>(_loop_l->v())) {
       auto _once1 = n2i(UINT64_C(0));
-      return (
-          (i2n(static_cast<int64_t>((std::string_view{_loop_s}).size())) *
-           UINT64_C(1000)) +
-          i2n(static_cast<std::int64_t>(static_cast<std::size_t>(_once1) <
-                                        (std::string_view{_loop_s}).size()
-                                            ? static_cast<unsigned char>(
-                                                  std::string_view{_loop_s}[
-                                                      static_cast<std::size_t>(
-                                                          _once1)])
-                                            : 0)));
+      return i2n(static_cast<int64_t>(std::string_view{_loop_s}.size())) *
+             UINT64_C(1000) +
+             i2n(static_cast<int64_t>(static_cast<std::size_t>(_once1) <
+                                      std::string_view{_loop_s}.size()
+                                          ? static_cast<unsigned char>(
+                                                std::string_view{_loop_s}[
+                                                    static_cast<std::size_t>(
+                                                        _once1)])
+                                          : 0));
     } else {
       const auto &[_, a1] = std::get<typename List<bool>::Cons>(_loop_l->v());
       auto _once2 = n2i(UINT64_C(1));
       _loop_s =
           (static_cast<std::size_t>(_once2) <=
-           (std::string_view{_loop_s}).size() ? std::string((
-                                                    std::string_view{_loop_s})
-                                                                .substr(
-                                                    static_cast<std::size_t>(
-                                                        _once2),
-                                                    static_cast<std::size_t>(
-                                                        n2i(UINT64_C(100)))))
-                                              : std::string());
+           std::string_view{_loop_s}.size() ? std::string(std::string_view{
+                                                  _loop_s}.substr(
+                                                  static_cast<std::size_t>(
+                                                      _once2),
+                                                  static_cast<std::size_t>(
+                                                      n2i(UINT64_C(100)))))
+                                            : std::string());
       _loop_l = crane_raw(a1);
     }
   }
@@ -196,7 +194,7 @@ uint64_t LoopifyStringViewDangling::drop_each(const List<bool> &l,
 bool Uint63Axioms::is_zero(int64_t i) { return i == INT64_C(0); }
 
 bool Uint63Axioms::is_even(int64_t i) {
-  return Uint63Axioms::is_zero((i & INT64_C(1)));
+  return Uint63Axioms::is_zero(i & INT64_C(1));
 }
 
 Z Uint63Axioms::to_Z_rec(uint64_t n, int64_t i) {
@@ -300,12 +298,12 @@ int64_t Uint63Axioms::of_pos_rec(uint64_t n, const Positive &p) {
       auto _f = std::move(std::get<_after_of_pos_rec_in_XI>(_popped));
       _stack.pop_back();
       _result =
-          ((INT64_C(1) >= 63
-                ? 0
-                : static_cast<int64_t>(
-                      (static_cast<uint64_t>(_result) << (INT64_C(1) & 63)) &
-                      0x7FFFFFFFFFFFFFFFULL)) |
-           INT64_C(1));
+          (INT64_C(1) >= 63
+               ? 0
+               : static_cast<int64_t>(
+                     (static_cast<uint64_t>(_result) << (INT64_C(1) & 63)) &
+                     UINT64_C(9223372036854775807))) |
+          INT64_C(1);
     } else {
       auto _f = std::move(std::get<_after_of_pos_rec_in_XO>(_popped));
       _stack.pop_back();
@@ -314,7 +312,7 @@ int64_t Uint63Axioms::of_pos_rec(uint64_t n, const Positive &p) {
                ? 0
                : static_cast<int64_t>(
                      (static_cast<uint64_t>(_result) << (INT64_C(1) & 63)) &
-                     0x7FFFFFFFFFFFFFFFULL));
+                     UINT64_C(9223372036854775807)));
     }
   }
   return _result;
@@ -333,8 +331,7 @@ int64_t Uint63Axioms::of_Z(const Z &z) {
   } else {
     const auto &[a0] = std::get<typename Z::Zneg>(z.v());
     return static_cast<int64_t>(
-        (static_cast<uint64_t>(INT64_C(0)) -
-         static_cast<uint64_t>(Uint63Axioms::of_pos(a0))) &
-        0x7FFFFFFFFFFFFFFFULL);
+        (UINT64_C(0) - static_cast<uint64_t>(Uint63Axioms::of_pos(a0))) &
+        UINT64_C(9223372036854775807));
   }
 }

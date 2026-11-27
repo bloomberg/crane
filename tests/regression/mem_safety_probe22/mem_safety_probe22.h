@@ -331,7 +331,7 @@ struct MemSafetyProbe22 {
   }
 
   static inline const uint64_t test_tree_map = tree_sum(tree_map(
-      [](uint64_t n) { return (n + UINT64_C(10)); },
+      [](uint64_t n) { return n + UINT64_C(10); },
       tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                  UINT64_C(2),
                  tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))));

@@ -188,9 +188,10 @@ struct InstructionCycles {
         auto _once2 = (UINT64_C(2) ? a0 / UINT64_C(2) : 0);
         uint64_t c3 = (UINT64_C(2) ? _once2 % UINT64_C(2) : _once2);
         uint64_t c4 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
-        bool base_cond = ((s.acc1 == UINT64_C(0) && c2 == UINT64_C(1)) ||
-                          ((s.carry1 && c3 == UINT64_C(1)) ||
-                           (!(s.test_pin1) && c4 == UINT64_C(1))));
+        bool base_cond =
+            (((s.acc1 == UINT64_C(0)) && (c2 == UINT64_C(1))) ||
+             ((s.carry1 && (c3 == UINT64_C(1))) ||
+              (!(s.test_pin1) && (c4 == UINT64_C(1)))));
         bool jump;
         if (c1 == UINT64_C(1)) {
           jump = !(base_cond);
@@ -493,7 +494,7 @@ struct InstructionCycles {
 
     state5 execute5(state5 s) const {
       if (std::holds_alternative<typename instruction5::INC5>(this->v())) {
-        auto _once1 = (s.acc5 + UINT64_C(1));
+        auto _once1 = s.acc5 + UINT64_C(1);
         return state5{(UINT64_C(16) ? _once1 % UINT64_C(16) : _once1), s.carry5,
                       s.test5};
       } else {
@@ -506,11 +507,11 @@ struct InstructionCycles {
         const auto &[a0] = std::get<typename instruction5::JCN5>(this->v());
         if ((UINT64_C(8) ? a0 / UINT64_C(8) : 0) == UINT64_C(1)) {
           return UINT64_C(16);
-        } else if ((s.acc5 == UINT64_C(0) &&
-                    (UINT64_C(2) ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) %
-                                   UINT64_C(2)
-                                 : (UINT64_C(4) ? a0 / UINT64_C(4) : 0)) ==
-                    UINT64_C(1))) {
+        } else if (((s.acc5 == UINT64_C(0)) &&
+                    ((UINT64_C(2) ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) %
+                                    UINT64_C(2)
+                                  : (UINT64_C(4) ? a0 / UINT64_C(4) : 0)) ==
+                     UINT64_C(1)))) {
           return UINT64_C(16);
         } else {
           return UINT64_C(8);

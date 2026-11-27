@@ -22,7 +22,7 @@ struct ClosureNestedEscape {
   /// Expected: 8 + 15 = 23.
   static inline const uint64_t test1 = []() -> uint64_t {
     auto [f, g] = make_pair_fix(UINT64_C(5));
-    return (f(UINT64_C(3)) + g(UINT64_C(3)));
+    return f(UINT64_C(3)) + g(UINT64_C(3));
   }();
   /// test2: With noise.
   /// add(0) = 7, mul(4) = 7 * 4 = 28.
@@ -30,7 +30,7 @@ struct ClosureNestedEscape {
   static inline const uint64_t test2 = []() {
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
         make_pair_fix(UINT64_C(7));
-    return (p.first(UINT64_C(0)) + p.second(UINT64_C(4)));
+    return p.first(UINT64_C(0)) + p.second(UINT64_C(4));
   }();
   /// test3: Only use one of the two fixpoints.
   /// mul(10) where n=3 → 3*10 = 30.

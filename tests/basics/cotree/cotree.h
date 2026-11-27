@@ -473,7 +473,7 @@ struct Cotree {
           return UINT64_C(0);
         } else {
           const auto &[a2, a3] = std::get<typename List<tree<T1>>::Cons>(l.v());
-          return (tree_size<T1>(a2) + _self_aux(_self_aux, *a3));
+          return tree_size<T1>(a2) + _self_aux(_self_aux, *a3);
         }
       };
       auto aux =
@@ -502,7 +502,7 @@ struct Cotree {
   static inline const uint64_t test_root = sample_cotree.root();
   static inline const uint64_t test_doubled_root =
       sample_cotree.template comap_cotree<uint64_t>(
-          [](uint64_t n) { return (n * UINT64_C(2)); })
+          [](uint64_t n) { return n * UINT64_C(2); })
           .root();
   static colist<uint64_t> nats(uint64_t n);
   static inline const List<uint64_t> test_first_five =

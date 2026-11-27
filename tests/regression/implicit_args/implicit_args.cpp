@@ -1,21 +1,21 @@
 #include "implicit_args.h"
 
-uint64_t ImplicitArgs::add_one(uint64_t x0_) { return (UINT64_C(1) + x0_); }
+uint64_t ImplicitArgs::add_one(uint64_t x0_) { return UINT64_C(1) + x0_; }
 
-uint64_t ImplicitArgs::double_nat(uint64_t n) { return (n + n); }
+uint64_t ImplicitArgs::double_nat(uint64_t n) { return n + n; }
 
 uint64_t ImplicitArgs::add_implicit(uint64_t x0_, uint64_t x1_) {
-  return (x0_ + x1_);
+  return x0_ + x1_;
 }
 
-uint64_t ImplicitArgs::scale(uint64_t x0_, uint64_t x1_) { return (x0_ * x1_); }
+uint64_t ImplicitArgs::scale(uint64_t x0_, uint64_t x1_) { return x0_ * x1_; }
 
 uint64_t ImplicitArgs::combine(uint64_t a, uint64_t b, uint64_t x) {
-  return (a + (b + x));
+  return a + (b + x);
 }
 
 uint64_t ImplicitArgs::with_base(uint64_t x0_, uint64_t x1_) {
-  return (x0_ + x1_);
+  return x0_ + x1_;
 }
 
 uint64_t ImplicitArgs::from_zero(uint64_t x0_) {
@@ -34,7 +34,7 @@ uint64_t ImplicitArgs::sum_with_init(uint64_t init,
   } else {
     const auto &[a0, a1] =
         std::get<typename ImplicitArgs::mylist<uint64_t>::Mycons>(l.v());
-    return (a0 + sum_with_init(init, *a1));
+    return a0 + sum_with_init(init, *a1);
   }
 }
 

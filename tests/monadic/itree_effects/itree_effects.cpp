@@ -10,7 +10,7 @@ void ITreeEffects::greet() {
 
 uint64_t ITreeEffects::roll_dice(uint64_t sides) {
   uint64_t n = (std::rand() % sides);
-  return (n + UINT64_C(1));
+  return n + UINT64_C(1);
 }
 
 void ITreeEffects::timed_greeting() {

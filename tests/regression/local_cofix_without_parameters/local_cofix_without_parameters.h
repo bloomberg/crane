@@ -207,13 +207,13 @@ struct LocalCofixWithoutParameters {
   static stream zeros_or(bool b);
   static stream ones_then(const List<uint64_t> &l);
   static inline const uint64_t result =
-      ((hd(zeros_or(true)) + hd(zeros_or(false))) +
-       take(UINT64_C(4),
-            ones_then(List<uint64_t>::cons(
-                UINT64_C(5),
-                List<uint64_t>::cons(UINT64_C(6),
-                                     List<uint64_t>::nil()))))
-           .template fold_left<uint64_t>(
-           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-           UINT64_C(0)));
+      hd(zeros_or(true)) + hd(zeros_or(false)) +
+      take(UINT64_C(4),
+           ones_then(List<uint64_t>::cons(
+               UINT64_C(5),
+               List<uint64_t>::cons(UINT64_C(6),
+                                    List<uint64_t>::nil()))))
+          .template fold_left<uint64_t>(
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
+          UINT64_C(0));
 };

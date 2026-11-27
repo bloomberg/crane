@@ -38,7 +38,7 @@ struct SuperclassOnlyConcept {
   struct L1N {
     using l1_base = BN;
 
-    constexpr static uint64_t l1(uint64_t n) { return (n + UINT64_C(1)); }
+    constexpr static uint64_t l1(uint64_t n) { return n + UINT64_C(1); }
   };
 
   static_assert(L1<L1N, uint64_t>);
@@ -46,7 +46,7 @@ struct SuperclassOnlyConcept {
   struct L2N {
     using l2_base = BN;
 
-    constexpr static uint64_t l2(uint64_t n) { return (n + UINT64_C(2)); }
+    constexpr static uint64_t l2(uint64_t n) { return n + UINT64_C(2); }
   };
 
   static_assert(L2<L2N, uint64_t>);
@@ -63,8 +63,7 @@ struct SuperclassOnlyConcept {
   template <typename _tcI0, typename T1>
     requires Both<_tcI0, T1>
   static uint64_t go(const T1 &x) {
-    return ((_tcI0::bl2::l2_base::b0(x) + _tcI0::bl1::l1(x)) +
-            _tcI0::bl2::l2(x));
+    return _tcI0::bl2::l2_base::b0(x) + _tcI0::bl1::l1(x) + _tcI0::bl2::l2(x);
   }
 
   static uint64_t run(uint64_t k);

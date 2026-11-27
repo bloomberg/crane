@@ -13,7 +13,7 @@ bool PromOps::nat_list_eqb(const List<uint64_t> &xs, const List<uint64_t> &ys) {
       return false;
     } else {
       const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(ys.v());
-      return (a0 == a00 && nat_list_eqb(*a1, *a10));
+      return ((a0 == a00) && nat_list_eqb(*a1, *a10));
     }
   }
 }
@@ -27,8 +27,7 @@ uint64_t PromOps::prom_data_or_zero(const PromOps::state1 &s) {
 }
 
 uint64_t PromOps::flagged_sum(const PromOps::state2 &s) {
-  return ((s.acc2 + s.prom_addr2) +
-          (s.prom_enable2 ? s.prom_data2 : UINT64_C(0)));
+  return s.acc2 + s.prom_addr2 + (s.prom_enable2 ? s.prom_data2 : UINT64_C(0));
 }
 
 PromOps::state3

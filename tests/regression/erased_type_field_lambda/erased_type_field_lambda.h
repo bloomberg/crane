@@ -173,7 +173,7 @@ struct ErasedTypeFieldLambda {
           List<std::pair<crane::obj, crane::fn<uint64_t(crane::obj)>>>::cons(
               std::make_pair(
                   UINT64_C(2), crane_erase_fn<uint64_t>([](const auto &x) {
-                    return (crane::any_cast<uint64_t>(x) * UINT64_C(10));
+                    return crane::any_cast<uint64_t>(x) * UINT64_C(10);
                   })),
               List<std::pair<crane::obj,
                              crane::fn<uint64_t(crane::obj)>>>::nil()))},
@@ -193,6 +193,6 @@ struct ErasedTypeFieldLambda {
                              crane::fn<uint64_t(crane::obj)>>>::nil())},
           List<slot>::nil()));
   static inline const uint64_t run = slots.template fold_left<uint64_t>(
-      [](uint64_t a, const slot &s) { return (a + weigh(s)); },
+      [](uint64_t a, const slot &s) { return a + weigh(s); },
       UINT64_C(0));
 };

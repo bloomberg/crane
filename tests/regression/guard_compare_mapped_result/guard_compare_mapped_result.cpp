@@ -22,7 +22,7 @@ bool GuardCompareMappedResult::eqt(const GuardCompareMappedResult::tree &a,
       } else {
         const auto &[a00, a10, a20] =
             std::get<typename GuardCompareMappedResult::tree::Node>(b.v());
-        return ((eqt(*a0, *a00) && a1 == a10) && eqt(*a2, *a20));
+        return ((eqt(*a0, *a00) && (a1 == a10)) && eqt(*a2, *a20));
       }
     }
   }

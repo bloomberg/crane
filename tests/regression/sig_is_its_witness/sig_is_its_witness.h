@@ -123,7 +123,7 @@ struct SigIsItsWitness {
   static uint64_t nested_val(uint64_t n);
   /// A function as the witness.
   [[gnu::used]] static inline const crane::fn<uint64_t(uint64_t)> fixes_zero =
-      [](uint64_t x) { return (x * UINT64_C(2)); };
+      [](uint64_t x) { return x * UINT64_C(2); };
   static uint64_t apply_fixes_zero(uint64_t n);
   /// unit as the witness.
   static constexpr std::monostate unit_sig = std::monostate{};

@@ -180,22 +180,22 @@ struct GlobRefNat {
 struct GlobalStateTests {
   struct nat_idx {
     static List<uint64_t> range(uint64_t fp, uint64_t sp) {
-      auto _once1 = (UINT64_C(1) + sp);
-      return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
+      auto _once1 = UINT64_C(1) + sp;
+      return ListDef::seq(fp, (_once1 - fp > _once1 ? 0 : _once1 - fp));
     }
 
     constexpr static std::optional<uint64_t> index(uint64_t fp, uint64_t sp,
                                                    uint64_t i) {
-      if ((fp <= i && i <= sp)) {
-        return std::make_optional<uint64_t>((((i - fp) > i ? 0 : (i - fp))));
+      if (((fp <= i) && (i <= sp))) {
+        return std::make_optional<uint64_t>((i - fp > i ? 0 : i - fp));
       } else {
         return std::optional<uint64_t>();
       }
     }
 
     constexpr static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
-      auto _once2 = (UINT64_C(1) + sp);
-      return (((_once2 - fp) > _once2 ? 0 : (_once2 - fp)));
+      auto _once2 = UINT64_C(1) + sp;
+      return (_once2 - fp > _once2 ? 0 : _once2 - fp);
     }
 
     constexpr static uint64_t toNat(uint64_t n) { return n; }
@@ -205,7 +205,7 @@ struct GlobalStateTests {
     constexpr static uint64_t suc(uint64_t x) { return (x + 1); }
 
     constexpr static uint64_t sub(uint64_t a0, uint64_t a1) {
-      return (((a0 - a1) > a0 ? 0 : (a0 - a1)));
+      return (a0 - a1 > a0 ? 0 : a0 - a1);
     }
 
     constexpr static uint64_t max(uint64_t a0, uint64_t a1) {

@@ -10,6 +10,6 @@ uint64_t PairBothRecursive::size(const PairBothRecursive::t &x) {
   } else {
     const auto &[a0] = std::get<typename PairBothRecursive::t::Br>(x.v());
     const auto &[a, b] = (*a0);
-    return (size(a) + size(b));
+    return size(a) + size(b);
   }
 }

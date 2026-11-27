@@ -156,7 +156,7 @@ struct TypeApp {
   }
 
   static inline const list<uint64_t> test_map = map<uint64_t, uint64_t>(
-      [](uint64_t x) { return (x + UINT64_C(1)); },
+      [](uint64_t x) { return x + UINT64_C(1); },
       list<uint64_t>::cons(
           UINT64_C(1),
           list<uint64_t>::cons(
@@ -175,9 +175,8 @@ struct TypeApp {
     return f(f(x));
   }
 
-  static inline const uint64_t test_twice = twice<uint64_t>(
-      [](uint64_t x) { return (x + UINT64_C(1)); },
-      UINT64_C(10));
+  static inline const uint64_t test_twice =
+      twice<uint64_t>([](uint64_t x) { return x + UINT64_C(1); }, UINT64_C(10));
 
   struct NatMonoid {
     using T = uint64_t;

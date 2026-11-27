@@ -134,7 +134,7 @@ struct MatchRefAfterMove {
           auto _f =
               std::move(std::get<_after_mylist_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -265,7 +265,7 @@ struct MatchRefAfterMove {
                 UINT64_C(20), mylist<uint64_t>::mycons(
                                   UINT64_C(30), mylist<uint64_t>::mynil()))));
     const auto &[a0, a1] = _sv;
-    return (a0 + a1);
+    return a0 + a1;
   }();
   /// test2: nested_match_probe 10,20,30 = 10+20+1 = 31
   static inline const uint64_t test2 =
@@ -281,7 +281,7 @@ struct MatchRefAfterMove {
         UINT64_C(5),
         mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mynil())));
     const auto &[a0, a1] = _sv;
-    return (a0 + mylist_sum(a1));
+    return a0 + mylist_sum(a1);
   }();
   /// test4: double_match 7,8,9 = (7, 8,9)
   static inline const uint64_t test4 = []() {
@@ -291,7 +291,7 @@ struct MatchRefAfterMove {
             UINT64_C(8),
             mylist<uint64_t>::mycons(UINT64_C(9), mylist<uint64_t>::mynil()))));
     const auto &[a0, a1] = _sv;
-    return (a0 + mylist_sum(a1));
+    return a0 + mylist_sum(a1);
   }();
 
   /// Pattern 5: CPS with explicit continuation that captures from match.
@@ -313,7 +313,7 @@ struct MatchRefAfterMove {
                              UINT64_C(200), mylist<uint64_t>::mycons(
                                                 UINT64_C(300),
                                                 mylist<uint64_t>::mynil()))),
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); });
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; });
 
   /// Pattern 6: Deep nesting of matches with multiple constructors.
   template <typename A, typename B> struct either {

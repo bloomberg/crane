@@ -27,7 +27,7 @@ struct TwiceTwiceEtaFlat {
             },
             [](crane::fn<uint64_t(uint64_t)> h) {
               return [=, h = std::move(h)](uint64_t n) {
-                return (h(n) + UINT64_C(1));
+                return h(n) + UINT64_C(1);
               };
             }),
         [](uint64_t n) { return n; })(UINT64_C(0));

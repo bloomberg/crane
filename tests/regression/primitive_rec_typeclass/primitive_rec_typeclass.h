@@ -16,7 +16,7 @@ struct PrimitiveRecTypeclass {
   };
 
   struct pointNorm {
-    static uint64_t norm(point p) { return (p.px + p.py); }
+    static uint64_t norm(point p) { return p.px + p.py; }
   };
 
   static_assert(HasNorm<pointNorm, point>);
@@ -28,7 +28,7 @@ struct PrimitiveRecTypeclass {
   };
 
   struct vec3Norm {
-    static uint64_t norm(vec3 v) { return ((v.vx + v.vy) + v.vz); }
+    static uint64_t norm(vec3 v) { return v.vx + v.vy + v.vz; }
   };
 
   static_assert(HasNorm<vec3Norm, vec3>);
@@ -36,7 +36,7 @@ struct PrimitiveRecTypeclass {
   template <typename _tcI0, typename T1>
     requires HasNorm<_tcI0, T1>
   static uint64_t double_norm(const T1 &x) {
-    return (_tcI0::norm(x) + _tcI0::norm(x));
+    return _tcI0::norm(x) + _tcI0::norm(x);
   }
 
   struct rect {

@@ -33,7 +33,7 @@ uint64_t BakeMappedValues::weight(const BakeMappedValues::spine &s) {
       auto _f = std::move(std::get<_after_weight_in_Grow>(_popped));
       _stack.pop_back();
       uint64_t x0 = _f.x0;
-      _result = (x0 + _result);
+      _result = x0 + _result;
     }
   }
   return _result;

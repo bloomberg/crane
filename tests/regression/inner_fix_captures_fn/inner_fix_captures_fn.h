@@ -153,7 +153,7 @@ struct InnerFixCapturesFn {
         _stack.pop_back();
         uint64_t a0 = _f.a0;
         std::shared_ptr<lst> a1 = std::move(_f.a1);
-        _result = ([&]() {
+        _result = [&]() {
           auto inner = [&](const lst &m, uint64_t a) -> uint64_t {
             // Loop replaces the tail recursion: each recursive call updates the
             // loop variables.
@@ -164,13 +164,13 @@ struct InnerFixCapturesFn {
               } else {
                 const auto &[a2, a3] =
                     std::get<typename lst::Cons>(_loop_m->v());
-                a = (a + f(a2));
+                a = a + f(a2);
                 _loop_m = crane_raw(a3);
               }
             }
           };
           return inner(*a1, f(a0));
-        }() + _result);
+        }() + _result;
       }
     }
     return _result;

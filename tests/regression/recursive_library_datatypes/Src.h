@@ -40,10 +40,10 @@ struct T {
 };
 
 const uint64_t r =
-    (T::t0(UINT64_C(4)).get() +
-     Datatypes::template List<uint64_t>::cons(
-         UINT64_C(1),
-         Datatypes::template List<uint64_t>::cons(
-             UINT64_C(2), Datatypes::template List<uint64_t>::nil()))
-         .length());
+    T::t0(UINT64_C(4)).get() +
+    Datatypes::template List<uint64_t>::cons(
+        UINT64_C(1),
+        Datatypes::template List<uint64_t>::cons(
+            UINT64_C(2), Datatypes::template List<uint64_t>::nil()))
+        .length();
 } // namespace Src

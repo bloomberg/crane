@@ -96,10 +96,10 @@ public:
 struct LoopAccCurriedPartialApp {
   static bool r(const List<uint64_t> &l);
   static inline const uint64_t result =
-      ((r(List<uint64_t>::cons(
-            UINT64_C(1),
-            List<uint64_t>::cons(UINT64_C(2),
-                                 List<uint64_t>::nil()))) ? UINT64_C(1)
-                                                          : UINT64_C(0)) +
-       (r(List<uint64_t>::nil()) ? UINT64_C(10) : UINT64_C(0)));
+      (r(List<uint64_t>::cons(
+           UINT64_C(1),
+           List<uint64_t>::cons(UINT64_C(2),
+                                List<uint64_t>::nil()))) ? UINT64_C(1)
+                                                         : UINT64_C(0)) +
+      (r(List<uint64_t>::nil()) ? UINT64_C(10) : UINT64_C(0));
 };

@@ -19,7 +19,7 @@ std::optional<uint64_t> ProgramTargetsRegionScan::jump_target(
 
 bool ProgramTargetsRegionScan::addr_in_regionb(
     uint64_t addr, const ProgramTargetsRegionScan::layout &l) {
-  return (l.base_addr <= addr && addr < (l.base_addr + l.code_size));
+  return ((l.base_addr <= addr) && (addr < l.base_addr + l.code_size));
 }
 
 bool ProgramTargetsRegionScan::target_in_layoutb(

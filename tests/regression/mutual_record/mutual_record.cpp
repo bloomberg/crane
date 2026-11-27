@@ -37,7 +37,7 @@ uint64_t MutualRecord::emp_list_salary(const List<MutualRecord::employee> &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename List<MutualRecord::employee>::Cons>(l.v());
-    return (emp_salary(a0) + emp_list_salary(*a1));
+    return emp_salary(a0) + emp_list_salary(*a1);
   }
 }
 
@@ -53,6 +53,6 @@ uint64_t MutualRecord::emp_list_count(const List<MutualRecord::employee> &l) {
   } else {
     const auto &[_, a1] =
         std::get<typename List<MutualRecord::employee>::Cons>(l.v());
-    return (UINT64_C(1) + emp_list_count(*a1));
+    return UINT64_C(1) + emp_list_count(*a1);
   }
 }

@@ -44,7 +44,7 @@ uint64_t FunctionVernac::list_sum_terminate(const List<uint64_t> &l) {
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     const uint64_t &x = list_sum_terminate(*a1);
-    return (a0 + x);
+    return a0 + x;
   }
 }
 

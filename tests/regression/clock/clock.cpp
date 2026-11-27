@@ -32,5 +32,5 @@ int64_t Clock::elapsed() {
           .count());
   return static_cast<int64_t>(
       (static_cast<uint64_t>(t2) - static_cast<uint64_t>(t1)) &
-      0x7FFFFFFFFFFFFFFFULL);
+      UINT64_C(9223372036854775807));
 }

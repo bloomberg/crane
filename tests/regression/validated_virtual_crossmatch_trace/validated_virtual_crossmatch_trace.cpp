@@ -255,9 +255,9 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
 
 bool ValidatedVirtualCrossmatchTraceCase::mfi_config_valid(
     const ValidatedVirtualCrossmatchTraceCase::MFIThresholdConfig &cfg) {
-  return ((cfg.mfi_cfg_negative < cfg.mfi_cfg_weak_positive &&
-           cfg.mfi_cfg_weak_positive < cfg.mfi_cfg_moderate) &&
-          cfg.mfi_cfg_moderate < cfg.mfi_cfg_strong);
+  return (((cfg.mfi_cfg_negative < cfg.mfi_cfg_weak_positive) &&
+           (cfg.mfi_cfg_weak_positive < cfg.mfi_cfg_moderate)) &&
+          (cfg.mfi_cfg_moderate < cfg.mfi_cfg_strong));
 }
 
 ValidatedVirtualCrossmatchTraceCase::MFIStrength
@@ -319,7 +319,7 @@ bool ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
       const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody &ab) {
     const auto &ab_ab_epitope = ab.ab_epitope;
     return (
-        (ab.ab_complement_fixing && mfi_negative_threshold < ab.ab_mfi) &&
+        (ab.ab_complement_fixing && (mfi_negative_threshold < ab.ab_mfi)) &&
         donor_epitopes.existsb(
             [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0) -> bool {
               return epitope_eqb(ab_ab_epitope, _x0);
@@ -409,10 +409,10 @@ bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
 
 bool ValidatedVirtualCrossmatchTraceCase::order_sample_valid(
     uint64_t collection_time, uint64_t current_time) {
-  return (((current_time - collection_time) > current_time
-               ? 0
-               : (current_time - collection_time))) <=
-         (UINT64_C(72) * UINT64_C(3600));
+  return (current_time - collection_time > current_time
+              ? 0
+              : current_time - collection_time) <=
+         UINT64_C(72) * UINT64_C(3600);
 }
 
 bool ValidatedVirtualCrossmatchTraceCase::transfusion_order_authorized(

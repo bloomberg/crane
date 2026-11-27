@@ -412,7 +412,7 @@ struct LoopifyPatterns {
   template <typename F0>
   static list<uint64_t> merge_by(F0 &&cmp, const list<uint64_t> &l1,
                                  const list<uint64_t> &l2) {
-    return merge_by_fuel((list_len(l1) + list_len(l2)), cmp, l1, l2);
+    return merge_by_fuel(list_len(l1) + list_len(l2), cmp, l1, l2);
   }
 
   /// process_twice l applies recursion twice: process(process(xs)).

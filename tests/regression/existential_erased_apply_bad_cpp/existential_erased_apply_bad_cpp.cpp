@@ -19,15 +19,10 @@ ExistentialErasedApplyBadCpp::mk(uint64_t n) {
               std::make_pair(crane::obj(n), crane::obj((n + 1))),
               crane::fn<uint64_t(crane::obj)>(
                   [](const crane::obj &p) -> uint64_t {
-                    return (
-                        crane::any_cast<uint64_t>(
-                            crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                p)
-                                .first) +
-                        crane::any_cast<uint64_t>(
-                            crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                p)
-                                .second));
+                    return crane::any_cast<uint64_t>(crane::any_cast<
+                        std::pair<crane::obj, crane::obj>>(p).first) +
+                           crane::any_cast<uint64_t>(crane::any_cast<
+                               std::pair<crane::obj, crane::obj>>(p).second);
                   })),
           List<ExistentialErasedApplyBadCpp::dyn>::cons(
               dyn::dyn0(List<crane::obj>::cons(
@@ -51,7 +46,7 @@ uint64_t ExistentialErasedApplyBadCpp::total(
   } else {
     const auto &[a0, a1] =
         std::get<typename List<ExistentialErasedApplyBadCpp::dyn>::Cons>(l.v());
-    return (force(a0) + total(*a1));
+    return force(a0) + total(*a1);
   }
 }
 

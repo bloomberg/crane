@@ -171,36 +171,25 @@ struct Uint63Axioms {
 struct StringGetHighByte {
   static inline const std::string accented = "\303\251";
   static inline const uint64_t first_code =
-      BinInt::to_nat(Uint63Axioms::to_Z(
-          static_cast<std::int64_t>(
-              static_cast<std::size_t>(INT64_C(0)) <
-              accented.size() ? static_cast<unsigned char>(accented[
-                                    static_cast<std::size_t>(INT64_C(0))])
-                              : 0)));
+      BinInt::to_nat(Uint63Axioms::to_Z(static_cast<int64_t>(
+          0uz < accented.size() ? static_cast<unsigned char>(accented[0uz])
+                                : 0)));
   static inline const bool high_above_low =
-      static_cast<std::int64_t>(
-          static_cast<std::size_t>(INT64_C(0)) <
-          std::string_view("a").size() ? static_cast<unsigned char>(
-                                             std::string_view("a")[
-                                                 static_cast<std::size_t>(
-                                                     INT64_C(0))])
-                                       : 0) <
-      static_cast<std::int64_t>(static_cast<std::size_t>(INT64_C(0)) <
-                                accented.size() ? static_cast<unsigned char>(
-                                                      accented[static_cast<
-                                                          std::size_t>(
-                                                          INT64_C(0))])
-                                                : 0);
+      static_cast<int64_t>(
+          0uz < std::string_view("a").size() ? static_cast<unsigned char>(
+                                                   std::string_view("a")[0uz])
+                                             : 0) <
+      static_cast<int64_t>(
+          0uz < accented.size() ? static_cast<unsigned char>(accented[0uz])
+                                : 0);
   /// A char63 is any int: one above 255 keeps its value.
   static inline const int64_t wide =
       crane::any_cast<int64_t>(static_cast<int64_t>(
-          (static_cast<uint64_t>(static_cast<std::int64_t>(
-               static_cast<std::size_t>(INT64_C(0)) <
-               accented.size() ? static_cast<unsigned char>(accented[
-                                     static_cast<std::size_t>(INT64_C(0))])
-                               : 0)) +
-           static_cast<uint64_t>(INT64_C(100))) &
-          0x7FFFFFFFFFFFFFFFULL));
+          (static_cast<uint64_t>(static_cast<int64_t>(
+               0uz < accented.size() ? static_cast<unsigned char>(accented[0uz])
+                                     : 0)) +
+           UINT64_C(100)) &
+          UINT64_C(9223372036854775807)));
   static inline const uint64_t wide_code =
       BinInt::to_nat(Uint63Axioms::to_Z(wide));
 };

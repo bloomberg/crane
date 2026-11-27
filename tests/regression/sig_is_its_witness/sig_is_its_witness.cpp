@@ -7,7 +7,7 @@ uint64_t SigIsItsWitness::pos_val(uint64_t n) { return pos(n); }
 
 uint64_t SigIsItsWitness::pos_match(uint64_t n) {
   const uint64_t &m = pos(n);
-  return (m + UINT64_C(1));
+  return m + UINT64_C(1);
 }
 
 /// Nested: a sig of a sig.
@@ -38,7 +38,7 @@ List<uint64_t> SigIsItsWitness::positives(uint64_t k) {
 
 uint64_t SigIsItsWitness::sum_positives(uint64_t k) {
   return positives(k).template fold_left<uint64_t>(
-      [](uint64_t acc, uint64_t p) { return (acc + p); },
+      [](uint64_t acc, uint64_t p) { return acc + p; },
       UINT64_C(0));
 }
 
@@ -48,7 +48,7 @@ uint64_t SigIsItsWitness::rt_sum(const SigIsItsWitness::rt &t) {
   } else {
     const auto &[a0, a1] = std::get<typename SigIsItsWitness::rt::Node>(t.v());
     const SigIsItsWitness::rt &r = (*a0);
-    return (a1 + rt_sum(r));
+    return a1 + rt_sum(r);
   }
 }
 

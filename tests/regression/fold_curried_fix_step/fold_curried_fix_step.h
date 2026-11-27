@@ -172,7 +172,7 @@ struct FoldCurriedFixStep {
   }
 
   static inline const uint64_t result = g(
-      [](uint64_t x, uint64_t y) { return ((x * UINT64_C(10)) + y); },
+      [](uint64_t x, uint64_t y) { return x * UINT64_C(10) + y; },
       List<uint64_t>::cons(
           UINT64_C(1),
           List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),

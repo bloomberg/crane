@@ -11,7 +11,7 @@
 /// g: Nat.modulo a (Nat.max b 1): the % mapping reads its divisor
 /// twice and bound std::max(b, 1) with auto&& the same way.
 uint64_t MaxResultDanglingRef::f(uint64_t a, uint64_t b) {
-  auto _once1 = std::max((a + UINT64_C(1)), (b + UINT64_C(2)));
+  auto _once1 = std::max(a + UINT64_C(1), b + UINT64_C(2));
   return (_once1 ? _once1 - 1 : _once1);
 }
 

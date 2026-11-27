@@ -51,6 +51,6 @@ uint64_t FixFoldEscape::sum_apply(const List<crane::fn<uint64_t(uint64_t)>> &l,
   } else {
     const auto &[a0, a1] =
         std::get<typename List<crane::fn<uint64_t(uint64_t)>>::Cons>(l.v());
-    return (a0(x) + sum_apply(*a1, x));
+    return a0(x) + sum_apply(*a1, x);
   }
 }

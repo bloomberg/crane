@@ -212,7 +212,7 @@ struct MoveCaptureReuse {
       } else {
         const auto &[a00, _] =
             std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
-        return (a0.length() + a00.length());
+        return a0.length() + a00.length();
       }
     }
   }();

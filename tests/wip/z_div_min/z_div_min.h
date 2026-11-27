@@ -6,8 +6,8 @@ struct Z {};
 
 struct ZDivMin {
   /// Build INT64_MIN = -9223372036854775808 via Z.opp(Z.of_nat ...)
-  static inline const int64_t neg_max = static_cast<int64_t>(
-      -static_cast<uint64_t>(INT64_C(9223372036854775807)));
+  static inline const int64_t neg_max =
+      static_cast<int64_t>(-UINT64_C(9223372036854775807));
   static inline const int64_t int64_min =
       static_cast<int64_t>(static_cast<uint64_t>(neg_max) - 1);
   /// INT64_MIN / -1 = 9223372036854775808, which doesn't fit in int64_t.

@@ -88,7 +88,7 @@ uint64_t NameClashMatchMatch::double_match(const NameClashMatchMatch::tree &t) {
       }
     }
   }();
-  return (a + b);
+  return a + b;
 }
 
 /// Match where the scrutinee is a function call that returns an inductive,

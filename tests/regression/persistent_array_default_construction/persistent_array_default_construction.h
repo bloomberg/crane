@@ -65,6 +65,6 @@ struct PersistentArrayDefaultConstruction {
 
   static uint64_t get0(const t &x);
   static inline const uint64_t first =
-      (get0(t::t0(persistent_array<uint64_t>(INT64_C(2), UINT64_C(7)))) +
-       get0(t::e()));
+      get0(t::t0(persistent_array<uint64_t>(INT64_C(2), UINT64_C(7)))) +
+      get0(t::e());
 };

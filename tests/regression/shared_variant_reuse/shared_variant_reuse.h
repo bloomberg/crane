@@ -237,7 +237,7 @@ struct SharedVariantReuse {
           auto _f = std::move(crane::get<_after_total_in_Cons>(_popped));
           _stack.pop_back();
           uint64_t a0 = _f.a0;
-          _result = (a0 + _result);
+          _result = a0 + _result;
         }
       }
       return _result;

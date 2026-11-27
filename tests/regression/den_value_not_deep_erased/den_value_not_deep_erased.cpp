@@ -13,7 +13,7 @@ uint64_t DenValueNotDeepErased::size(const DenValueNotDeepErased::ty &t,
                .template fold_left<uint64_t>(
         [=, a0_value = a0_value](uint64_t acc,
                                  DenValueNotDeepErased::den x) {
-          return (acc + size(a0_value, std::move(x)));
+          return acc + size(a0_value, std::move(x));
         },
         UINT64_C(0));
   }

@@ -43,7 +43,7 @@ bool LoopifyListRelations::is_prefix_of(const List<uint64_t> &l1,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      _result = (a0 == a00 && _result);
+      _result = ((a0 == a00) && _result);
     }
   }
   return _result;
@@ -56,7 +56,7 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
   if (len2 < len1) {
     return false;
   } else {
-    uint64_t diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
+    uint64_t diff = (len2 - len1 > len2 ? 0 : len2 - len1);
     List<uint64_t> suffix;
     auto drop = [&](const List<uint64_t> &xs) -> List<uint64_t> {
       // Loop replaces the tail recursion: each recursive call updates the loop
@@ -169,11 +169,11 @@ List<uint64_t> LoopifyListRelations::find_sublists_aux(
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        idx = (idx + UINT64_C(1));
+        idx = idx + UINT64_C(1);
         _loop_haystack = crane_raw(a1);
         continue;
       } else {
-        idx = (idx + UINT64_C(1));
+        idx = idx + UINT64_C(1);
         _loop_haystack = crane_raw(a1);
         continue;
       }
@@ -235,7 +235,7 @@ bool LoopifyListRelations::list_eq(const List<uint64_t> &l1,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      _result = (a0 == a00 && _result);
+      _result = ((a0 == a00) && _result);
     }
   }
   return _result;
@@ -509,7 +509,7 @@ List<uint64_t> LoopifyListRelations::merge(const List<uint64_t> &l1,
                                            const List<uint64_t> &l2) {
   uint64_t len1 = l1.length();
   uint64_t len2 = l2.length();
-  return merge_fuel((len1 + len2), l1, l2);
+  return merge_fuel(len1 + len2, l1, l2);
 }
 
 List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
@@ -563,7 +563,7 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
               auto _f = std::move(std::get<_after_member_in_Cons>(_popped));
               _stack.pop_back();
               uint64_t a2 = _f.a2;
-              _result = (y == a2 || _result);
+              _result = ((y == a2) || _result);
             }
           }
           return _result;
@@ -638,7 +638,7 @@ List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
               auto _f = std::move(std::get<_after_member_in_Cons>(_popped));
               _stack.pop_back();
               uint64_t a2 = _f.a2;
-              _result = (y == a2 || _result);
+              _result = ((y == a2) || _result);
             }
           }
           return _result;

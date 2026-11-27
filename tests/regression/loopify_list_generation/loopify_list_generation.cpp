@@ -114,7 +114,7 @@ List<uint64_t> LoopifyListGeneration::iterate(uint64_t n, uint64_t x) {
                           std::make_shared<List<uint64_t>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-      x = (x + UINT64_C(1));
+      x = x + UINT64_C(1);
       n = n_;
       continue;
     }
@@ -225,7 +225,7 @@ List<uint64_t> LoopifyListGeneration::range(uint64_t start, uint64_t len) {
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       len = len_;
-      start = (start + UINT64_C(1));
+      start = start + UINT64_C(1);
       continue;
     }
   }

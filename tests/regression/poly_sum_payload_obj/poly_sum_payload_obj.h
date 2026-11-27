@@ -824,7 +824,7 @@ struct PolySumPayloadObj {
           UINT64_C(0),
           [](uint64_t) { return sret<pt>(pt{UINT64_C(0), true}); },
           ptree<bool>::pleaf());
-      return ((w111.length() * UINT64_C(13)) + [&]() -> uint64_t {
+      return w111.length() * UINT64_C(13) + [&]() -> uint64_t {
         auto _cs = w111.get(UINT64_C(0));
         if (_cs.has_value()) {
           const Ascii &c = *_cs;
@@ -832,7 +832,7 @@ struct PolySumPayloadObj {
         } else {
           return UINT64_C(0);
         }
-      }());
+      }();
     }();
   }();
 };

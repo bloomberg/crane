@@ -46,7 +46,7 @@ uint64_t VisitMatchBug::match_extract_field(const VisitMatchBug::State &s) {
 uint64_t VisitMatchBug::match_extract_two(const VisitMatchBug::State &s) {
   uint64_t v = s.value;
   uint64_t d = s.data;
-  return (v + d);
+  return v + d;
 }
 
 uint64_t VisitMatchBug::match_nested(const VisitMatchBug::State &s) {
@@ -58,5 +58,5 @@ uint64_t VisitMatchBug::match_in_tail(const VisitMatchBug::State &s) {
 }
 
 uint64_t VisitMatchBug::match_in_expr(const VisitMatchBug::State &s) {
-  return (s.value + UINT64_C(1));
+  return s.value + UINT64_C(1);
 }

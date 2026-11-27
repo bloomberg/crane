@@ -174,6 +174,6 @@ struct PolymorphicValueEtaArity {
   }();
   static inline const uint64_t through_constf = cs.template fold_left<uint64_t>(
       [](uint64_t a,
-         const crane::fn<uint64_t(bool)> &g) { return (a + g(true)); },
+         const crane::fn<uint64_t(bool)> &g) { return a + g(true); },
       UINT64_C(0));
 };

@@ -174,11 +174,10 @@ struct ResetState {
             UINT64_C(10),
             List<uint64_t>::cons(UINT64_C(11), List<uint64_t>::nil()))};
     state_full s_ = reset_state_full(std::move(s));
-    return (((s_.acc + ListDef::template nth<uint64_t>(UINT64_C(1), s_.ram_sys,
-                                                       UINT64_C(0))) +
-             ListDef::template nth<uint64_t>(UINT64_C(0), s_.rom,
-                                             UINT64_C(0))) +
-            s_.stack.length());
+    return s_.acc + ListDef::template nth<uint64_t>(UINT64_C(1), s_.ram_sys,
+                                                    UINT64_C(0)) +
+           ListDef::template nth<uint64_t>(UINT64_C(0), s_.rom, UINT64_C(0)) +
+           s_.stack.length();
   }();
   static state_minimal reset_state_minimal(const state_minimal &s);
   static inline const uint64_t pc_clear_test =

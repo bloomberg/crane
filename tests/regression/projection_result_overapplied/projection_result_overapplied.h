@@ -10,7 +10,7 @@ struct ProjectionResultOverapplied {
   static inline const std::pair<crane::fn<uint64_t(uint64_t, uint64_t)>,
                                 uint64_t> fp = std::make_pair(
       crane::fn<uint64_t(uint64_t, uint64_t)>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }),
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; }),
       UINT64_C(0));
   static inline const uint64_t direct = fp.first(UINT64_C(2), UINT64_C(3));
   static uint64_t
@@ -23,5 +23,5 @@ struct ProjectionResultOverapplied {
   static inline const uint64_t second = apply_snd(std::make_pair(
       UINT64_C(4),
       crane::fn<uint64_t(uint64_t, uint64_t)>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 * _x1); })));
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 * _x1; })));
 };

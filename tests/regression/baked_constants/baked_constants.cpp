@@ -18,7 +18,7 @@ uint64_t BakedConstants::size(const BakedConstants::tree &t) {
   } else {
     const auto &[l0, _, r0] =
         crane::get<typename BakedConstants::tree::Node>(t.v());
-    return ((UINT64_C(1) + size(*l0)) + size(*r0));
+    return UINT64_C(1) + size(*l0) + size(*r0);
   }
 }
 
@@ -28,7 +28,7 @@ uint64_t BakedConstants::sum_tree(const BakedConstants::tree &t) {
   } else {
     const auto &[l0, x0, r0] =
         crane::get<typename BakedConstants::tree::Node>(t.v());
-    return ((sum_tree(*l0) + x0) + sum_tree(*r0));
+    return sum_tree(*l0) + x0 + sum_tree(*r0);
   }
 }
 
@@ -36,7 +36,7 @@ uint64_t BakedConstants::sum_tree(const BakedConstants::tree &t) {
 crane::shared_array<uint64_t> BakedConstants::row(uint64_t k) {
   return vec_of_list<uint64_t>(
       ListDef::seq(UINT64_C(0), UINT64_C(10)).template map<uint64_t>(
-          [=](uint64_t i) { return (i * k); }));
+          [=](uint64_t i) { return i * k; }));
 }
 
 uint64_t BakedConstants::big_size() { return size(big); }
@@ -72,7 +72,7 @@ uint64_t BakedConstants::weights() {
       [](const BakedConstants::entry &e, uint64_t acc) -> uint64_t {
         if (e.weight.has_value()) {
           const uint64_t &w = *e.weight;
-          return (w + acc);
+          return w + acc;
         } else {
           return acc;
         }
@@ -81,7 +81,7 @@ uint64_t BakedConstants::weights() {
 }
 
 /// What cannot be baked.
-uint64_t BakedConstants::twice(uint64_t n) { return (n + n); }
+uint64_t BakedConstants::twice(uint64_t n) { return n + n; }
 
 BakedConstants::stream BakedConstants::ones() {
   return stream::lazy_([]() -> typename BakedConstants::stream::Cons {

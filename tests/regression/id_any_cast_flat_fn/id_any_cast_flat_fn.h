@@ -27,7 +27,7 @@ struct IdAnyCastFlatFn {
           // touching its counts.
           static const auto erased_fn = crane::immortal(
               crane_erase_fn([](const crane::fn<uint64_t(uint64_t)> &c,
-                                uint64_t n) { return (c(n) + UINT64_C(1)); }));
+                                uint64_t n) { return c(n) + UINT64_C(1); }));
           crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>, uint64_t)> _rg =
               crane_any_cast<
                   crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>, uint64_t)>>(

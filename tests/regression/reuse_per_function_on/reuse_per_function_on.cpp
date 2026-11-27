@@ -61,6 +61,6 @@ uint64_t ReusePerFunctionOn::sum(const ReusePerFunctionOn::lst &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename ReusePerFunctionOn::lst::Cons>(l.v());
-    return (a0 + sum(*a1));
+    return a0 + sum(*a1);
   }
 }

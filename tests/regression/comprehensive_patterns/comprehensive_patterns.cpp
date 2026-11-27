@@ -421,12 +421,12 @@ uint64_t
 ComprehensivePatterns::match_bind_and_use(const ComprehensivePatterns::R &r) {
   uint64_t v = r.val;
   uint64_t d = r.dat;
-  return ((v + d) + r.val);
+  return v + d + r.val;
 }
 
 uint64_t
 ComprehensivePatterns::let_with_type(const ComprehensivePatterns::R &r) {
-  return (r.val + r.val);
+  return r.val + r.val;
 }
 
 uint64_t
@@ -436,14 +436,14 @@ ComprehensivePatterns::proj_of_last_use(const ComprehensivePatterns::R &r1) {
 
 uint64_t
 ComprehensivePatterns::multi_let_same(const ComprehensivePatterns::R &r) {
-  return ((r.val + r.val) + r.val);
+  return r.val + r.val + r.val;
 }
 
 uint64_t ComprehensivePatterns::option_unwrap_proj(
     const std::optional<ComprehensivePatterns::R> &o) {
   if (o.has_value()) {
     const ComprehensivePatterns::R &r = *o;
-    return (r.val + r.dat);
+    return r.val + r.dat;
   } else {
     return UINT64_C(0);
   }
@@ -459,7 +459,7 @@ std::optional<uint64_t> ComprehensivePatterns::match_multi_use(
     const std::optional<ComprehensivePatterns::R> &o) {
   if (o.has_value()) {
     const ComprehensivePatterns::R &r = *o;
-    return std::make_optional<uint64_t>((r.val + r.dat));
+    return std::make_optional<uint64_t>(r.val + r.dat);
   } else {
     return std::optional<uint64_t>();
   }
@@ -527,7 +527,7 @@ uint64_t ComprehensivePatterns::nested_match(
     const ComprehensivePatterns::R &r1 = *o1;
     if (o2.has_value()) {
       const ComprehensivePatterns::R &r2 = *o2;
-      return (r1.val + r2.val);
+      return r1.val + r2.val;
     } else {
       return r1.val;
     }
@@ -547,7 +547,7 @@ ComprehensivePatterns::compose_proj(const ComprehensivePatterns::R &r) {
       [](const ComprehensivePatterns::R &x) { return x.val; };
   crane::fn<uint64_t(ComprehensivePatterns::R)> g =
       [](const ComprehensivePatterns::R &x) { return x.dat; };
-  return (f(r) + g(r));
+  return f(r) + g(r);
 }
 
 std::optional<uint64_t>
@@ -563,7 +563,7 @@ ComprehensivePatterns::proj_as_arg(const ComprehensivePatterns::NC &r) {
 }
 
 uint64_t ComprehensivePatterns::use_two(uint64_t x0_, uint64_t x1_) {
-  return (x0_ + x1_);
+  return x0_ + x1_;
 }
 
 uint64_t
@@ -575,12 +575,12 @@ uint64_t
 ComprehensivePatterns::let_proj_then_base(const ComprehensivePatterns::NC &r) {
   uint64_t x = r.nc_a;
   uint64_t y = r.nc_b;
-  return (x + y);
+  return x + y;
 }
 
 uint64_t ComprehensivePatterns::base_then_multi_proj(
     const ComprehensivePatterns::NC &r) {
-  return ((r.nc_a + r.nc_b) + r.nc_c);
+  return r.nc_a + r.nc_b + r.nc_c;
 }
 
 uint64_t
@@ -598,7 +598,7 @@ ComprehensivePatterns::proj_in_scrutinee(const ComprehensivePatterns::NC &r) {
     return r.nc_b;
   } else {
     uint64_t n = r.nc_a - 1;
-    return (n + r.nc_c);
+    return n + r.nc_c;
   }
 }
 
@@ -609,14 +609,14 @@ ComprehensivePatterns::return_proj_nc(const ComprehensivePatterns::NC &r) {
 
 uint64_t
 ComprehensivePatterns::call_return_proj(const ComprehensivePatterns::NC &r) {
-  return (return_proj_nc(r) + r.nc_b);
+  return return_proj_nc(r) + r.nc_b;
 }
 
-uint64_t ComprehensivePatterns::inc(uint64_t n) { return (n + UINT64_C(1)); }
+uint64_t ComprehensivePatterns::inc(uint64_t n) { return n + UINT64_C(1); }
 
 uint64_t
 ComprehensivePatterns::nested_proj_calls(const ComprehensivePatterns::NC &r) {
-  return (inc(r.nc_a) + inc(r.nc_b));
+  return inc(r.nc_a) + inc(r.nc_b);
 }
 
 uint64_t ComprehensivePatterns::count_down(uint64_t n,
@@ -649,7 +649,7 @@ uint64_t ComprehensivePatterns::count_down(uint64_t n,
     } else {
       auto _f = std::move(std::get<_after_count_down_in_S>(_popped));
       _stack.pop_back();
-      _result = (_result + r.nc_b);
+      _result = _result + r.nc_b;
     }
   }
   return _result;
@@ -665,7 +665,7 @@ uint64_t ComprehensivePatterns::f2(const ComprehensivePatterns::NC &r) {
 
 uint64_t ComprehensivePatterns::multi_function_calls(
     const ComprehensivePatterns::NC &r) {
-  return (f1(r) + f2(r));
+  return f1(r) + f2(r);
 }
 
 uint64_t
@@ -674,13 +674,13 @@ ComprehensivePatterns::proj_then_match(const ComprehensivePatterns::NC &r) {
   const crane::obj &_x = r.nc_a;
   uint64_t b = r.nc_b;
   const crane::obj &_x0 = r.nc_c;
-  return (x + b);
+  return x + b;
 }
 
 uint64_t
 ComprehensivePatterns::let_used_twice(const ComprehensivePatterns::NC &r) {
   uint64_t x = r.nc_a;
-  return (x + x);
+  return x + x;
 }
 
 bool ComprehensivePatterns::base_in_call_and_proj(
@@ -693,17 +693,17 @@ uint64_t ComprehensivePatterns::chained_lets_same_base(
   uint64_t x = r.nc_a;
   uint64_t y = r.nc_b;
   uint64_t z = r.nc_c;
-  return ((x + y) + z);
+  return x + y + z;
 }
 
 uint64_t
 ComprehensivePatterns::double_proj_nc(const ComprehensivePatterns::OuterNC &o) {
-  return (o.outer_nc.nc_a + o.outer_nc.nc_b);
+  return o.outer_nc.nc_a + o.outer_nc.nc_b;
 }
 
 uint64_t
 ComprehensivePatterns::multi_positions(const ComprehensivePatterns::NC &r) {
-  return (r.nc_a + (r.nc_b == UINT64_C(0) ? r.nc_a : r.nc_c));
+  return r.nc_a + (r.nc_b == UINT64_C(0) ? r.nc_a : r.nc_c);
 }
 
 uint64_t ComprehensivePatterns::sum_proj(uint64_t n,
@@ -736,7 +736,7 @@ uint64_t ComprehensivePatterns::sum_proj(uint64_t n,
     } else {
       auto _f = std::move(std::get<_after_sum_proj_in_S>(_popped));
       _stack.pop_back();
-      _result = (r.nc_a + _result);
+      _result = r.nc_a + _result;
     }
   }
   return _result;
@@ -744,12 +744,12 @@ uint64_t ComprehensivePatterns::sum_proj(uint64_t n,
 
 uint64_t ComprehensivePatterns::hof_test(const ComprehensivePatterns::NC &r) {
   return apply(
-      [](const ComprehensivePatterns::NC &x) { return (x.nc_a + x.nc_b); },
+      [](const ComprehensivePatterns::NC &x) { return x.nc_a + x.nc_b; },
       r);
 }
 
 uint64_t ComprehensivePatterns::use_two_fc(uint64_t x0_, uint64_t x1_) {
-  return (x0_ + x1_);
+  return x0_ + x1_;
 }
 
 uint64_t
@@ -758,7 +758,7 @@ ComprehensivePatterns::bug_two_args(const ComprehensivePatterns::State &s) {
 }
 
 uint64_t ComprehensivePatterns::use_three(uint64_t x, uint64_t y, uint64_t z) {
-  return ((x + y) + z);
+  return x + y + z;
 }
 
 uint64_t
@@ -800,7 +800,7 @@ uint64_t ComprehensivePatterns::f2_fc(uint64_t n) { return inc(n); }
 uint64_t
 ComprehensivePatterns::bug_multi_calls(const ComprehensivePatterns::State &s) {
   uint64_t v = s.state_value;
-  return (f1_fc(v) + f2_fc(v));
+  return f1_fc(v) + f2_fc(v);
 }
 
 std::pair<ComprehensivePatterns::State,
@@ -828,7 +828,7 @@ uint64_t ComprehensivePatterns::two_proj_sequence(
     const ComprehensivePatterns::State &s) {
   uint64_t v = s.state_value;
   uint64_t d = s.state_data;
-  return (v + d);
+  return v + d;
 }
 
 uint64_t
@@ -896,7 +896,7 @@ uint64_t ComprehensivePatterns::return_proj_stmt(
 
 uint64_t ComprehensivePatterns::return_complex(
     const ComprehensivePatterns::StateStmt &s) {
-  return (s.stmt_value + s.stmt_data);
+  return s.stmt_value + s.stmt_data;
 }
 
 std::pair<uint64_t, uint64_t>
@@ -916,12 +916,12 @@ uint64_t ComprehensivePatterns::triple_chain(
 
 uint64_t ComprehensivePatterns::proj_in_arith(
     const ComprehensivePatterns::StateStmt &s) {
-  return (s.stmt_value + UINT64_C(10));
+  return s.stmt_value + UINT64_C(10);
 }
 
 uint64_t ComprehensivePatterns::multi_proj_expr(
     const ComprehensivePatterns::StateStmt &s) {
-  return (s.stmt_value + (s.stmt_data * UINT64_C(2)));
+  return s.stmt_value + s.stmt_data * UINT64_C(2);
 }
 
 List<uint64_t>
@@ -971,7 +971,7 @@ ComprehensivePatterns::sum_values(uint64_t n,
     } else {
       auto _f = std::move(std::get<_after_sum_values_in_S>(_popped));
       _stack.pop_back();
-      _result = (s.stmt_value + _result);
+      _result = s.stmt_value + _result;
     }
   }
   return _result;
@@ -1037,7 +1037,7 @@ ComprehensivePatterns::sum_with_state(uint64_t n,
     } else {
       auto _f = std::move(std::get<_after_sum_with_state_in_S>(_popped));
       _stack.pop_back();
-      _result = (r.cf_val + _result);
+      _result = r.cf_val + _result;
     }
   }
   return _result;
@@ -1097,11 +1097,11 @@ ComprehensivePatterns::even_count(uint64_t n,
     } else if (std::holds_alternative<_after_even_count_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_even_count_in_S>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     } else {
       auto _f = std::move(std::get<_after_odd_count_entry_in_S>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -1160,11 +1160,11 @@ uint64_t ComprehensivePatterns::odd_count(uint64_t n,
     } else if (std::holds_alternative<_after_even_count_entry_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_even_count_entry_in_S>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     } else {
       auto _f = std::move(std::get<_after_odd_count_in_S>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -1200,7 +1200,7 @@ uint64_t ComprehensivePatterns::accum_with_state(
     } else {
       auto _f = std::move(std::get<_after_accum_with_state_in_S>(_popped));
       _stack.pop_back();
-      _result = (s.lb_value + _result);
+      _result = s.lb_value + _result;
     }
   }
   return _result;

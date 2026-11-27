@@ -116,6 +116,6 @@ struct FnListStateAliasFit {
     // touching its counts.
     static const auto h_1 = crane::immortal(h(UINT64_C(3)));
     auto [a, s] = h_1(UINT64_C(5));
-    return ((a * UINT64_C(100)) + s);
+    return a * UINT64_C(100) + s;
   }();
 };

@@ -21,7 +21,7 @@ BoxedFields::shift(uint64_t d, const List<BoxedFields::point> &ps) {
       const auto &_sv0 = crane::unbox(a0);
       const auto &[a00, a10] = _sv0;
       auto _cell = typename List<BoxedFields::point>::Cons(
-          point::pt((a00 + d), a10), nullptr);
+          point::pt(a00 + d, a10), nullptr);
       List<BoxedFields::point> &_node =
           (_write ? *(*_write = std::make_shared<List<BoxedFields::point>>(
                           std::move(_cell)))

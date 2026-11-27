@@ -106,7 +106,7 @@ struct MemSafetyProbe2 {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         crane::fn<uint64_t(uint64_t)> f =
             [&](uint64_t _x0) -> uint64_t { return a0->sum_values(_x0); };
-        return (f(a1) + a2->sum_values(a1));
+        return f(a1) + a2->sum_values(a1);
       }
     }
 
@@ -136,13 +136,13 @@ struct MemSafetyProbe2 {
       std::pair<tree, tree> p = std::make_pair(*this, *this);
       crane::fn<uint64_t(uint64_t)> f =
           [=](uint64_t _x0) -> uint64_t {
-            return std::move(p).first.sum_values(_x0);
+            return std::move(p.first).sum_values(_x0);
           };
       crane::fn<uint64_t(uint64_t)> g =
           [&](uint64_t _x0) -> uint64_t {
-            return std::move(p).second.sum_values(_x0);
+            return std::move(p.second).sum_values(_x0);
           };
-      return (f(UINT64_C(1)) + g(UINT64_C(2)));
+      return f(UINT64_C(1)) + g(UINT64_C(2));
     }
 
     /// TEST 11: Partial application used in BOTH branches of a match
@@ -184,7 +184,7 @@ struct MemSafetyProbe2 {
             [&](uint64_t _x0) -> uint64_t { return a0->sum_values(_x0); };
         crane::fn<uint64_t(uint64_t)> fr =
             [&](uint64_t _x0) -> uint64_t { return a2->sum_values(_x0); };
-        return (fl(a1) + fr(a1));
+        return fl(a1) + fr(a1);
       }
     }
 
@@ -198,7 +198,7 @@ struct MemSafetyProbe2 {
     uint64_t double_wrap(uint64_t x) const {
       crane::fn<uint64_t(uint64_t)> f =
           [&](uint64_t _x0) -> uint64_t { return this->sum_values(_x0); };
-      return (f(x) + x);
+      return f(x) + x;
     }
 
     /// TEST 4: Partial application of a wrapper that stores its arg in a
@@ -238,15 +238,15 @@ struct MemSafetyProbe2 {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
-          return (a1 + x);
+          return a1 + x;
         } else {
           const auto &[_, a10, _] = std::get<typename tree::Node>(_sv0.v());
           auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
-            return (a10 + x);
+            return a10 + x;
           } else {
             const auto &[_, a11, _] = std::get<typename tree::Node>(_sv1.v());
-            return (((a10 + a11) + a1) + x);
+            return a10 + a11 + a1 + x;
           }
         }
       }
@@ -456,7 +456,7 @@ struct MemSafetyProbe2 {
         } else {
           auto _f = std::move(std::get<_after_mylength_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -514,7 +514,7 @@ struct MemSafetyProbe2 {
   static inline const uint64_t test_dup_tree = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<tree, uint64_t> p = t.dup_tree();
-    return (std::move(p).first.sum_values(UINT64_C(0)) + p.second);
+    return std::move(p.first).sum_values(UINT64_C(0)) + p.second;
   }();
   static inline const uint64_t test_cps = []() {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
@@ -522,7 +522,7 @@ struct MemSafetyProbe2 {
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     return t.template with_tree<uint64_t>(
         [](const crane::fn<uint64_t(uint64_t)> &f) {
-          return (f(UINT64_C(5)) + f(UINT64_C(0)));
+          return f(UINT64_C(5)) + f(UINT64_C(0));
         });
   }();
   static inline const uint64_t test_compose = []() {
@@ -548,8 +548,8 @@ struct MemSafetyProbe2 {
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     std::pair<tree, tree> p = t.tree_pair();
-    return (std::move(p).first.sum_values(UINT64_C(0)) +
-            std::move(p).second.sum_values(UINT64_C(0)));
+    return std::move(p.first).sum_values(UINT64_C(0)) +
+           std::move(p.second).sum_values(UINT64_C(0));
   }();
   /// TEST 7: Closure escaping through a list, then applied.
   static mylist<uint64_t>
@@ -643,7 +643,7 @@ struct MemSafetyProbe2 {
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     std::pair<crane::fn<uint64_t(uint64_t)>, tree> p = t.pair_closure_tree();
-    return (p.first(UINT64_C(5)) + p.second.sum_values(UINT64_C(0)));
+    return p.first(UINT64_C(5)) + p.second.sum_values(UINT64_C(0));
   }();
   static inline const uint64_t test_chain =
       tree::node(tree::leaf(), UINT64_C(10), tree::leaf()).apply_chain(

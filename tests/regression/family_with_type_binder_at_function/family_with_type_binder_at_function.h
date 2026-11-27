@@ -161,9 +161,9 @@ struct FamilyWithTypeBinderAtFunction {
 
   static uint64_t clos(const List<uint64_t> &l, uint64_t x0_);
   static inline const uint64_t result =
-      ((use1.length() + use2(UINT64_C(1))) +
-       clos(List<uint64_t>::cons(
-           UINT64_C(1),
-           List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-            UINT64_C(1)));
+      use1.length() + use2(UINT64_C(1)) +
+      clos(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+           UINT64_C(1));
 };

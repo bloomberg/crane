@@ -144,13 +144,13 @@ struct BakeMappedValues {
       crane::bake::read<spine>(crane_baked_deep_a469784f0b1a);
   static uint64_t weight(const spine &s);
   static inline const uint64_t arr_sum =
-      ((arr.get(INT64_C(0)) + arr.get(INT64_C(1))) + arr.get(INT64_C(9)));
+      (arr.get(INT64_C(0))) + (arr.get(INT64_C(1))) + (arr.get(INT64_C(9)));
   static inline const uint64_t label_length = []() -> uint64_t {
     if (labelled.has_value()) {
       const std::pair<std::string, uint64_t> &p = *labelled;
       const auto &[s, n] = p;
       if (static_cast<int64_t>(s.size()) == INT64_C(5)) {
-        return (n + UINT64_C(5));
+        return n + UINT64_C(5);
       } else {
         return n;
       }
@@ -163,7 +163,7 @@ struct BakeMappedValues {
         for (const auto &_x : _l) _a = _f(_a, _x);
         return _a;
       }(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
           digits,
           UINT64_C(0));
   static inline const uint64_t deep_weight = weight(deep);

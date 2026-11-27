@@ -11,7 +11,7 @@ RecordDefaults::set_debug(bool d, const RecordDefaults::Config &c) {
 }
 
 uint64_t RecordDefaults::rect_area(const RecordDefaults::Rect &r) {
-  return (r.extent.px * r.extent.py);
+  return r.extent.px * r.extent.py;
 }
 
 RecordDefaults::Rect RecordDefaults::make_rect(uint64_t x, uint64_t y,
@@ -20,5 +20,5 @@ RecordDefaults::Rect RecordDefaults::make_rect(uint64_t x, uint64_t y,
 }
 
 uint64_t RecordDefaults::total_cells(const RecordDefaults::Config &c) {
-  return ((c.cfg_width * c.cfg_height) * c.cfg_depth);
+  return c.cfg_width * c.cfg_height * c.cfg_depth;
 }

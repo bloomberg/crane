@@ -170,7 +170,7 @@ LoopifyOptionMaybe::find_index_even_aux(const List<uint64_t> &l, uint64_t idx) {
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
         return std::make_optional<uint64_t>(idx);
       } else {
-        idx = (idx + UINT64_C(1));
+        idx = idx + UINT64_C(1);
         _loop_l = crane_raw(a1);
       }
     }

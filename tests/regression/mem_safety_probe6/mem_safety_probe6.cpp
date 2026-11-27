@@ -26,7 +26,7 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
       uint64_t rest_len = a1_value.length();
       auto _cell = typename MemSafetyProbe6::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t n) { return ((a0 + rest_len) + n); },
+          [=](uint64_t n) { return a0 + rest_len + n; },
           nullptr);
       MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe6::mylist<
@@ -97,10 +97,9 @@ MemSafetyProbe6::capture_and_reuse(uint64_t,
     const auto &[a0, a1] =
         std::get<typename MemSafetyProbe6::mylist<uint64_t>::Mycons>(l.v());
     const MemSafetyProbe6::mylist<uint64_t> &a1_value = *a1;
-    crane::fn<uint64_t(uint64_t)> f = [=, a1_value = a1_value](uint64_t n) {
-      return (a1_value.length() + n);
-    };
+    crane::fn<uint64_t(uint64_t)> f =
+        [=, a1_value = a1_value](uint64_t n) { return a1_value.length() + n; };
     uint64_t tail_len = a1_value.length();
-    return (f(a0) + tail_len);
+    return f(a0) + tail_len;
   }
 }

@@ -41,7 +41,6 @@ Coinductive::stream Coinductive::interleave(const Coinductive::stream &s1,
 
 Coinductive::tree Coinductive::infinite_tree(uint64_t n) {
   return tree::lazy_([=]() mutable -> typename Coinductive::tree::Node {
-    return {n, infinite_tree((n + UINT64_C(1))),
-            infinite_tree((n + UINT64_C(2)))};
+    return {n, infinite_tree(n + UINT64_C(1)), infinite_tree(n + UINT64_C(2))};
   });
 }

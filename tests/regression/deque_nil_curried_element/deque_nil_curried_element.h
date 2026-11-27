@@ -30,11 +30,11 @@ struct DequeNilCurriedElement {
             crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>(
             [](crane::fn<uint64_t(uint64_t)> g) {
               return [=, g = std::move(g)](uint64_t n) {
-                return (g(n) + UINT64_C(7));
+                return g(n) + UINT64_C(7);
               };
             },
             std::deque<crane::fn<
                 crane::fn<uint64_t(uint64_t)>(crane::fn<uint64_t(uint64_t)>)>>{}),
-        [](uint64_t n) { return (n * UINT64_C(2)); })(UINT64_C(3));
+        [](uint64_t n) { return n * UINT64_C(2); })(UINT64_C(3));
   }();
 };

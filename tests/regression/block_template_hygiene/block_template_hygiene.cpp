@@ -94,8 +94,8 @@ std::string BlockTemplateHygiene::let_after_block() {
   std::string last;
   std::getline(std::cin, last);
   std::string full =
-      (first + (std::string(" ") + last).substr(0, 16777211)).substr(0,
-                                                                     16777211);
+      (first + ((std::string(" ") + last).substr(0, 16777211))).substr(0,
+                                                                       16777211);
   return full;
 }
 

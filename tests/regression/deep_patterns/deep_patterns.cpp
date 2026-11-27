@@ -25,7 +25,7 @@ uint64_t DeepPatterns::deep_pair(
   const auto &[p0, p1] = p;
   const auto &[a, b] = p0;
   const auto &[c, d] = p1;
-  return (((a + b) + c) + d);
+  return a + b + c + d;
 }
 
 uint64_t DeepPatterns::list_shape(const List<uint64_t> &l) {
@@ -41,17 +41,17 @@ uint64_t DeepPatterns::list_shape(const List<uint64_t> &l) {
           std::get<typename List<uint64_t>::Cons>(_sv0.v());
       auto &&_sv1 = *a10;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv1.v())) {
-        return (a0 + a00);
+        return a0 + a00;
       } else {
         const auto &[a01, a11] =
             std::get<typename List<uint64_t>::Cons>(_sv1.v());
         auto &&_sv2 = *a11;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv2.v())) {
-          return ((a0 + a00) + a01);
+          return a0 + a00 + a01;
         } else {
           const auto &[_, a12] =
               std::get<typename List<uint64_t>::Cons>(_sv2.v());
-          return (((a0 + a00) + a01) + a12->length());
+          return a0 + a00 + a01 + a12->length();
         }
       }
     }
@@ -77,7 +77,7 @@ uint64_t DeepPatterns::deep_sum(const DeepPatterns::outer &o) {
     }
   } else {
     const auto &[a0] = std::get<typename DeepPatterns::outer::ORight>(o.v());
-    return (a0 + UINT64_C(100));
+    return a0 + UINT64_C(100);
   }
 }
 
@@ -92,11 +92,11 @@ uint64_t DeepPatterns::complex_match(
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        return (n + a0);
+        return n + a0;
       } else {
         const auto &[_, a10] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        return ((n + a0) + a10->length());
+        return n + a0 + a10->length();
       }
     }
   } else {
@@ -107,9 +107,9 @@ uint64_t DeepPatterns::complex_match(
 uint64_t DeepPatterns::guarded_match(std::pair<uint64_t, uint64_t> p) {
   const auto &[a, b] = p;
   if (a <= b) {
-    return (((b - a) > b ? 0 : (b - a)));
+    return (b - a > b ? 0 : b - a);
   } else {
-    return (((a - b) > a ? 0 : (a - b)));
+    return (a - b > a ? 0 : a - b);
   }
 }
 

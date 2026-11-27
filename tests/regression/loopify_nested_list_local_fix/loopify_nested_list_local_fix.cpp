@@ -139,7 +139,7 @@ LoopifyNestedListLocalFix::size(const LoopifyNestedListLocalFix::mterm &t) {
       const List<LoopifyNestedListLocalFix::mterm> &a1_value = *a1;
       _result = ((_result + a1_value.template fold_right<uint64_t>(
                                 [](const LoopifyNestedListLocalFix::mterm &x,
-                                   uint64_t acc) { return (size(x) + acc); },
+                                   uint64_t acc) { return size(x) + acc; },
                                 UINT64_C(0))) +
                  1);
     }

@@ -64,13 +64,13 @@ struct NameClashLetMatch {
               return a01;
             }
           }();
-          return (a00 + z);
+          return a00 + z;
         } else {
           const auto &[a00] = std::get<typename either::Right>(e2.v());
           return a00;
         }
       }();
-      return (a + b);
+      return a + b;
     }
 
     /// Two either values matched in sequence, same field names.
@@ -81,7 +81,7 @@ struct NameClashLetMatch {
           return a0;
         } else {
           const auto &[a0] = std::get<typename either::Right>(this->v());
-          return (a0 * UINT64_C(2));
+          return a0 * UINT64_C(2);
         }
       }();
       uint64_t v2 = [&]() {
@@ -90,17 +90,17 @@ struct NameClashLetMatch {
           return a00;
         } else {
           const auto &[a00] = std::get<typename either::Right>(e2.v());
-          return (a00 * UINT64_C(3));
+          return a00 * UINT64_C(3);
         }
       }();
-      return (v1 + v2);
+      return v1 + v2;
     }
 
     /// Match binding used in a nested let that shadows.
     uint64_t match_then_let() const {
       if (std::holds_alternative<typename either::Left>(this->v())) {
         const auto &[a0] = std::get<typename either::Left>(this->v());
-        return (a0 + UINT64_C(1));
+        return a0 + UINT64_C(1);
       } else {
         const auto &[a0] = std::get<typename either::Right>(this->v());
         return a0;
@@ -152,7 +152,7 @@ struct NameClashLetMatch {
           return a00;
         }
       }();
-      return (((a0 + a1) + a2) + from_either);
+      return a0 + a1 + a2 + from_either;
     }
 
     template <typename T1, typename F0> T1 triple_rec(F0 &&f) const {

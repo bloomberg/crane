@@ -157,7 +157,7 @@ struct FunctionTypeArgumentCurried {
 
   static inline const List<crane::fn<uint64_t(uint64_t, uint64_t)>> ws =
       wrap<crane::fn<uint64_t(uint64_t, uint64_t)>>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); });
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; });
   static inline const uint64_t from_wrap = []() {
     auto &&_sv = ws;
     if (std::holds_alternative<
@@ -210,7 +210,7 @@ struct FunctionTypeArgumentCurried {
       [](uint64_t acc,
          const crane::fn<t(uint64_t,
                            uint64_t)> &f) {
-        return (acc + ev(f(UINT64_C(0), UINT64_C(5))));
+        return acc + ev(f(UINT64_C(0), UINT64_C(5)));
       },
       UINT64_C(0));
 
@@ -222,11 +222,11 @@ struct FunctionTypeArgumentCurried {
   static inline const std::pair<crane::fn<uint64_t(uint64_t, uint64_t)>,
                                 uint64_t> pf = std::make_pair(
       crane::fn<uint64_t(uint64_t, uint64_t)>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }),
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; }),
       UINT64_C(1));
   static inline const uint64_t from_pair =
       myfst<crane::fn<uint64_t(uint64_t, uint64_t)>, uint64_t>(pf)(UINT64_C(2),
                                                                    UINT64_C(3));
   static inline const uint64_t result =
-      (((f2(UINT64_C(1), UINT64_C(2)) + from_wrap) + from_ctor) + from_pair);
+      f2(UINT64_C(1), UINT64_C(2)) + from_wrap + from_ctor + from_pair;
 };

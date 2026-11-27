@@ -60,7 +60,7 @@ uint64_t InstructionCycles::program_cycles5(
   } else {
     const auto &[a0, a1] = std::get<
         typename List<InstructionCycles::instruction5>::Cons>(prog.v());
-    return (a0.cycles_sum(s) + program_cycles5(a0.execute5(s), *a1));
+    return a0.cycles_sum(s) + program_cycles5(a0.execute5(s), *a1);
   }
 }
 
@@ -77,7 +77,7 @@ uint64_t InstructionCycles::program_cycles6(
   } else {
     const auto &[_, a1] = std::get<
         typename List<InstructionCycles::Instruction6>::Cons>(prog.v());
-    return (cycles6(s) + program_cycles6(s, *a1));
+    return cycles6(s) + program_cycles6(s, *a1);
   }
 }
 
@@ -94,6 +94,6 @@ uint64_t InstructionCycles::program_cycles7(
   } else {
     const auto &[_, a1] = std::get<
         typename List<InstructionCycles::Instruction7>::Cons>(prog.v());
-    return (cycles7(s) + program_cycles7(s, *a1));
+    return cycles7(s) + program_cycles7(s, *a1);
   }
 }

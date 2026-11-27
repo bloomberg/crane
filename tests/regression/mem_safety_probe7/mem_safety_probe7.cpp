@@ -34,7 +34,7 @@ uint64_t MemSafetyProbe7::sum_list(const MemSafetyProbe7::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -120,7 +120,7 @@ uint64_t MemSafetyProbe7::sum_fns(
       auto _f = std::move(std::get<_after_sum_fns_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(std::monostate)> a0 = std::move(_f.a0);
-      _result = (a0(std::monostate{}) + _result);
+      _result = a0(std::monostate{}) + _result;
     }
   }
   return _result;
@@ -199,7 +199,7 @@ MemSafetyProbe7::build_accum_closures(
       auto _cell = typename MemSafetyProbe7::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
           [=, a1_value = a1_value](uint64_t n) {
-            return ((a0 + sum_list(a1_value)) + n);
+            return a0 + sum_list(a1_value) + n;
           },
           nullptr);
       MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>> &_node =

@@ -148,7 +148,7 @@ struct CpsClosureChain {
                  UINT64_C(3),
                  tree::node(tree::leaf(), UINT64_C(4), tree::leaf())),
       UINT64_C(1),
-      [](uint64_t l, uint64_t n, uint64_t r) { return ((l + n) + r); },
+      [](uint64_t l, uint64_t n, uint64_t r) { return l + n + r; },
       [](uint64_t x) { return x; });
   /// Store CPS result in a pair with another computation to test
   /// that the continuation chain doesn't interfere with other data.
@@ -158,7 +158,7 @@ struct CpsClosureChain {
     uint64_t f = tree_fold_cps(
         std::move(t),
         UINT64_C(0),
-        [](uint64_t l, uint64_t n, uint64_t r) { return ((l + n) + r); },
+        [](uint64_t l, uint64_t n, uint64_t r) { return l + n + r; },
         [](uint64_t x) { return x; });
     return std::make_pair(s, f);
   }();

@@ -17,6 +17,6 @@ uint64_t Nat::pow(uint64_t n, uint64_t m) {
     return UINT64_C(1);
   } else {
     uint64_t m0 = m - 1;
-    return (n * Nat::pow(n, m0));
+    return n * Nat::pow(n, m0);
   }
 }

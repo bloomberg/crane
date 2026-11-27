@@ -60,7 +60,7 @@ ClosureEscapeMatch::nested_closure_opt(
       const auto &[a00, _] = std::get<
           typename ClosureEscapeMatch::mylist<uint64_t>::Mycons>(b.v());
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-          crane::fn<uint64_t(uint64_t)>([=](uint64_t n) { return (a00 + n); }));
+          crane::fn<uint64_t(uint64_t)>([=](uint64_t n) { return a00 + n; }));
     }
   } else {
     const auto &[a0, _] =
@@ -68,13 +68,13 @@ ClosureEscapeMatch::nested_closure_opt(
     if (std::holds_alternative<
             typename ClosureEscapeMatch::mylist<uint64_t>::Mynil>(b.v())) {
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-          crane::fn<uint64_t(uint64_t)>([=](uint64_t n) { return (a0 + n); }));
+          crane::fn<uint64_t(uint64_t)>([=](uint64_t n) { return a0 + n; }));
     } else {
       const auto &[a00, _] = std::get<
           typename ClosureEscapeMatch::mylist<uint64_t>::Mycons>(b.v());
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
           crane::fn<uint64_t(uint64_t)>(
-              [=](uint64_t n) { return ((a0 + a00) + n); }));
+              [=](uint64_t n) { return a0 + a00 + n; }));
     }
   }
 }

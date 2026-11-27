@@ -14,7 +14,7 @@ uint64_t LocalTailLoopDefault::sum_to(uint64_t n) {
     } else {
       uint64_t k_ = n - 1;
       uint64_t _next_k = k_;
-      _lc1_loop_acc = (_lc1_loop_acc + n);
+      _lc1_loop_acc = _lc1_loop_acc + n;
       n = _next_k;
     }
   }

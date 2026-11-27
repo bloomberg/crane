@@ -50,7 +50,7 @@ struct MacroNamedConstructor {
   }
 
   static uint64_t code(Num n);
-  static inline const uint64_t total = (code(Num::EOF_) + code(Num::ERRNO));
+  static inline const uint64_t total = code(Num::EOF_) + code(Num::ERRNO);
   /// The standard library's own float_class has a NAN constructor.
   static bool is_normal(double f);
   static inline const bool two_is_normal = is_normal(0x1.4p+1);

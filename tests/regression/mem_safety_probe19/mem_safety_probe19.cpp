@@ -9,7 +9,7 @@ uint64_t MemSafetyProbe19::option_fn(const MemSafetyProbe19::tree &t,
   } else {
     const auto &[a0] =
         std::get<typename MemSafetyProbe19::myopt<uint64_t>::Mysome>(o.v());
-    return ((t.tree_sum() + a0) + n);
+    return t.tree_sum() + a0 + n;
   }
 }
 
@@ -17,13 +17,13 @@ uint64_t MemSafetyProbe19::choice_fn(const MemSafetyProbe19::tree &t,
                                      MemSafetyProbe19::Choice c, uint64_t n) {
   switch (c) {
   case Choice::CLEFT: {
-    return (t.tree_sum() + n);
+    return t.tree_sum() + n;
   }
   case Choice::CRIGHT: {
     return n;
   }
   case Choice::CBOTH: {
-    return ((t.tree_sum() + t.tree_sum()) + n);
+    return t.tree_sum() + t.tree_sum() + n;
   }
   default:
     std::unreachable();
@@ -36,7 +36,7 @@ uint64_t MemSafetyProbe19::choice_fn(const MemSafetyProbe19::tree &t,
 uint64_t MemSafetyProbe19::make_adder(uint64_t n, bool b, uint64_t x0_) {
   MemSafetyProbe19::tree t = tree::node(tree::leaf(), n, tree::leaf());
   if (b) {
-    return (t.tree_sum() + x0_);
+    return t.tree_sum() + x0_;
   } else {
     return x0_;
   }

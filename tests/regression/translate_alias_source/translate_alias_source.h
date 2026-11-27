@@ -290,7 +290,7 @@ struct TranslateAliasSource {
                         return {ItreeF<
                             Sum1<AE, BE, crane::obj>, uint64_t,
                             Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::retf(
-                            (crane::any_cast<uint64_t>(x) + UINT64_C(1)))};
+                            crane::any_cast<uint64_t>(x) + UINT64_C(1))};
                       });
                 })))));
   }();

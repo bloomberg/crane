@@ -9,8 +9,8 @@ uint64_t InstructionClassifiers::count_writes_acc(
     const auto &[a0, a1] =
         std::get<typename List<InstructionClassifiers::instr_acc>::Cons>(
             prog.v());
-    return ((a0.writes_acc() ? UINT64_C(1) : UINT64_C(0)) +
-            count_writes_acc(*a1));
+    return (a0.writes_acc() ? UINT64_C(1) : UINT64_C(0)) +
+           count_writes_acc(*a1);
   }
 }
 
@@ -23,8 +23,8 @@ uint64_t InstructionClassifiers::count_writes_ram(
     const auto &[a0, a1] =
         std::get<typename List<InstructionClassifiers::instr_ram>::Cons>(
             prog.v());
-    return ((a0.writes_ram() ? UINT64_C(1) : UINT64_C(0)) +
-            count_writes_ram(*a1));
+    return (a0.writes_ram() ? UINT64_C(1) : UINT64_C(0)) +
+           count_writes_ram(*a1);
   }
 }
 
@@ -37,8 +37,8 @@ uint64_t InstructionClassifiers::count_writes_regs(
     const auto &[a0, a1] =
         std::get<typename List<InstructionClassifiers::instr_regs>::Cons>(
             prog.v());
-    return ((a0.writes_regs() ? UINT64_C(1) : UINT64_C(0)) +
-            count_writes_regs(*a1));
+    return (a0.writes_regs() ? UINT64_C(1) : UINT64_C(0)) +
+           count_writes_regs(*a1);
   }
 }
 
@@ -51,6 +51,6 @@ uint64_t InstructionClassifiers::count_jumps(
     const auto &[a0, a1] =
         std::get<typename List<InstructionClassifiers::instr_jump>::Cons>(
             prog.v());
-    return ((a0.is_jump() ? UINT64_C(1) : UINT64_C(0)) + count_jumps(*a1));
+    return (a0.is_jump() ? UINT64_C(1) : UINT64_C(0)) + count_jumps(*a1);
   }
 }

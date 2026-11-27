@@ -35,7 +35,7 @@ LoopifyFinalMove::thread_end(final_move_support::buffer b, uint64_t k) {
       _stack.pop_back();
       uint64_t k = _f.k;
       auto [b_, n] = std::move(_result);
-      _result = std::make_pair(std::move(b_), (k + n));
+      _result = std::make_pair(std::move(b_), k + n);
     }
   }
   return _result;
@@ -77,8 +77,7 @@ LoopifyFinalMove::thread_both(final_move_support::buffer b, uint64_t k) {
       uint64_t k = _f.k;
       auto [b_, n] = std::move(_result);
       _result = std::make_pair(
-          std::move(b_),
-          ((k + n) + static_cast<std::uint64_t>(b.items.size())));
+          std::move(b_), k + n + (static_cast<std::uint64_t>(b.items.size())));
     }
   }
   return _result;

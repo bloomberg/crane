@@ -68,12 +68,12 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
     } else if (std::holds_alternative<_after_sizes_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_sizes_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + _result);
+      _result = _f._tmp2 + _result;
     } else if (std::holds_alternative<_after_sizes_in_Forest0>(_popped)) {
       auto _f = std::move(std::get<_after_sizes_in_Forest0>(_popped));
       _stack.pop_back();
       uint64_t n0 = _f.n0;
-      _result = (n0 + _result);
+      _result = n0 + _result;
     } else {
       auto _f = std::move(std::get<_after_tree_size_in_Cons>(_popped));
       _stack.pop_back();
@@ -125,7 +125,7 @@ uint64_t LoopifyPartnerBackUnderFixpoint::forest_size(
     } else {
       auto _f = std::move(std::get<_after_sizes_in_Cons>(_popped));
       _lc1_stack.pop_back();
-      _lc1_result = (_f._tmp2 + _lc1_result);
+      _lc1_result = _f._tmp2 + _lc1_result;
     }
   }
   return _lc1_result;

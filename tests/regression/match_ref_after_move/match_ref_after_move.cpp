@@ -37,7 +37,7 @@ uint64_t MatchRefAfterMove::nested_match_probe(
       const auto &[a00, a10] =
           std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
               _sv0.v());
-      return ((a0 + a00) + a10->mylist_length());
+      return a0 + a00 + a10->mylist_length();
     }
   }
 }
@@ -56,7 +56,7 @@ MatchRefAfterMove::match_into_pair(const MatchRefAfterMove::mylist<uint64_t> &l)
         std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
     return mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>::mkpair(
         a0,
-        mylist<uint64_t>::mycons((a0 + UINT64_C(1)), crane::shared_child(a1)));
+        mylist<uint64_t>::mycons(a0 + UINT64_C(1), crane::shared_child(a1)));
   }
 }
 
@@ -97,7 +97,7 @@ MatchRefAfterMove::mylist_sum(const MatchRefAfterMove::mylist<uint64_t> &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
-    return (a0 + mylist_sum(*a1));
+    return a0 + mylist_sum(*a1);
   }
 }
 
@@ -128,7 +128,7 @@ uint64_t MatchRefAfterMove::complex_match(
     } else {
       const auto &[a00, a10] = std::get<
           typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(a0.v());
-      return (a00 + a10->mylist_length());
+      return a00 + a10->mylist_length();
     }
   }
 }

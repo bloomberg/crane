@@ -83,7 +83,7 @@ uint64_t MemSafetyProbe::apply_all(
       auto _f = std::move(std::get<_after_apply_all_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(x) + _result);
+      _result = a0(x) + _result;
     }
   }
   return _result;
@@ -133,7 +133,7 @@ uint64_t MemSafetyProbe::match_partial(MemSafetyProbe::tree t) {
 /// ---- TEST 6: Deep currying chain ----
 /// Multi-level partial application where each level binds a new value.
 uint64_t MemSafetyProbe::add3(uint64_t a, uint64_t b, uint64_t c) {
-  return ((a + b) + c);
+  return a + b + c;
 }
 
 /// ---- TEST 7: Store partial application in Box, then apply twice ----

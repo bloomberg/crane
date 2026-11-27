@@ -21,7 +21,7 @@ RoseSharedSuffixDrainSize::rsize(const RoseSharedSuffixDrainSize::rose &t) {
             const auto &[a2, a3] =
                 std::get<typename List<RoseSharedSuffixDrainSize::rose>::Cons>(
                     l.v());
-            return (rsize(a2) + _self_go(_self_go, *a3));
+            return rsize(a2) + _self_go(_self_go, *a3);
           }
         };
     auto go =
@@ -48,5 +48,5 @@ uint64_t RoseSharedSuffixDrainSize::run(uint64_t n) {
   uint64_t a = rsize(rose::node(UINT64_C(1), t));
   uint64_t b = rsize(rose::node(UINT64_C(2), t));
   uint64_t c = rsize(rose::node(UINT64_C(3), std::move(t)));
-  return ((a + b) + c);
+  return a + b + c;
 }

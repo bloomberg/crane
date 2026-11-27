@@ -108,7 +108,7 @@ struct ThreeArgumentCurriedSlot {
                                               uint64_t)>> ws =
       wrap<crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>(add3);
   static inline const uint64_t result =
-      (f3(UINT64_C(1), UINT64_C(2), UINT64_C(3)) + []() {
+      f3(UINT64_C(1), UINT64_C(2), UINT64_C(3)) + []() {
         auto &&_sv = ws;
         if (std::holds_alternative<typename List<
                 crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>::Nil>(
@@ -121,5 +121,5 @@ struct ThreeArgumentCurriedSlot {
                   _sv.v());
           return a0(UINT64_C(1), UINT64_C(1), UINT64_C(1));
         }
-      }());
+      }();
 };

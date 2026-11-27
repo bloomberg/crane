@@ -21,7 +21,7 @@
 ///
 /// The wrong values have no diagnostic (with a literal left operand clang
 /// flags g via -Wtautological-constant-out-of-range-compare).
-uint64_t CaseOfCaseResultType::h(uint64_t n) { return (n + UINT64_C(7)); }
+uint64_t CaseOfCaseResultType::h(uint64_t n) { return n + UINT64_C(7); }
 
 bool CaseOfCaseResultType::g(uint64_t k, uint64_t n) {
   return k <= [&]() -> uint64_t {
@@ -42,7 +42,7 @@ bool CaseOfCaseResultType::w(uint64_t k, uint64_t n) {
       return k;
     } else {
       uint64_t _x = n - 1;
-      return (k + UINT64_C(9));
+      return k + UINT64_C(9);
     }
   }();
 }

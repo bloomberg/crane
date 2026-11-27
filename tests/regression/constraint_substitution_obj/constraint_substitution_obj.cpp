@@ -17,7 +17,7 @@ ConstraintSubstitutionObj::tree_obs(const ConstraintSubstitutionObj::tree &t) {
     const auto &[a0, a1, a2] =
         std::get<typename ConstraintSubstitutionObj::tree::Node>(t.v());
     auto _once1 =
-        (((tree_obs(*a0) * UINT64_C(7)) + a1) + (tree_obs(*a2) * UINT64_C(3)));
+        tree_obs(*a0) * UINT64_C(7) + a1 + tree_obs(*a2) * UINT64_C(3);
     return (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
   }
 }

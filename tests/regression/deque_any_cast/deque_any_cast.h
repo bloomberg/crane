@@ -34,9 +34,7 @@ struct DequeAnyCast {
   struct nat_monoid {
     using m_carrier = uint64_t;
 
-    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) {
-      return (a0 + a1);
-    }
+    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) { return a0 + a1; }
 
     constexpr static uint64_t m_id() { return UINT64_C(0); }
   };

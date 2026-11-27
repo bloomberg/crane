@@ -26,7 +26,7 @@ uint64_t ItreeRetFamilyFromResult::result(
       if (std::holds_alternative<typename Sum<uint64_t, uint64_t>::Inl>(r0.v())) {
         const auto &[a00] =
             std::get<typename Sum<uint64_t, uint64_t>::Inl>(r0.v());
-        return (UINT64_C(100) + a00);
+        return UINT64_C(100) + a00;
       } else {
         const auto &[a00] =
             std::get<typename Sum<uint64_t, uint64_t>::Inr>(r0.v());

@@ -263,7 +263,7 @@ struct MemSafetyProbe3 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -293,15 +293,15 @@ struct MemSafetyProbe3 {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
-          return (a1 + x);
+          return a1 + x;
         } else {
           const auto &[_, a10, _] = std::get<typename tree::Node>(_sv0.v());
           auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
-            return (a10 + x);
+            return a10 + x;
           } else {
             const auto &[_, a11, _] = std::get<typename tree::Node>(_sv1.v());
-            return (((a10 + a11) + a1) + x);
+            return a10 + a11 + a1 + x;
           }
         }
       }
@@ -541,7 +541,7 @@ struct MemSafetyProbe3 {
           } else {
             auto _f = std::move(std::get<_after_helper_in_S>(_popped));
             _stack.pop_back();
-            _result = (t.sum_values(UINT64_C(1)) + std::move(_result));
+            _result = t.sum_values(UINT64_C(1)) + std::move(_result);
           }
         }
         return _result;
@@ -566,7 +566,7 @@ struct MemSafetyProbe3 {
         crane::fn<uint64_t(uint64_t)> fr =
             [&](uint64_t _x0) -> uint64_t { return a2->sum_values(_x0); };
         uint64_t vr = fr(std::move(a1));
-        return (vl + vr);
+        return vl + vr;
       }
     }();
   }();
@@ -575,7 +575,7 @@ struct MemSafetyProbe3 {
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
         t1.paired_closures(std::move(t2));
-    return (p.first(UINT64_C(5)) + p.second(UINT64_C(5)));
+    return p.first(UINT64_C(5)) + p.second(UINT64_C(5));
   }();
   static inline const uint64_t test_tree_sum =
       tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
@@ -596,8 +596,8 @@ struct MemSafetyProbe3 {
     std::pair<
         std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>,
         uint64_t> p = t.nested_pair();
-    return (((p.first).first(UINT64_C(10)) + (p.first).second(UINT64_C(10))) +
-            p.second);
+    return p.first.first(UINT64_C(10)) + p.first.second(UINT64_C(10)) +
+           p.second;
   }();
   static inline const uint64_t test_map_with_captured = []() {
     return []() {
@@ -606,7 +606,7 @@ struct MemSafetyProbe3 {
                           tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
       tree t2 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
       tree mapped = t.map_tree([=, t2 = std::move(t2)](uint64_t v) {
-        return (v + t2.sum_values(UINT64_C(0)));
+        return v + t2.sum_values(UINT64_C(0));
       });
       return mapped.tree_sum();
     }();
@@ -619,10 +619,10 @@ struct MemSafetyProbe3 {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>, tree> p =
         t.opt_pair(true);
-    auto _cs = std::move(p).first;
+    auto _cs = std::move(p.first);
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-      return (f(UINT64_C(10)) + std::move(p).second.sum_values(UINT64_C(0)));
+      return f(UINT64_C(10)) + std::move(p.second).sum_values(UINT64_C(0));
     } else {
       return UINT64_C(0);
     }
@@ -699,7 +699,7 @@ struct MemSafetyProbe3 {
                 UINT64_C(3),
                 _x0);
           };
-      return (f(UINT64_C(0)) + f(UINT64_C(10)));
+      return f(UINT64_C(0)) + f(UINT64_C(10));
     }();
   }();
 };

@@ -66,7 +66,7 @@ PulseParseCertificateCase::pulse_base_from_runs(const List<uint64_t> &rs) {
 
 PulseParseCertificateCase::PulseClass
 PulseParseCertificateCase::classify_run_with_base(uint64_t base, uint64_t n) {
-  if ((base + 1) <= n) {
+  if (((base + 1)) <= n) {
     return PulseClass::MARKLONG;
   } else {
     return PulseClass::MARKSHORT;
@@ -147,8 +147,8 @@ bool PulseParseCertificateCase::pulse_class_list_eqb(
 bool PulseParseCertificateCase::pulse_parse_certificate_self_consistent(
     const PulseParseCertificateCase::PulseCertificate &cert) {
   return (
-      (cert.certificate_base == pulse_base_from_runs(cert.certificate_runs) &&
-       cert.certificate_classes.length() == cert.certificate_runs.length()) &&
+      ((cert.certificate_base == pulse_base_from_runs(cert.certificate_runs)) &&
+       (cert.certificate_classes.length() == cert.certificate_runs.length())) &&
       pulse_class_list_eqb(
           cert.certificate_classes,
           classify_runs_with_base(cert.certificate_base,

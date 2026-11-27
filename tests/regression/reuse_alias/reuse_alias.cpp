@@ -9,8 +9,7 @@ ReuseAlias::inc_head(const ReuseAlias::mylist<uint64_t> &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v());
-    return mylist<uint64_t>::mycons((a0 + UINT64_C(1)),
-                                    crane::shared_child(a1));
+    return mylist<uint64_t>::mycons(a0 + UINT64_C(1), crane::shared_child(a1));
   }
 }
 

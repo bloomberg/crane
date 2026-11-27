@@ -155,7 +155,7 @@ struct MemSafetyProbe6 {
         return n;
       } else {
         const auto &[_, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return (a1->length() + n);
+        return a1->length() + n;
       }
     }
 
@@ -191,7 +191,7 @@ struct MemSafetyProbe6 {
         } else {
           auto _f = std::move(std::get<_after_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -409,7 +409,7 @@ struct MemSafetyProbe6 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -506,7 +506,7 @@ struct MemSafetyProbe6 {
           [&](crane::fn<uint64_t(uint64_t)> _x0) -> mylist<uint64_t> {
             return tail_mapper(UINT64_C(0), std::move(l), _x0);
           };
-      mylist<uint64_t> l2 = f([](uint64_t n) { return (n * UINT64_C(10)); });
+      mylist<uint64_t> l2 = f([](uint64_t n) { return n * UINT64_C(10); });
       return l2.length();
     }();
   }();
@@ -519,7 +519,7 @@ struct MemSafetyProbe6 {
           [=, t = std::move(t)](bool _x0) -> tree {
             return t.both_subtrees(UINT64_C(0), _x0);
           };
-      return (sel(true).tree_sum() + sel(false).tree_sum());
+      return sel(true).tree_sum() + sel(false).tree_sum();
     }();
   }();
   /// TEST 5: Chain of closures each pre-computing from the tail.

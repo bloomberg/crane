@@ -224,7 +224,7 @@ struct ReuseTwoChildren {
       return UINT64_C(0);
     } else {
       const auto &[a0, _, _, a3] = std::get<typename tree<T1>::Node>(t.v());
-      return ((UINT64_C(1) + size<T1>(*a0)) + size<T1>(*a3));
+      return UINT64_C(1) + size<T1>(*a0) + size<T1>(*a3);
     }
   }
 
@@ -250,7 +250,7 @@ struct ReuseTwoChildren {
         auto _cs2 = find<uint64_t>(UINT64_C(5), t1);
         if (_cs2.has_value()) {
           const uint64_t &c = *_cs2;
-          return (((a + b) + c) + size<uint64_t>(t1));
+          return a + b + c + size<uint64_t>(t1);
         } else {
           return UINT64_C(0);
         }

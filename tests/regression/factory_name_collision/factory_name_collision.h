@@ -175,7 +175,7 @@ struct FactoryNameCollision {
         return a0;
       } else {
         const auto &[a0] = std::get<typename cased::MK0>(this->v());
-        return (a0 + UINT64_C(1));
+        return a0 + UINT64_C(1);
       }
     }
 
@@ -200,5 +200,5 @@ struct FactoryNameCollision {
 
   static inline const uint64_t head = lst::cons(UINT64_C(7), lst::nil()).nil0();
   static inline const uint64_t cased_sum =
-      (cased::mk(UINT64_C(1)).uncase() + cased::mk0(UINT64_C(1)).uncase());
+      cased::mk(UINT64_C(1)).uncase() + cased::mk0(UINT64_C(1)).uncase();
 };

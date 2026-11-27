@@ -16,6 +16,6 @@ uint64_t R::sum1(const R::lst &l) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1] = std::get<typename R::lst::Cons>(l.v());
-    return (a0 + sum1(*a1));
+    return a0 + sum1(*a1);
   }
 }

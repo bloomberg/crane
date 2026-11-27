@@ -159,7 +159,7 @@ struct LoopifyTreeVariants {
           auto _f =
               std::move(std::get<_after_ternary_count_in_TNode_3>(_popped));
           _stack.pop_back();
-          _result = (((UINT64_C(1) + _f._tmp3) + _f._tmp2) + _result);
+          _result = UINT64_C(1) + _f._tmp3 + _f._tmp2 + _result;
         }
       }
       return _result;
@@ -235,7 +235,7 @@ struct LoopifyTreeVariants {
           auto _f = std::move(std::get<_after_ternary_sum_in_TNode_3>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = (((_f._tmp3 + a1) + _f._tmp2) + _result);
+          _result = _f._tmp3 + a1 + _f._tmp2 + _result;
         }
       }
       return _result;
@@ -511,7 +511,7 @@ struct LoopifyTreeVariants {
         } else {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_4>(_popped));
           _stack.pop_back();
-          _result = (((_f._tmp4 + _f._tmp3) + _f._tmp2) + _result);
+          _result = _f._tmp4 + _f._tmp3 + _f._tmp2 + _result;
         }
       }
       return _result;
@@ -829,7 +829,7 @@ struct LoopifyTreeVariants {
           auto _f =
               std::move(std::get<_after_leaf_tree_sum_in_LNode_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         }
       }
       return _result;

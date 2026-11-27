@@ -39,7 +39,7 @@ access_support::handle TypedMappingAccess::keep(access_support::handle x0_) {
 uint64_t TypedMappingAccess::keep_and_reseat(access_support::handle h) {
   access_support::handle k = access_support::keep(h);
   uint64_t r = access_support::get(access_support::reseat(h, UINT64_C(7)));
-  return (access_support::get(k) + r);
+  return (access_support::get(k)) + r;
 }
 
 /// Writes the buffer in place, two calls deep.
@@ -190,7 +190,7 @@ uint64_t TypedMappingAccess::reseat_sum(access_support::handle &h, uint64_t n) {
       uint64_t n = _f.n;
       auto _once1 = access_support::get(access_support::reseat(h, n));
       auto _once2 = _result;
-      _result = (_once1 + std::move(_once2));
+      _result = _once1 + std::move(_once2);
     }
   }
   return _result;

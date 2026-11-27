@@ -43,7 +43,7 @@ struct UserInductiveShadowsStdlib {
   /// bare name finds the user's Comparison.
   static ::Comparison theirs_cmp(uint64_t a, uint64_t b);
   static inline const uint64_t run =
-      ((mine(Comparison::EQ_) + theirs(UINT64_C(1), UINT64_C(2))) + []() {
+      mine(Comparison::EQ_) + theirs(UINT64_C(1), UINT64_C(2)) + []() {
         switch (theirs_cmp(UINT64_C(3), UINT64_C(3))) {
         case ::Comparison::EQ: {
           return UINT64_C(10);
@@ -52,5 +52,5 @@ struct UserInductiveShadowsStdlib {
           return UINT64_C(0);
         }
         }
-      }());
+      }();
 };

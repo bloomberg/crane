@@ -418,7 +418,7 @@ struct LoopifyLists {
         auto _f = std::move(std::get<_after_go_in_S>(_popped));
         _lc1_stack.pop_back();
         uint64_t _lc1_i = _f.i;
-        _lc1_result = list<T1>::cons(f((((n - _lc1_i) > n ? 0 : (n - _lc1_i)))),
+        _lc1_result = list<T1>::cons(f((n - _lc1_i > n ? 0 : n - _lc1_i)),
                                      std::move(_lc1_result));
       }
     }
@@ -995,7 +995,7 @@ struct LoopifyLists {
       }
       return _result;
     };
-    uint64_t len = (length(l1) + length(l2));
+    uint64_t len = length(l1) + length(l2);
     return zip_longest_aux<T1>((len + 1), l1, l2, default0);
   }
 

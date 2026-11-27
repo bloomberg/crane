@@ -294,5 +294,5 @@ struct LoopifyNestedListLocalFix {
   static mterm h2(uint64_t n);
   static uint64_t size(const mterm &t);
   static inline const uint64_t result =
-      ((size(h(UINT64_C(3))) * UINT64_C(100)) + size(h2(UINT64_C(3))));
+      size(h(UINT64_C(3))) * UINT64_C(100) + size(h2(UINT64_C(3)));
 };

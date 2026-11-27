@@ -16,7 +16,7 @@ LoopifyAdoptedFixAliasResult::add_opt(std::optional<uint64_t> a,
     const uint64_t &x = *a;
     if (b.has_value()) {
       const uint64_t &y = *b;
-      return std::make_optional<uint64_t>((x + y));
+      return std::make_optional<uint64_t>(x + y);
     } else {
       return std::make_optional<uint64_t>(x);
     }
@@ -34,7 +34,7 @@ uint64_t LoopifyAdoptedFixAliasResult::sum(
     const List<std::pair<uint64_t, uint64_t>> &m) {
   return m.template fold_left<uint64_t>(
       [](uint64_t acc,
-         std::pair<uint64_t, uint64_t> p) { return (acc + p.second); },
+         std::pair<uint64_t, uint64_t> p) { return acc + p.second; },
       UINT64_C(0));
 }
 
@@ -57,7 +57,7 @@ LoopifyAdoptedFixAliasResult::keys(uint64_t n, uint64_t i, uint64_t step) {
     } else {
       uint64_t n_ = n - 1;
       auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
-          std::make_pair((i * step), i), nullptr);
+          std::make_pair(i * step, i), nullptr);
       LoopifyAdoptedFixAliasResult::t<uint64_t> &_node =
           (_write ? *(*_write = std::make_shared<
                           LoopifyAdoptedFixAliasResult::t<uint64_t>>(

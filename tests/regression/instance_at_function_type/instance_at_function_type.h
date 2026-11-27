@@ -33,10 +33,10 @@ struct InstanceAtFunctionType {
   template <typename _tcI0, typename _tcI1, typename T1, typename T2>
     requires Sz<_tcI0, T2> && Sz<_tcI1, T1>
   static uint64_t both(const T1 &a, const T2 &b) {
-    return (_tcI1::sz(a) + _tcI0::sz(b));
+    return _tcI1::sz(a) + _tcI0::sz(b);
   }
 
   static inline const uint64_t go =
       both<SzF, SzN, uint64_t, crane::fn<uint64_t(uint64_t)>>(
-          UINT64_C(3), [](uint64_t n) { return (n + UINT64_C(4)); });
+          UINT64_C(3), [](uint64_t n) { return n + UINT64_C(4); });
 };

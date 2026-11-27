@@ -21,7 +21,7 @@ void LoopifyUnitVoidRepro::loop(uint64_t x, uint64_t y,
         }
       }();
       _loop_cells = crane_raw(a1);
-      x = (x + cell_size);
+      x = x + cell_size;
     }
   }
 }

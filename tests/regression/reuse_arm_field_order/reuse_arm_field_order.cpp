@@ -49,7 +49,7 @@ uint64_t ReuseArmFieldOrder::sum(const ReuseArmFieldOrder::lst &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename ReuseArmFieldOrder::lst::Cons>(l.v());
-    return (a0 + sum(*a1));
+    return a0 + sum(*a1);
   }
 }
 

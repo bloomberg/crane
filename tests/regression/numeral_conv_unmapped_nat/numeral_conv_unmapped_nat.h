@@ -137,9 +137,8 @@ struct NumeralConvUnmappedNat {
               },
               INT64_C(0))) +
           static_cast<uint64_t>(
-              (INT64_C(-9) < 0 ? static_cast<int64_t>(
-                                     -static_cast<uint64_t>(INT64_C(-9)))
-                               : INT64_C(-9))))) +
-                           static_cast<uint64_t>(
-                               static_cast<int64_t>(UINT64_C(2))));
+              INT64_C(-9) < 0 ? static_cast<int64_t>(
+                                    -UINT64_C(18446744073709551607))
+                              : INT64_C(-9)))) +
+                           static_cast<uint64_t>(INT64_C(2)));
 };

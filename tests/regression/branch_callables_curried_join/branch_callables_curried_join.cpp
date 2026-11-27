@@ -110,7 +110,7 @@ uint64_t BranchCallablesCurriedJoin::v3(std::optional<uint64_t> x) {
       }()));
     }
   }();
-  return (p.first + p.second(UINT64_C(1)));
+  return p.first + p.second(UINT64_C(1));
 }
 
 uint64_t BranchCallablesCurriedJoin::f1(

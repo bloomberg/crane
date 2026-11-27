@@ -527,10 +527,10 @@ struct ComprehensivePatterns {
     Tree transform_tree() const {
       if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
         const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
-        return Tree::leaf((a0 + UINT64_C(1)));
+        return Tree::leaf(a0 + UINT64_C(1));
       } else {
         const auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
-        return Tree::node(crane::shared_child(a0), (a1 + UINT64_C(1)),
+        return Tree::node(crane::shared_child(a0), a1 + UINT64_C(1),
                           crane::shared_child(a2));
       }
     }
@@ -569,7 +569,7 @@ struct ComprehensivePatterns {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
             const auto &[a0] = std::get<typename Tree::Leaf>(_sv.v());
-            _result = (a0 + s.lb_value);
+            _result = a0 + s.lb_value;
           } else {
             const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
             _stack.emplace_back(
@@ -592,7 +592,7 @@ struct ComprehensivePatterns {
               std::get<_after_consume_tree_with_state_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = (((a1 + s.lb_value) + _f._tmp2) + _result);
+          _result = a1 + s.lb_value + _f._tmp2 + _result;
         }
       }
       return _result;
@@ -648,7 +648,7 @@ struct ComprehensivePatterns {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((a1 + _f._tmp2) + _result);
+          _result = a1 + _f._tmp2 + _result;
         }
       }
       return _result;
@@ -770,7 +770,7 @@ struct ComprehensivePatterns {
         return UINT64_C(0);
       } else {
         const auto &[a0] = std::get<typename Container::Full>(this->v());
-        return (a0.ro_value + a0.ro_data);
+        return a0.ro_value + a0.ro_data;
       }
     }
 

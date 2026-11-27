@@ -1,7 +1,7 @@
 #include "fix_in_record.h"
 
 FixInRecord::fn_box FixInRecord::make_box(uint64_t n) {
-  uint64_t base = (n * UINT64_C(3));
+  uint64_t base = n * UINT64_C(3);
   auto add_impl = [=](auto &_self_add, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return base;

@@ -13,7 +13,7 @@ uint64_t LoopifyItreeSeq::count_down(uint64_t n) {
       return _lc1_loop_acc;
     } else {
       uint64_t k_ = n - 1;
-      _lc1_loop_acc = (_lc1_loop_acc + UINT64_C(1));
+      _lc1_loop_acc = _lc1_loop_acc + UINT64_C(1);
       n = k_;
     }
   }
@@ -31,7 +31,7 @@ uint64_t LoopifyItreeSeq::sum_to(uint64_t n) {
     } else {
       uint64_t k_ = n - 1;
       uint64_t _next_k = k_;
-      _lc1_loop_acc = (_lc1_loop_acc + n);
+      _lc1_loop_acc = _lc1_loop_acc + n;
       n = _next_k;
     }
   }

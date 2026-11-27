@@ -15,18 +15,18 @@ FimOperatesOnPairs::set_reg(const FimOperatesOnPairs::state &s, uint64_t r,
 uint64_t FimOperatesOnPairs::get_reg_pair(const FimOperatesOnPairs::state &s,
                                           uint64_t r) {
   auto _once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
-  uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
-  return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
+  uint64_t base = (r - _once1 > r ? 0 : r - _once1);
+  return get_reg(s, base) * UINT64_C(16) + get_reg(s, base + UINT64_C(1));
 }
 
 FimOperatesOnPairs::state
 FimOperatesOnPairs::set_reg_pair(const FimOperatesOnPairs::state &s, uint64_t r,
                                  uint64_t v) {
   auto _once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
-  uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
+  uint64_t base = (r - _once1 > r ? 0 : r - _once1);
   uint64_t hi = (UINT64_C(16) ? v / UINT64_C(16) : 0);
   uint64_t lo = (UINT64_C(16) ? v % UINT64_C(16) : v);
-  return set_reg(set_reg(s, base, hi), (base + UINT64_C(1)), lo);
+  return set_reg(set_reg(s, base, hi), base + UINT64_C(1), lo);
 }
 
 FimOperatesOnPairs::state

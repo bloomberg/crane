@@ -24,7 +24,7 @@ DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
           auto &&_sv = *a11;
           if (std::holds_alternative<
                   typename DeepPattern::list<DeepPattern::tree>::Nil>(_sv.v())) {
-            return (a00 + a02);
+            return a00 + a02;
           } else {
             return UINT64_C(0);
           }
@@ -59,7 +59,7 @@ DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
               if (std::holds_alternative<
                       typename DeepPattern::list<DeepPattern::tree>::Nil>(
                       _sv.v())) {
-                return ((a01 + a02) + a04);
+                return a01 + a02 + a04;
               } else {
                 return UINT64_C(0);
               }
@@ -80,7 +80,7 @@ DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
                   if (std::holds_alternative<
                           typename DeepPattern::list<DeepPattern::tree>::Nil>(
                           _sv.v())) {
-                    return (((a01 + a02) + a05) + a06);
+                    return a01 + a02 + a05 + a06;
                   } else {
                     return UINT64_C(0);
                   }

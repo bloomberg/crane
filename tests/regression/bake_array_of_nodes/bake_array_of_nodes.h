@@ -253,17 +253,15 @@ struct BakeArrayOfNodes {
           crane_baked_nested_42e6117f3d38);
   static uint64_t root(const tree &t);
   static inline const uint64_t total =
-      (((((lists.get(INT64_C(1)).length() + root(nodes.get(INT64_C(0)))) +
-          root(leaves.get(INT64_C(1)))) +
-         empties.get(INT64_C(2)).length()) +
-        []() -> uint64_t {
-          auto _cs = opts.get(INT64_C(1));
-          if (_cs.has_value()) {
-            const tree &t = *_cs;
-            return root(t);
-          } else {
-            return UINT64_C(0);
-          }
-        }()) +
-       root((nested.get(INT64_C(1))).get(INT64_C(0))));
+      lists.get(INT64_C(1)).length() + root(nodes.get(INT64_C(0))) +
+      root(leaves.get(INT64_C(1))) + empties.get(INT64_C(2)).length() +
+      []() -> uint64_t {
+        auto _cs = opts.get(INT64_C(1));
+        if (_cs.has_value()) {
+          const tree &t = *_cs;
+          return root(t);
+        } else {
+          return UINT64_C(0);
+        }
+      }() + root((nested.get(INT64_C(1))).get(INT64_C(0)));
 };

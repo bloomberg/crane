@@ -50,5 +50,5 @@ struct FunctorValueFieldCall {
 
   using PN = Pairify<NatC>;
   using Q = Pairify<PN>;
-  static inline const uint64_t go = (Q::zero().first).first;
+  static inline const uint64_t go = Q::zero().first.first;
 };

@@ -8,7 +8,7 @@ uint64_t FixPartialApp::count_nodes(const FixPartialApp::tree &t,
   } else {
     const auto &[a0, _, a2] =
         std::get<typename FixPartialApp::tree::Node>(t.v());
-    return count_nodes(*a0, count_nodes(*a2, (base + UINT64_C(1))));
+    return count_nodes(*a0, count_nodes(*a2, base + UINT64_C(1)));
   }
 }
 
@@ -18,6 +18,6 @@ uint64_t FixPartialApp::tree_sum(const FixPartialApp::tree &t) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename FixPartialApp::tree::Node>(t.v());
-    return ((tree_sum(*a0) + a1) + tree_sum(*a2));
+    return tree_sum(*a0) + a1 + tree_sum(*a2);
   }
 }

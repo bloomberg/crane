@@ -86,7 +86,7 @@ struct LiftedLambdaTwoUsers {
       t x = t::n(t::l());
       crane::fn<uint64_t(uint64_t)> f =
           [=, x = std::move(x)](uint64_t) { return depth(x); };
-      return (f(UINT64_C(0)) + f(UINT64_C(1)));
+      return f(UINT64_C(0)) + f(UINT64_C(1));
     }();
   }();
   static inline const uint64_t two = []() {
@@ -94,8 +94,8 @@ struct LiftedLambdaTwoUsers {
       t y = t::n(t::n(t::l()));
       crane::fn<uint64_t(uint64_t)> g =
           [=, y = std::move(y)](uint64_t) { return depth(y); };
-      return (g(UINT64_C(0)) + g(UINT64_C(1)));
+      return g(UINT64_C(0)) + g(UINT64_C(1));
     }();
   }();
-  static inline const uint64_t go = (one + two);
+  static inline const uint64_t go = one + two;
 };

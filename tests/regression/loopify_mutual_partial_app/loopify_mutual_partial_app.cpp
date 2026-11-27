@@ -85,14 +85,14 @@ LoopifyMutualPartialApp::sum_e(const LoopifyMutualPartialApp::e<uint64_t> &x) {
           _result = l0_value.template fold_left<uint64_t>(
               [](uint64_t acc,
                  const LoopifyMutualPartialApp::md<uint64_t> &m1) {
-                return (acc + sum_md(m1));
+                return acc + sum_md(m1);
               },
               UINT64_C(0));
         } else {
           const auto &[a0, b0] =
               std::get<typename LoopifyMutualPartialApp::md<uint64_t>::MPair>(
                   m0_value.v());
-          _result = (sum_md(*a0) + sum_md(*b0));
+          _result = sum_md(*a0) + sum_md(*b0);
         }
       }
     } else if (std::holds_alternative<_after_sum_e_in_Add>(_popped)) {
@@ -104,12 +104,12 @@ LoopifyMutualPartialApp::sum_e(const LoopifyMutualPartialApp::e<uint64_t> &x) {
     } else if (std::holds_alternative<_after_sum_e_in_Add_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_in_Add_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + _result);
+      _result = _f._tmp2 + _result;
     } else {
       auto _f = std::move(std::get<_after_sum_e_in_MConst>(_popped));
       _stack.pop_back();
       uint64_t u0 = _f.u0;
-      _result = (u0 + _result);
+      _result = u0 + _result;
     }
   }
   return _result;
@@ -181,7 +181,7 @@ uint64_t LoopifyMutualPartialApp::sum_md(
         _result = l0_value.template fold_left<uint64_t>(
             [](uint64_t acc,
                const LoopifyMutualPartialApp::md<uint64_t> &m0) {
-              return (acc + sum_md(m0));
+              return acc + sum_md(m0);
             },
             UINT64_C(0));
       } else {
@@ -225,12 +225,12 @@ uint64_t LoopifyMutualPartialApp::sum_md(
     } else if (std::holds_alternative<_after_sum_e_entry_in_Add_2>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_Add_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + _result);
+      _result = _f._tmp2 + _result;
     } else if (std::holds_alternative<_after_sum_e_entry_in_MConst>(_popped)) {
       auto _f = std::move(std::get<_after_sum_e_entry_in_MConst>(_popped));
       _stack.pop_back();
       uint64_t u0 = _f.u0;
-      _result = (u0 + _result);
+      _result = u0 + _result;
     } else if (std::holds_alternative<_after_sum_md_in_MPair>(_popped)) {
       auto _f = std::move(std::get<_after_sum_md_in_MPair>(_popped));
       _stack.pop_back();
@@ -240,7 +240,7 @@ uint64_t LoopifyMutualPartialApp::sum_md(
     } else {
       auto _f = std::move(std::get<_after_sum_md_in_MPair_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp6 + _result);
+      _result = _f._tmp6 + _result;
     }
   }
   return _result;
@@ -250,7 +250,7 @@ uint64_t LoopifyMutualPartialApp::sum_md(
 /// 313
 bool LoopifyMutualPartialApp::check() {
   return sum_e(ft_e<LoopifyMutualPartialApp::endo_double, uint64_t, uint64_t>(
-      [](uint64_t u) { return (u + UINT64_C(100)); },
+      [](uint64_t u) { return u + UINT64_C(100); },
       sample)) ==
-         (UINT64_C(14) + UINT64_C(313));
+         UINT64_C(14) + UINT64_C(313);
 }

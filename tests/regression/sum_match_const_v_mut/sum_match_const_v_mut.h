@@ -131,19 +131,19 @@ struct SumMatchConstVMut {
     return []() {
       std::pair<Sum<bool, bool>, uint64_t> w7 =
           std::make_pair(Sum<bool, bool>::inl(true), UINT64_C(0));
-      auto _once3 = (([&]() {
+      auto _once3 = [&]() {
         const Sum<bool, bool> &w8 = w7.first;
         if (std::holds_alternative<typename Sum<bool, bool>::Inl>(w8.v())) {
           const auto &[a0] = std::get<typename Sum<bool, bool>::Inl>(w8.v());
-          auto _once1 = ((a0 ? UINT64_C(1) : UINT64_C(2)) * UINT64_C(2));
+          auto _once1 = (a0 ? UINT64_C(1) : UINT64_C(2)) * UINT64_C(2);
           return (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
         } else {
           const auto &[a0] = std::get<typename Sum<bool, bool>::Inr>(w8.v());
           auto _once2 =
-              (((a0 ? UINT64_C(1) : UINT64_C(2)) * UINT64_C(2)) + UINT64_C(1));
+              (a0 ? UINT64_C(1) : UINT64_C(2)) * UINT64_C(2) + UINT64_C(1);
           return (UINT64_C(10007) ? _once2 % UINT64_C(10007) : _once2);
         }
-      }() * UINT64_C(5)) + w7.second);
+      }() * UINT64_C(5) + w7.second;
       return (UINT64_C(10007) ? _once3 % UINT64_C(10007) : _once3);
     }();
   }();
@@ -151,20 +151,20 @@ struct SumMatchConstVMut {
     return []() {
       std::pair<Sum<bool, uint64_t>, uint64_t> w7 =
           std::make_pair(Sum<bool, uint64_t>::inr(UINT64_C(6)), UINT64_C(3));
-      auto _once3 = (([&]() {
+      auto _once3 = [&]() {
         const Sum<bool, uint64_t> &w8 = w7.first;
         if (std::holds_alternative<typename Sum<bool, uint64_t>::Inl>(w8.v())) {
           const auto &[a0] =
               std::get<typename Sum<bool, uint64_t>::Inl>(w8.v());
-          auto _once1 = ((a0 ? UINT64_C(1) : UINT64_C(2)) * UINT64_C(2));
+          auto _once1 = (a0 ? UINT64_C(1) : UINT64_C(2)) * UINT64_C(2);
           return (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
         } else {
           const auto &[a0] =
               std::get<typename Sum<bool, uint64_t>::Inr>(w8.v());
-          auto _once2 = ((a0 * UINT64_C(2)) + UINT64_C(1));
+          auto _once2 = a0 * UINT64_C(2) + UINT64_C(1);
           return (UINT64_C(10007) ? _once2 % UINT64_C(10007) : _once2);
         }
-      }() * UINT64_C(5)) + w7.second);
+      }() * UINT64_C(5) + w7.second;
       return (UINT64_C(10007) ? _once3 % UINT64_C(10007) : _once3);
     }();
   }();
@@ -172,21 +172,21 @@ struct SumMatchConstVMut {
     return []() {
       std::pair<Sum<uint64_t, uint64_t>, uint64_t> w7 = std::make_pair(
           Sum<uint64_t, uint64_t>::inl(UINT64_C(4)), UINT64_C(1));
-      auto _once3 = (([&]() {
+      auto _once3 = [&]() {
         const Sum<uint64_t, uint64_t> &w8 = w7.first;
         if (std::holds_alternative<typename Sum<uint64_t, uint64_t>::Inl>(
                 w8.v())) {
           const auto &[a0] =
               std::get<typename Sum<uint64_t, uint64_t>::Inl>(w8.v());
-          auto _once1 = (a0 * UINT64_C(2));
+          auto _once1 = a0 * UINT64_C(2);
           return (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
         } else {
           const auto &[a0] =
               std::get<typename Sum<uint64_t, uint64_t>::Inr>(w8.v());
-          auto _once2 = ((a0 * UINT64_C(2)) + UINT64_C(1));
+          auto _once2 = a0 * UINT64_C(2) + UINT64_C(1);
           return (UINT64_C(10007) ? _once2 % UINT64_C(10007) : _once2);
         }
-      }() * UINT64_C(5)) + w7.second);
+      }() * UINT64_C(5) + w7.second;
       return (UINT64_C(10007) ? _once3 % UINT64_C(10007) : _once3);
     }();
   }();

@@ -76,6 +76,6 @@ struct SubSelfUnusedParam {
   static uint64_t on_stream(const stream &s);
   static uint64_t in_branch(bool c, const box &b);
   static inline const uint64_t result =
-      ((on_box(box::box0(UINT64_C(5))) + on_stream(sconst(UINT64_C(3)))) +
-       in_branch(false, box::box0(UINT64_C(5))));
+      on_box(box::box0(UINT64_C(5))) + on_stream(sconst(UINT64_C(3))) +
+      in_branch(false, box::box0(UINT64_C(5)));
 };

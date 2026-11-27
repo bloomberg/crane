@@ -32,7 +32,7 @@ uint64_t LoopifyAdvancedLists::product(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_product_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 * _result);
+      _result = a0 * _result;
     }
   }
   return _result;
@@ -107,7 +107,7 @@ List<uint64_t> LoopifyAdvancedLists::pairwise_sum(const List<uint64_t> &l) {
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        auto _cell = typename List<uint64_t>::Cons((a0 + a00), nullptr);
+        auto _cell = typename List<uint64_t>::Cons(a0 + a00, nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))

@@ -93,8 +93,9 @@ std::string QuicksortFun::list_to_string_helper(const List<uint64_t> &l) {
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result =
-          (std::to_string(a0) +
-           (std::string(", ") + std::move(_result)).substr(0, 16777211))
+          ((std::to_string(a0)) +
+           ((std::string(", ") + std::move(_result)).substr(0,
+                                                            16777211)))
               .substr(0, 16777211);
     }
   }

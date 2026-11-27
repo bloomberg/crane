@@ -80,9 +80,9 @@ LoopifySearch::knapsack_fuel(uint64_t fuel, uint64_t capacity,
       uint64_t value = _f.value;
       _stack.emplace_back(_after_knapsack_fuel_in_false_2{
           capacity, f, &a1, weight, value, _result});
-      _stack.emplace_back(_call{
-          &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-          f});
+      _stack.emplace_back(
+          _call{&a1, (capacity - weight > capacity ? 0 : capacity - weight),
+                f});
     } else if (std::holds_alternative<_after_knapsack_fuel_in_false_2>(_popped)) {
       auto _f = std::move(std::get<_after_knapsack_fuel_in_false_2>(_popped));
       _stack.pop_back();
@@ -91,11 +91,10 @@ LoopifySearch::knapsack_fuel(uint64_t fuel, uint64_t capacity,
       const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t weight = _f.weight;
       uint64_t value = _f.value;
-      if (_f._tmp3 <= (value + _result)) {
+      if (_f._tmp3 <= value + _result) {
         _stack.emplace_back(_after_knapsack_fuel_in_true{value});
         _stack.emplace_back(_call{
-            &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-            f});
+            &a1, (capacity - weight > capacity ? 0 : capacity - weight), f});
       } else {
         _stack.emplace_back(_call{&a1, capacity, f});
       }
@@ -103,7 +102,7 @@ LoopifySearch::knapsack_fuel(uint64_t fuel, uint64_t capacity,
       auto _f = std::move(std::get<_after_knapsack_fuel_in_true>(_popped));
       _stack.pop_back();
       uint64_t value = _f.value;
-      _result = (value + _result);
+      _result = value + _result;
     }
   }
   return _result;
@@ -155,8 +154,7 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(const List<uint64_t> &l) {
         _result = std::make_pair(cand, (count + 1));
       } else if (UINT64_C(0) < count) {
         _result = std::make_pair(
-            cand,
-            (((count - UINT64_C(1)) > count ? 0 : (count - UINT64_C(1)))));
+            cand, (count - UINT64_C(1) > count ? 0 : count - UINT64_C(1)));
       } else {
         _result = std::make_pair(a0, UINT64_C(1));
       }
@@ -433,7 +431,7 @@ uint64_t LoopifySearch::collatz_fuel(uint64_t fuel, uint64_t n) {
           _stack.emplace_back(_call{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
         } else {
           _stack.emplace_back(_after_collatz_fuel_in_false{});
-          _stack.emplace_back(_call{((UINT64_C(3) * n) + UINT64_C(1)), f});
+          _stack.emplace_back(_call{UINT64_C(3) * n + UINT64_C(1), f});
         }
       }
     } else if (std::holds_alternative<_after_collatz_fuel_in_false>(_popped)) {
@@ -513,7 +511,7 @@ bool LoopifySearch::subset_sum_fuel(uint64_t fuel, uint64_t target,
         _result = true;
       } else if (a0 <= target) {
         _stack.emplace_back(
-            _call{&a1, (((target - a0) > target ? 0 : (target - a0))), f});
+            _call{&a1, (target - a0 > target ? 0 : target - a0), f});
       } else {
         _result = false;
       }
@@ -887,8 +885,8 @@ LoopifySearch::merge_sorted_fuel(uint64_t fuel, const List<uint64_t> &l1,
 
 List<uint64_t> LoopifySearch::merge_sorted(const List<uint64_t> &l1,
                                            List<uint64_t> l2) {
-  return merge_sorted_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)),
-                           l1, l2);
+  return merge_sorted_fuel(len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2), l1,
+                           l2);
 }
 
 /// merge_sort l sorts list using merge sort.

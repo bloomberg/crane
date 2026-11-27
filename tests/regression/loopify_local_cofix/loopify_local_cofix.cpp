@@ -39,7 +39,7 @@ LoopifyLocalCofix::stream LoopifyLocalCofix::from_list(List<uint64_t> l) {
         return stream::lazy_(
             [=,
              l = l]() mutable -> typename LoopifyLocalCofix::stream::Cons {
-              return {(l.length() + n), _self_go(_self_go, (n + 1))};
+              return {l.length() + n, _self_go(_self_go, (n + 1))};
             });
       };
   uint64_t _lc1_n = UINT64_C(0);

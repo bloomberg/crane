@@ -41,7 +41,7 @@ uint64_t SharedVariantBasic::size(const SharedVariantBasic::tree &t) {
   } else {
     const auto &[a0, _, _, a3] =
         crane::get<typename SharedVariantBasic::tree::Node>(t.v());
-    return ((UINT64_C(1) + size(*a0)) + size(*a3));
+    return UINT64_C(1) + size(*a0) + size(*a3);
   }
 }
 

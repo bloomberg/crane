@@ -974,7 +974,7 @@ struct LoopifyHofs {
   template <typename F0>
   static List<uint64_t> merge_by(F0 &&cmp, const List<uint64_t> &l1,
                                  const List<uint64_t> &l2) {
-    return merge_by_fuel((l1.length() + l2.length()), cmp, l1, l2);
+    return merge_by_fuel(l1.length() + l2.length(), cmp, l1, l2);
   }
 
   /// max_by f l finds element with maximum f value.

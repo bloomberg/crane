@@ -142,16 +142,16 @@ struct LocalFixFunctionResultInlined {
     }();
   }();
   static inline const bool u =
-      (std::make_pair(
-           []() -> crane::fn<bool(uint64_t)> {
-             List<uint64_t> l = List<uint64_t>::nil();
-             crane::fn<bool(uint64_t)> acc = [](uint64_t) { return false; };
-             if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
-               return acc;
-             } else {
-               return [](uint64_t) { return true; };
-             }
-           }(),
-           true))
+      std::make_pair(
+          []() -> crane::fn<bool(uint64_t)> {
+            List<uint64_t> l = List<uint64_t>::nil();
+            crane::fn<bool(uint64_t)> acc = [](uint64_t) { return false; };
+            if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+              return acc;
+            } else {
+              return [](uint64_t) { return true; };
+            }
+          }(),
+          true)
           .first(UINT64_C(0));
 };

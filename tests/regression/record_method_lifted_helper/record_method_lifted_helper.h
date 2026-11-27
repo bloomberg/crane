@@ -107,7 +107,7 @@ struct RecordMethodLiftedHelper {
     }
 
     uint64_t total() const {
-      return (anon_crane_len(this->nats) + anon_crane_len(this->flags));
+      return anon_crane_len(this->nats) + anon_crane_len(this->flags);
     }
   };
 

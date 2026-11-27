@@ -541,8 +541,7 @@ struct DepElim {
       my_vec.vec_tail(UINT64_C(2)).vec_to_list(UINT64_C(2));
   static inline const List<uint64_t> test_vec_map =
       my_vec.template vec_map<uint64_t>(
-          UINT64_C(3),
-          [](uint64_t n) { return (n + UINT64_C(1)); })
+          UINT64_C(3), [](uint64_t n) { return n + UINT64_C(1); })
           .vec_to_list(UINT64_C(3));
   static inline const uint64_t test_present =
       avail::present(UINT64_C(42)).get_present();

@@ -782,7 +782,7 @@ struct TmcAmbiguousCalls {
         } else {
           auto _f = std::move(std::get<_after_eval_in_Add_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         }
       }
       return _result;
@@ -821,7 +821,7 @@ struct TmcAmbiguousCalls {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename term::Lit>(_sv.v())) {
             const auto &[n0] = std::get<typename term::Lit>(_sv.v());
-            _result = term::lit((k * n0));
+            _result = term::lit(k * n0);
           } else if (std::holds_alternative<typename term::Neg>(_sv.v())) {
             const auto &[t1] = std::get<typename term::Neg>(_sv.v());
             _stack.emplace_back(_after_scale_in_Neg{});

@@ -12,7 +12,7 @@ uint64_t LetFixNoStdfun::sum_list(const List<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
-      _lc1_loop_acc = (_lc1_loop_acc + a0);
+      _lc1_loop_acc = _lc1_loop_acc + a0;
       _lc1_loop_xs = crane_raw(a1);
     }
   }
@@ -34,12 +34,12 @@ uint64_t LetFixNoStdfun::flat_map_sum(const List<List<uint64_t>> &xss) {
         } else {
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_loop_ys->v());
-          acc = (acc + a00);
+          acc = acc + a00;
           _loop_ys = crane_raw(a10);
         }
       }
     };
-    return (inner_sum(a0, UINT64_C(0)) + flat_map_sum(*a1));
+    return inner_sum(a0, UINT64_C(0)) + flat_map_sum(*a1);
   }
 }
 

@@ -88,7 +88,7 @@ uint64_t MonadicVoidEdge::mixed_binds() {
   std::cout << std::string("middle") << '\n';
   uint64_t b = UINT64_C(20);
   std::cout << std::string("end") << '\n';
-  return (a + b);
+  return a + b;
 }
 
 /// 13. Function that takes itree as argument and sequences

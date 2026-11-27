@@ -39,7 +39,7 @@ struct PolyComposedLambdaTparam {
     return cf(cg(x0_));
   }
 
-  static inline const uint64_t t = (
+  static inline const uint64_t t =
       f<sz_bool, bool>(true, UINT64_C(3)).second +
-      (f<sz_bool, bool>(false, UINT64_C(4)).first ? UINT64_C(1) : UINT64_C(0)));
+      (f<sz_bool, bool>(false, UINT64_C(4)).first ? UINT64_C(1) : UINT64_C(0));
 };

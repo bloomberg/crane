@@ -89,7 +89,7 @@ struct MethodPartialApp {
 
     /// add_to_sum: methodified on first arg (tree).
     /// Takes a tree and a nat, returns the tree's sum plus the nat.
-    uint64_t add_to_sum(uint64_t x) const { return (this->tree_sum() + x); }
+    uint64_t add_to_sum(uint64_t x) const { return this->tree_sum() + x; }
 
     uint64_t tree_sum() const {
       const tree *_self = this;
@@ -140,7 +140,7 @@ struct MethodPartialApp {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -224,7 +224,7 @@ struct MethodPartialApp {
           [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
             return t.add_to_sum(_x0);
           };
-      return (f(UINT64_C(5)) + f(UINT64_C(10)));
+      return f(UINT64_C(5)) + f(UINT64_C(10));
     }();
   }();
 
@@ -263,7 +263,7 @@ struct MethodPartialApp {
         return t.add_to_sum(_x0);
       });
       auto &[a0] = b;
-      return (a0(UINT64_C(5)) + a0(UINT64_C(10)));
+      return a0(UINT64_C(5)) + a0(UINT64_C(10));
     }();
   }();
   /// Two partial apps from different trees.
@@ -275,7 +275,7 @@ struct MethodPartialApp {
           [&](uint64_t _x0) -> uint64_t { return t1.add_to_sum(_x0); };
       crane::fn<uint64_t(uint64_t)> f2 =
           [&](uint64_t _x0) -> uint64_t { return t2.add_to_sum(_x0); };
-      return (f1(UINT64_C(0)) + f2(UINT64_C(0)));
+      return f1(UINT64_C(0)) + f2(UINT64_C(0));
     }();
   }();
 };

@@ -140,7 +140,7 @@ struct ClosureChain {
           [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
             return make_chain(UINT64_C(2), std::move(t), _x0);
           };
-      return (f(UINT64_C(0)) + f(UINT64_C(100)));
+      return f(UINT64_C(0)) + f(UINT64_C(100));
     }();
   }();
 };

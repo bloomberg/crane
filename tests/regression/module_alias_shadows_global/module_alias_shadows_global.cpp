@@ -1,6 +1,6 @@
 #include "module_alias_shadows_global.h"
 
-uint64_t dbl(uint64_t n) { return (n + n); }
+uint64_t dbl(uint64_t n) { return n + n; }
 
 /// Two levels down, naming the file-scope definitions, which the members
 /// of this module and of the enclosing one both hide.

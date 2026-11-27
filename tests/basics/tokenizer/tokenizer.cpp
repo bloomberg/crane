@@ -35,33 +35,32 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                                                                        _lc1_loop_index]))
                                                              : INT64_C(0));
         if (hard.contains(static_cast<char>(c))) {
-          auto _once1 =
-              static_cast<int64_t>((static_cast<uint64_t>(_lc1_loop_index) +
-                                    static_cast<uint64_t>(INT64_C(1))) &
-                                   0x7FFFFFFFFFFFFFFFULL);
-          return std::make_pair(
-              std::make_optional<std::basic_string_view<char>>(
-                  ((INT64_C(0) >= 0 &&
-                    INT64_C(0) <=
-                    static_cast<int64_t>(_lc1_loop_s.length()))
-                       ? _lc1_loop_s.substr(INT64_C(0), _lc1_loop_index)
-                       : std::basic_string_view<char>())),
-              ((_once1 >= 0 &&
-                _once1 <=
+          auto _once1 = static_cast<int64_t>(
+              (static_cast<uint64_t>(_lc1_loop_index) + UINT64_C(1)) &
+              UINT64_C(9223372036854775807));
+          return std::make_pair(std::make_optional<std::basic_string_view<char>>(
+              ((INT64_C(0) >= 0 &&
+                INT64_C(0) <=
                 static_cast<int64_t>(_lc1_loop_s.length()))
-                   ? _lc1_loop_s.substr(_once1,
-                                        static_cast<int64_t>(
-                                            (static_cast<uint64_t>(
-                                                 input.length()) -
-                                             static_cast<uint64_t>(
-                                                 static_cast<int64_t>(
-                                                     (static_cast<uint64_t>(
-                                                          _lc1_loop_index) +
-                                                      static_cast<uint64_t>(
-                                                          INT64_C(1))) &
-                                                     0x7FFFFFFFFFFFFFFFULL))) &
-                                            0x7FFFFFFFFFFFFFFFULL))
-                   : std::basic_string_view<char>()));
+                   ? _lc1_loop_s.substr(INT64_C(0), _lc1_loop_index)
+                   : std::basic_string_view<char>())),
+                                ((_once1 >= 0 &&
+                                  _once1 <=
+                                  static_cast<int64_t>(_lc1_loop_s.length()))
+                                     ? _lc1_loop_s.substr(
+                                           _once1,
+                                           static_cast<int64_t>(
+                                               (static_cast<uint64_t>(
+                                                    input.length()) -
+                                                static_cast<uint64_t>(
+                                                    static_cast<int64_t>(
+                                                        (static_cast<uint64_t>(
+                                                             _lc1_loop_index) +
+                                                         UINT64_C(1)) &
+                                                        UINT64_C(
+                                                            9223372036854775807)))) &
+                                               UINT64_C(9223372036854775807)))
+                                     : std::basic_string_view<char>()));
         } else if (soft.contains(static_cast<char>(c))) {
           if (_lc1_loop_index == INT64_C(0)) {
             _lc1_loop_s =
@@ -72,46 +71,41 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                            INT64_C(1),
                            static_cast<int64_t>(
                                (static_cast<uint64_t>(input.length()) -
-                                static_cast<uint64_t>(INT64_C(1))) &
-                               0x7FFFFFFFFFFFFFFFULL))
+                                UINT64_C(1)) &
+                               UINT64_C(9223372036854775807)))
                      : std::basic_string_view<char>());
             _lc1_loop_index = INT64_C(0);
             _lc1_loop_fuel = fuel_;
           } else {
-            auto _once2 =
-                static_cast<int64_t>((static_cast<uint64_t>(_lc1_loop_index) +
-                                      static_cast<uint64_t>(INT64_C(1))) &
-                                     0x7FFFFFFFFFFFFFFFULL);
-            return std::make_pair(std::make_optional<
-                std::basic_string_view<char>>(
-                ((INT64_C(0) >= 0 &&
-                  INT64_C(0) <=
+            auto _once2 = static_cast<int64_t>(
+                (static_cast<uint64_t>(_lc1_loop_index) + UINT64_C(1)) &
+                UINT64_C(9223372036854775807));
+            return std::make_pair(
+                std::make_optional<std::basic_string_view<char>>(
+                    ((INT64_C(0) >= 0 &&
+                      INT64_C(0) <=
+                      static_cast<int64_t>(_lc1_loop_s.length()))
+                         ? _lc1_loop_s.substr(INT64_C(0), _lc1_loop_index)
+                         : std::basic_string_view<char>())),
+                ((_once2 >= 0 &&
+                  _once2 <=
                   static_cast<int64_t>(_lc1_loop_s.length()))
-                     ? _lc1_loop_s.substr(INT64_C(0), _lc1_loop_index)
-                     : std::basic_string_view<char>())),
-                                  ((_once2 >= 0 &&
-                                    _once2 <=
-                                    static_cast<int64_t>(_lc1_loop_s.length()))
-                                       ? _lc1_loop_s.substr(
-                                             _once2,
-                                             static_cast<int64_t>(
-                                                 (static_cast<uint64_t>(
-                                                      input.length()) -
-                                                  static_cast<uint64_t>(
-                                                      static_cast<int64_t>(
-                                                          (static_cast<uint64_t>(
-                                                               _lc1_loop_index) +
-                                                           static_cast<uint64_t>(
-                                                               INT64_C(1))) &
-                                                          0x7FFFFFFFFFFFFFFFULL))) &
-                                                 0x7FFFFFFFFFFFFFFFULL))
-                                       : std::basic_string_view<char>()));
+                     ? _lc1_loop_s.substr(
+                           _once2, static_cast<int64_t>(
+                                       (static_cast<uint64_t>(input.length()) -
+                                        static_cast<uint64_t>(
+                                            static_cast<int64_t>(
+                                                (static_cast<uint64_t>(
+                                                     _lc1_loop_index) +
+                                                 UINT64_C(1)) &
+                                                UINT64_C(9223372036854775807)))) &
+                                       UINT64_C(9223372036854775807)))
+                     : std::basic_string_view<char>()));
           }
         } else {
-          _lc1_loop_index =
-              static_cast<int64_t>((static_cast<uint64_t>(_lc1_loop_index) +
-                                    static_cast<uint64_t>(INT64_C(1))) &
-                                   0x7FFFFFFFFFFFFFFFULL);
+          _lc1_loop_index = static_cast<int64_t>(
+              (static_cast<uint64_t>(_lc1_loop_index) + UINT64_C(1)) &
+              UINT64_C(9223372036854775807));
           _lc1_loop_fuel = fuel_;
         }
       }
@@ -135,11 +129,11 @@ Tokenizer::list_tokens(std::basic_string_view<char> input,
           std::pair<std::optional<std::basic_string_view<char>>,
                     std::basic_string_view<char>> t =
               next_token(std::move(rest), soft, hard);
-          auto _cs = std::move(t).first;
+          auto _cs = std::move(t.first);
           if (_cs.has_value()) {
             const std::basic_string_view<char> &t_ = *_cs;
             return List<std::basic_string_view<char>>::cons(
-                t_, _self_aux(_self_aux, fuel_, std::move(t).second));
+                t_, _self_aux(_self_aux, fuel_, std::move(t.second)));
           } else {
             return List<std::basic_string_view<char>>::nil();
           }

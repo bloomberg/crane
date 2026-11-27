@@ -20,7 +20,7 @@ struct TodoDependentFieldAlias {
   struct nat_magma {
     using carrier = uint64_t;
 
-    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return a0 + a1; }
   };
 
   static_assert(Magma<nat_magma>);

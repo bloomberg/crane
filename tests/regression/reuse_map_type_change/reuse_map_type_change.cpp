@@ -38,13 +38,13 @@ uint64_t ReuseMapTypeChange::suml(const ReuseMapTypeChange::lst<uint64_t> &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename ReuseMapTypeChange::lst<uint64_t>::Cons>(l.v());
-    return (a0 + suml(*a1));
+    return a0 + suml(*a1);
   }
 }
 
 uint64_t ReuseMapTypeChange::go1(uint64_t n) {
   return suml(mapl<uint64_t, uint64_t>(
-      [](uint64_t x) { return (x + UINT64_C(1)); },
+      [](uint64_t x) { return x + UINT64_C(1); },
       build(n, lst<uint64_t>::nil())));
 }
 

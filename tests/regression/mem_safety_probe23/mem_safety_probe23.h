@@ -172,7 +172,7 @@ struct MemSafetyProbe23 {
     std::pair<tree, uint64_t> r = sum_with_original(tree::node(
         tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), UINT64_C(7),
         tree::node(tree::leaf(), UINT64_C(11), tree::leaf())));
-    return (r.second + tree_sum(std::move(r).first));
+    return r.second + tree_sum(std::move(r.first));
   }();
   /// TEST 2: Return a PAIR of the original tree and a transformed copy.
   /// Forces tree to be owned; two recursive calls on children.
@@ -181,7 +181,7 @@ struct MemSafetyProbe23 {
     std::pair<tree, tree> r = dup_and_double(tree::node(
         tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), UINT64_C(5),
         tree::node(tree::leaf(), UINT64_C(7), tree::leaf())));
-    return (tree_sum(std::move(r).first) + tree_sum(std::move(r).second));
+    return tree_sum(std::move(r.first)) + tree_sum(std::move(r.second));
   }();
   /// TEST 3: Store children in result alongside recursive processing.
   /// l and r are extracted from match, BOTH used in result AND in
@@ -194,9 +194,8 @@ struct MemSafetyProbe23 {
         tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(5),
         tree::node(tree::leaf(), UINT64_C(8), tree::leaf())));
     auto [left_child, right_child] = std::move(p);
-    return (
-        (tree_sum(std::move(left_child)) + tree_sum(std::move(right_child))) +
-        s);
+    return tree_sum(std::move(left_child)) + tree_sum(std::move(right_child)) +
+           s;
   }();
   /// TEST 4: Recursive function that rebuilds tree with an
   /// ACCUMULATOR that captures the original tree. The accumulator
@@ -207,7 +206,7 @@ struct MemSafetyProbe23 {
         tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
         tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
                                                UINT64_C(0));
-    return (r.second + tree_sum(std::move(r).first));
+    return r.second + tree_sum(std::move(r.first));
   }();
   /// TEST 5: Function using tree_sum on children INSIDE the same
   /// expression as recursive calls. Tests that child pointers remain
@@ -217,7 +216,7 @@ struct MemSafetyProbe23 {
     std::pair<uint64_t, uint64_t> r = interleaved_ops(tree::node(
         tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(5),
         tree::node(tree::leaf(), UINT64_C(3), tree::leaf())));
-    return (r.first + r.second);
+    return r.first + r.second;
   }();
   /// TEST 6: Nested tree type — tree of trees. Tests clone correctness
   /// for deeply nested value types.
@@ -244,6 +243,6 @@ struct MemSafetyProbe23 {
     std::pair<tree, uint64_t> r = annotate_sizes(tree::node(
         tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
         tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
-    return (tree_sum(std::move(r).first) + r.second);
+    return tree_sum(std::move(r.first)) + r.second;
   }();
 };

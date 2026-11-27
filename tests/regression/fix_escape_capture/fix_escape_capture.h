@@ -21,6 +21,6 @@ struct FixEscapeCapture {
   make_pair_fn2(uint64_t base);
   static inline const uint64_t test_pair2 = []() -> uint64_t {
     auto [n, f] = make_pair_fn2(UINT64_C(5));
-    return (n + f(UINT64_C(3)));
+    return n + f(UINT64_C(3));
   }();
 };

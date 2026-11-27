@@ -14,5 +14,5 @@ namespace BloombergLP {}
 
 unsigned int BdeConceptDeclvalInclude::N::op(unsigned int x0_,
                                              unsigned int x1_) {
-  return (x0_ + x1_);
+  return x0_ + x1_;
 }

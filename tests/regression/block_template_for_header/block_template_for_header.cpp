@@ -10,5 +10,6 @@ uint64_t BlockTemplateForHeader::next_after(uint64_t n) {
       }
     };
     return _r;
-  }() + UINT64_C(1));
+  }()) +
+         UINT64_C(1);
 }

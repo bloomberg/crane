@@ -26,7 +26,7 @@ uint64_t CpsClosureChain::tree_sum_cps(const CpsClosureChain::tree &t,
     return tree_sum_cps(
         a0_value, [=, a2_value = a2_value, k = k](uint64_t left_sum) {
           return tree_sum_cps(a2_value, [=, k = k](uint64_t right_sum) {
-            return k(((left_sum + a1) + right_sum));
+            return k(left_sum + a1 + right_sum);
           });
         });
   }

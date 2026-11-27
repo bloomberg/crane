@@ -362,7 +362,7 @@ uint64_t CoalitionBidHonorTraceCase::unit_class_bonus(
 
 uint64_t CoalitionBidHonorTraceCase::unit_skill(
     const CoalitionBidHonorTraceCase::Unit &u) {
-  return (u.unit_gunnery + u.unit_piloting);
+  return u.unit_gunnery + u.unit_piloting;
 }
 
 uint64_t CoalitionBidHonorTraceCase::skill_bv_multiplier_num(uint64_t skill) {
@@ -379,14 +379,14 @@ uint64_t CoalitionBidHonorTraceCase::skill_bv_multiplier_num(uint64_t skill) {
 
 uint64_t CoalitionBidHonorTraceCase::unit_base_bv(
     const CoalitionBidHonorTraceCase::Unit &u) {
-  return (u.unit_tonnage * weight_class_value(u.unit_weight));
+  return u.unit_tonnage * weight_class_value(u.unit_weight);
 }
 
 uint64_t CoalitionBidHonorTraceCase::unit_tech_bv(
     const CoalitionBidHonorTraceCase::Unit &u) {
   uint64_t base = unit_base_bv(u);
   if (u.unit_is_clan) {
-    return (base + (UINT64_C(2) ? base / UINT64_C(2) : 0));
+    return base + (UINT64_C(2) ? base / UINT64_C(2) : 0);
   } else {
     return base;
   }
@@ -395,14 +395,14 @@ uint64_t CoalitionBidHonorTraceCase::unit_tech_bv(
 uint64_t CoalitionBidHonorTraceCase::unit_battle_value(
     const CoalitionBidHonorTraceCase::Unit &u) {
   uint64_t tech_bv = unit_tech_bv(u);
-  return (UINT64_C(4) ? (tech_bv * skill_bv_multiplier_num(unit_skill(u))) /
+  return (UINT64_C(4) ? tech_bv * skill_bv_multiplier_num(unit_skill(u)) /
                         UINT64_C(4)
                       : 0);
 }
 
 uint64_t CoalitionBidHonorTraceCase::unit_effective_combat_rating(
     const CoalitionBidHonorTraceCase::Unit &u) {
-  return (unit_battle_value(u) + unit_class_bonus(u.unit_class));
+  return unit_battle_value(u) + unit_class_bonus(u.unit_class);
 }
 
 CoalitionBidHonorTraceCase::ForceMetrics
@@ -418,11 +418,11 @@ CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::metrics_add(
     const CoalitionBidHonorTraceCase::ForceMetrics &m1,
     const CoalitionBidHonorTraceCase::ForceMetrics &m2) {
-  return ForceMetrics{
-      (m1.fm_count + m2.fm_count), (m1.fm_tonnage + m2.fm_tonnage),
-      (m1.fm_elite_count + m2.fm_elite_count),
-      (m1.fm_clan_count + m2.fm_clan_count), (m1.fm_total_bv + m2.fm_total_bv),
-      (m1.fm_total_ecr + m2.fm_total_ecr)};
+  return ForceMetrics{m1.fm_count + m2.fm_count, m1.fm_tonnage + m2.fm_tonnage,
+                      m1.fm_elite_count + m2.fm_elite_count,
+                      m1.fm_clan_count + m2.fm_clan_count,
+                      m1.fm_total_bv + m2.fm_total_bv,
+                      m1.fm_total_ecr + m2.fm_total_ecr};
 }
 
 CoalitionBidHonorTraceCase::ForceMetrics
@@ -542,7 +542,7 @@ bool CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const CoalitionBidHonorTraceCase::CoalitionMemberBid &cbid) {
   return (
-      cbid.cmb_member_index < c.length() &&
+      (cbid.cmb_member_index < c.length()) &&
       metrics_total_lt(
           force_metrics(cbid.cmb_new_force),
           force_metrics(

@@ -32,16 +32,16 @@ struct ClassInstanceAtFunctionType {
     requires Weigh<_tcI0, T1> && Weigh<_tcI1, T2>
   struct WeighPair {
     static uint64_t weigh(std::pair<T1, T2> p) {
-      return (_tcI0::weigh(std::move(p).first) +
-              _tcI1::weigh(std::move(p).second));
+      return _tcI0::weigh(std::move(p.first)) +
+             _tcI1::weigh(std::move(p.second));
     }
   };
 
   static inline const uint64_t total =
-      ((WeighNat::weigh(UINT64_C(1)) +
-        WeighFn::weigh([](uint64_t n) { return (n * UINT64_C(2)); })) +
-       WeighPair<WeighNat, WeighFn, uint64_t,
-                 crane::fn<uint64_t(uint64_t)>>::weigh(std::make_pair(
-           UINT64_C(3), crane::fn<uint64_t(uint64_t)>(
-                            [](uint64_t n) { return (n + UINT64_C(1)); }))));
+      WeighNat::weigh(UINT64_C(1)) +
+      WeighFn::weigh([](uint64_t n) { return n * UINT64_C(2); }) +
+      WeighPair<WeighNat, WeighFn, uint64_t,
+                crane::fn<uint64_t(uint64_t)>>::weigh(std::make_pair(
+          UINT64_C(3), crane::fn<uint64_t(uint64_t)>(
+                           [](uint64_t n) { return n + UINT64_C(1); })));
 };

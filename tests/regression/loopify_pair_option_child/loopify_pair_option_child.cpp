@@ -41,7 +41,7 @@ uint64_t LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree &t) {
       auto _f = std::move(std::get<_after_sum_in_Some>(_popped));
       _stack.pop_back();
       uint64_t x = _f.x;
-      _result = ((_f._tmp2 + x) + _result);
+      _result = _f._tmp2 + x + _result;
     } else {
       auto _f = std::move(std::get<_after_sum_in_pair>(_popped));
       _stack.pop_back();
@@ -56,7 +56,7 @@ uint64_t LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree &t) {
       } else {
         _tmp1 = UINT64_C(0);
         {
-          _result = ((_tmp2 + x) + _tmp1);
+          _result = _tmp2 + x + _tmp1;
         }
       }
     }

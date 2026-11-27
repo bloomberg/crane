@@ -17,7 +17,7 @@ RecordFieldPatterns::classify_point(const RecordFieldPatterns::Point &p) {
       return UINT64_C(2);
     } else {
       uint64_t _x0 = y - 1;
-      return (x + y);
+      return x + y;
     }
   }
 }
@@ -29,7 +29,7 @@ uint64_t RecordFieldPatterns::zero_x(const RecordFieldPatterns::Point &p) {
     return n;
   } else {
     uint64_t m = px0 - 1;
-    return (m + n);
+    return m + n;
   }
 }
 
@@ -54,7 +54,7 @@ RecordFieldPatterns::scaled_sum(uint64_t scale,
                                 const RecordFieldPatterns::ScaledPoint &sp) {
   uint64_t x = sp.sp_x;
   uint64_t y = sp.sp_y;
-  return (scale * (x + y));
+  return scale * (x + y);
 }
 
 RecordFieldPatterns::Point RecordFieldPatterns::PointImpl::mk(uint64_t x,
@@ -80,9 +80,9 @@ RecordFieldPatterns::segment_length_sq(const RecordFieldPatterns::Segment &s) {
   uint64_t y1 = seg_start0.py;
   uint64_t x2 = seg_end0.px;
   uint64_t y2 = seg_end0.py;
-  uint64_t dx = (((x2 - x1) > x2 ? 0 : (x2 - x1)));
-  uint64_t dy = (((y2 - y1) > y2 ? 0 : (y2 - y1)));
-  return ((dx * dx) + (dy * dy));
+  uint64_t dx = (x2 - x1 > x2 ? 0 : x2 - x1);
+  uint64_t dy = (y2 - y1 > y2 ? 0 : y2 - y1);
+  return dx * dx + dy * dy;
 }
 
 uint64_t
@@ -90,14 +90,14 @@ RecordFieldPatterns::bounded_range(const RecordFieldPatterns::Bounded &b) {
   uint64_t l = b.lo;
   uint64_t h = b.hi;
   uint64_t m = b.mid;
-  return ((((h - l) > h ? 0 : (h - l))) + m);
+  return (h - l > h ? 0 : h - l) + m;
 }
 
 uint64_t
 RecordFieldPatterns::sum_px(const List<RecordFieldPatterns::Point> &points) {
   return points.template fold_left<uint64_t>(
       [](uint64_t acc,
-         const RecordFieldPatterns::Point &p) { return (acc + p.px); },
+         const RecordFieldPatterns::Point &p) { return acc + p.px; },
       UINT64_C(0));
 }
 

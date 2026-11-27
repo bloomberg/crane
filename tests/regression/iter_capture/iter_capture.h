@@ -14,7 +14,7 @@ struct IterCapture {
           _crane_acc = _crane_f(std::move(_crane_acc));
         }
         return _crane_acc;
-      }(UINT64_C(3), [=](uint64_t x) { return (x + acc_); }, UINT64_C(0));
+      }(UINT64_C(3), [=](uint64_t x) { return x + acc_; }, UINT64_C(0));
     }();
   }();
 };

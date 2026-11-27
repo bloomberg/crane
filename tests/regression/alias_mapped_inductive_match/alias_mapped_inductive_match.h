@@ -25,6 +25,6 @@ struct AliasMappedInductiveMatch {
   using N = M;
   static uint64_t get(const std::optional<uint64_t> &o);
   static inline const uint64_t result =
-      (get(std::make_optional<uint64_t>(UINT64_C(4))) +
-       get(std::optional<uint64_t>()));
+      get(std::make_optional<uint64_t>(UINT64_C(4))) +
+      get(std::optional<uint64_t>());
 };

@@ -103,7 +103,7 @@ struct MemSafetyProbe14 {
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> fn_and_val() const {
       uint64_t s = this->tree_sum();
       return std::make_pair(
-          crane::fn<uint64_t(uint64_t)>([=](uint64_t n) { return (s + n); }),
+          crane::fn<uint64_t(uint64_t)>([=](uint64_t n) { return s + n; }),
           s);
     }
 
@@ -112,22 +112,22 @@ struct MemSafetyProbe14 {
     uint64_t two_closures() const {
       tree _self_val = *this;
       crane::fn<uint64_t(uint64_t)> f1 =
-          [=](uint64_t n) { return (_self_val.tree_sum() + n); };
+          [=](uint64_t n) { return _self_val.tree_sum() + n; };
       crane::fn<uint64_t(uint64_t)> f2 =
           [=, _self_val = std::move(_self_val)](uint64_t n) {
-            return (_self_val.tree_sum() * n);
+            return _self_val.tree_sum() * n;
           };
-      return (f1(UINT64_C(3)) + f2(UINT64_C(2)));
+      return f1(UINT64_C(3)) + f2(UINT64_C(2));
     }
 
     uint64_t closure_then_consume() const {
       tree _self_val = *this;
       crane::fn<uint64_t(uint64_t)> f =
           [=, _self_val = std::move(_self_val)](uint64_t n) {
-            return (_self_val.tree_sum() + n);
+            return _self_val.tree_sum() + n;
           };
       uint64_t v = this->consume_tree();
-      return (f(UINT64_C(0)) + v);
+      return f(UINT64_C(0)) + v;
     }
 
     /// TEST 3: Tree used in closure, then tree passed to
@@ -150,16 +150,16 @@ struct MemSafetyProbe14 {
       uint64_t ts = this->tree_sum();
       crane::fn<uint64_t(uint64_t)> f =
           [=, _self_val = std::move(_self_val)](uint64_t n) {
-            return (_self_val.tree_sum() + n);
+            return _self_val.tree_sum() + n;
           };
-      return (ts + f(UINT64_C(0)));
+      return ts + f(UINT64_C(0));
     }
 
     /// TEST 1: make_adder takes a tree by value (move).
     /// The closure captures tree_sum t. After the closure is created,
     /// t is dead in the caller, so Crane might move t.
     /// But the closure must hold a valid copy.
-    uint64_t make_adder(uint64_t n) const { return (this->tree_sum() + n); }
+    uint64_t make_adder(uint64_t n) const { return this->tree_sum() + n; }
 
     uint64_t tree_sum() const {
       const tree *_self = this;
@@ -210,7 +210,7 @@ struct MemSafetyProbe14 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -492,7 +492,7 @@ struct MemSafetyProbe14 {
                         UINT64_C(200),
                         tree::node(tree::leaf(), UINT64_C(300), tree::leaf()));
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p = t.fn_and_val();
-    return (p.first(UINT64_C(5)) + p.second);
+    return p.first(UINT64_C(5)) + p.second;
   }();
   /// TEST 8: Large tree stress test. Many closures, deep recursion.
   static tree make_balanced(uint64_t n);

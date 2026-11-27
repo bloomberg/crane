@@ -2,7 +2,7 @@
 
 bool EncodeOps::pair_in_range(std::pair<uint64_t, uint64_t> p) {
   const auto &[b1, b2] = p;
-  return (b1 < UINT64_C(256) && b2 < UINT64_C(256));
+  return ((b1 < UINT64_C(256)) && (b2 < UINT64_C(256)));
 }
 
 List<uint64_t>

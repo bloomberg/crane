@@ -30,7 +30,7 @@ bool mk_action(uint64_t n, domty tup) {
     uint64_t _x = n - 1;
     auto [v, _] =
         crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(tup));
-    return crane::any_cast<uint64_t>(v) < (crane::any_cast<uint64_t>(v) + 1);
+    return crane::any_cast<uint64_t>(v) < ((crane::any_cast<uint64_t>(v) + 1));
   }
 }
 

@@ -220,7 +220,7 @@ struct LiftedLocalFixLoopify {
             std::move(std::get<_after_weighted_crane_sum_all_in_Cons>(_popped));
         _stack.pop_back();
         auto a0 = std::move(_f.a0);
-        _result = (w(a0) + _result);
+        _result = w(a0) + _result;
       }
     }
     return _result;

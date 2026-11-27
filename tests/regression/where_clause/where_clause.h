@@ -171,7 +171,7 @@ struct WhereClause {
         } else if (std::holds_alternative<_after_expr_size_in_Plus_2>(_popped)) {
           auto _f = std::move(std::get<_after_expr_size_in_Plus_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp2) + _result);
+          _result = UINT64_C(1) + _f._tmp2 + _result;
         } else if (std::holds_alternative<_after_expr_size_in_Times>(_popped)) {
           auto _f = std::move(std::get<_after_expr_size_in_Times>(_popped));
           _stack.pop_back();
@@ -181,7 +181,7 @@ struct WhereClause {
         } else {
           auto _f = std::move(std::get<_after_expr_size_in_Times_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp4) + _result);
+          _result = UINT64_C(1) + _f._tmp4 + _result;
         }
       }
       return _result;
@@ -246,7 +246,7 @@ struct WhereClause {
         } else if (std::holds_alternative<_after_eval_in_Plus_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_in_Plus_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         } else if (std::holds_alternative<_after_eval_in_Times>(_popped)) {
           auto _f = std::move(std::get<_after_eval_in_Times>(_popped));
           _stack.pop_back();
@@ -256,7 +256,7 @@ struct WhereClause {
         } else {
           auto _f = std::move(std::get<_after_eval_in_Times_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 * _result);
+          _result = _f._tmp4 * _result;
         }
       }
       return _result;
@@ -844,7 +844,7 @@ struct WhereClause {
         } else {
           auto _f = std::move(std::get<_after_aeval_in_APlus_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         }
       }
       return _result;

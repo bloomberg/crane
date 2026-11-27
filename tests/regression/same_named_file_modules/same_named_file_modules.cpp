@@ -682,7 +682,7 @@ N Coq_Pos::lxor(const Positive &p, const Positive &q) {
 
 uint64_t Coq_Pos::to_nat(const Positive &x) {
   return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
       x,
       UINT64_C(1));
 }
@@ -829,7 +829,7 @@ Positive Coq_Pos::gcdn(uint64_t n, const Positive &a, const Positive &b) {
 }
 
 Positive Coq_Pos::gcd(const Positive &a, const Positive &b) {
-  return gcdn((size_nat(a) + size_nat(b)), a, b);
+  return gcdn(size_nat(a) + size_nat(b), a, b);
 }
 
 std::pair<Positive, std::pair<Positive, Positive>>
@@ -901,7 +901,7 @@ Coq_Pos::ggcdn(uint64_t n, const Positive &a, const Positive &b) {
 
 std::pair<Positive, std::pair<Positive, Positive>>
 Coq_Pos::ggcd(const Positive &a, const Positive &b) {
-  return ggcdn((size_nat(a) + size_nat(b)), a, b);
+  return ggcdn(size_nat(a) + size_nat(b), a, b);
 }
 
 Positive Coq_Pos::shiftl_nat(Positive p, uint64_t n) {

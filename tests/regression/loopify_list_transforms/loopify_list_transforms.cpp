@@ -53,7 +53,7 @@ LoopifyListTransforms::run_length_encode(const List<uint64_t> &l) {
         auto [y, n] = std::move(a01);
         if (a0 == y) {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
-              std::make_pair(y, (n + UINT64_C(1))), crane::shared_child(a11));
+              std::make_pair(y, n + UINT64_C(1)), crane::shared_child(a11));
         } else {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
               std::make_pair(a0, UINT64_C(1)),
@@ -89,7 +89,7 @@ List<uint64_t> LoopifyListTransforms::prefix_sums(uint64_t acc,
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      acc = (acc + a0);
+      acc = acc + a0;
       continue;
     }
   }
@@ -164,9 +164,9 @@ LoopifyListTransforms::sliding_pairs(const List<uint64_t> &l) {
 
 uint64_t LoopifyListTransforms::abs_diff(uint64_t x, uint64_t y) {
   if (y < x) {
-    return (((x - y) > x ? 0 : (x - y)));
+    return (x - y > x ? 0 : x - y);
   } else {
-    return (((y - x) > y ? 0 : (y - x)));
+    return (y - x > y ? 0 : y - x);
   }
 }
 
@@ -365,7 +365,7 @@ LoopifyListTransforms::rotate_left_fuel(uint64_t fuel, uint64_t n,
           List<uint64_t> rotated =
               a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
           _loop_l = std::move(rotated);
-          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
           fuel = fuel_;
         }
       }
@@ -375,7 +375,7 @@ LoopifyListTransforms::rotate_left_fuel(uint64_t fuel, uint64_t n,
 
 List<uint64_t> LoopifyListTransforms::rotate_left(uint64_t n,
                                                   const List<uint64_t> &l) {
-  return rotate_left_fuel((n + UINT64_C(1)), n, l);
+  return rotate_left_fuel(n + UINT64_C(1), n, l);
 }
 
 List<uint64_t>
@@ -469,7 +469,7 @@ uint64_t LoopifyListTransforms::step_sum(const List<uint64_t> &l) {
         if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
           contribution = a0;
         } else {
-          contribution = (a0 * UINT64_C(2));
+          contribution = a0 * UINT64_C(2);
         }
         _stack.emplace_back(_after_step_sum_in_Cons{contribution});
         _stack.emplace_back(_call{crane_raw(a1)});
@@ -478,7 +478,7 @@ uint64_t LoopifyListTransforms::step_sum(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_step_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t contribution = _f.contribution;
-      _result = (contribution + _result);
+      _result = contribution + _result;
     }
   }
   return _result;

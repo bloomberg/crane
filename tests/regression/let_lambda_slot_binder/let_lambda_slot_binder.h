@@ -97,7 +97,7 @@ struct LetLambdaSlotBinder {
       crane::fn<uint64_t(bool)> w;
       crane::fn<uint64_t(tree)> cf = [](tree) { return UINT64_C(1); };
       w = [=, cf = std::move(cf)](bool) { return cf(tree::leaf()); };
-      return (w(true) + w(false));
+      return w(true) + w(false);
     }();
   }();
 };

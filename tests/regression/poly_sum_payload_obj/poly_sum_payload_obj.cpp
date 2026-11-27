@@ -5,7 +5,7 @@ unsigned int Ascii0::N_of_digits(const List<bool> &l) {
     return 0u;
   } else {
     const auto &[a0, a1] = std::get<typename List<bool>::Cons>(l.v());
-    return ((a0 ? 1u : 0u) + (2u * Ascii0::N_of_digits(*a1)));
+    return (a0 ? 1u : 0u) + 2u * Ascii0::N_of_digits(*a1);
   }
 }
 

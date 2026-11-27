@@ -15,7 +15,7 @@ int64_t EffectDeepCompose::timed_env_op(const std::string &name,
           .count());
   return static_cast<int64_t>(
       (static_cast<uint64_t>(t2) - static_cast<uint64_t>(t1)) &
-      0x7FFFFFFFFFFFFFFFULL);
+      UINT64_C(9223372036854775807));
 }
 
 /// 2. Function using only console from inside bigE

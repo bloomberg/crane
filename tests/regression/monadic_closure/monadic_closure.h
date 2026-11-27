@@ -119,7 +119,7 @@ struct MonadicClosure {
   static int64_t with_length(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);
-    return f(static_cast<int64_t>((std::string_view{line}).size()));
+    return f(static_cast<int64_t>(std::string_view{line}.size()));
   }
 
   static int64_t test_with_length();

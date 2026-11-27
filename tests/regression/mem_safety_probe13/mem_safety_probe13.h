@@ -112,7 +112,7 @@ struct MemSafetyProbe13 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         if (std::holds_alternative<typename tree::Leaf>(a0_value.v())) {
-          return (a2_value.tree_sum() + a1);
+          return a2_value.tree_sum() + a1;
         } else {
           const auto &[a00, a10, a20] =
               std::get<typename tree::Node>(a0_value.v());
@@ -120,9 +120,9 @@ struct MemSafetyProbe13 {
           const tree &a20_value = *a20;
           crane::fn<uint64_t(uint64_t)> f =
               [=, a20_value = a20_value, a2_value = a2_value](uint64_t n) {
-                return ((a2_value.tree_sum() + a20_value.tree_sum()) + n);
+                return a2_value.tree_sum() + a20_value.tree_sum() + n;
               };
-          return (f(a10) + a00_value.tree_sum());
+          return f(a10) + a00_value.tree_sum();
         }
       }
     }
@@ -176,7 +176,7 @@ struct MemSafetyProbe13 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -422,7 +422,7 @@ struct MemSafetyProbe13 {
         } else {
           auto _f = std::move(std::get<_after_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -492,7 +492,7 @@ struct MemSafetyProbe13 {
     uint64_t val_sum = sum_list(std::move(vals));
     uint64_t fn_sum = sum_list(fns.template map_list<uint64_t>(
         [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(0)); }));
-    return (val_sum + fn_sum);
+    return val_sum + fn_sum;
   }();
   static inline const uint64_t test_double_match = []() {
     tree t = tree::node(
@@ -646,7 +646,7 @@ struct MemSafetyProbe13 {
           auto _f = std::move(std::get<_after_eval_ftree_in_FNode_2>(_popped));
           _stack.pop_back();
           crane::fn<uint64_t(uint64_t)> a1 = std::move(_f.a1);
-          _result = ((_f._tmp2 + a1(base)) + _result);
+          _result = _f._tmp2 + a1(base) + _result;
         }
       }
       return _result;

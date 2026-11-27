@@ -49,7 +49,7 @@ uint64_t LoopifyAccumulatorReadElsewhere::size(
     } else {
       auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = ((_f._tmp2 + UINT64_C(1)) + _result);
+      _result = _f._tmp2 + UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -105,7 +105,7 @@ uint64_t LoopifyAccumulatorReadElsewhere::keys(
       auto _f = std::move(std::get<_after_keys_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + a1) + _result);
+      _result = _f._tmp2 + a1 + _result;
     }
   }
   return _result;
@@ -145,7 +145,7 @@ LoopifyAccumulatorReadElsewhere::grow_counted(
       uint64_t m = n - 1;
       LoopifyAccumulatorReadElsewhere::tree _next_acc =
           tree::node(_loop_acc, m, _loop_acc);
-      count = (count + size(_loop_acc));
+      count = count + size(_loop_acc);
       n = m;
       _loop_acc = std::move(_next_acc);
     }

@@ -139,16 +139,17 @@ struct WpmOps {
              UINT64_C(2), UINT64_C(99), false};
   static inline const state1 after1 = execute_wpm1(sample1);
   static inline const bool test_wpm_disabled_is_nop = (
-      ListDef::template nth<uint64_t>(UINT64_C(0), after1.rom1, UINT64_C(0)) ==
-      UINT64_C(10) &&
-      (ListDef::template nth<uint64_t>(UINT64_C(1), after1.rom1, UINT64_C(0)) ==
-       UINT64_C(11) &&
-       (ListDef::template nth<uint64_t>(UINT64_C(2), after1.rom1,
+      (ListDef::template nth<uint64_t>(UINT64_C(0), after1.rom1, UINT64_C(0)) ==
+       UINT64_C(10)) &&
+      ((ListDef::template nth<uint64_t>(UINT64_C(1), after1.rom1,
                                         UINT64_C(0)) ==
-        UINT64_C(12) &&
-        ListDef::template nth<uint64_t>(UINT64_C(3), after1.rom1,
-                                        UINT64_C(0)) ==
-        UINT64_C(13))));
+        UINT64_C(11)) &&
+       ((ListDef::template nth<uint64_t>(UINT64_C(2), after1.rom1,
+                                         UINT64_C(0)) ==
+         UINT64_C(12)) &&
+        (ListDef::template nth<uint64_t>(UINT64_C(3), after1.rom1,
+                                         UINT64_C(0)) ==
+         UINT64_C(13)))));
 
   struct state2 {
     List<uint64_t> ram_sys2;
@@ -259,16 +260,17 @@ struct WpmOps {
              UINT64_C(2), UINT64_C(99), true};
   static inline const state6 after6 = execute_wpm6(sample6);
   static inline const bool test_wpm_writes_exactly_once = (
-      ListDef::template nth<uint64_t>(UINT64_C(2), after6.rom6, UINT64_C(0)) ==
-      UINT64_C(99) &&
-      (ListDef::template nth<uint64_t>(UINT64_C(0), after6.rom6, UINT64_C(0)) ==
-       UINT64_C(10) &&
-       (ListDef::template nth<uint64_t>(UINT64_C(1), after6.rom6,
+      (ListDef::template nth<uint64_t>(UINT64_C(2), after6.rom6, UINT64_C(0)) ==
+       UINT64_C(99)) &&
+      ((ListDef::template nth<uint64_t>(UINT64_C(0), after6.rom6,
                                         UINT64_C(0)) ==
-        UINT64_C(11) &&
-        ListDef::template nth<uint64_t>(UINT64_C(3), after6.rom6,
-                                        UINT64_C(0)) ==
-        UINT64_C(13))));
+        UINT64_C(10)) &&
+       ((ListDef::template nth<uint64_t>(UINT64_C(1), after6.rom6,
+                                         UINT64_C(0)) ==
+         UINT64_C(11)) &&
+        (ListDef::template nth<uint64_t>(UINT64_C(3), after6.rom6,
+                                         UINT64_C(0)) ==
+         UINT64_C(13)))));
   static inline const std::pair<std::pair<
       std::pair<std::pair<std::pair<bool, bool>, bool>, uint64_t>, bool>,
                                 bool> t =

@@ -223,11 +223,11 @@ struct PartialAppPrefixWork {
           uint64_t x0_);
   [[gnu::used]] static inline const List<crane::fn<uint64_t(uint64_t)>> fs3 =
       List<crane::fn<uint64_t(uint64_t)>>::cons(
-          [](uint64_t x) { return (x + UINT64_C(1)); },
+          [](uint64_t x) { return x + UINT64_C(1); },
           List<crane::fn<uint64_t(uint64_t)>>::cons(
-              [](uint64_t x) { return (x * UINT64_C(2)); },
+              [](uint64_t x) { return x * UINT64_C(2); },
               List<crane::fn<uint64_t(uint64_t)>>::cons(
-                  [](uint64_t x) { return (x + UINT64_C(3)); },
+                  [](uint64_t x) { return x + UINT64_C(3); },
                   List<crane::fn<uint64_t(uint64_t)>>::nil())));
   static uint64_t run(uint64_t n);
 };

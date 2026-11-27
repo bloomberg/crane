@@ -23,7 +23,7 @@ struct NatIterFunctionAcc {
         UINT64_C(10),
         [](crane::fn<uint64_t(uint64_t)> f) {
           return [=, f = std::move(f)](uint64_t x) {
-            return f((x + UINT64_C(1)));
+            return f(x + UINT64_C(1));
           };
         },
         crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }))(

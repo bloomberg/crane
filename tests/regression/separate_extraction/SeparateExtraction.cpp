@@ -1,7 +1,7 @@
 #include "SeparateExtraction.h"
 
 namespace SeparateExtraction {
-uint64_t sep_add(uint64_t x0_, uint64_t x1_) { return (x0_ + x1_); }
+uint64_t sep_add(uint64_t x0_, uint64_t x1_) { return x0_ + x1_; }
 
 uint64_t color_to_nat(Color c) {
   switch (c) {

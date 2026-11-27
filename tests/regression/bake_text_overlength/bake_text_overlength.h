@@ -319,8 +319,8 @@ struct BakeTextOverlength {
   static inline const uint64_t total = words.template fold_left<uint64_t>(
       [](uint64_t a,
          const std::string &s) {
-        return (a + BinInt::to_nat(
-                        Uint63Axioms::to_Z(static_cast<int64_t>(s.size()))));
+        return a + BinInt::to_nat(
+                       Uint63Axioms::to_Z(static_cast<int64_t>(s.size())));
       },
       UINT64_C(0));
 };

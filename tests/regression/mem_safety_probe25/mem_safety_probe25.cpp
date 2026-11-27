@@ -8,7 +8,7 @@ MemSafetyProbe25::build_adders(const MemSafetyProbe25::tree &t) {
     const auto &[_, a1, _] =
         std::get<typename MemSafetyProbe25::tree::Node>(t.v());
     return mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-        [=](uint64_t x) { return (x + a1); },
+        [=](uint64_t x) { return x + a1; },
         mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
   }
 }

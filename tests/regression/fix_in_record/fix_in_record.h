@@ -31,14 +31,13 @@ struct FixInRecord {
   static inline const uint64_t test2 = []() {
     fn_box bx = make_box(UINT64_C(20));
     uint64_t noise =
-        ((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) + UINT64_C(4)) +
-         UINT64_C(5));
+        UINT64_C(1) + UINT64_C(2) + UINT64_C(3) + UINT64_C(4) + UINT64_C(5);
     return std::move(bx).fn(noise);
   }();
   /// test3: Use label too (to ensure struct is alive).
   /// n=5, base=15, label=15, fn(0) = 15. label + fn(0) = 30.
   static inline const uint64_t test3 = []() {
     fn_box bx = make_box(UINT64_C(5));
-    return (bx.label + bx.fn(UINT64_C(0)));
+    return bx.label + bx.fn(UINT64_C(0));
   }();
 };

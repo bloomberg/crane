@@ -137,7 +137,7 @@ struct DoubleInvokeMove {
           };
       tree w1 = f(UINT64_C(0));
       tree w2 = f(UINT64_C(1));
-      return (left_value(std::move(w1)) + left_value(std::move(w2)));
+      return left_value(std::move(w1)) + left_value(std::move(w2));
     }();
   }();
 };

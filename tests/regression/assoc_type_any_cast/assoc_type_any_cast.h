@@ -27,7 +27,7 @@ struct AssocTypeAnyCast {
     }
 
     constexpr static uint64_t unwrap(std::pair<uint64_t, uint64_t> p) {
-      return (p.first + p.second);
+      return p.first + p.second;
     }
   };
 

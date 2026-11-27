@@ -18,7 +18,7 @@ LoopifyInnerInstanceCall::bumped() {
   // touching its counts.
   static const auto fmap = crane::immortal(Monads::template Functor_stateT<
       Functor_itree<LoopifyInnerInstanceCall::Ev>, uint64_t>::template fmap<
-      uint64_t, uint64_t>([](uint64_t x) { return (x + UINT64_C(1)); }, st));
+      uint64_t, uint64_t>([](uint64_t x) { return x + UINT64_C(1); }, st));
   return crane_any_cast<
       Itree<LoopifyInnerInstanceCall::Ev, std::pair<uint64_t, uint64_t>>>(
       fmap(UINT64_C(5)));
@@ -32,6 +32,6 @@ Itree<LoopifyInnerInstanceCall::Ev, bool> LoopifyInnerInstanceCall::check() {
       [](std::pair<uint64_t,
                    uint64_t> p) {
         return Monad_itree<LoopifyInnerInstanceCall::Ev>::template ret<bool>(
-            (p.first == UINT64_C(5) && p.second == UINT64_C(42)));
+            ((p.first == UINT64_C(5)) && (p.second == UINT64_C(42))));
       });
 }

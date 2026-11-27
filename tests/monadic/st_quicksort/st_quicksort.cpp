@@ -31,10 +31,9 @@ void quicksort_ST(std::span<uint64_t> arr, uint64_t lo, uint64_t hi) {
   if (lo < hi) {
     uint64_t p = partition(
         arr, lo, hi,
-        (lo +
-         (UINT64_C(2) ? (((hi - lo) > hi ? 0 : (hi - lo))) / UINT64_C(2) : 0)));
-    quicksort_ST(arr, lo, (((p - UINT64_C(1)) > p ? 0 : (p - UINT64_C(1)))));
-    quicksort_ST(arr, (p + UINT64_C(1)), hi);
+        lo + (UINT64_C(2) ? (hi - lo > hi ? 0 : hi - lo) / UINT64_C(2) : 0));
+    quicksort_ST(arr, lo, (p - UINT64_C(1) > p ? 0 : p - UINT64_C(1)));
+    quicksort_ST(arr, p + UINT64_C(1), hi);
   }
 }
 
@@ -104,9 +103,8 @@ List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
     std::shared_ptr<crane::array_storage<uint64_t>> arr =
         crane::st::new_list_array<uint64_t>(xs);
     auto _once1 = xs.length();
-    quicksort_ST(
-        std::span{*arr}, UINT64_C(0),
-        (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
+    quicksort_ST(std::span{*arr}, UINT64_C(0),
+                 (_once1 - UINT64_C(1) > _once1 ? 0 : _once1 - UINT64_C(1)));
     return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
   }
 }
@@ -174,7 +172,8 @@ std::string StQuicksort::list_to_string_helper(const List<uint64_t> &l) {
       uint64_t a0 = _f.a0;
       _result =
           (std::to_string(a0) +
-           (std::string(", ") + std::move(_result)).substr(0, 16777211))
+           ((std::string(", ") + std::move(_result)).substr(0,
+                                                            16777211)))
               .substr(0, 16777211);
     }
   }

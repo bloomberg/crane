@@ -78,7 +78,7 @@ void EffectPoly::test_sequence_void() {
 
 uint64_t EffectPoly::sum_with_logging(uint64_t acc, uint64_t n) {
   std::cout << std::string("adding") << '\n';
-  return (acc + n);
+  return acc + n;
 }
 
 uint64_t EffectPoly::test_fold() {
@@ -105,6 +105,6 @@ int64_t EffectPoly::chain_types() {
   std::cout << std::string("enter a number:") << '\n';
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
+  int64_t len = static_cast<int64_t>(std::string_view{line}.size());
   return len;
 }

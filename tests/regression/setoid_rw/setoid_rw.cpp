@@ -19,4 +19,4 @@ uint64_t SetoidRw::classify_mod3(uint64_t n) {
   }
 }
 
-uint64_t SetoidRw::add_mod3(uint64_t x, uint64_t y) { return mod3((x + y)); }
+uint64_t SetoidRw::add_mod3(uint64_t x, uint64_t y) { return mod3(x + y); }

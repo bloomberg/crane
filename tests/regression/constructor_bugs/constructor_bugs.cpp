@@ -23,7 +23,7 @@ ConstructorBugs::bad_direct(ConstructorBugs::source_state s1) {
 
 ConstructorBugs::source_state
 ConstructorBugs::step2(const ConstructorBugs::source_state &s) {
-  return source_state{s.source_a, s.source_b, (s.source_flag + UINT64_C(1))};
+  return source_state{s.source_a, s.source_b, s.source_flag + UINT64_C(1)};
 }
 
 std::pair<bool, ConstructorBugs::packed_state>
@@ -62,8 +62,8 @@ ConstructorBugs::bad_branch_list(ConstructorBugs::source_state_list s1) {
 ConstructorBugs::state ConstructorBugs::get_state(uint64_t n) {
   return state{n, List<uint64_t>::cons(
                       n, List<uint64_t>::cons(
-                             (n + UINT64_C(1)),
-                             List<uint64_t>::cons((n + UINT64_C(2)),
+                             n + UINT64_C(1),
+                             List<uint64_t>::cons(n + UINT64_C(2),
                                                   List<uint64_t>::nil())))};
 }
 
@@ -292,7 +292,7 @@ ConstructorBugs::nested_extract(const ConstructorBugs::Inner &i) {
 
 std::pair<ConstructorBugs::Outer, uint64_t>
 ConstructorBugs::update_test(const ConstructorBugs::Outer &o) {
-  return std::make_pair(Outer{o.outer_inner, (o.outer_data + UINT64_C(1))},
+  return std::make_pair(Outer{o.outer_inner, o.outer_data + UINT64_C(1)},
                         o.outer_inner.inner_val);
 }
 

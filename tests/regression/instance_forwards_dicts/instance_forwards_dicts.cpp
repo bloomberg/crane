@@ -11,7 +11,7 @@ InstanceForwardsDicts::sum_exp(const InstanceForwardsDicts::exp<uint64_t> &e) {
       return a1;
     }
     case Tag::B: {
-      return (UINT64_C(100) + a1);
+      return UINT64_C(100) + a1;
     }
     default:
       std::unreachable();
@@ -23,7 +23,7 @@ InstanceForwardsDicts::sum_exp(const InstanceForwardsDicts::exp<uint64_t> &e) {
                  typename InstanceForwardsDicts::exp<uint64_t>::Neg>(e.v())) {
     const auto &[a0, a1] =
         std::get<typename InstanceForwardsDicts::exp<uint64_t>::Neg>(e.v());
-    return (a0 + sum_exp(*a1));
+    return a0 + sum_exp(*a1);
   } else {
     const auto &[a0] =
         std::get<typename InstanceForwardsDicts::exp<uint64_t>::EMeta>(e.v());

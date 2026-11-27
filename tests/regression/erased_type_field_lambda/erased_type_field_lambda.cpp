@@ -10,7 +10,7 @@ uint64_t ErasedTypeFieldLambda::weigh(const ErasedTypeFieldLambda::slot &s) {
       [](uint64_t a,
          const std::pair<ErasedTypeFieldLambda::sty,
                          crane::fn<uint64_t(ErasedTypeFieldLambda::sty)>> &p) {
-        return (a + p.second(p.first));
+        return a + p.second(p.first);
       },
       UINT64_C(0));
 }

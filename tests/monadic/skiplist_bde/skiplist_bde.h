@@ -785,12 +785,12 @@ template <typename K, typename V> struct SkipList {
   static void extendPath(SkipPath<T1, T2> path,
                          bsl::shared_ptr<SkipNode<T1, T2>> head,
                          unsigned int needed, unsigned int currentMax) {
-    if (needed <= (currentMax + 1)) {
+    if (needed <= ((currentMax + 1))) {
       return;
     } else {
       SkipList<int, int>::template extendPath_aux<T1, T2>(
           bsl::move(path), bsl::move(head),
-          (((needed - 1u) > needed ? 0 : (needed - 1u))), (currentMax + 1u));
+          (needed - 1u > needed ? 0 : needed - 1u), currentMax + 1u);
     }
   }
 
@@ -1057,7 +1057,7 @@ template <typename K, typename V> struct SkipList {
   static SkipList<T1, T2> create(const T1 &dummyKey, const T2 &dummyVal) {
     auto _once1 = 16u;
     bsl::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
-        dummyKey, dummyVal, (((_once1 - 1u) > _once1 ? 0 : (_once1 - 1u))));
+        dummyKey, dummyVal, (_once1 - 1u > _once1 ? 0 : _once1 - 1u));
     stm::TVar<unsigned int> lvlTV = stm::newTVar<unsigned int>(0u);
     stm::TVar<unsigned int> lenTV = stm::newTVar<unsigned int>(0u);
     return SkipList<T1, T2>{bsl::move(headNode), 16u, bsl::move(lvlTV),

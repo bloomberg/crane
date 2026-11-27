@@ -105,7 +105,7 @@ struct CallbackStaysConcrete {
       return acc;
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      return sum_map_acc(f, *a1, (acc + f(a0)));
+      return sum_map_acc(f, *a1, acc + f(a0));
     }
   }
 
@@ -124,7 +124,7 @@ struct CallbackStaysConcrete {
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_lc1_loop_l0->v());
-        _lc1_loop_acc = (_lc1_loop_acc + f(a0));
+        _lc1_loop_acc = _lc1_loop_acc + f(a0);
         _lc1_loop_l0 = crane_raw(a1);
       }
     }

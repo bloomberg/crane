@@ -27,6 +27,6 @@ void NoMappingEventProbe::loop(uint64_t x, uint64_t y,
         return;
       }
     }();
-    loop((x + cell_size), y, *a1);
+    loop(x + cell_size, y, *a1);
   }
 }

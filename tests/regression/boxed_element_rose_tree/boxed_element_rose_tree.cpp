@@ -17,7 +17,7 @@ uint64_t BoxedElementRoseTree::size(const BoxedElementRoseTree::rose &r) {
           } else {
             const BoxedElementRoseTree::rose &k = l.front();
             auto t = l.tail();
-            return (size(k) + _self_go(_self_go, std::move(t)));
+            return size(k) + _self_go(_self_go, std::move(t));
           }
         };
     auto go =
@@ -31,7 +31,7 @@ uint64_t BoxedElementRoseTree::size(const BoxedElementRoseTree::rose &r) {
 uint64_t BoxedElementRoseTree::total(const BoxedElementRoseTree::rose &r) {
   const auto &[n0, kids] =
       std::get<typename BoxedElementRoseTree::rose::Node>(r.v());
-  return (n0 + [&]() {
+  return n0 + [&]() {
     auto go_impl =
         [](auto &_self_go,
            const crane::list<crane::box<BoxedElementRoseTree::rose>> &l)
@@ -41,7 +41,7 @@ uint64_t BoxedElementRoseTree::total(const BoxedElementRoseTree::rose &r) {
           } else {
             const BoxedElementRoseTree::rose &k = l.front();
             auto t = l.tail();
-            return (total(k) + _self_go(_self_go, std::move(t)));
+            return total(k) + _self_go(_self_go, std::move(t));
           }
         };
     auto go =
@@ -49,7 +49,7 @@ uint64_t BoxedElementRoseTree::total(const BoxedElementRoseTree::rose &r) {
           return go_impl(go_impl, l);
         };
     return go(kids);
-  }());
+  }();
 }
 
 crane::list<uint64_t>

@@ -37,10 +37,10 @@ bool LoopifyFrameLambdaType::check() {
         _sv.v());
     const auto &[pairs, rest] = x0;
     return (
-        pairs.length() == UINT64_C(2) &&
-        rest.template fold_left<uint64_t>(
-            [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-            UINT64_C(0)) ==
-        UINT64_C(70));
+        (pairs.length() == UINT64_C(2)) &&
+        (rest.template fold_left<uint64_t>(
+             [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
+             UINT64_C(0)) ==
+         UINT64_C(70)));
   }
 }

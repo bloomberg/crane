@@ -272,13 +272,13 @@ struct CofixThunkDanglingCapture {
   static List<uint64_t> stake(uint64_t k, const stream &s);
   static inline const uint64_t t =
       stake(UINT64_C(3), h(UINT64_C(3))).template fold_left<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
           UINT64_C(0));
   static inline const uint64_t t2 =
       stake(UINT64_C(3),
             g2(tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                           UINT64_C(2), tree::leaf())))
           .template fold_left<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
           UINT64_C(0));
 };

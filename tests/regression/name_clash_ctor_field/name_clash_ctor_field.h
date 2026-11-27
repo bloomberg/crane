@@ -20,7 +20,7 @@ struct NameClashCtorField {
 
     uint64_t sum_clash1() const {
       const auto &[d_a0, d_a1] = *this;
-      return (d_a0 + d_a1);
+      return d_a0 + d_a1;
     }
 
     template <typename T1, typename F0> T1 clash1_rec(F0 &&f) const {
@@ -167,7 +167,7 @@ struct NameClashCtorField {
       if (std::holds_alternative<typename box::Box0>(this->v())) {
         const auto &[a0] = std::get<typename box::Box0>(this->v());
         const auto &[a00, a10] = a0;
-        return (a00 + a10);
+        return a00 + a10;
       } else {
         return UINT64_C(0);
       }

@@ -44,13 +44,13 @@ uint64_t LoopifyVariantSelfAssign::drain(
               _loop_l.v())) {
         const auto &[a0] =
             std::get<typename LoopifyVariantSelfAssign::lst::One>(_loop_l.v());
-        s = (s + a0);
-        _loop_l = lst::cons(a0, lst::one((a0 + UINT64_C(1))));
+        s = s + a0;
+        _loop_l = lst::cons(a0, lst::one(a0 + UINT64_C(1)));
         n = m;
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyVariantSelfAssign::lst::Cons>(_loop_l.v());
-        s = (s + a0);
+        s = s + a0;
         _loop_l = LoopifyVariantSelfAssign::lst(*a1);
         n = m;
       }

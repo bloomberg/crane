@@ -5,7 +5,7 @@
 /// This should work because f has type std::function<...>
 /// by the time it's passed to Wrap.
 MemSafetyProbe12::wrap MemSafetyProbe12::pack_fn_let(uint64_t base) {
-  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t x) { return (x + base); };
+  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t x) { return x + base; };
   return wrap::wrap0(std::move(f));
 }
 
@@ -15,7 +15,7 @@ MemSafetyProbe12::wrap MemSafetyProbe12::pack_fn_let(uint64_t base) {
 /// but unwrap tries any_cast<std::function<...>>.
 MemSafetyProbe12::wrap MemSafetyProbe12::pack_fn_direct(uint64_t base) {
   return wrap::wrap0(
-      crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return (x + base); }));
+      crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return x + base; }));
 }
 
 /// TEST 5: Pack a composed closure (let-bound, safe path).
@@ -23,6 +23,6 @@ MemSafetyProbe12::wrap
 MemSafetyProbe12::pack_composed(crane::fn<uint64_t(uint64_t)> f,
                                 uint64_t base) {
   crane::fn<uint64_t(uint64_t)> g =
-      [=, f = std::move(f)](uint64_t x) { return (f(x) + base); };
+      [=, f = std::move(f)](uint64_t x) { return f(x) + base; };
   return wrap::wrap0(std::move(g));
 }

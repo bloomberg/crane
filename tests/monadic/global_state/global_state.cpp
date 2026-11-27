@@ -47,7 +47,7 @@ uint64_t GlobalStateTests::fib_fun(uint64_t n) {
     } else {
       auto _f = std::move(std::get<_after_fib_fun_in_S_2>(_popped));
       _stack.pop_back();
-      _result = (_f._tmp2 + _result);
+      _result = _f._tmp2 + _result;
     }
   }
   return _result;

@@ -304,7 +304,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<_after_size_cond_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_size_cond_in_Add_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp2) + _result);
+          _result = UINT64_C(1) + _f._tmp2 + _result;
         } else if (std::holds_alternative<_after_size_cond_in_Cond>(_popped)) {
           auto _f = std::move(std::get<_after_size_cond_in_Cond>(_popped));
           _stack.pop_back();
@@ -321,7 +321,7 @@ struct LoopifyExprVariants {
         } else {
           auto _f = std::move(std::get<_after_size_cond_in_Cond_3>(_popped));
           _stack.pop_back();
-          _result = (((UINT64_C(1) + _f._tmp5) + _f._tmp4) + _result);
+          _result = UINT64_C(1) + _f._tmp5 + _f._tmp4 + _result;
         }
       }
       return _result;
@@ -385,7 +385,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<_after_eval_cond_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_cond_in_Add_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         } else {
           auto _f = std::move(std::get<_after_eval_cond_in_Cond>(_popped));
           _stack.pop_back();
@@ -734,7 +734,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<_after_count_ops_in_AAdd_2>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_AAdd_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp2) + _result);
+          _result = UINT64_C(1) + _f._tmp2 + _result;
         } else if (std::holds_alternative<_after_count_ops_in_ADiv>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_ADiv>(_popped));
           _stack.pop_back();
@@ -744,7 +744,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<_after_count_ops_in_ADiv_2>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_ADiv_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp6) + _result);
+          _result = UINT64_C(1) + _f._tmp6 + _result;
         } else if (std::holds_alternative<_after_count_ops_in_AMul>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_AMul>(_popped));
           _stack.pop_back();
@@ -754,7 +754,7 @@ struct LoopifyExprVariants {
         } else {
           auto _f = std::move(std::get<_after_count_ops_in_AMul_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp4) + _result);
+          _result = UINT64_C(1) + _f._tmp4 + _result;
         }
       }
       return _result;
@@ -832,7 +832,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<_after_eval_arith_in_AAdd_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_AAdd_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         } else if (std::holds_alternative<_after_eval_arith_in_ADiv>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_ADiv>(_popped));
           _stack.pop_back();
@@ -854,7 +854,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<_after_eval_arith_in_AMul_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_AMul_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 * _result);
+          _result = _f._tmp4 * _result;
         } else {
           auto _f = std::move(std::get<_after_eval_arith_in_S>(_popped));
           _stack.pop_back();
@@ -1925,12 +1925,12 @@ struct LoopifyExprVariants {
           auto _f =
               std::move(std::get<_after_list_expr_size_in_LAppend_2>(_popped));
           _stack.pop_back();
-          _result = ((UINT64_C(1) + _f._tmp3) + _result);
+          _result = UINT64_C(1) + _f._tmp3 + _result;
         } else {
           auto _f =
               std::move(std::get<_after_list_expr_size_in_LCons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;

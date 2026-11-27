@@ -10,6 +10,6 @@ uint64_t FastVariantAssignFromOwnChild::total(
   } else {
     const auto &[a0, a1] =
         crane::get<typename FastVariantAssignFromOwnChild::chain::Link>(c.v());
-    return (a0 + total(*a1));
+    return a0 + total(*a1);
   }
 }

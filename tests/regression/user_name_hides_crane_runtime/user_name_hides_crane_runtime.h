@@ -157,7 +157,7 @@ struct UserNameHidesCraneRuntime {
           auto _f = std::move(std::get<_after_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + ucrane_raw(a1)) + _result);
+          _result = _f._tmp2 + ucrane_raw(a1) + _result;
         }
       }
       return _result;
@@ -233,9 +233,9 @@ struct UserNameHidesCraneRuntime {
 
   static uint64_t ucrane_raw(uint64_t n);
   static inline const uint64_t result =
-      (tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                  UINT64_C(2),
-                  tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
-           .sum() +
-       UINT64_C(1));
+      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                 UINT64_C(2),
+                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
+          .sum() +
+      UINT64_C(1);
 };

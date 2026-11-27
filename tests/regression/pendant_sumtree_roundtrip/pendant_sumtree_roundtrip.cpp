@@ -14,7 +14,7 @@ uint64_t PendantSumtreeRoundtripCase::value_digits(uint64_t, const T0<T> &ds) {
     return UINT64_C(0);
   } else {
     const auto &[h, n, a2] = std::get<typename T0<T>::Cons0>(ds.v());
-    return (digit_to_nat(h) + (UINT64_C(10) * value_digits(n, *a2)));
+    return digit_to_nat(h) + UINT64_C(10) * value_digits(n, *a2);
   }
 }
 
@@ -153,7 +153,7 @@ bool PendantSumtreeRoundtripCase::group_sums_validb(
                 const uint64_t &v = *ov;
                 if (acc.has_value()) {
                   const uint64_t &a = *acc;
-                  return std::make_optional<uint64_t>((v + a));
+                  return std::make_optional<uint64_t>(v + a);
                 } else {
                   return std::optional<uint64_t>();
                 }
@@ -282,7 +282,7 @@ std::optional<uint64_t> PendantSumtreeRoundtripCase::sumtree_leaf_total(
           const uint64_t &v = *ov;
           if (acc.has_value()) {
             const uint64_t &a = *acc;
-            return std::make_optional<uint64_t>((v + a));
+            return std::make_optional<uint64_t>(v + a);
           } else {
             return std::optional<uint64_t>();
           }
@@ -307,7 +307,7 @@ bool PendantSumtreeRoundtripCase::nat_list_eqb(const List<uint64_t> &xs,
       return false;
     } else {
       const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(ys.v());
-      return (a0 == a00 && nat_list_eqb(*a1, *a10));
+      return ((a0 == a00) && nat_list_eqb(*a1, *a10));
     }
   }
 }

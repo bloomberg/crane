@@ -141,7 +141,7 @@ struct MemSafetyProbe29 {
               std::move(std::get<_after_double_inner_in_INode_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = inner::inode(std::move(_f._tmp2), (a1 * UINT64_C(2)),
+          _result = inner::inode(std::move(_f._tmp2), a1 * UINT64_C(2),
                                  std::move(_result));
         }
       }
@@ -197,7 +197,7 @@ struct MemSafetyProbe29 {
           auto _f = std::move(std::get<_after_inner_sum_in_INode_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -464,7 +464,7 @@ struct MemSafetyProbe29 {
           auto _f = std::move(std::get<_after_outer_sum_in_ONode_2>(_popped));
           _stack.pop_back();
           inner a1 = std::move(_f.a1);
-          _result = ((_f._tmp2 + a1.inner_sum()) + _result);
+          _result = _f._tmp2 + a1.inner_sum() + _result;
         }
       }
       return _result;
@@ -789,7 +789,7 @@ struct MemSafetyProbe29 {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-            _result = expr::lit((a0 * UINT64_C(2)));
+            _result = expr::lit(a0 * UINT64_C(2));
           } else if (std::holds_alternative<typename expr::Neg>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Neg>(_sv.v());
             _stack.emplace_back(_after_double_expr_in_Neg{});
@@ -894,7 +894,7 @@ struct MemSafetyProbe29 {
         } else if (std::holds_alternative<_after_eval_expr_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_expr_in_Add_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp2 + _result);
+          _result = _f._tmp2 + _result;
         } else if (std::holds_alternative<_after_eval_expr_in_Mul>(_popped)) {
           auto _f = std::move(std::get<_after_eval_expr_in_Mul>(_popped));
           _stack.pop_back();
@@ -904,7 +904,7 @@ struct MemSafetyProbe29 {
         } else {
           auto _f = std::move(std::get<_after_eval_expr_in_Mul_2>(_popped));
           _stack.pop_back();
-          _result = (_f._tmp4 * _result);
+          _result = _f._tmp4 * _result;
         }
       }
       return _result;
@@ -1176,7 +1176,7 @@ struct MemSafetyProbe29 {
           auto _f = std::move(std::get<_after_tree3_sum_in_T3Node_3>(_popped));
           _stack.pop_back();
           uint64_t a3 = _f.a3;
-          _result = (((_f._tmp3 + _f._tmp2) + _result) + a3);
+          _result = _f._tmp3 + _f._tmp2 + _result + a3;
         }
       }
       return _result;
@@ -1329,7 +1329,7 @@ struct MemSafetyProbe29 {
                      inner::inode(inner::ileaf(), UINT64_C(42), inner::ileaf()),
                      outer::oleaf());
     std::pair<outer, outer> p = o.dup_outer();
-    return (std::move(p).first.outer_sum() + std::move(p).second.outer_sum());
+    return std::move(p.first).outer_sum() + std::move(p.second).outer_sum();
   }();
   static inline const uint64_t test_double_expr =
       expr::add(expr::lit(UINT64_C(5)),
@@ -1342,6 +1342,6 @@ struct MemSafetyProbe29 {
                   expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))));
     inner i = e.expr_to_inner();
     outer o = outer::onode(outer::oleaf(), i, outer::oleaf());
-    return (o.outer_sum() + i.inner_sum());
+    return o.outer_sum() + i.inner_sum();
   }();
 };

@@ -29,7 +29,7 @@ ClosureNestedEscape::make_pair_fix(uint64_t n) {
       return UINT64_C(0);
     } else {
       uint64_t x_ = x - 1;
-      return (n + _self_mul(_self_mul, x_));
+      return n + _self_mul(_self_mul, x_);
     }
   };
   auto mul =

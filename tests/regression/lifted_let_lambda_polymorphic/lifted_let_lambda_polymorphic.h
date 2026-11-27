@@ -129,10 +129,9 @@ struct LiftedLetLambdaPolymorphic {
   }
 
   static inline const uint64_t from_let =
-      all<uint64_t>(
-          [](uint64_t _x0) -> uint64_t {
-            return (UINT64_C(2) * _x0);
-          })
+      all<uint64_t>([](uint64_t _x0) -> uint64_t {
+        return UINT64_C(2) * _x0;
+      })
           .template fold_left<uint64_t>(
           [](uint64_t a,
              const crane::fn<uint64_t(uint64_t)> &f) { return f(a); },
@@ -147,6 +146,6 @@ struct LiftedLetLambdaPolymorphic {
   }
 
   static inline const uint64_t from_section = quad<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
       UINT64_C(1));
 };

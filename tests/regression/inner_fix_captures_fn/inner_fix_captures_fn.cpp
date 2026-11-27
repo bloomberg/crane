@@ -29,5 +29,5 @@ InnerFixCapturesFn::lst InnerFixCapturesFn::mk(uint64_t n) {
 }
 
 uint64_t InnerFixCapturesFn::go(uint64_t n) {
-  return walk([](uint64_t k) { return (k + UINT64_C(1)); }, mk(n));
+  return walk([](uint64_t k) { return k + UINT64_C(1); }, mk(n));
 }

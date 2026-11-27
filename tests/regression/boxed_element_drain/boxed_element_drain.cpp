@@ -6,7 +6,7 @@
 uint64_t BoxedElementDrain::total(const BoxedElementDrain::rose &r) {
   const auto &[n0, kids] =
       std::get<typename BoxedElementDrain::rose::Node>(r.v());
-  return (n0 + [&]() {
+  return n0 + [&]() {
     auto go_impl =
         [](auto &_self_go,
            const crane::list<BoxedElementDrain::rose> &l)
@@ -16,7 +16,7 @@ uint64_t BoxedElementDrain::total(const BoxedElementDrain::rose &r) {
           } else {
             const BoxedElementDrain::rose &k = l.front();
             auto t = l.tail();
-            return (total(k) + _self_go(_self_go, std::move(t)));
+            return total(k) + _self_go(_self_go, std::move(t));
           }
         };
     auto go =
@@ -24,7 +24,7 @@ uint64_t BoxedElementDrain::total(const BoxedElementDrain::rose &r) {
           return go_impl(go_impl, l);
         };
     return go(kids);
-  }());
+  }();
 }
 
 BoxedElementDrain::rose BoxedElementDrain::spine(uint64_t d) {

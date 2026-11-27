@@ -15,7 +15,7 @@ NameClashReturnThis::maybe_transform(bool flag,
     } else {
       const auto &[a0, a1] =
           std::get<typename NameClashReturnThis::shape::Square>(s.v());
-      return shape::circle((a0 + a1));
+      return shape::circle(a0 + a1);
     }
   } else {
     return s;
@@ -28,7 +28,7 @@ NameClashReturnThis::identity_or_double(const NameClashReturnThis::shape &s) {
   if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(s.v())) {
     const auto &[a0] =
         std::get<typename NameClashReturnThis::shape::Circle>(s.v());
-    return shape::circle((a0 * UINT64_C(2)));
+    return shape::circle(a0 * UINT64_C(2));
   } else {
     const auto &[a0, a1] =
         std::get<typename NameClashReturnThis::shape::Square>(s.v());
@@ -59,6 +59,6 @@ uint64_t NameClashReturnThis::nested_this(const NameClashReturnThis::shape &s) {
   } else {
     const auto &[a0, a1] =
         std::get<typename NameClashReturnThis::shape::Square>(_sv.v());
-    return (a0 + a1);
+    return a0 + a1;
   }
 }

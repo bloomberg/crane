@@ -30,6 +30,6 @@ struct PickCurriedFnOverapply {
               return [=, g = std::move(g)](uint64_t n) { return g((n + 1)); };
             },
             [](crane::fn<uint64_t(uint64_t)> g) { return g; }),
-        [](uint64_t n) { return (n * UINT64_C(10)); })(UINT64_C(1));
+        [](uint64_t n) { return n * UINT64_C(10); })(UINT64_C(1));
   }();
 };

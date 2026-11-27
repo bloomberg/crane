@@ -12,7 +12,7 @@ uint64_t LetFixTailLoop::sum_list(const List<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
-      _lc1_loop_acc = (_lc1_loop_acc + a0);
+      _lc1_loop_acc = _lc1_loop_acc + a0;
       _lc1_loop_xs = crane_raw(a1);
     }
   }
@@ -30,7 +30,7 @@ uint64_t LetFixTailLoop::length_list(const List<uint64_t> &l) {
     } else {
       const auto &[_, a1] =
           std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
-      _lc1_loop_n = (UINT64_C(1) + _lc1_loop_n);
+      _lc1_loop_n = UINT64_C(1) + _lc1_loop_n;
       _lc1_loop_xs = crane_raw(a1);
     }
   }

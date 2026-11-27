@@ -307,7 +307,7 @@ struct LocalFixMethodPointerJoin {
           return sz_nat::sz;
         }
       }();
-      auto _once1 = (w177(UINT64_C(0)) + w177(UINT64_C(3)));
+      auto _once1 = w177(UINT64_C(0)) + w177(UINT64_C(3));
       return (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
     }();
   }();

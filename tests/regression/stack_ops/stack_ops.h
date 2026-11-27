@@ -161,7 +161,7 @@ struct StackOps {
                                                 UINT64_C(3)});
     if (o.has_value()) {
       const uint64_t &a = *o;
-      return ((a + s_.stack_with_acc.length()) + s_.acc);
+      return a + s_.stack_with_acc.length() + s_.acc;
     } else {
       return std::move(s_).acc;
     }

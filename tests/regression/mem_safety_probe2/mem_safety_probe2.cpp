@@ -72,7 +72,7 @@ uint64_t MemSafetyProbe2::mysum(const MemSafetyProbe2::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_mysum_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -151,7 +151,7 @@ uint64_t MemSafetyProbe2::apply_all(
       auto _f = std::move(std::get<_after_apply_all_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(x) + _result);
+      _result = a0(x) + _result;
     }
   }
   return _result;

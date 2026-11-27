@@ -8,14 +8,13 @@
 /// deduces a distinct closure type per branch, so the conditional's operands
 /// (or a lambda's two returns) have incompatible types.
 uint64_t BranchPairsOfLambdas::f(bool b) {
-  return (
-      b
-          ? std::make_pair(UINT64_C(0), crane::fn<uint64_t(uint64_t)>(
-                                            [](uint64_t x) { return x; }))
-          : std::make_pair(UINT64_C(1),
-                           crane::fn<uint64_t(uint64_t)>(
-                               [](uint64_t x) {
-                                 return (x + UINT64_C(1));
-                               })))
+  return (b
+              ? std::make_pair(UINT64_C(0), crane::fn<uint64_t(uint64_t)>(
+                                                [](uint64_t x) { return x; }))
+              : std::make_pair(UINT64_C(1),
+                               crane::fn<uint64_t(uint64_t)>(
+                                   [](uint64_t x) {
+                                     return x + UINT64_C(1);
+                                   })))
              .first;
 }

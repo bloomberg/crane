@@ -14,7 +14,7 @@ uint64_t LoopifyListAccess::nth(uint64_t n, const List<uint64_t> &l) {
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+        n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
       }
     }
   }
@@ -54,7 +54,7 @@ uint64_t LoopifyListAccess::index_of_aux(uint64_t x, const List<uint64_t> &l,
       if (x == a0) {
         return idx;
       } else {
-        idx = (idx + UINT64_C(1));
+        idx = idx + UINT64_C(1);
         _loop_l = crane_raw(a1);
       }
     }
@@ -177,7 +177,7 @@ uint64_t LoopifyListAccess::count(uint64_t x, const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_count_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -198,7 +198,7 @@ bool LoopifyListAccess::elem_at_eq(uint64_t idx, uint64_t val,
         return a0 == val;
       } else {
         _loop_l = crane_raw(a1);
-        idx = (((idx - UINT64_C(1)) > idx ? 0 : (idx - UINT64_C(1))));
+        idx = (idx - UINT64_C(1) > idx ? 0 : idx - UINT64_C(1));
       }
     }
   }
@@ -219,7 +219,7 @@ uint64_t LoopifyListAccess::nth_default(uint64_t n, uint64_t default0,
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+        n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
       }
     }
   }

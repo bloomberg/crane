@@ -14,9 +14,9 @@ uint64_t DoubleOptionNest::peek(const DoubleOptionNest::t &x) {
       const DoubleOptionNest::t &u = *i;
       const auto &[a00, _] =
           std::get<typename DoubleOptionNest::t::Node>(u.v());
-      return (a0 + a00);
+      return a0 + a00;
     } else {
-      return (a0 + UINT64_C(1));
+      return a0 + UINT64_C(1);
     }
   } else {
     return a0;

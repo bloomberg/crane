@@ -207,7 +207,7 @@ MemSafetyProbe5::make_tree_list(uint64_t n) {
       auto _cell =
           typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons(
               tree::node(tree::node(tree::leaf(), n, tree::leaf()),
-                         (n * UINT64_C(2)), tree::leaf()),
+                         n * UINT64_C(2), tree::leaf()),
               nullptr);
       MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &_node =
           (_write ? *(*_write = std::make_shared<
@@ -262,7 +262,7 @@ uint64_t MemSafetyProbe5::sum_getters(
       auto _f = std::move(std::get<_after_sum_getters_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(x) + _result);
+      _result = a0(x) + _result;
     }
   }
   return _result;

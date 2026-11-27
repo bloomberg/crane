@@ -260,28 +260,26 @@ struct ClassMethodFunctionPayload {
     return _tcI0::template bind<uint64_t, crane::fn<uint64_t(uint64_t)>>(
         std::move(x), [](uint64_t n) {
           return _tcI0::template ret<crane::fn<uint64_t(uint64_t)>>(
-              [=](uint64_t k) { return (k + n); });
+              [=](uint64_t k) { return k + n; });
         });
   }
 
-  static inline const uint64_t run =
-      ([]() -> uint64_t {
-        auto _cs = adders<MOpt>(std::make_optional<uint64_t>(UINT64_C(3)));
-        if (_cs.has_value()) {
-          const crane::fn<uint64_t(uint64_t)> &f = *_cs;
-          return f(UINT64_C(1));
-        } else {
-          return UINT64_C(0);
-        }
-      }() +
-       adders<MList>(List<uint64_t>::cons(
-           UINT64_C(1),
-           List<uint64_t>::cons(UINT64_C(2),
-                                List<uint64_t>::nil())))
-           .template fold_left<uint64_t>(
-           [](uint64_t a,
-              const crane::fn<uint64_t(uint64_t)> &f) {
-             return (a + f(UINT64_C(1)));
-           },
-           UINT64_C(0)));
+  static inline const uint64_t run = []() -> uint64_t {
+    auto _cs = adders<MOpt>(std::make_optional<uint64_t>(UINT64_C(3)));
+    if (_cs.has_value()) {
+      const crane::fn<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(1));
+    } else {
+      return UINT64_C(0);
+    }
+  }() + adders<MList>(List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(UINT64_C(2),
+                                 List<uint64_t>::nil())))
+            .template fold_left<uint64_t>(
+            [](uint64_t a,
+               const crane::fn<uint64_t(uint64_t)> &f) {
+              return a + f(UINT64_C(1));
+            },
+            UINT64_C(0));
 };

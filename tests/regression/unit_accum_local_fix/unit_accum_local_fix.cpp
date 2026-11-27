@@ -32,8 +32,8 @@ uint64_t UnitAccumLocalFix::fill(uint64_t n) {
                            return std::monostate{};
                          });
   }();
-  return std::span{std::as_const(*a)}[
-      (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))];
+  return std::span{std::as_const(*a)}[n - UINT64_C(1) > n ? 0
+                                                          : n - UINT64_C(1)];
 }
 
 uint64_t UnitAccumLocalFix::fill_top(uint64_t n) {
@@ -44,8 +44,8 @@ uint64_t UnitAccumLocalFix::fill_top(uint64_t n) {
     std::span{*a}[i] = (i * UINT64_C(3));
     return std::monostate{};
   });
-  return std::span{std::as_const(*a)}[
-      (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))];
+  return std::span{std::as_const(*a)}[n - UINT64_C(1) > n ? 0
+                                                          : n - UINT64_C(1)];
 }
 
 /// A pure top-level Fixpoint returning its unit accumulator.
@@ -144,7 +144,7 @@ uint64_t UnitAccumLocalFix::sum_with_unit(const List<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
-      _lc1_loop_acc = (_lc1_loop_acc + a0);
+      _lc1_loop_acc = _lc1_loop_acc + a0;
       _lc1_loop_xs = crane_raw(a1);
     }
   }

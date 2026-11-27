@@ -32,7 +32,7 @@ uint64_t DequeElementCast::get_item_num(
     } else {
       const auto &[s0] =
           std::get<typename DequeElementCast::Val::VStr>(_sv0.v());
-      return (s0 + UINT64_C(100));
+      return s0 + UINT64_C(100);
     }
     break;
   }

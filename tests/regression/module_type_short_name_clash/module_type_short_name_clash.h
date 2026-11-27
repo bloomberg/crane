@@ -36,7 +36,7 @@ struct ModuleTypeShortNameClash {
   struct A {
     template <A_T X> struct F {
       static const uint64_t &get() {
-        static const uint64_t v = (X::x + UINT64_C(1));
+        static const uint64_t v = X::x + UINT64_C(1);
         return v;
       }
     };
@@ -61,5 +61,5 @@ struct ModuleTypeShortNameClash {
 
   using FA = A::F<IA>;
   using FB = B::F<IB>;
-  static inline const uint64_t result = (FA::get() + FB::get());
+  static inline const uint64_t result = FA::get() + FB::get();
 };

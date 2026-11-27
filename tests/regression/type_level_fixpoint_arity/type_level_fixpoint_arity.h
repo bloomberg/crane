@@ -15,7 +15,7 @@ struct TypeLevelFixpointArity {
   static uint64_t apply1(nfun f, uint64_t x);
   static uint64_t apply2(nfun f, uint64_t x, uint64_t y);
   static inline const uint64_t total =
-      ((crane::any_cast<uint64_t>(constN(UINT64_C(0), UINT64_C(7))) +
-        apply1(constN(UINT64_C(1), UINT64_C(8)), UINT64_C(0))) +
-       apply2(constN(UINT64_C(2), UINT64_C(9)), UINT64_C(0), UINT64_C(0)));
+      crane::any_cast<uint64_t>(constN(UINT64_C(0), UINT64_C(7))) +
+      apply1(constN(UINT64_C(1), UINT64_C(8)), UINT64_C(0)) +
+      apply2(constN(UINT64_C(2), UINT64_C(9)), UINT64_C(0), UINT64_C(0));
 };

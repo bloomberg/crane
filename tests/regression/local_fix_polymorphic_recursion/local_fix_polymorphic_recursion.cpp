@@ -29,7 +29,7 @@ uint64_t LocalFixPolymorphicRecursion::run(uint64_t k, uint64_t n) {
       _lc1_loop_y = true;
       _lc1_loop_h = crane_erase_fn<uint64_t>([=](bool b) {
         if (b) {
-          return (UINT64_C(10) + k);
+          return UINT64_C(10) + k;
         } else {
           return UINT64_C(20);
         }

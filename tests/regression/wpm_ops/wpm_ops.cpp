@@ -13,7 +13,7 @@ bool WpmOps::nat_list_eqb(const List<uint64_t> &xs, const List<uint64_t> &ys) {
       return false;
     } else {
       const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(ys.v());
-      return (a0 == a00 && nat_list_eqb(*a1, *a10));
+      return ((a0 == a00) && nat_list_eqb(*a1, *a10));
     }
   }
 }

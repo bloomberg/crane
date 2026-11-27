@@ -102,9 +102,9 @@ struct MemSafetyProbe19 {
     uint64_t nested_match_fn(bool b1, bool b2, uint64_t n) const {
       if (b1) {
         if (b2) {
-          return (this->tree_sum() + n);
+          return this->tree_sum() + n;
         } else {
-          return ((this->tree_sum() + this->tree_sum()) + n);
+          return this->tree_sum() + this->tree_sum() + n;
         }
       } else {
         return n;
@@ -116,7 +116,7 @@ struct MemSafetyProbe19 {
     /// return_captures_by_value won't recurse into it.
     uint64_t choose_fn(bool b, uint64_t n) const {
       if (b) {
-        return (this->tree_sum() + n);
+        return this->tree_sum() + n;
       } else {
         return n;
       }
@@ -171,7 +171,7 @@ struct MemSafetyProbe19 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -372,7 +372,7 @@ struct MemSafetyProbe19 {
           return _pa0.choose_fn(true, _x0);
         };
       }();
-      return (f(UINT64_C(1)) + f(UINT64_C(2)));
+      return f(UINT64_C(1)) + f(UINT64_C(2));
     }();
   }();
 
@@ -412,8 +412,8 @@ struct MemSafetyProbe19 {
                            Choice::CLEFT, _x0);
         };
     uint64_t a = UINT64_C(100);
-    uint64_t b = (a + UINT64_C(200));
-    uint64_t c = (b + UINT64_C(300));
+    uint64_t b = a + UINT64_C(200);
+    uint64_t c = b + UINT64_C(300);
     return f(c);
   }();
 };

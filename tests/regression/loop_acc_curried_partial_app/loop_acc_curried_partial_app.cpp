@@ -2,7 +2,7 @@
 
 bool LoopAccCurriedPartialApp::r(const List<uint64_t> &l) {
   const crane::fn<bool(uint64_t, bool)> &_lc1_acc =
-      [](uint64_t n, bool b) { return (b && n == UINT64_C(0)); };
+      [](uint64_t n, bool b) { return (b && (n == UINT64_C(0))); };
   uint64_t _lc1_x0_ = UINT64_C(5);
   bool _lc1_x1_ = true;
   // Loop replaces the tail recursion: each recursive call updates the loop

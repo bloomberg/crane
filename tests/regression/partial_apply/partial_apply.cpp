@@ -39,6 +39,6 @@ PartialApply::double_tag(const List<uint64_t> &l) {
 
 uint64_t PartialApply::sum_with_init(uint64_t init, const List<uint64_t> &l) {
   return l.template fold_left<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
       init);
 }

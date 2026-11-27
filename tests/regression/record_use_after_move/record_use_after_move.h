@@ -34,12 +34,12 @@ struct RecordUseAfterMove {
   static inline const uint64_t double_let = []() {
     uint64_t x = initial_box.payload;
     uint64_t y = initial_box.payload;
-    return (x + y);
+    return x + y;
   }();
   /// Record passed to two different functions.
   static inline const uint64_t two_consumers = []() {
     uint64_t p = use_box(initial_box);
     uint64_t q = use_box(initial_box);
-    return (p + q);
+    return p + q;
   }();
 };

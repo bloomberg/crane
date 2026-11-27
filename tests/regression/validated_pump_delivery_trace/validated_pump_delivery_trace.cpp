@@ -2,7 +2,7 @@
 
 bool ValidatedPumpDeliveryTraceCase::bg_in_meter_range(
     const ValidatedPumpDeliveryTraceCase::Mg_dL &bg) {
-  return (BG_METER_MIN <= bg.mg_dL_val && bg.mg_dL_val <= BG_METER_MAX);
+  return ((BG_METER_MIN <= bg.mg_dL_val) && (bg.mg_dL_val <= BG_METER_MAX));
 }
 
 bool ValidatedPumpDeliveryTraceCase::carbs_reasonable(
@@ -79,10 +79,9 @@ uint64_t ValidatedPumpDeliveryTraceCase::div_ceil(uint64_t a, uint64_t b) {
   if (b == UINT64_C(0)) {
     return UINT64_C(0);
   } else {
-    auto _once1 = (a + b);
-    return (
-        b ? (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))) / b
-          : 0);
+    auto _once1 = a + b;
+    return (b ? (_once1 - UINT64_C(1) > _once1 ? 0 : _once1 - UINT64_C(1)) / b
+              : 0);
   }
 }
 
@@ -117,7 +116,7 @@ bool ValidatedPumpDeliveryTraceCase::history_sorted_from(
     const auto &[a0, a1] = std::get<
         typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
         events.v());
-    return (a0.be_time_minutes <= prev &&
+    return ((a0.be_time_minutes <= prev) &&
             history_sorted_from(a0.be_time_minutes, *a1));
   }
 }
@@ -153,16 +152,14 @@ uint64_t ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
   } else if (pt == UINT64_C(0)) {
     return UINT64_C(0);
   } else if (elapsed <= pt) {
-    auto _once1 = (pt ? (elapsed * UINT64_C(25)) / pt : 0);
-    return (
-        ((UINT64_C(100) - _once1) > UINT64_C(100) ? 0
-                                                  : (UINT64_C(100) - _once1)));
+    auto _once1 = (pt ? elapsed * UINT64_C(25) / pt : 0);
+    return (UINT64_C(100) - _once1 > UINT64_C(100) ? 0
+                                                   : UINT64_C(100) - _once1);
   } else if (dia <= pt) {
     return UINT64_C(0);
   } else {
-    auto _once2 = (((dia - pt) > dia ? 0 : (dia - pt)));
-    return (_once2 ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) *
-                      UINT64_C(75)) /
+    auto _once2 = (dia - pt > dia ? 0 : dia - pt);
+    return (_once2 ? (dia - elapsed > dia ? 0 : dia - elapsed) * UINT64_C(75) /
                      _once2
                    : 0);
   }
@@ -175,13 +172,12 @@ ValidatedPumpDeliveryTraceCase::bilinear_iob_from_bolus(
   if (now < event.be_time_minutes) {
     return UINT64_C(0);
   } else {
-    return div_ceil(
-        (event.be_dose_twentieths *
-         bilinear_iob_fraction((((now - event.be_time_minutes) > now
-                                     ? 0
-                                     : (now - event.be_time_minutes))),
-                               dia, itype)),
-        UINT64_C(100));
+    return div_ceil(event.be_dose_twentieths *
+                    bilinear_iob_fraction((now - event.be_time_minutes >
+                                           now ? 0
+                                               : now - event.be_time_minutes),
+                                          dia, itype),
+                    UINT64_C(100));
   }
 }
 
@@ -198,8 +194,8 @@ ValidatedPumpDeliveryTraceCase::total_bilinear_iob(
     const auto &[a0, a1] = std::get<
         typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
         events.v());
-    return (bilinear_iob_from_bolus(now, a0, dia, itype) +
-            total_bilinear_iob(now, *a1, dia, itype));
+    return bilinear_iob_from_bolus(now, a0, dia, itype) +
+           total_bilinear_iob(now, *a1, dia, itype);
   }
 }
 
@@ -209,10 +205,9 @@ ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
     const ValidatedPumpDeliveryTraceCase::Mg_dL &target) {
   if (target.mg_dL_val <= bg.mg_dL_val) {
     auto _once1 =
-        (UINT64_C(100) ? (bg.mg_dL_val * UINT64_C(15)) / UINT64_C(100) : 0);
-    return Mg_dL{(
-        ((bg.mg_dL_val - _once1) > bg.mg_dL_val ? 0
-                                                : (bg.mg_dL_val - _once1)))};
+        (UINT64_C(100) ? bg.mg_dL_val * UINT64_C(15) / UINT64_C(100) : 0);
+    return Mg_dL{
+        (bg.mg_dL_val - _once1 > bg.mg_dL_val ? 0 : bg.mg_dL_val - _once1)};
   } else {
     return bg;
   }
@@ -223,11 +218,9 @@ uint64_t ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
   if (bg.mg_dL_val < UINT64_C(250)) {
     return base_isf_tenths;
   } else if (bg.mg_dL_val < UINT64_C(350)) {
-    return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(80)) / UINT64_C(100)
-                          : 0);
+    return (UINT64_C(100) ? base_isf_tenths * UINT64_C(80) / UINT64_C(100) : 0);
   } else {
-    return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(60)) / UINT64_C(100)
-                          : 0);
+    return (UINT64_C(100) ? base_isf_tenths * UINT64_C(60) / UINT64_C(100) : 0);
   }
 }
 
@@ -242,12 +235,11 @@ ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
   } else if (current_bg.mg_dL_val <= target_bg.mg_dL_val) {
     return UINT64_C(0);
   } else {
-    return (eff_isf ? ((((current_bg.mg_dL_val - target_bg.mg_dL_val) >
-                         current_bg.mg_dL_val
-                             ? 0
-                             : (current_bg.mg_dL_val - target_bg.mg_dL_val))) *
-                       UINT64_C(200)) /
-                      eff_isf
+    return (eff_isf ? (current_bg.mg_dL_val - target_bg.mg_dL_val >
+                       current_bg.mg_dL_val
+                           ? 0
+                           : current_bg.mg_dL_val - target_bg.mg_dL_val) *
+                      UINT64_C(200) / eff_isf
                     : 0);
   }
 }
@@ -259,20 +251,20 @@ ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
     uint64_t isf_tenths) {
   if (current_bg.mg_dL_val < target_bg.mg_dL_val) {
     uint64_t reverse_drop =
-        (((target_bg.mg_dL_val - current_bg.mg_dL_val) >
-          target_bg.mg_dL_val ? 0
-                              : (target_bg.mg_dL_val - current_bg.mg_dL_val)));
+        (target_bg.mg_dL_val - current_bg.mg_dL_val > target_bg.mg_dL_val
+             ? 0
+             : target_bg.mg_dL_val - current_bg.mg_dL_val);
     uint64_t reverse_units;
     if (isf_tenths == UINT64_C(0)) {
       reverse_units = UINT64_C(0);
     } else {
       reverse_units =
-          (isf_tenths ? (reverse_drop * UINT64_C(200)) / isf_tenths : 0);
+          (isf_tenths ? reverse_drop * UINT64_C(200) / isf_tenths : 0);
     }
     if (carb <= reverse_units) {
       return UINT64_C(0);
     } else {
-      return (((carb - reverse_units) > carb ? 0 : (carb - reverse_units)));
+      return (carb - reverse_units > carb ? 0 : carb - reverse_units);
     }
   } else {
     return carb;
@@ -285,16 +277,15 @@ ValidatedPumpDeliveryTraceCase::predict_bg_drop_tenths(uint64_t iob_twentieths,
   if (isf_tenths == UINT64_C(0)) {
     return UINT64_C(0);
   } else {
-    return (UINT64_C(200) ? (iob_twentieths * isf_tenths) / UINT64_C(200) : 0);
+    return (UINT64_C(200) ? iob_twentieths * isf_tenths / UINT64_C(200) : 0);
   }
 }
 
 uint64_t ValidatedPumpDeliveryTraceCase::conservative_cob_rise(
     const ValidatedPumpDeliveryTraceCase::Config &cfg, uint64_t cob_grams) {
-  return (UINT64_C(100) ? ((cob_grams *
-                            cfg.cfg_conservative_cob_absorption_percent) *
-                           cfg.cfg_bg_rise_per_gram) /
-                          UINT64_C(100)
+  return (UINT64_C(100) ? cob_grams *
+                          cfg.cfg_conservative_cob_absorption_percent *
+                          cfg.cfg_bg_rise_per_gram / UINT64_C(100)
                         : 0);
 }
 
@@ -308,11 +299,11 @@ uint64_t ValidatedPumpDeliveryTraceCase::predicted_eventual_bg_tenths(
   if (current_bg.mg_dL_val <= drop) {
     bg_after_drop = UINT64_C(0);
   } else {
-    bg_after_drop = (((current_bg.mg_dL_val - drop) >
-                      current_bg.mg_dL_val ? 0
-                                           : (current_bg.mg_dL_val - drop)));
+    bg_after_drop = (current_bg.mg_dL_val - drop > current_bg.mg_dL_val
+                         ? 0
+                         : current_bg.mg_dL_val - drop);
   }
-  return (bg_after_drop + rise);
+  return bg_after_drop + rise;
 }
 
 ValidatedPumpDeliveryTraceCase::SuspendDecision
@@ -324,7 +315,7 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
   if (isf_tenths == UINT64_C(0)) {
     return SuspendDecision::suspend_withhold();
   } else {
-    uint64_t total_insulin = (iob_twentieths + proposed);
+    uint64_t total_insulin = iob_twentieths + proposed;
     uint64_t pred = predicted_eventual_bg_tenths(cfg, current_bg, total_insulin,
                                                  cob_grams, isf_tenths);
     if (pred < BG_LEVEL2_HYPO) {
@@ -336,29 +327,29 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
         effective_target = UINT64_C(0);
       } else {
         effective_target =
-            (((cfg.cfg_suspend_threshold_mg_dl - rise_from_cob) >
-              cfg.cfg_suspend_threshold_mg_dl
-                  ? 0
-                  : (cfg.cfg_suspend_threshold_mg_dl - rise_from_cob)));
+            (cfg.cfg_suspend_threshold_mg_dl - rise_from_cob >
+             cfg.cfg_suspend_threshold_mg_dl
+                 ? 0
+                 : cfg.cfg_suspend_threshold_mg_dl - rise_from_cob);
       }
       uint64_t safe_drop;
       if (current_bg.mg_dL_val <= effective_target) {
         safe_drop = UINT64_C(0);
       } else {
-        safe_drop = (
-            ((current_bg.mg_dL_val - effective_target) >
+        safe_drop =
+            (current_bg.mg_dL_val - effective_target >
              current_bg.mg_dL_val ? 0
-                                  : (current_bg.mg_dL_val - effective_target)));
+                                  : current_bg.mg_dL_val - effective_target);
       }
       uint64_t safe_insulin =
-          (isf_tenths ? (safe_drop * UINT64_C(200)) / isf_tenths : 0);
+          (isf_tenths ? safe_drop * UINT64_C(200) / isf_tenths : 0);
       if (safe_insulin <= iob_twentieths) {
         return SuspendDecision::suspend_withhold();
       } else {
         return SuspendDecision::suspend_reduce(
-            (((safe_insulin - iob_twentieths) > safe_insulin
-                  ? 0
-                  : (safe_insulin - iob_twentieths))));
+            (safe_insulin - iob_twentieths > safe_insulin
+                 ? 0
+                 : safe_insulin - iob_twentieths));
       }
     } else {
       return SuspendDecision::suspend_none();
@@ -393,7 +384,7 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::pediatric_max_twentieths(uint64_t weight_kg) {
-  return (weight_kg * UINT64_C(10));
+  return weight_kg * UINT64_C(10);
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
@@ -408,14 +399,14 @@ ValidatedPumpDeliveryTraceCase::cap_pediatric(uint64_t bolus,
 
 bool ValidatedPumpDeliveryTraceCase::prec_params_valid(
     const ValidatedPumpDeliveryTraceCase::PrecisionParams &p) {
-  return (((((((UINT64_C(20) <= p.prec_icr_tenths &&
-                p.prec_icr_tenths <= UINT64_C(1000)) &&
-               UINT64_C(100) <= p.prec_isf_tenths) &&
-              p.prec_isf_tenths <= UINT64_C(4000)) &&
-             BG_HYPO <= p.prec_target_bg.mg_dL_val) &&
-            p.prec_target_bg.mg_dL_val <= BG_HYPER) &&
-           UINT64_C(120) <= p.prec_dia) &&
-          p.prec_dia <= UINT64_C(360));
+  return ((((((((UINT64_C(20) <= p.prec_icr_tenths) &&
+                (p.prec_icr_tenths <= UINT64_C(1000))) &&
+               (UINT64_C(100) <= p.prec_isf_tenths)) &&
+              (p.prec_isf_tenths <= UINT64_C(4000))) &&
+             (BG_HYPO <= p.prec_target_bg.mg_dL_val)) &&
+            (p.prec_target_bg.mg_dL_val <= BG_HYPER)) &&
+           (UINT64_C(120) <= p.prec_dia)) &&
+          (p.prec_dia <= UINT64_C(360)));
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
@@ -424,7 +415,7 @@ ValidatedPumpDeliveryTraceCase::carb_bolus_twentieths(uint64_t carbs_g,
   if (icr_tenths == UINT64_C(0)) {
     return UINT64_C(0);
   } else {
-    return (icr_tenths ? (carbs_g * UINT64_C(200)) / icr_tenths : 0);
+    return (icr_tenths ? carbs_g * UINT64_C(200) / icr_tenths : 0);
   }
 }
 
@@ -433,14 +424,12 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
     const ValidatedPumpDeliveryTraceCase::PrecisionInput &input,
     const ValidatedPumpDeliveryTraceCase::PrecisionParams &params) {
   uint64_t activity_isf =
-      (UINT64_C(100) ? (params.prec_isf_tenths *
-                        isf_activity_modifier(input.pi_activity)) /
-                       UINT64_C(100)
+      (UINT64_C(100) ? params.prec_isf_tenths *
+                       isf_activity_modifier(input.pi_activity) / UINT64_C(100)
                      : 0);
   uint64_t activity_icr =
-      (UINT64_C(100) ? (params.prec_icr_tenths *
-                        icr_activity_modifier(input.pi_activity)) /
-                       UINT64_C(100)
+      (UINT64_C(100) ? params.prec_icr_tenths *
+                       icr_activity_modifier(input.pi_activity) / UINT64_C(100)
                      : 0);
   ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
   if (input.pi_use_sensor_margin) {
@@ -458,11 +447,11 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
   ValidatedPumpDeliveryTraceCase::Insulin_twentieth iob =
       total_bilinear_iob(input.pi_now, input.pi_bolus_history, params.prec_dia,
                          params.prec_insulin_type);
-  uint64_t raw = (carb_adj + corr);
+  uint64_t raw = carb_adj + corr;
   if (raw <= iob) {
     return UINT64_C(0);
   } else {
-    return (((raw - iob) > raw ? 0 : (raw - iob)));
+    return (raw - iob > raw ? 0 : raw - iob);
   }
 }
 
@@ -473,7 +462,7 @@ bool ValidatedPumpDeliveryTraceCase::time_reasonable(uint64_t now) {
 bool ValidatedPumpDeliveryTraceCase::history_extraction_safe(
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   return (
-      events.length() <= UINT64_C(100) &&
+      (events.length() <= UINT64_C(100)) &&
       events.forallb([](const ValidatedPumpDeliveryTraceCase::BolusEvent &e) {
         return e.be_dose_twentieths <= UINT64_C(500);
       }));
@@ -502,8 +491,7 @@ bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
     if (now < a0.be_time_minutes) {
       return false;
     } else {
-      return (
-          ((now - a0.be_time_minutes) > now ? 0 : (now - a0.be_time_minutes))) <
+      return (now - a0.be_time_minutes > now ? 0 : now - a0.be_time_minutes) <
              UINT64_C(15);
     }
   }
@@ -544,7 +532,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
         total_bilinear_iob(input.pi_now, input.pi_bolus_history,
                            params.prec_dia, params.prec_insulin_type);
     if ((iob_dangerously_high(iob) &&
-         input.pi_carbs_g.grams_val == UINT64_C(0))) {
+         (input.pi_carbs_g.grams_val == UINT64_C(0)))) {
       return PrecisionResult::precerror(prec_error_iob_high);
     } else {
       const auto &input_pi_now = input.pi_now;
@@ -553,12 +541,12 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
               [=](uint64_t acc,
                   const ValidatedPumpDeliveryTraceCase::BolusEvent &e)
                    -> uint64_t {
-                if (((((input_pi_now - UINT64_C(1440)) > input_pi_now
+                if ((((input_pi_now - UINT64_C(1440) > input_pi_now
                            ? 0
-                           : (input_pi_now - UINT64_C(1440)))) <=
-                     e.be_time_minutes &&
-                     e.be_time_minutes <= input_pi_now)) {
-                  return (acc + e.be_dose_twentieths);
+                           : input_pi_now - UINT64_C(1440)) <=
+                      e.be_time_minutes) &&
+                     (e.be_time_minutes <= input_pi_now))) {
+                  return acc + e.be_dose_twentieths;
                 } else {
                   return acc;
                 }
@@ -567,7 +555,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
       uint64_t tdd_limit;
       if (input.pi_weight_kg.has_value()) {
         const uint64_t &w = *input.pi_weight_kg;
-        tdd_limit = (w * ONE_UNIT);
+        tdd_limit = w * ONE_UNIT;
       } else {
         tdd_limit = UINT64_C(5000);
       }
@@ -577,16 +565,16 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
         ValidatedPumpDeliveryTraceCase::Insulin_twentieth raw =
             calculate_precision_bolus(input, params);
         ValidatedPumpDeliveryTraceCase::Insulin_twentieth tdd_capped;
-        if ((raw + tdd_current) <= tdd_limit) {
+        if (raw + tdd_current <= tdd_limit) {
           tdd_capped = raw;
         } else {
-          tdd_capped = (((tdd_limit - tdd_current) > tdd_limit
-                             ? 0
-                             : (tdd_limit - tdd_current)));
+          tdd_capped =
+              (tdd_limit - tdd_current > tdd_limit ? 0
+                                                   : tdd_limit - tdd_current);
         }
         uint64_t activity_isf =
-            (UINT64_C(100) ? (params.prec_isf_tenths *
-                              isf_activity_modifier(input.pi_activity)) /
+            (UINT64_C(100) ? params.prec_isf_tenths *
+                             isf_activity_modifier(input.pi_activity) /
                              UINT64_C(100)
                            : 0);
         ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
@@ -635,7 +623,7 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
 
 uint64_t
 ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(uint64_t mmol_tenths) {
-  return (UINT64_C(10) ? (mmol_tenths * UINT64_C(18)) / UINT64_C(10) : 0);
+  return (UINT64_C(10) ? mmol_tenths * UINT64_C(18) / UINT64_C(10) : 0);
 }
 
 ValidatedPumpDeliveryTraceCase::PrecisionInput
@@ -661,7 +649,7 @@ ValidatedPumpDeliveryTraceCase::round_down_to_increment(uint64_t t,
   if (increment == UINT64_C(0)) {
     return t;
   } else {
-    return ((increment ? t / increment : 0) * increment);
+    return (increment ? t / increment : 0) * increment;
   }
 }
 
@@ -705,18 +693,18 @@ ValidatedPumpDeliveryTraceCase::final_delivery(
 bool ValidatedPumpDeliveryTraceCase::pump_can_deliver(
     const ValidatedPumpDeliveryTraceCase::PumpState &state, uint64_t dose) {
   return (((!(state.ps_occlusion_detected) &&
-            dose <= state.ps_reservoir_twentieths) &&
-           dose <= UINT64_C(500)) &&
-          UINT64_C(5) <= state.ps_battery_percent);
+            (dose <= state.ps_reservoir_twentieths)) &&
+           (dose <= UINT64_C(500))) &&
+          (UINT64_C(5) <= state.ps_battery_percent));
 }
 
 uint64_t ValidatedPumpDeliveryTraceCase::reservoir_after_bolus(
     const ValidatedPumpDeliveryTraceCase::PumpState &state, uint64_t dose) {
   if (dose <= state.ps_reservoir_twentieths) {
-    return (((state.ps_reservoir_twentieths - dose) >
-             state.ps_reservoir_twentieths
-                 ? 0
-                 : (state.ps_reservoir_twentieths - dose)));
+    return (state.ps_reservoir_twentieths - dose >
+            state.ps_reservoir_twentieths
+                ? 0
+                : state.ps_reservoir_twentieths - dose);
   } else {
     return UINT64_C(0);
   }

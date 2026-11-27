@@ -25,7 +25,7 @@ uint64_t LoopifyMemberOwnCalls::ja(uint64_t n) {
           return jb(m, _x0);
         })
                .template fold_left<uint64_t>(
-        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
         UINT64_C(0));
   }
 }
@@ -35,7 +35,7 @@ uint64_t LoopifyMemberOwnCalls::jb(uint64_t n, uint64_t x) {
     return x;
   } else {
     uint64_t m = n - 1;
-    return (x + ja(m));
+    return x + ja(m);
   }
 }
 
@@ -44,7 +44,7 @@ uint64_t LoopifyMemberOwnCalls::f1(uint64_t n) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    return (UINT64_C(1) + f2(n_));
+    return UINT64_C(1) + f2(n_);
   }
 }
 
@@ -53,7 +53,7 @@ uint64_t LoopifyMemberOwnCalls::f2(uint64_t n) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    return (UINT64_C(2) + f3(n_));
+    return UINT64_C(2) + f3(n_);
   }
 }
 
@@ -62,6 +62,6 @@ uint64_t LoopifyMemberOwnCalls::f3(uint64_t n) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    return (UINT64_C(3) + f1(n_));
+    return UINT64_C(3) + f1(n_);
   }
 }

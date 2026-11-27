@@ -13,7 +13,7 @@ uint64_t LetFix::local_sum(const List<uint64_t> &l) {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_lc1_loop_xs->v());
       _lc1_loop_xs = crane_raw(a1);
-      _lc1_loop_acc = (_lc1_loop_acc + a0);
+      _lc1_loop_acc = _lc1_loop_acc + a0;
     }
   }
 }

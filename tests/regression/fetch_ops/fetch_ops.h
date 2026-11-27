@@ -141,7 +141,7 @@ struct FetchOps {
                          UINT64_C(2), List<uint64_t>::cons(
                                           UINT64_C(3), List<uint64_t>::nil()))),
                                                  UINT64_C(0));
-    return (p.first + p.second);
+    return p.first + p.second;
   }();
   static std::optional<std::pair<uint64_t, uint64_t>>
   fetch_window(const List<uint64_t> &rom_data, uint64_t addr);

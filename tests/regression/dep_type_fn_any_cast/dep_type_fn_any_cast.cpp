@@ -16,11 +16,10 @@ DepTypeFnAnyCast::dt DepTypeFnAnyCast::mk(uint64_t n) {
 }
 
 uint64_t DepTypeFnAnyCast::run(uint64_t k) {
-  return (
-      (crane::any_cast<uint64_t>(mk(UINT64_C(0))) + List<uint64_t>(
-                                                        crane::any_cast<
-                                                            List<crane::obj>>(
-                                                            mk(UINT64_C(1))))
-                                                        .length()) +
-      k);
+  return crane::any_cast<uint64_t>(mk(UINT64_C(0))) + List<uint64_t>(
+                                                          crane::any_cast<
+                                                              List<crane::obj>>(
+                                                              mk(UINT64_C(1))))
+                                                          .length() +
+         k;
 }

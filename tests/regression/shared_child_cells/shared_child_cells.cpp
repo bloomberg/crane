@@ -23,7 +23,7 @@ uint64_t SharedChildCells::sum(const SharedChildCells::tree &t) {
   } else {
     const auto &[l0, k0, r0] =
         std::get<typename SharedChildCells::tree::Node>(t.v());
-    return ((sum(*l0) + k0) + sum(*r0));
+    return sum(*l0) + k0 + sum(*r0);
   }
 }
 

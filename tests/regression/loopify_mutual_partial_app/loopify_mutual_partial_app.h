@@ -807,7 +807,7 @@ struct LoopifyMutualPartialApp {
   static uint64_t sum_md(const md<uint64_t> &m);
 
   struct endo_double {
-    constexpr static uint64_t endo(uint64_t n) { return (UINT64_C(2) * n); }
+    constexpr static uint64_t endo(uint64_t n) { return UINT64_C(2) * n; }
   };
 
   static_assert(Endo<endo_double, uint64_t>);

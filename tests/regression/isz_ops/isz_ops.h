@@ -111,15 +111,15 @@ struct IszOps {
       UINT64_C(0));
   static uint64_t isz_iterations(uint64_t v);
   static inline const uint64_t test_iterations_remaining =
-      (isz_iterations(UINT64_C(0)) + isz_iterations(UINT64_C(12)));
+      isz_iterations(UINT64_C(0)) + isz_iterations(UINT64_C(12));
   static bool isz_loops(const state &s, uint64_t r);
   static bool isz_terminates(const state &s, uint64_t r);
   static inline const uint64_t test_loop_flags = []() {
     state s = state{List<uint64_t>::cons(
         UINT64_C(15),
         List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))};
-    return ((isz_loops(s, UINT64_C(0)) ? UINT64_C(1) : UINT64_C(0)) +
-            (isz_terminates(s, UINT64_C(0)) ? UINT64_C(1) : UINT64_C(0)));
+    return (isz_loops(s, UINT64_C(0)) ? UINT64_C(1) : UINT64_C(0)) +
+           (isz_terminates(s, UINT64_C(0)) ? UINT64_C(1) : UINT64_C(0));
   }();
   static inline const std::pair<std::pair<uint64_t, uint64_t>, uint64_t> t =
       std::make_pair(

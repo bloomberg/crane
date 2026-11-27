@@ -64,7 +64,7 @@ int64_t EffectComplexReturn::elapsed_ms() {
           .count());
   return static_cast<int64_t>(
       (static_cast<uint64_t>(t2) - static_cast<uint64_t>(t1)) &
-      0x7FFFFFFFFFFFFFFFULL);
+      UINT64_C(9223372036854775807));
 }
 
 /// 6. Effect result used to build a list

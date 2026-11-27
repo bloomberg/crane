@@ -31,7 +31,7 @@ InplaceFixSavedInFrame::insert_shift(uint64_t x, const List<uint64_t> &l) {
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         const List<uint64_t> &a1_value = *a1;
-        uint64_t k = (a0 + x);
+        uint64_t k = a0 + x;
         auto map_k = [=](List<List<uint64_t>> lsts) -> List<List<uint64_t>> {
           // Explicit stack replaces the non-tail recursion of map_k: _call
           // frames are pending calls, _after frames resume a caller.
@@ -98,7 +98,7 @@ uint64_t InplaceFixSavedInFrame::sum_heads(const List<List<uint64_t>> &ls) {
           return acc;
         } else {
           const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
-          return (acc + a0);
+          return acc + a0;
         }
       },
       UINT64_C(0));

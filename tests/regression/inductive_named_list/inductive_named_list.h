@@ -207,7 +207,7 @@ struct InductiveNamedList {
   }
 
   static uint64_t len(const List_ &l);
-  static inline const uint64_t go = (
+  static inline const uint64_t go =
       len(List_::lcons(UINT64_C(1), List_::lcons(UINT64_C(2), List_::lnil()))) +
-      List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()).length());
+      List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()).length();
 };

@@ -35,7 +35,7 @@ uint64_t TypedFitScrutineeLet::on_t3(bool b, uint64_t n) {
     if (b) {
       return t3::a();
     } else {
-      uint64_t k = (n + UINT64_C(1));
+      uint64_t k = n + UINT64_C(1);
       return t3::b(k);
     }
   }();
@@ -51,7 +51,7 @@ uint64_t TypedFitScrutineeLet::on_z(bool b, uint64_t n) {
     if (b) {
       return Z::z0();
     } else {
-      uint64_t k = (n + UINT64_C(1));
+      uint64_t k = n + UINT64_C(1);
       return BinInt::of_nat(k);
     }
   }();

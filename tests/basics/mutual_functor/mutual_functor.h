@@ -228,7 +228,7 @@ template <Elem E> struct MutualTree {
       return UINT64_C(1);
     } else {
       const auto &[_, a1] = std::get<typename tree::Node>(t0.v());
-      return (UINT64_C(1) + forest_size(*a1));
+      return UINT64_C(1) + forest_size(*a1);
     }
   }
 
@@ -237,7 +237,7 @@ template <Elem E> struct MutualTree {
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename forest::FCons>(f.v());
-      return (tree_size(*a0) + forest_size(*a1));
+      return tree_size(*a0) + forest_size(*a1);
     }
   }
 
@@ -247,7 +247,7 @@ template <Elem E> struct MutualTree {
       return a0;
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
-      return (a0 + forest_sum(*a1));
+      return a0 + forest_sum(*a1);
     }
   }
 
@@ -256,7 +256,7 @@ template <Elem E> struct MutualTree {
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename forest::FCons>(f.v());
-      return (tree_sum(*a0) + forest_sum(*a1));
+      return tree_sum(*a0) + forest_sum(*a1);
     }
   }
 

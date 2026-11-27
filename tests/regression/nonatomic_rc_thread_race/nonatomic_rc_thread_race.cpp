@@ -29,7 +29,7 @@ uint64_t NonatomicRcThreadRace::churn(uint64_t n,
     return UINT64_C(0);
   } else {
     uint64_t k = n - 1;
-    return (step(l) + churn(k, l));
+    return step(l) + churn(k, l);
   }
 }
 

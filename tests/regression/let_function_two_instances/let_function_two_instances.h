@@ -142,6 +142,6 @@ struct LetFunctionTwoInstances {
   }
 
   static inline const uint64_t result =
-      (both<uint64_t>(UINT64_C(7)).first.length() +
-       both<uint64_t>(UINT64_C(7)).second.length());
+      both<uint64_t>(UINT64_C(7)).first.length() +
+      both<uint64_t>(UINT64_C(7)).second.length();
 };

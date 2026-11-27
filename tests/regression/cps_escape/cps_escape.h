@@ -89,7 +89,7 @@ struct CpsEscape {
 
     /// CPS-style: take a tree, produce a continuation (nat -> nat)
     /// that adds tree_sum to its argument. The continuation captures t.
-    uint64_t make_adder(uint64_t x) const { return (this->tree_sum() + x); }
+    uint64_t make_adder(uint64_t x) const { return this->tree_sum() + x; }
 
     /// Sum all values in a tree.
     uint64_t tree_sum() const {
@@ -141,7 +141,7 @@ struct CpsEscape {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -298,7 +298,7 @@ struct CpsEscape {
       });
       auto &[a0] = b1;
       auto &[a00] = b2;
-      return (a0(UINT64_C(0)) + a00(UINT64_C(0)));
+      return a0(UINT64_C(0)) + a00(UINT64_C(0));
     }();
   }();
 };

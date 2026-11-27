@@ -65,5 +65,5 @@ LoopifyNontailPair::countdown_top(const List<uint64_t> &x0_) {
 }
 
 uint64_t LoopifyNontailPair::run_count(const List<uint64_t> &l) {
-  return (countdown_top(l).first).first;
+  return countdown_top(l).first.first;
 }

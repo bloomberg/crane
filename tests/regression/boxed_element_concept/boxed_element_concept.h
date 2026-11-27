@@ -87,8 +87,8 @@ struct BoxedElementConcept {
   template <typename F> struct Measure {
     static const uint64_t &total() {
       static const uint64_t v =
-          (F::count(F::forest) + F::count(List::template flat_map<rose, rose>(
-                                     F::children, F::forest)));
+          F::count(F::forest) +
+          F::count(List::template flat_map<rose, rose>(F::children, F::forest));
       return v;
     }
   };

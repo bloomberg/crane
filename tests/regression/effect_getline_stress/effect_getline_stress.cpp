@@ -62,7 +62,7 @@ void EffectGetlineStress::read_and_echo() {
 int64_t EffectGetlineStress::get_line_length() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
+  int64_t len = static_cast<int64_t>(std::string_view{line}.size());
   return len;
 }
 
@@ -79,7 +79,7 @@ std::string EffectGetlineStress::concat_two_lines() {
 std::pair<std::string, int64_t> EffectGetlineStress::get_and_measure() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
+  int64_t len = static_cast<int64_t>(std::string_view{line}.size());
   return std::make_pair(std::move(line), len);
 }
 

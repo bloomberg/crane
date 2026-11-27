@@ -191,8 +191,8 @@ struct PropBinderBeforeTypeBinder {
   }
 
   static inline const uint64_t guard_sum =
-      (gget<uint64_t>(UINT64_C(0), guarded<uint64_t>::g(UINT64_C(5))) +
-       gget<uint64_t>(UINT64_C(7), guarded<uint64_t>::n()));
+      gget<uint64_t>(UINT64_C(0), guarded<uint64_t>::g(UINT64_C(5))) +
+      gget<uint64_t>(UINT64_C(7), guarded<uint64_t>::n());
 
   template <typename T1, typename F0>
   static T1 sel(F0 &&dec, T1 def, uint64_t n, T1 a) {

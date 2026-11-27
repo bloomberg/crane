@@ -105,9 +105,9 @@ struct MemSafetyProbe24 {
     /// both. Tests that clone is independent of original.
     uint64_t clone_and_transform() const {
       std::pair<tree, uint64_t> p = std::make_pair(*this, this->tree_sum());
-      tree t2 = std::move(p).first;
-      uint64_t s = std::move(p).second;
-      tree t3 = t2.map_tree([=](uint64_t n) { return (n + s); });
+      tree t2 = std::move(p.first);
+      uint64_t s = std::move(p.second);
+      tree t3 = t2.map_tree([=](uint64_t n) { return n + s; });
       return t3.tree_sum();
     }
 
@@ -231,7 +231,7 @@ struct MemSafetyProbe24 {
           uint64_t a1 = _f.a1;
           std::pair<tree, uint64_t> pl = std::move(_f.pl);
           std::pair<tree, uint64_t> pr = std::move(_result);
-          _result = std::make_pair(*_self, ((a1 + pl.second) + pr.second));
+          _result = std::make_pair(*_self, a1 + pl.second + pr.second);
         }
       }
       return _result;
@@ -305,7 +305,7 @@ struct MemSafetyProbe24 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -494,7 +494,7 @@ struct MemSafetyProbe24 {
         } else {
           auto _f = std::move(std::get<_after_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -588,13 +588,12 @@ struct MemSafetyProbe24 {
                    tree::node(tree::leaf(), UINT64_C(11),
                               tree::leaf()))
             .pair_self();
-    return (std::move(p).first.tree_sum() + p.second);
+    return std::move(p.first).tree_sum() + p.second;
   }();
   static inline const uint64_t test_triple_use = []() {
     std::pair<std::pair<tree, tree>, uint64_t> p =
         tree::node(tree::leaf(), UINT64_C(5), tree::leaf()).triple_use();
-    return (((p.first).first.tree_sum() + (p.first).second.tree_sum()) +
-            p.second);
+    return p.first.first.tree_sum() + p.first.second.tree_sum() + p.second;
   }();
   static inline const uint64_t test_tag_tree = []() {
     std::pair<tree, uint64_t> p =
@@ -603,16 +602,16 @@ struct MemSafetyProbe24 {
                    tree::node(tree::leaf(), UINT64_C(8),
                               tree::leaf()))
             .tag_tree();
-    return (std::move(p).first.tree_sum() + p.second);
+    return std::move(p.first).tree_sum() + p.second;
   }();
   static mylist<uint64_t> tree_to_list(const tree &t);
   static inline const uint64_t test_nested_ops = []() {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                         UINT64_C(7),
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
-    tree doubled = t.map_tree([](uint64_t n) { return (n * UINT64_C(2)); });
+    tree doubled = t.map_tree([](uint64_t n) { return n * UINT64_C(2); });
     mylist<uint64_t> flat = tree_to_list(std::move(doubled));
-    return (sum_list(std::move(flat)) + t.tree_sum());
+    return sum_list(std::move(flat)) + t.tree_sum();
   }();
   static inline const uint64_t test_clone_and_transform =
       tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
@@ -645,7 +644,7 @@ struct MemSafetyProbe24 {
                    UINT64_C(20),
                    tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
     crane::fn<uint64_t(std::pair<uint64_t, uint64_t>)> add_pair =
-        [](std::pair<uint64_t, uint64_t> p) { return (p.first + p.second); };
+        [](std::pair<uint64_t, uint64_t> p) { return p.first + p.second; };
     if (std::holds_alternative<
             typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(
             pairs.v_mut())) {

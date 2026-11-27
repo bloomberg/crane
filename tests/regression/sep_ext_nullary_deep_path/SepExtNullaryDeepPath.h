@@ -56,13 +56,13 @@ template <Root R> struct Worker {
   }
 
   static const uint64_t &deep_sum() {
-    static const uint64_t v = ([] {
+    static const uint64_t v = [] {
       if constexpr (requires { R::M::L::val(); }) return R::M::L::val();
       else return R::M::L::val;
     }() + [] {
       if constexpr (requires { R::M::L::extra(); }) return R::M::L::extra();
       else return R::M::L::extra;
-    }());
+    }();
     return v;
   }
 };

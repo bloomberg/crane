@@ -53,7 +53,7 @@ uint64_t LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
       auto _f = std::move(std::get<_after_sum_shapes_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t val = _f.val;
-      _result = (val + _result);
+      _result = val + _result;
     }
   }
   return _result;

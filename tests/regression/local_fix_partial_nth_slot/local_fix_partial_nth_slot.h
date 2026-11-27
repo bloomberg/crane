@@ -242,7 +242,7 @@ struct LocalFixPartialNthSlot {
       };
     }())
                .template fold_left<uint64_t>(
-        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
         UINT64_C(0));
   }();
 };

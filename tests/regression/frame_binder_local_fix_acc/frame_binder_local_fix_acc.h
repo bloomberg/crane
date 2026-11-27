@@ -434,8 +434,7 @@ struct FrameBinderLocalFixAcc {
           auto _f = std::move(std::get<_after_tree_obs_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          auto _once1 =
-              (((_f._tmp2 * UINT64_C(7)) + a1) + (_result * UINT64_C(3)));
+          auto _once1 = _f._tmp2 * UINT64_C(7) + a1 + _result * UINT64_C(3);
           _result = (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
         }
       }
@@ -545,7 +544,7 @@ struct FrameBinderLocalFixAcc {
     static uint64_t sz(List<T1> l) {
       return l.template fold_left<uint64_t>(
           [=](uint64_t a, const T1 &x) {
-            auto _once1 = (a + _tcI0::sz(x));
+            auto _once1 = a + _tcI0::sz(x);
             return (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
           },
           UINT64_C(0));
@@ -556,8 +555,8 @@ struct FrameBinderLocalFixAcc {
     requires Sz<_tcI0, T1> && Sz<_tcI1, T2>
   struct sz_pair {
     static uint64_t sz(std::pair<T1, T2> p) {
-      auto _once1 = ((_tcI0::sz(std::move(p).first) * UINT64_C(3)) +
-                     _tcI1::sz(std::move(p).second));
+      auto _once1 = _tcI0::sz(std::move(p.first)) * UINT64_C(3) +
+                    _tcI1::sz(std::move(p.second));
       return (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
     }
   };

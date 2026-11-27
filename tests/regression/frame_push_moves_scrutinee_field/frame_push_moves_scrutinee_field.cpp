@@ -73,7 +73,7 @@ uint64_t FramePushMovesScrutineeField::weigh(List<List<uint64_t>> s,
       auto _f = std::move(std::get<_after_weigh_in_Cons>(_popped));
       _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = ((_f._tmp2 + a0.length()) + _result);
+      _result = _f._tmp2 + a0.length() + _result;
     }
   }
   return _result;

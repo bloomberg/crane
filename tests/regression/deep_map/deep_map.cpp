@@ -22,7 +22,7 @@ DeepMap::tree<uint64_t> DeepMap::build_right(uint64_t n,
 
 DeepMap::tree<uint64_t> DeepMap::map_inc(const DeepMap::tree<uint64_t> &t) {
   return tmap<uint64_t, uint64_t>(
-      [](uint64_t x) { return (x + UINT64_C(1)); },
+      [](uint64_t x) { return x + UINT64_C(1); },
       t);
 }
 

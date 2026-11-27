@@ -12,7 +12,7 @@ uint64_t TypeConstructorParamInductive::size_list(
     const auto &[a0, a1] =
         std::get<typename TypeConstructorParamInductive::wrapped<
             List<crane::obj>, uint64_t>::Pair2>(w.v());
-    return (a0.length() + a1.length());
+    return a0.length() + a1.length();
   }
 }
 
@@ -33,7 +33,7 @@ uint64_t TypeConstructorParamInductive::size_opt(
     const auto &[a0, a1] =
         std::get<typename TypeConstructorParamInductive::wrapped<
             std::optional<crane::obj>, uint64_t>::Pair2>(w.v());
-    return ([&]() -> uint64_t {
+    return [&]() -> uint64_t {
       if (a0.has_value()) {
         const uint64_t &_x = *a0;
         return UINT64_C(1);
@@ -47,6 +47,6 @@ uint64_t TypeConstructorParamInductive::size_opt(
       } else {
         return UINT64_C(0);
       }
-    }());
+    }();
   }
 }

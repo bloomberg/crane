@@ -202,7 +202,7 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<uint64_t> &l) {
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto [s, c] = std::move(_result);
-      _result = std::make_pair((a0 + s), (c + 1));
+      _result = std::make_pair(a0 + s, (c + 1));
     }
   }
   return _result;
@@ -247,7 +247,7 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<uint64_t> &l) {
       uint64_t a0 = _f.a0;
       auto [s, p0] = std::move(_result);
       const auto &[p, c] = p0;
-      _result = std::make_pair((a0 + s), std::make_pair((a0 * p), (c + 1)));
+      _result = std::make_pair(a0 + s, std::make_pair(a0 * p, (c + 1)));
     }
   }
   return _result;

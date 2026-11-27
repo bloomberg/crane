@@ -19,7 +19,7 @@ JumpTargets::collect_targets(const List<JumpTargets::instr_collection> &prog) {
 }
 
 bool JumpTargets::addr_in_region(uint64_t addr, const JumpTargets::layout &l) {
-  return (l.base_ <= addr && addr < (l.base_ + l.code_));
+  return ((l.base_ <= addr) && (addr < l.base_ + l.code_));
 }
 
 bool JumpTargets::in_layout(const JumpTargets::layout &l,

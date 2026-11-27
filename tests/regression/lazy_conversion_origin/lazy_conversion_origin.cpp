@@ -9,6 +9,6 @@ LazyConversionOrigin::stream<uint64_t> LazyConversionOrigin::from(uint64_t n) {
 
 uint64_t LazyConversionOrigin::doubled(uint64_t n) {
   return nth<uint64_t>(n, smap<uint64_t, uint64_t>(
-                              [](uint64_t x) { return (x + x); },
+                              [](uint64_t x) { return x + x; },
                               from(UINT64_C(0))));
 }

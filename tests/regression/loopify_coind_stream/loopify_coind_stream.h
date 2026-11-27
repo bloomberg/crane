@@ -238,18 +238,18 @@ struct LoopifyCoindStream {
   static inline const stream<uint64_t> nats =
       iterate<uint64_t>([](uint64_t x) { return (x + 1); }, UINT64_C(0));
   static inline const stream<uint64_t> doubled = smap<uint64_t, uint64_t>(
-      [](uint64_t n) { return (n * UINT64_C(2)); },
+      [](uint64_t n) { return n * UINT64_C(2); },
       nats);
   static inline const stream<uint64_t> sum_stream =
       zipWith<uint64_t, uint64_t, uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
           nats,
           doubled);
   static inline const stream<uint64_t> fibs =
       unfold<uint64_t, std::pair<uint64_t, uint64_t>>(
           [](std::pair<uint64_t, uint64_t> pat) {
             const auto &[a, b] = pat;
-            return std::make_pair(a, std::make_pair(b, (a + b)));
+            return std::make_pair(a, std::make_pair(b, a + b));
           },
           std::make_pair(UINT64_C(0), UINT64_C(1)));
   static inline const List<uint64_t> test_nats_5 =

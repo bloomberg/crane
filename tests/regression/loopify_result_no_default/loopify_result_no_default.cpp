@@ -15,7 +15,7 @@ Itree<LoopifyResultNoDefault::Ev, uint64_t> LoopifyResultNoDefault::sum_tree() {
       [](uint64_t r,
          uint64_t x) {
         return Monad_itree<LoopifyResultNoDefault::Ev>::template ret<uint64_t>(
-            (r + x));
+            r + x);
       },
       List<uint64_t>::cons(
           UINT64_C(1),

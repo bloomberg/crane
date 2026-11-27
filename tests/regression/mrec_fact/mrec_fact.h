@@ -473,7 +473,7 @@ struct MrecFact {
                                                   T1,
                                                   Itree<Sum1<call, crane::obj,
                                                              crane::obj>,
-                                                        T1>>::retf((n0 * r)));
+                                                        T1>>::retf(n0 * r));
                                             });
     }
   }

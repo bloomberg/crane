@@ -65,7 +65,7 @@ LoopifySpecialRecursion::process_twice_fuel(uint64_t fuel,
 }
 
 List<uint64_t> LoopifySpecialRecursion::process_twice(const List<uint64_t> &l) {
-  return process_twice_fuel((l.length() * l.length()), l);
+  return process_twice_fuel(l.length() * l.length(), l);
 }
 
 List<uint64_t> LoopifySpecialRecursion::double_append(const List<uint64_t> &l1,
@@ -134,7 +134,7 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<uint64_t> &l) {
           return a00;
         }
       }();
-      if ((UINT64_C(2) ? (a0 + next_val) % UINT64_C(2) : (a0 + next_val)) ==
+      if ((UINT64_C(2) ? (a0 + next_val) % UINT64_C(2) : a0 + next_val) ==
           UINT64_C(0)) {
         _loop_l = crane_raw(a1);
         continue;
@@ -277,14 +277,14 @@ uint64_t LoopifySpecialRecursion::sum_odd_indices_aux(const List<uint64_t> &l,
         if ((UINT64_C(2) ? idx % UINT64_C(2) : idx) == UINT64_C(1)) {
           _stack.emplace_back(_after_sum_odd_indices_aux_in_true{a0});
         }
-        _stack.emplace_back(_call{(idx + UINT64_C(1)), crane_raw(a1)});
+        _stack.emplace_back(_call{idx + UINT64_C(1), crane_raw(a1)});
       }
     } else {
       auto _f =
           std::move(std::get<_after_sum_odd_indices_aux_in_true>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -336,15 +336,15 @@ uint64_t LoopifySpecialRecursion::categorize_by(uint64_t k,
     } else if (std::holds_alternative<_after_categorize_by_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_categorize_by_in_false>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     } else if (std::holds_alternative<_after_categorize_by_in_true>(_popped)) {
       auto _f = std::move(std::get<_after_categorize_by_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(3) + _result);
+      _result = UINT64_C(3) + _result;
     } else {
       auto _f = std::move(std::get<_after_categorize_by_in_true_2>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(2) + _result);
+      _result = UINT64_C(2) + _result;
     }
   }
   return _result;

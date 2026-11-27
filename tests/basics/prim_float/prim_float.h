@@ -6,7 +6,7 @@
 struct PrimFloat {
   static inline const double f_zero = 0x0p+0;
   static inline const double f_one = 0x1p+0;
-  static inline const double f_neg_one = (-0x1p+0);
+  static inline const double f_neg_one = -0x1p+0;
   static double test_add(double x0_, double x1_);
   static double test_sub(double x0_, double x1_);
   static double test_mul(double x0_, double x1_);

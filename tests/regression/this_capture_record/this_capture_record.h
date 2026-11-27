@@ -143,7 +143,7 @@ struct ThisCaptureRecord {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -257,7 +257,7 @@ struct ThisCaptureRecord {
   static inline const uint64_t test1 = []() {
     callback_rec cb = tree_callbacks(
         tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(0));
-    return (cb.cr_add(UINT64_C(10)) + cb.cr_mul(UINT64_C(3)));
+    return cb.cr_add(UINT64_C(10)) + cb.cr_mul(UINT64_C(3));
   }();
   /// test2: With noise to clobber memory.
   /// flag=0, tree_sum = 60. cr_add(0) = 60, cr_mul(1) = 60.
@@ -267,7 +267,7 @@ struct ThisCaptureRecord {
         tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
         tree::node(tree::leaf(), UINT64_C(30), tree::leaf())),
                                      UINT64_C(0));
-    return (cb.cr_add(UINT64_C(0)) + cb.cr_mul(UINT64_C(1)));
+    return cb.cr_add(UINT64_C(0)) + cb.cr_mul(UINT64_C(1));
   }();
   /// test3: flag=1, tree_sum=100. cr_mul(7) = tree_sum = 100.
   static inline const uint64_t test3 =

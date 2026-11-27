@@ -200,7 +200,7 @@ struct RecordFieldPatterns {
 
   template <HasRecord M> struct UseRecord {
     static uint64_t sum_fields(typename M::R r) {
-      return (M::get_x(r) + M::get_y(r));
+      return M::get_x(r) + M::get_y(r);
     }
   };
 

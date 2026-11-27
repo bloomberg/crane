@@ -18,17 +18,17 @@ uint64_t NameClashNestedDeep::deep4(
           std::get<typename NameClashNestedDeep::mylist::MyCons>(b.v());
       if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
               c.v())) {
-        return (a0 + a00);
+        return a0 + a00;
       } else {
         const auto &[a01, _] =
             std::get<typename NameClashNestedDeep::mylist::MyCons>(c.v());
         if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
                 d.v())) {
-          return ((a0 + a00) + a01);
+          return a0 + a00 + a01;
         } else {
           const auto &[a02, _] =
               std::get<typename NameClashNestedDeep::mylist::MyCons>(d.v());
-          return (((a0 + a00) + a01) + a02);
+          return a0 + a00 + a01 + a02;
         }
       }
     }
@@ -60,7 +60,7 @@ NameClashNestedDeep::let_match_chain(const NameClashNestedDeep::mylist &xs,
     }
   }();
   NameClashNestedDeep::mylist combined =
-      mylist::mycons((hd_x + hd_y), mylist::mynil());
+      mylist::mycons(hd_x + hd_y, mylist::mynil());
   if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
           combined.v_mut())) {
     return UINT64_C(0);
@@ -104,7 +104,7 @@ NameClashNestedDeep::multi_match_same(const NameClashNestedDeep::mylist &xs) {
       return std::move(a01);
     }
   }();
-  return (first + second);
+  return first + second;
 }
 
 /// Nested match where inner match scrutinee is a field from outer match.

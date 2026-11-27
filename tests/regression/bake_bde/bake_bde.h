@@ -140,7 +140,7 @@ struct BakeBde {
       table.template fold_left<unsigned int>(
           [](unsigned int _x0,
              unsigned int _x1)
-               -> unsigned int { return (_x0 + _x1); },
+               -> unsigned int { return _x0 + _x1; },
           0u);
-  static inline const unsigned int pair_sum = (pair.first + pair.second);
+  static inline const unsigned int pair_sum = pair.first + pair.second;
 };

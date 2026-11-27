@@ -22,7 +22,7 @@ List<uint64_t> LoopifyScans::scanl(uint64_t acc, const List<uint64_t> &l) {
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      acc = (acc + a0);
+      acc = acc + a0;
       continue;
     }
   }
@@ -51,7 +51,7 @@ List<uint64_t> LoopifyScans::scanl_mult(uint64_t acc, const List<uint64_t> &l) {
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      acc = (acc * a0);
+      acc = acc * a0;
       continue;
     }
   }
@@ -148,14 +148,14 @@ List<uint64_t> LoopifyScans::pairwise_diff(uint64_t prev,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t diff;
       if (a0 < prev) {
-        uint64_t sub = (((prev - a0) > prev ? 0 : (prev - a0)));
+        uint64_t sub = (prev - a0 > prev ? 0 : prev - a0);
         if (prev < sub) {
           diff = UINT64_C(0);
         } else {
           diff = sub;
         }
       } else {
-        uint64_t sub = (((a0 - prev) > a0 ? 0 : (a0 - prev)));
+        uint64_t sub = (a0 - prev > a0 ? 0 : a0 - prev);
         if (a0 < sub) {
           diff = UINT64_C(0);
         } else {
@@ -200,7 +200,7 @@ List<uint64_t> LoopifyScans::accumulate_if_even(uint64_t acc,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        acc = (acc + a0);
+        acc = acc + a0;
         continue;
       } else {
         auto _cell = typename List<uint64_t>::Cons(acc, nullptr);

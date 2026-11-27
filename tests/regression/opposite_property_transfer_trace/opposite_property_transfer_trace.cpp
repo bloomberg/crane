@@ -45,7 +45,7 @@ OppositePropertyTransferTraceCase::sample_left_property(
     const OppositePropertyTransferTraceCase::Triangle1Witness &) {
   uint64_t lsw_seed0 = h_left.lsw_seed;
   uint64_t lsw_value0 = h_left.lsw_value;
-  return LeftProperty{lsw_seed0, ((lsw_value0 + pS.ps_shift) + pS.ps_tag),
+  return LeftProperty{lsw_seed0, lsw_value0 + pS.ps_shift + pS.ps_tag,
                       pS.ps_tag};
 }
 

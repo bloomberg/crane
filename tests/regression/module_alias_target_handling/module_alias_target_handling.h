@@ -1248,7 +1248,7 @@ struct Coq_Pos {
           _lc1_pa0,
           [=, f0 = f0](unsigned int p0,
                        const T1 &x) {
-            return f0(((2u * p0) + 1u), f0((2u * p0), x));
+            return f0(((2u * p0)) + 1u, f0((2u * p0), x));
           },
           _x0);
     };
@@ -1639,7 +1639,7 @@ struct ModuleAliasTargetHandling {
 
   using U = T_Mod;
   static inline const uint64_t methodified =
-      (T_Mod::T::b(UINT64_C(3)).f() + U::T::a().f());
+      T_Mod::T::b(UINT64_C(3)).f() + U::T::a().f();
 };
 
 template <typename T1>

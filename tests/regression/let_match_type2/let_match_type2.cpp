@@ -20,7 +20,7 @@ uint64_t LetMatchType2::let_match_pair(bool b) {
   } else {
     p = std::make_pair(UINT64_C(3), UINT64_C(4));
   }
-  return (p.first + p.second);
+  return p.first + p.second;
 }
 
 /// 3. Match returning list — might trigger std::any
@@ -61,7 +61,7 @@ uint64_t LetMatchType2::cascading_nat(bool a, bool b, bool c) {
   } else {
     z = UINT64_C(0);
   }
-  return ((x + y) + z);
+  return x + y + z;
 }
 
 /// 6. Match returning function type
@@ -103,7 +103,7 @@ uint64_t LetMatchType2::let_match_bindings(uint64_t n) {
     x = UINT64_C(0);
   } else {
     uint64_t m = n - 1;
-    x = (m + UINT64_C(1));
+    x = m + UINT64_C(1);
   }
-  return (x + x);
+  return x + x;
 }

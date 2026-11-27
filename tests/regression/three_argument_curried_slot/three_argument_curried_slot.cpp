@@ -1,7 +1,7 @@
 #include "three_argument_curried_slot.h"
 
 uint64_t ThreeArgumentCurriedSlot::add3(uint64_t a, uint64_t b, uint64_t c) {
-  return ((a + b) + c);
+  return a + b + c;
 }
 
 uint64_t ThreeArgumentCurriedSlot::f3(uint64_t x0_, uint64_t x1_,

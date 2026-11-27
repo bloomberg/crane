@@ -183,7 +183,7 @@ LoopifyStrings::string_chain_fuel(uint64_t fuel, const List<uint64_t> &s,
         } else {
           _stack.emplace_back(_after_string_chain_fuel_in_false{});
           _stack.emplace_back(
-              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+              _call{(n - UINT64_C(1) > n ? 0 : n - UINT64_C(1)), fuel_});
         }
       }
     } else {
@@ -287,7 +287,7 @@ bool LoopifyStrings::list_eq(const List<uint64_t> &l1,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      _result = (a0 == a00 && _result);
+      _result = ((a0 == a00) && _result);
     }
   }
   return _result;
@@ -405,7 +405,7 @@ LoopifyStrings::run_length_aux(uint64_t current, uint64_t count,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (a0 == current) {
         _loop_l = crane_raw(a1);
-        count = (count + UINT64_C(1));
+        count = count + UINT64_C(1);
         continue;
       } else if (count == UINT64_C(0)) {
         _loop_l = crane_raw(a1);

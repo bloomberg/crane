@@ -216,13 +216,13 @@ struct NestedInductiveNoDrain {
           return UINT64_C(0);
         } else {
           const auto &[a00, a10] = std::get<typename lst<tree>::Cons>(m.v());
-          return (a00.tsum() + _self_go0(_self_go0, *a10));
+          return a00.tsum() + _self_go0(_self_go0, *a10);
         }
       };
       auto go0 =
           [&](const lst<tree> &m) -> uint64_t { return go0_impl(go0_impl, m); };
       _tmp3 = go0(*a1);
-      return (a0 + _tmp3);
+      return a0 + _tmp3;
     }
 
     tree spine(uint64_t n) const {

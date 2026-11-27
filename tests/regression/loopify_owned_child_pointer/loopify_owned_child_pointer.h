@@ -210,7 +210,7 @@ struct LoopifyOwnedChildPointer {
           auto _f = std::move(crane::get<_after_sz_in_pair_2>(_popped));
           _stack.pop_back();
           uint64_t a0 = _f.a0;
-          _result = ((a0 + _f._tmp2) + _result);
+          _result = a0 + _f._tmp2 + _result;
         }
       }
       return _result;
@@ -363,7 +363,7 @@ struct LoopifyOwnedChildPointer {
           const tree &a0_value = *a0;
           _result = List<crane::fn<uint64_t(uint64_t)>>::cons(
               [=, a0_value = a0_value](uint64_t y) {
-                return (y + a0_value.sum());
+                return y + a0_value.sum();
               },
               _f._tmp2.app(std::move(_result)));
         }
@@ -420,7 +420,7 @@ struct LoopifyOwnedChildPointer {
           auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -502,7 +502,7 @@ struct LoopifyOwnedChildPointer {
       t0.subs().template fold_left<uint64_t>(
           [](uint64_t a,
              const crane::fn<uint64_t(uint64_t)> &f) {
-            return (a + f(UINT64_C(0)));
+            return a + f(UINT64_C(0));
           },
           UINT64_C(0));
 };

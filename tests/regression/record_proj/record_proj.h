@@ -24,7 +24,7 @@ struct RecordProj {
   static uint64_t apply_to_field(F0 &&f, const Point &p) {
     uint64_t a = p.x;
     uint64_t b = p.y;
-    return (f(a) + f(b));
+    return f(a) + f(b);
   }
 
   static inline const uint64_t test1 =

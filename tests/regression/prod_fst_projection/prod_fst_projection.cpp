@@ -41,7 +41,7 @@ uint64_t ProdFstProjection::depth(const ProdFstProjection::t &x) {
       } else {
         const auto &[a0] = std::get<typename ProdFstProjection::t::N>(x.v());
         _stack.emplace_back(_after_depth_in_N{});
-        _stack.emplace_back(_call{(*a0).first});
+        _stack.emplace_back(_call{a0->first});
       }
     } else {
       auto _f = std::move(std::get<_after_depth_in_N>(_popped));

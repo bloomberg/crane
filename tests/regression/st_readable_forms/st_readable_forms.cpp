@@ -4,11 +4,10 @@ uint64_t pair_parts() {
   std::pair<uint64_t, uint64_t> r = std::make_pair(UINT64_C(3), UINT64_C(4));
   std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
       std::make_shared<crane::array_storage<std::pair<uint64_t, uint64_t>>>(
-          static_cast<std::size_t>(UINT64_C(2)),
-          std::make_pair(UINT64_C(5), UINT64_C(6)));
+          2uz, std::make_pair(UINT64_C(5), UINT64_C(6)));
   auto [x, _] = r;
   auto [_, y] = std::span{std::as_const(*a)}[UINT64_C(1)];
-  return (x + y);
+  return x + y;
 }
 
 uint64_t fib_step(uint64_t n) {
@@ -37,13 +36,12 @@ uint64_t fib_step(uint64_t n) {
 
 uint64_t add_at(std::span<const uint64_t> arr, uint64_t acc, uint64_t i) {
   uint64_t v = arr[i];
-  return (acc + v);
+  return acc + v;
 }
 
 uint64_t sum_with() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
-      std::make_shared<crane::array_storage<uint64_t>>(
-          static_cast<std::size_t>(UINT64_C(4)), UINT64_C(3));
+      std::make_shared<crane::array_storage<uint64_t>>(4uz, UINT64_C(3));
   std::span{*arr}[UINT64_C(2)] = UINT64_C(10);
   return STMonad::template for_each_with<uint64_t, uint64_t>(
       ListDef::seq(UINT64_C(0), UINT64_C(4)), UINT64_C(0),
@@ -89,7 +87,7 @@ uint64_t count_back(std::span<uint64_t> arr, uint64_t k) {
       uint64_t k = _f.k;
       uint64_t k_ = _f.k_;
       arr[(UINT64_C(4) ? k_ % UINT64_C(4) : k_)] = _result;
-      _result = (_result + k);
+      _result = _result + k;
     }
   }
   return _result;
@@ -97,12 +95,11 @@ uint64_t count_back(std::span<uint64_t> arr, uint64_t k) {
 
 uint64_t run_count_back() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
-      std::make_shared<crane::array_storage<uint64_t>>(
-          static_cast<std::size_t>(UINT64_C(4)), UINT64_C(0));
+      std::make_shared<crane::array_storage<uint64_t>>(4uz, UINT64_C(0));
   return count_back(std::span{*arr}, UINT64_C(5));
 }
 
-uint64_t ignore_ref(const uint64_t *, uint64_t n) { return (n + UINT64_C(1)); }
+uint64_t ignore_ref(const uint64_t *, uint64_t n) { return n + UINT64_C(1); }
 
 uint64_t pass_view(uint64_t *r0) {
   *r0 = UINT64_C(2);

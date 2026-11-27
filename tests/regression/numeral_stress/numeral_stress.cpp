@@ -16,11 +16,11 @@ uint64_t NumeralStress::count_from(uint64_t n, uint64_t target) {
 
 /// 9. Numeral in boolean expression
 bool NumeralStress::check_range(uint64_t n) {
-  return (UINT64_C(10) <= n && n <= UINT64_C(100));
+  return ((UINT64_C(10) <= n) && (n <= UINT64_C(100)));
 }
 
 /// 10. Mixed nat and Z in one function
 int64_t NumeralStress::mixed_arith(uint64_t n) {
   return static_cast<int64_t>(static_cast<uint64_t>(static_cast<int64_t>(n)) +
-                              static_cast<uint64_t>(INT64_C(100)));
+                              UINT64_C(100));
 }

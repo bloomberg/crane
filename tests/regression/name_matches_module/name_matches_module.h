@@ -44,5 +44,5 @@ struct NameMatchesModule {
   /// and NameMatchesModule inside module NameMatchesModule.
   static constexpr uint64_t NameMatchesModule0 = UINT64_C(4);
   static inline const uint64_t run =
-      (NameMatchesModule0 + Inner_Mod::Inner::i(UINT64_C(6)).get());
+      NameMatchesModule0 + Inner_Mod::Inner::i(UINT64_C(6)).get();
 };

@@ -154,14 +154,14 @@ struct LetPairShadow {
   /// sum(list) + acc = 40 + 60 = 100
   static inline const uint64_t test1 = []() -> uint64_t {
     auto [l, acc] = map_accum<uint64_t, uint64_t, uint64_t>(
-        [](uint64_t s, uint64_t x) { return std::make_pair((s + x), s); },
+        [](uint64_t s, uint64_t x) { return std::make_pair(s + x, s); },
         UINT64_C(0),
         mylist<uint64_t>::mycons(
             UINT64_C(10),
             mylist<uint64_t>::mycons(
                 UINT64_C(20), mylist<uint64_t>::mycons(
                                   UINT64_C(30), mylist<uint64_t>::mynil()))));
-    return (mylist_sum(std::move(l)) + acc);
+    return mylist_sum(std::move(l)) + acc;
   }();
   /// Helper functions that return pairs (force temporary allocation).
   static std::pair<uint64_t, uint64_t> add_pair(uint64_t a, uint64_t b);

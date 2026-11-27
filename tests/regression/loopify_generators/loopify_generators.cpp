@@ -167,7 +167,7 @@ uint64_t LoopifyGenerators::len_impl(const List<uint64_t> &l) {
 List<std::pair<uint64_t, uint64_t>>
 LoopifyGenerators::zip_longest(const List<uint64_t> &l1,
                                const List<uint64_t> &l2, uint64_t default0) {
-  return zip_longest_aux(l1, l2, default0, (len_impl(l1) + len_impl(l2)));
+  return zip_longest_aux(l1, l2, default0, len_impl(l1) + len_impl(l2));
 }
 
 /// build_list n builds tree-like list structure: build_list(4) -> 2,4,2.
@@ -257,7 +257,7 @@ List<uint64_t> LoopifyGenerators::take(uint64_t n, const List<uint64_t> &l) {
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+        n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
         continue;
       }
     }

@@ -146,7 +146,7 @@ struct LocalLiftedMutual {
       return h(y);
     } else {
       uint64_t m = n0 - 1;
-      return (run_crane_g<T1>(h, y, m, k) + UINT64_C(1));
+      return run_crane_g<T1>(h, y, m, k) + UINT64_C(1);
     }
   }
 
@@ -154,7 +154,7 @@ struct LocalLiftedMutual {
   static uint64_t run_crane_g(F0 &&h, const T1 x, const uint64_t n0,
                               const uint64_t k) {
     if (n0 <= 0) {
-      return (h(x) + k);
+      return h(x) + k;
     } else {
       uint64_t m = n0 - 1;
       return run_crane_f<T1>(h, x, m, k);

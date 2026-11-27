@@ -275,15 +275,14 @@ struct MonadClassNestedBind {
     return _tcI0::template bind<uint64_t, List<uint64_t>>(
         _tcI0::template ret<uint64_t>(x), [](uint64_t n) {
           return _tcI0::template bind<uint64_t, List<uint64_t>>(
-              _tcI0::template ret<uint64_t>((n + UINT64_C(1))),
-              [=](uint64_t m) {
+              _tcI0::template ret<uint64_t>(n + UINT64_C(1)), [=](uint64_t m) {
                 return _tcI0::template ret<List<uint64_t>>(List<uint64_t>::cons(
                     n, List<uint64_t>::cons(m, List<uint64_t>::nil())));
               });
         });
   }
 
-  static inline const uint64_t total = ([]() -> uint64_t {
+  static inline const uint64_t total = []() -> uint64_t {
     auto _cs = chain<MOption>(UINT64_C(1));
     if (_cs.has_value()) {
       const List<uint64_t> &l = *_cs;
@@ -291,5 +290,5 @@ struct MonadClassNestedBind {
     } else {
       return UINT64_C(0);
     }
-  }() + chain<MList>(UINT64_C(2)).length());
+  }() + chain<MList>(UINT64_C(2)).length();
 };

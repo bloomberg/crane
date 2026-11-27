@@ -11,7 +11,7 @@ std::optional<std::string> EffectNestedIo::read_optional() {
 std::pair<std::string, int64_t> EffectNestedIo::read_pair() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
+  int64_t len = static_cast<int64_t>(std::string_view{line}.size());
   return std::make_pair(std::move(line), len);
 }
 
@@ -70,5 +70,5 @@ std::pair<std::string, std::string> EffectNestedIo::multi_read_store() {
 int64_t EffectNestedIo::read_length() {
   std::string line;
   std::getline(std::cin, line);
-  return static_cast<int64_t>((std::string_view{line}).size());
+  return static_cast<int64_t>(std::string_view{line}.size());
 }

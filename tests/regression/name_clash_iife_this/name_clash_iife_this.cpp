@@ -20,10 +20,10 @@ uint64_t NameClashIifeThis::match_of_match(NameClashIifeThis::Color c,
   if (std::holds_alternative<typename NameClashIifeThis::shape::Circle>(_sv.v())) {
     const auto &[a0] =
         std::get<typename NameClashIifeThis::shape::Circle>(_sv.v());
-    return (a0 * UINT64_C(2));
+    return a0 * UINT64_C(2);
   } else {
     const auto &[a0, a1] =
         std::get<typename NameClashIifeThis::shape::Square>(_sv.v());
-    return (a0 + a1);
+    return a0 + a1;
   }
 }

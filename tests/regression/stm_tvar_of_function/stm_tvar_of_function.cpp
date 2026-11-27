@@ -16,7 +16,7 @@ uint64_t StmTvarOfFunction::fnw() {
       stm::newTVar<crane::fn<uint64_t(uint64_t)>>(
           crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return (x + 1); }));
   stm::writeTVar(a, crane::fn<uint64_t(uint64_t)>(
-                        [](uint64_t x) { return (x + UINT64_C(2)); }));
+                        [](uint64_t x) { return x + UINT64_C(2); }));
   crane::fn<uint64_t(uint64_t)> f = stm::readTVar(std::move(a));
   return f(UINT64_C(1));
 }

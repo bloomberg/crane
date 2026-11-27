@@ -16,18 +16,18 @@ struct FixPairTwoClosures {
   /// Total = 38.
   static inline const uint64_t test1 = []() -> uint64_t {
     auto [f, g] = make_ops(UINT64_C(10), UINT64_C(20));
-    return (f(UINT64_C(3)) + g(UINT64_C(5)));
+    return f(UINT64_C(3)) + g(UINT64_C(5));
   }();
   /// test2: Use both closures interleaved.
   /// fst(1) + snd(2) + fst(3) = 11 + 22 + 13 = 46.
   static inline const uint64_t test2 = []() -> uint64_t {
     auto [f, g] = make_ops(UINT64_C(10), UINT64_C(20));
-    return ((f(UINT64_C(1)) + g(UINT64_C(2))) + f(UINT64_C(3)));
+    return f(UINT64_C(1)) + g(UINT64_C(2)) + f(UINT64_C(3));
   }();
   /// test3: Asymmetric arguments to stress different captured values.
   /// make_ops(100, 1). fst(0) + snd(0) = 100 + 1 = 101.
   static inline const uint64_t test3 = []() -> uint64_t {
     auto [f, g] = make_ops(UINT64_C(100), UINT64_C(1));
-    return (f(UINT64_C(0)) + g(UINT64_C(0)));
+    return f(UINT64_C(0)) + g(UINT64_C(0));
   }();
 };

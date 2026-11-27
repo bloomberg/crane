@@ -29,7 +29,7 @@ uint64_t NameClashScopeLeak::heads_sum(const List<uint64_t> &l1,
       return a00;
     }
   }();
-  return (h1 + h2);
+  return h1 + h2;
 }
 
 /// Match on list, and in the Cons branch, match on the tail.
@@ -43,7 +43,7 @@ uint64_t NameClashScopeLeak::first_two_sum(const List<uint64_t> &l) {
       return a0;
     } else {
       const auto &[a00, _] = std::get<typename List<uint64_t>::Cons>(_sv0.v());
-      return (a0 + a00);
+      return a0 + a00;
     }
   }
 }
@@ -54,7 +54,7 @@ uint64_t NameClashScopeLeak::branch_let_clash(const List<uint64_t> &l) {
     return UINT64_C(0);
   } else {
     const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
-    return (a0 * UINT64_C(2));
+    return a0 * UINT64_C(2);
   }
 }
 
@@ -86,7 +86,7 @@ uint64_t NameClashScopeLeak::triple_head(const List<uint64_t> &l1,
       return a01;
     }
   }();
-  return ((a + b) + c);
+  return a + b + c;
 }
 
 /// Matching on a pair where both components are lists.
@@ -109,5 +109,5 @@ uint64_t NameClashScopeLeak::pair_match(
       return a00;
     }
   }();
-  return (h1 + h2);
+  return h1 + h2;
 }

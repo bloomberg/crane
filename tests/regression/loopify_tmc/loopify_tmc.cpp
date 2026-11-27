@@ -59,7 +59,7 @@ LoopifyTmc::prefix_sums(uint64_t acc, const LoopifyTmc::list<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyTmc::list<uint64_t>::Cons>(_loop_l->v());
-      uint64_t s = (acc + a0);
+      uint64_t s = acc + a0;
       auto _cell = typename LoopifyTmc::list<uint64_t>::Cons(s, nullptr);
       LoopifyTmc::list<uint64_t> &_node =
           (_write ? *(*_write = std::make_shared<LoopifyTmc::list<uint64_t>>(

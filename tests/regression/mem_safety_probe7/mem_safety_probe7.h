@@ -132,7 +132,7 @@ struct MemSafetyProbe7 {
         } else {
           auto _f = std::move(std::get<_after_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -390,7 +390,7 @@ struct MemSafetyProbe7 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -494,7 +494,7 @@ struct MemSafetyProbe7 {
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     std::pair<crane::fn<uint64_t(std::monostate)>,
               crane::fn<uint64_t(std::monostate)>> p = t.make_subtree_getters();
-    return (p.first(std::monostate{}) + p.second(std::monostate{}));
+    return p.first(std::monostate{}) + p.second(std::monostate{});
   }();
   /// TEST 6: Stress test — large list, each closure captures
   /// the entire remaining tail.

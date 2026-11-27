@@ -86,7 +86,7 @@ struct LiftedLambdaForwardRef {
       t x = t::n(t::l());
       crane::fn<uint64_t(uint64_t)> f =
           [=, x = std::move(x)](uint64_t) { return later(x); };
-      return (f(UINT64_C(0)) + f(UINT64_C(1)));
+      return f(UINT64_C(0)) + f(UINT64_C(1));
     }();
   }();
 };

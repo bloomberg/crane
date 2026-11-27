@@ -397,9 +397,9 @@ struct ToString {
                                     const bsl::pair<T1, T2> &x) {
     const auto &[a, b] = x;
     return (bsl::string("(") +
-            (p1(a) + (bsl::string(", ") +
-                      (p2(b) + bsl::string(")")).substr(0, 16777211))
-                         .substr(0, 16777211))
+            (p1(a) + ((bsl::string(", ") +
+                       (p2(b) + bsl::string(")")).substr(0, 16777211))
+                          .substr(0, 16777211)))
                 .substr(0, 16777211))
                .substr(0, 16777211);
   }
@@ -437,10 +437,11 @@ struct ToString {
                 (p(d_a0) + bsl::string("]")).substr(0, 16777211))
                    .substr(0, 16777211);
       } else {
-        return (bsl::string("[") + (p(d_a0) + (intersperse<T1>(p, "; ", *d_a1) +
-                                               bsl::string("]"))
-                                                  .substr(0, 16777211))
-                                       .substr(0, 16777211))
+        return (bsl::string("[") +
+                (p(d_a0) +
+                 ((intersperse<T1>(p, "; ", *d_a1) + bsl::string("]")).substr(
+                                                         0, 16777211)))
+                    .substr(0, 16777211))
                    .substr(0, 16777211);
       }
     }

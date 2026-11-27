@@ -54,5 +54,5 @@ FunctorComp::Queue::pop(std::pair<List<uint64_t>, List<uint64_t>> q) {
 uint64_t
 FunctorComp::Queue::size(const std::pair<List<uint64_t>, List<uint64_t>> &q) {
   const auto &[front, back] = q;
-  return (front.length() + back.length());
+  return front.length() + back.length();
 }

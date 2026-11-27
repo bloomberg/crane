@@ -130,7 +130,7 @@ struct NestedPartialApp {
           [=, g = std::move(g)](tree _pa0) { return g(UINT64_C(42), _pa0); };
       tree r1 = h(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
       tree r2 = h(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
-      return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
+      return tree_sum(std::move(r1)) + tree_sum(std::move(r2));
     }();
   }();
   /// Variation: use intermediate partial app g twice before further
@@ -148,7 +148,7 @@ struct NestedPartialApp {
           [=, g = std::move(g)](tree _pa0) { return g(UINT64_C(99), _pa0); };
       tree r1 = h1(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
       tree r2 = h2(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
-      return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
+      return tree_sum(std::move(r1)) + tree_sum(std::move(r2));
     }();
   }();
   /// Variation: 4-argument function, triple nesting.
@@ -169,7 +169,7 @@ struct NestedPartialApp {
           [=, f2 = std::move(f2)](tree _pa0) { return f2(UINT64_C(30), _pa0); };
       uint64_t r1 = f3(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
       uint64_t r2 = f3(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
-      return (r1 + r2);
+      return r1 + r2;
     }();
   }();
 };

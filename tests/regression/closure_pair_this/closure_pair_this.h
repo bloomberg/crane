@@ -99,14 +99,14 @@ struct ClosurePairThis {
       if (flag <= 0) {
         return std::make_pair(
             crane::fn<uint64_t(uint64_t)>(
-                [=](uint64_t x) { return (x + _self_val.tree_sum()); }),
+                [=](uint64_t x) { return x + _self_val.tree_sum(); }),
             crane::fn<uint64_t(uint64_t)>(
-                [=](uint64_t x) { return (_self_val.tree_sum() * x); }));
+                [=](uint64_t x) { return _self_val.tree_sum() * x; }));
       } else {
         uint64_t _x = flag - 1;
         return std::make_pair(
             crane::fn<uint64_t(uint64_t)>([=, _self_val = std::move(_self_val)](
-                uint64_t x) { return (_self_val.tree_sum() + x); }),
+                uint64_t x) { return _self_val.tree_sum() + x; }),
             crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }));
       }
     }
@@ -160,7 +160,7 @@ struct ClosurePairThis {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -263,7 +263,7 @@ struct ClosurePairThis {
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
         tree::node(tree::leaf(), UINT64_C(7), tree::leaf()).get_fn_pair(
             UINT64_C(0));
-    return (p.first(UINT64_C(3)) + p.second(UINT64_C(2)));
+    return p.first(UINT64_C(3)) + p.second(UINT64_C(2));
   }();
   /// test2: flag=1. fst closure adds sum, snd is identity.
   /// (7 + 4) + 5 = 11 + 5 = 16.
@@ -271,7 +271,7 @@ struct ClosurePairThis {
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
         tree::node(tree::leaf(), UINT64_C(7), tree::leaf()).get_fn_pair(
             UINT64_C(1));
-    return (p.first(UINT64_C(4)) + p.second(UINT64_C(5)));
+    return p.first(UINT64_C(4)) + p.second(UINT64_C(5));
   }();
   /// test3: Use both closures after allocating another tree to increase
   /// memory pressure on the freed region.
@@ -286,6 +286,6 @@ struct ClosurePairThis {
         tree::node(tree::leaf(), UINT64_C(999), tree::leaf()).tree_sum();
     uint64_t a = p.first(noise);
     uint64_t b = p.second(UINT64_C(1));
-    return (a + b);
+    return a + b;
   }();
 };

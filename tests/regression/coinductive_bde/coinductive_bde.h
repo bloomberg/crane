@@ -176,6 +176,6 @@ struct CoinductiveBde {
       take(4u, from(3u)).template fold_left<unsigned int>(
           [](unsigned int _x0,
              unsigned int _x1)
-               -> unsigned int { return (_x0 + _x1); },
+               -> unsigned int { return _x0 + _x1; },
           0u);
 };

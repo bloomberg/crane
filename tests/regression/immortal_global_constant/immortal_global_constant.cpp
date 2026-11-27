@@ -125,6 +125,6 @@ ImmortalGlobalConstant::tree ImmortalGlobalConstant::fresh(uint64_t x0_) {
 /// A copy of the global per call.
 uint64_t ImmortalGlobalConstant::sizes(uint64_t n) {
   return upto(n, List<uint64_t>::nil()).template fold_left<uint64_t>(
-      [](uint64_t acc, uint64_t) { return (acc + size(table)); },
+      [](uint64_t acc, uint64_t) { return acc + size(table); },
       UINT64_C(0));
 }

@@ -46,11 +46,9 @@ std::pair<uint64_t, uint64_t> bump_each() {
 
 std::pair<List<uint64_t>, List<uint64_t>> fill_each() {
   std::shared_ptr<crane::array_storage<uint64_t>> a =
-      std::make_shared<crane::array_storage<uint64_t>>(
-          static_cast<std::size_t>(UINT64_C(3)), UINT64_C(0));
+      std::make_shared<crane::array_storage<uint64_t>>(3uz, UINT64_C(0));
   std::shared_ptr<crane::array_storage<uint64_t>> b =
-      std::make_shared<crane::array_storage<uint64_t>>(
-          static_cast<std::size_t>(UINT64_C(2)), UINT64_C(0));
+      std::make_shared<crane::array_storage<uint64_t>>(2uz, UINT64_C(0));
   auto fill = [](uint64_t i, uint64_t n, std::span<uint64_t> arr_view) -> void {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
@@ -70,8 +68,9 @@ std::pair<List<uint64_t>, List<uint64_t>> fill_each() {
   fill(UINT64_C(0), UINT64_C(2), std::span{*b});
   List<uint64_t> xs =
       crane::st::elems<List<uint64_t>>(std::span{std::as_const(*a)});
-  return std::make_pair(std::move(xs), crane::st::elems<List<uint64_t>>(
-                                           std::span{std::as_const(*b)}));
+  List<uint64_t> ys =
+      crane::st::elems<List<uint64_t>>(std::span{std::as_const(*b)});
+  return std::make_pair(std::move(xs), std::move(ys));
 }
 
 uint64_t LocalLambdaRefs::nth(uint64_t n, const List<uint64_t> &l,

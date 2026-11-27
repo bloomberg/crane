@@ -31,7 +31,7 @@ uint64_t UnusedPairBindingRedefinition::f(uint64_t a) {
       return acc;
     }
   }();
-  return (x + UINT64_C(5));
+  return x + UINT64_C(5);
 }
 
 uint64_t UnusedPairBindingRedefinition::g(uint64_t a) {
@@ -58,5 +58,5 @@ uint64_t UnusedPairBindingRedefinition::g(uint64_t a) {
       return acc;
     }
   }();
-  return ((x + p0) + q);
+  return x + p0 + q;
 }

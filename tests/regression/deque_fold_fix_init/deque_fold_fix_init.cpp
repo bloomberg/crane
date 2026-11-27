@@ -8,7 +8,7 @@ uint64_t DequeFoldFixInit::compose_all(const std::deque<uint64_t> &l,
     return _a;
   }(
       [](crane::fn<uint64_t(uint64_t)> acc, uint64_t k) {
-        return [=, acc = std::move(acc)](uint64_t x) { return (acc(x) + k); };
+        return [=, acc = std::move(acc)](uint64_t x) { return acc(x) + k; };
       },
       l,
       crane::fn<uint64_t(uint64_t)>([&]() {
@@ -29,7 +29,7 @@ uint64_t DequeFoldFixInit::compose_all(const std::deque<uint64_t> &l,
                       std::deque<uint64_t>(_loop_m.begin() + 1, _loop_m.end());
                   _loop_acc =
                       [=, _loop_acc = std::move(_loop_acc)](uint64_t x) {
-                        return (_loop_acc(x) + j);
+                        return _loop_acc(x) + j;
                       };
                   _loop_m = std::move(r);
                 }

@@ -136,7 +136,7 @@ public:
         auto _f = std::move(std::get<_after_clone0_in_Node_2>(_popped));
         _stack.pop_back();
         uint64_t a1 = _f.a1;
-        _result = ((_f._tmp2 + a1) + _result);
+        _result = _f._tmp2 + a1 + _result;
       }
     }
     return _result;
@@ -154,6 +154,5 @@ public:
 [[gnu::used]] inline const Tree sample =
     Tree::node(Tree::node(Tree::leaf(), UINT64_C(1), Tree::leaf()), UINT64_C(2),
                Tree::node(Tree::leaf(), UINT64_C(3), Tree::leaf()));
-const uint64_t total =
-    ((sample.clone0() + sample.leaf0()) + Tree::leaf().leaf0());
+const uint64_t total = sample.clone0() + sample.leaf0() + Tree::leaf().leaf0();
 } // namespace SepExtMethodNameClash

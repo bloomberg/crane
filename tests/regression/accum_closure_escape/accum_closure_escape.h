@@ -317,7 +317,7 @@ struct AccumClosureEscape {
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              [=](uint64_t x) { return (a1 + x); },
+              [=](uint64_t x) { return a1 + x; },
               _f._tmp2.mylist_append(std::move(_result)));
         }
       }

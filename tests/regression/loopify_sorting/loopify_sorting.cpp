@@ -142,7 +142,7 @@ LoopifySorting::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
 
 List<uint64_t> LoopifySorting::merge(const List<uint64_t> &l1,
                                      const List<uint64_t> &l2) {
-  return merge_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), l1, l2);
+  return merge_fuel(len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2), l1, l2);
 }
 
 List<uint64_t> LoopifySorting::merge_sort_fuel(uint64_t fuel,

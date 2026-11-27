@@ -207,6 +207,6 @@ struct LoopifyLocalCofix {
                List<uint64_t>::cons(UINT64_C(7),
                                     List<uint64_t>::nil()))))
           .template fold_left<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
           UINT64_C(0));
 };

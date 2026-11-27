@@ -173,7 +173,7 @@ bool Pos::eqb(const Positive &p, const Positive &q) {
 
 uint64_t Pos::to_nat(const Positive &x) {
   return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
       x,
       UINT64_C(1));
 }
@@ -923,7 +923,7 @@ uint64_t EpochCellGlyphTraceCase::count_total_lunar(
       }
       }
     }();
-    return (count_here + count_total_lunar(*a1));
+    return count_here + count_total_lunar(*a1);
   }
 }
 
@@ -953,7 +953,7 @@ uint64_t EpochCellGlyphTraceCase::count_visible_total_lunar(
       }
       }
     }();
-    return (count_here + count_visible_total_lunar(*a1));
+    return count_here + count_visible_total_lunar(*a1);
   }
 }
 
@@ -974,7 +974,7 @@ uint64_t EpochCellGlyphTraceCase::visible_series_checksum(
     } else {
       term = UINT64_C(0);
     }
-    return (term + visible_series_checksum(*a1));
+    return term + visible_series_checksum(*a1);
   }
 }
 

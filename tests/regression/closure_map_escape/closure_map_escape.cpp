@@ -61,6 +61,6 @@ uint64_t ClosureMapEscape::sum_apply(
   } else {
     const auto &[a0, a1] = std::get<typename ClosureMapEscape::mylist<
         crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
-    return (a0(arg) + sum_apply(*a1, arg));
+    return a0(arg) + sum_apply(*a1, arg);
   }
 }

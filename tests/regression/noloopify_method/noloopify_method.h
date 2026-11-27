@@ -91,7 +91,7 @@ struct NoloopifyMethod {
         return UINT64_C(1);
       } else {
         const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
-        return (a0->size() + a1->size());
+        return a0->size() + a1->size();
       }
     }
 

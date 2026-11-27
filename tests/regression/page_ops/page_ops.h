@@ -113,10 +113,10 @@ struct PageOps {
   static uint64_t base_for_next2(const state &s);
   static uint64_t recompose(uint64_t p);
   static inline const uint64_t max_addr =
-      (((Nat::pow(UINT64_C(2), UINT64_C(12)) - UINT64_C(1)) >
-        Nat::pow(UINT64_C(2), UINT64_C(12))
-            ? 0
-            : (Nat::pow(UINT64_C(2), UINT64_C(12)) - UINT64_C(1))));
+      (Nat::pow(UINT64_C(2), UINT64_C(12)) - UINT64_C(1) >
+       Nat::pow(UINT64_C(2), UINT64_C(12))
+           ? 0
+           : Nat::pow(UINT64_C(2), UINT64_C(12)) - UINT64_C(1));
 
   struct instruction {
     // TYPES
@@ -190,7 +190,7 @@ struct PageOps {
                      : page_base(UINT64_C(777)));
   static inline const uint64_t test_page_base_next_pc = []() {
     state s = state{UINT64_C(511)};
-    return (base_for_next1(s) + base_for_next2(s));
+    return base_for_next1(s) + base_for_next2(s);
   }();
   static inline const uint64_t test_page_boundary_cross =
       base_for_next1(state{UINT64_C(255)});
@@ -199,7 +199,7 @@ struct PageOps {
   static inline const uint64_t test_base_for_next_page_cross_2 =
       base_for_next2(state{UINT64_C(255)});
   static inline const bool test_page_decomp_roundtrip =
-      ((UINT64_C(4) * UINT64_C(256)) + UINT64_C(3)) == UINT64_C(1027);
+      UINT64_C(4) * UINT64_C(256) + UINT64_C(3) == UINT64_C(1027);
   static inline const uint64_t test_page_offset_recompose =
       recompose(addr12_of_nat(UINT64_C(1027)));
   static inline const uint64_t test_page_recompose =

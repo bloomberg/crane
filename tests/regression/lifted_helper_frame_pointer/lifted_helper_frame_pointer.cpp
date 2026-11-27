@@ -7,7 +7,7 @@ uint64_t LiftedHelperFramePointer::zigzag(
     const LiftedHelperFramePointer::tree<uint64_t> &u,
     const LiftedHelperFramePointer::tree<bool> &s,
     const LiftedHelperFramePointer::tree<bool> &w) {
-  return (zigzag_crane_go(t, u) + (UINT64_C(1000) * zigzag_crane_go(s, w)));
+  return zigzag_crane_go(t, u) + UINT64_C(1000) * zigzag_crane_go(s, w);
 }
 
 LiftedHelperFramePointer::tree<bool>

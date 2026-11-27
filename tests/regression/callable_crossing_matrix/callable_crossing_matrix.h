@@ -207,7 +207,7 @@ struct CallableCrossingMatrix {
   }
 
   template <typename F0> static uint64_t at_erased2(F0 &&f) {
-    return (UINT64_C(0) + f(UINT64_C(1), UINT64_C(2)));
+    return UINT64_C(0) + f(UINT64_C(1), UINT64_C(2));
   }
 
   /// Sources.
@@ -221,32 +221,29 @@ struct CallableCrossingMatrix {
   static uint64_t src_mapping2(uint64_t x0_, uint64_t x1_);
 
   template <typename F0> static uint64_t sum2(F0 &&slot) {
-    return (
-        (((((slot(add2) + slot(curried2)) + slot(src_lambda2)) +
+    return slot(add2) + slot(curried2) + slot(src_lambda2) +
            slot([](uint64_t _x0,
                    uint64_t _x1)
-                     -> uint64_t { return src_let2(UINT64_C(0), _x0, _x1); })) +
-          slot([](uint64_t _x0,
-                  uint64_t _x1)
-                    -> uint64_t {
-            return src_match2(UINT64_C(0), _x0, _x1);
-          })) +
-         slot([](uint64_t _x0,
-                 uint64_t _x1)
-                   -> uint64_t { return src_fix2(UINT64_C(1), _x0, _x1); })) +
-        slot(src_mapping2));
+                     -> uint64_t { return src_let2(UINT64_C(0), _x0, _x1); }) +
+           slot([](uint64_t _x0,
+                   uint64_t _x1)
+                     -> uint64_t {
+             return src_match2(UINT64_C(0), _x0, _x1);
+           }) +
+           slot([](uint64_t _x0,
+                   uint64_t _x1)
+                     -> uint64_t { return src_fix2(UINT64_C(1), _x0, _x1); }) +
+           slot(src_mapping2);
   }
 
   template <typename F0> static uint64_t sum3(F0 &&slot) {
-    return (
-        ((slot(add3) + slot(curried3)) +
-         slot([](uint64_t a, uint64_t b,
-                 uint64_t c) { return ((a + b) + c); })) +
-        slot([](uint64_t _x0, uint64_t _x1,
-                uint64_t _x2)
-                  -> uint64_t {
-          return src_fix3(UINT64_C(1), _x0, _x1, _x2);
-        }));
+    return slot(add3) + slot(curried3) +
+           slot([](uint64_t a, uint64_t b, uint64_t c) { return a + b + c; }) +
+           slot([](uint64_t _x0, uint64_t _x1,
+                   uint64_t _x2)
+                     -> uint64_t {
+             return src_fix3(UINT64_C(1), _x0, _x1, _x2);
+           });
   }
 
   static inline const uint64_t r2_param =

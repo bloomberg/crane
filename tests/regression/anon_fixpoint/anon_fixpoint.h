@@ -14,5 +14,5 @@ struct AnonFixpoint {
   static inline const uint64_t test_fact_0 = factorial(UINT64_C(0));
   static inline const uint64_t test_double = double_sum(UINT64_C(3));
   static inline const uint64_t test_gcd =
-      gcd((UINT64_C(4) * UINT64_C(3)), (UINT64_C(2) * UINT64_C(3)));
+      gcd(UINT64_C(4) * UINT64_C(3), UINT64_C(2) * UINT64_C(3));
 };

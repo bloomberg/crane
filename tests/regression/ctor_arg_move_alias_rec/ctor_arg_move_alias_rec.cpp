@@ -31,7 +31,7 @@ uint64_t CtorArgMoveAliasRec::osum(
   } else {
     const auto &[a0, a1] = std::get<typename CtorArgMoveAliasRec::mylist<
         CtorArgMoveAliasRec::inner>::Mycons>(o.v());
-    return (a0.isum() + osum(*a1));
+    return a0.isum() + osum(*a1);
   }
 }
 

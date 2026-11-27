@@ -48,7 +48,7 @@ struct SingletonRecord {
   };
 
   static inline const fn_wrapper my_fn_wrapper =
-      fn_wrapper{[](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); }};
+      fn_wrapper{[](uint64_t _x0) -> uint64_t { return UINT64_C(1) + _x0; }};
   static uint64_t apply_wrapped(const fn_wrapper &w, uint64_t n);
   static inline const uint64_t test_get = get_value(wrapped_five);
   static inline const uint64_t test_get2 = get_value2(wrapped_five);

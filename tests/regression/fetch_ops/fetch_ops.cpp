@@ -38,7 +38,7 @@ FetchOps::fetch_window(const List<uint64_t> &rom_data, uint64_t addr) {
       return std::optional<std::pair<uint64_t, uint64_t>>();
     } else {
       return std::make_optional<std::pair<uint64_t, uint64_t>>(
-          std::make_pair(a0, (addr + UINT64_C(2))));
+          std::make_pair(a0, addr + UINT64_C(2)));
     }
   }
 }

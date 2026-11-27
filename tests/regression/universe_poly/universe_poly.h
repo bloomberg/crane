@@ -223,16 +223,16 @@ struct UniversePoly {
 
   static inline const poption<uint64_t> test_map_some =
       poption_map<uint64_t, uint64_t>(
-          [](uint64_t n) { return (n + UINT64_C(1)); },
+          [](uint64_t n) { return n + UINT64_C(1); },
           poption<uint64_t>::psome(UINT64_C(5)));
   static inline const poption<uint64_t> test_map_none =
       poption_map<uint64_t, uint64_t>(
-          [](uint64_t n) { return (n + UINT64_C(1)); },
+          [](uint64_t n) { return n + UINT64_C(1); },
           poption<uint64_t>::pnone());
   static inline const poption<uint64_t> test_bind =
       poption_bind<uint64_t, uint64_t>(
           poption<uint64_t>::psome(UINT64_C(3)),
-          [](uint64_t n) { return poption<uint64_t>::psome((n + n)); });
+          [](uint64_t n) { return poption<uint64_t>::psome(n + n); });
 
   template <typename T1> static uint64_t poly_length(const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {

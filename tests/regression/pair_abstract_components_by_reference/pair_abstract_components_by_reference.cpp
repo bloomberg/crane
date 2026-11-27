@@ -41,5 +41,5 @@ Comparison PairAbstractComponentsByReference::NatCmp::compare(uint64_t x0_,
 uint64_t
 PairAbstractComponentsByReference::sum_pair(std::pair<uint64_t, uint64_t> p) {
   const auto &[a, b] = p;
-  return (a + b);
+  return a + b;
 }

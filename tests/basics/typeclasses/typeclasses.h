@@ -148,7 +148,7 @@ struct Typeclasses {
           return UINT64_C(0);
         } else {
           const auto &[a1, a2] = std::get<typename List<T1>::Cons>(l.v());
-          return (_tcI0::to_nat(a1) + _self_sum(_self_sum, *a2));
+          return _tcI0::to_nat(a1) + _self_sum(_self_sum, *a2);
         }
       };
       return sum_impl(sum_impl, a0);
@@ -164,7 +164,7 @@ struct Typeclasses {
   template <typename _tcI0, typename T1>
     requires Numeric<_tcI0, T1>
   static uint64_t numeric_double(const T1 &x) {
-    return (_tcI0::to_nat(x) + _tcI0::to_nat(x));
+    return _tcI0::to_nat(x) + _tcI0::to_nat(x);
   }
 
   struct eqNat {
@@ -215,7 +215,7 @@ struct Typeclasses {
     if (_tcI0::eqb(x, y)) {
       return _tcI1::to_nat(x);
     } else {
-      return (_tcI1::to_nat(x) + _tcI1::to_nat(y));
+      return _tcI1::to_nat(x) + _tcI1::to_nat(y);
     }
   }
 

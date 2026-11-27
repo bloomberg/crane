@@ -29,7 +29,7 @@ uint64_t ReuseScrutineeConcurrentUnit::churn(
     return UINT64_C(0);
   } else {
     uint64_t k = n - 1;
-    return (len(lst::cons(UINT64_C(0), l)) + churn(k, l));
+    return len(lst::cons(UINT64_C(0), l)) + churn(k, l);
   }
 }
 

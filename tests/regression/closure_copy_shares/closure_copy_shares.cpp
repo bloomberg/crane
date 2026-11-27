@@ -8,11 +8,11 @@ uint64_t ClosureCopyShares::sum(const List<uint64_t> &l) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    return (a0 + sum(*a1));
+    return a0 + sum(*a1);
   }
 }
 
 /// Captures a list.
 uint64_t ClosureCopyShares::adder(const List<uint64_t> &l, uint64_t x) {
-  return (sum(l) + x);
+  return sum(l) + x;
 }

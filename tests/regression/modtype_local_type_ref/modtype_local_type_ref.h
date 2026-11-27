@@ -22,8 +22,8 @@ struct ModtypeLocalTypeRef {
   };
 
   static inline const uint64_t run =
-      (S::lookup(std::make_pair(UINT64_C(1), UINT64_C(42)), UINT64_C(1)) +
-       T::shift(point{UINT64_C(1), UINT64_C(2)}, UINT64_C(3)).px);
+      S::lookup(std::make_pair(UINT64_C(1), UINT64_C(42)), UINT64_C(1)) +
+      T::shift(point{UINT64_C(1), UINT64_C(2)}, UINT64_C(3)).px;
 };
 
 template <typename M>

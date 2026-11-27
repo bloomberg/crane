@@ -1251,21 +1251,20 @@ struct CoalitionBidHonorTraceCase {
               this->v())) {
         const auto &[_, _, attacker_bid, defender_bid, _, _, _, ready0] =
             std::get<typename BatchallPhase::PhaseBidding>(this->v());
-        return ((bid_metrics(attacker_bid).fm_total_ecr +
-                 bid_metrics(defender_bid).fm_total_ecr) +
-                [&]() {
-                  switch (ready0) {
-                  case ReadyStatus::NEITHERREADY: {
-                    return UINT64_C(2);
-                  }
-                  case ReadyStatus::BOTHREADY: {
-                    return UINT64_C(0);
-                  }
-                  default: {
-                    return UINT64_C(1);
-                  }
-                  }
-                }());
+        return bid_metrics(attacker_bid).fm_total_ecr +
+               bid_metrics(defender_bid).fm_total_ecr + [&]() {
+                 switch (ready0) {
+                 case ReadyStatus::NEITHERREADY: {
+                   return UINT64_C(2);
+                 }
+                 case ReadyStatus::BOTHREADY: {
+                   return UINT64_C(0);
+                 }
+                 default: {
+                   return UINT64_C(1);
+                 }
+                 }
+               }();
       } else {
         return UINT64_C(0);
       }

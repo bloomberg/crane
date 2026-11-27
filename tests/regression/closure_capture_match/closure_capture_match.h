@@ -110,15 +110,15 @@ struct ClosureCaptureMatch {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
-          return (a1 + x);
+          return a1 + x;
         } else {
           const auto &[_, a10, _] = std::get<typename tree::Node>(_sv0.v());
           auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
-            return (a10 + x);
+            return a10 + x;
           } else {
             const auto &[_, a11, _] = std::get<typename tree::Node>(_sv1.v());
-            return (((a10 + a11) + a1) + x);
+            return a10 + a11 + a1 + x;
           }
         }
       }
@@ -246,7 +246,7 @@ struct ClosureCaptureMatch {
       crane::fn<uint64_t(uint64_t)> f =
           [=](uint64_t _x0) -> uint64_t { return t.deep_capture(_x0); };
       fn_box b = box_from_match(std::move(t));
-      return (f(UINT64_C(5)) + b.unbox(UINT64_C(7)));
+      return f(UINT64_C(5)) + b.unbox(UINT64_C(7));
     }();
   }();
 };

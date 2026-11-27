@@ -66,6 +66,6 @@ struct FactoryHidesFieldType {
 
   static uint64_t area(const shape &s);
   static inline const uint64_t result =
-      (area(shape::tag(pt{UINT64_C(2), UINT64_C(3)})) +
-       area(shape::Pt_(pt{UINT64_C(2), UINT64_C(3)})));
+      area(shape::tag(pt{UINT64_C(2), UINT64_C(3)})) +
+      area(shape::Pt_(pt{UINT64_C(2), UINT64_C(3)}));
 };

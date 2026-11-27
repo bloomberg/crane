@@ -100,7 +100,7 @@ public:
 /// -Wdivision-by-zero under the suite's -Werror.  The value is right.
 struct DivByLiteralZeroGuard {
   template <typename T1> static uint64_t f(const T1 &) {
-    return (UINT64_C(0) + UINT64_C(5));
+    return UINT64_C(0) + UINT64_C(5);
   }
 
   static inline const uint64_t t = f<bool>(true);

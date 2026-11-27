@@ -101,7 +101,7 @@ struct FixLetBinderSelfReference {
           crane::fn<
               uint64_t(crane::fn<uint64_t(List<uint64_t>)>, List<uint64_t>)> h =
               [](const crane::fn<uint64_t(List<uint64_t>)> &g,
-                 const List<uint64_t> &l) { return (g(l) + UINT64_C(1)); };
+                 const List<uint64_t> &l) { return g(l) + UINT64_C(1); };
           auto f_impl = [=](auto &_self_f, List<uint64_t> l) -> uint64_t {
             crane::fn<uint64_t(List<uint64_t>)> h0 =
                 [=, h = h](List<uint64_t> _pa0) {
@@ -130,10 +130,10 @@ struct FixLetBinderSelfReference {
         }();
       }();
   static inline const uint64_t result =
-      (both.first(List<uint64_t>::cons(
-           UINT64_C(4),
-           List<uint64_t>::cons(
-               UINT64_C(5),
-               List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil())))) +
-       both.second(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil())));
+      both.first(List<uint64_t>::cons(
+          UINT64_C(4),
+          List<uint64_t>::cons(
+              UINT64_C(5),
+              List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil())))) +
+      both.second(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
 };

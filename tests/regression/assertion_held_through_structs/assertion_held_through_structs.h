@@ -23,8 +23,8 @@ struct AssertionHeldThroughStructs {
     };
 
     static inline const uint64_t run =
-        ((S::lookup(UINT64_C(1)) + Inner::S2::lookup(UINT64_C(2))) +
-         Inner::hk::getk(UINT64_C(3)));
+        S::lookup(UINT64_C(1)) + Inner::S2::lookup(UINT64_C(2)) +
+        Inner::hk::getk(UINT64_C(3));
   };
 };
 

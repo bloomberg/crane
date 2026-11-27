@@ -7,7 +7,7 @@ CraneMoveHunt::box CraneMoveHunt::clone_box(const CraneMoveHunt::box &b) {
 CraneMoveHunt::box CraneMoveHunt::keep_box(CraneMoveHunt::box b) { return b; }
 
 uint64_t CraneMoveHunt::use_state(const CraneMoveHunt::state &s) {
-  return (s.core.payload + s.cursor.payload);
+  return s.core.payload + s.cursor.payload;
 }
 
 CraneMoveHunt::state
@@ -17,7 +17,7 @@ CraneMoveHunt::render_state(const CraneMoveHunt::state &s) {
 
 uint64_t CraneMoveHunt::sound_state(const CraneMoveHunt::state &before,
                                     const CraneMoveHunt::state &after) {
-  return (use_state(before) + use_state(after));
+  return use_state(before) + use_state(after);
 }
 
 CraneMoveHunt::state
@@ -128,7 +128,7 @@ CraneMoveHunt::state axiom_nat_pair_frame(const CraneMoveHunt::state &s0) {
   auto [quit, s1] = CraneMoveHunt::handle_state(s0);
   CraneMoveHunt::state s2 = CraneMoveHunt::resolve_state(s1);
   uint64_t n = toy_tick_nat(s1);
-  if ((quit || n == UINT64_C(0))) {
+  if ((quit || (n == UINT64_C(0)))) {
     return s2;
   } else {
     return std::move(s1);

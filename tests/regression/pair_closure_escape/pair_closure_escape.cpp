@@ -9,18 +9,18 @@ uint64_t PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
         std::get<typename PairClosureEscape::tree::Node>(t.v());
     auto &&_sv0 = *a0;
     if (std::holds_alternative<typename PairClosureEscape::tree::Leaf>(_sv0.v())) {
-      return (a1 + x);
+      return a1 + x;
     } else {
       const auto &[_, a10, _] =
           std::get<typename PairClosureEscape::tree::Node>(_sv0.v());
       auto &&_sv1 = *a2;
       if (std::holds_alternative<typename PairClosureEscape::tree::Leaf>(
               _sv1.v())) {
-        return (a10 + x);
+        return a10 + x;
       } else {
         const auto &[_, a11, _] =
             std::get<typename PairClosureEscape::tree::Node>(_sv1.v());
-        return (((a10 + a11) + a1) + x);
+        return a10 + a11 + a1 + x;
       }
     }
   }

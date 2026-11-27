@@ -3,8 +3,8 @@
 bool HistoricalEventSafetyTraceCase::is_safe_bool(
     const HistoricalEventSafetyTraceCase::PlantConfig &pconf,
     const HistoricalEventSafetyTraceCase::State &s) {
-  return (s.reservoir_level_cm <= pconf.max_reservoir_cm &&
-          s.downstream_stage_cm <= pconf.max_downstream_cm);
+  return ((s.reservoir_level_cm <= pconf.max_reservoir_cm) &&
+          (s.downstream_stage_cm <= pconf.max_downstream_cm));
 }
 
 uint64_t HistoricalEventSafetyTraceCase::event_to_inflow(

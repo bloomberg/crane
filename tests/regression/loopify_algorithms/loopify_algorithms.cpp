@@ -212,7 +212,7 @@ List<uint64_t> LoopifyAlgorithms::prefix_sums(uint64_t acc,
                   : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      acc = (acc + a0);
+      acc = acc + a0;
       continue;
     }
   }
@@ -246,7 +246,7 @@ List<uint64_t> LoopifyAlgorithms::differences(const List<uint64_t> &l) {
         const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         auto _cell = typename List<uint64_t>::Cons(
-            (((a00 - a0) > a00 ? 0 : (a00 - a0))), nullptr);
+            (a00 - a0 > a00 ? 0 : a00 - a0), nullptr);
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
@@ -280,7 +280,7 @@ List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
           const auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l.v());
           _loop_l = a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
-          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
           fuel = f;
         }
       }
@@ -616,7 +616,7 @@ uint64_t LoopifyAlgorithms::max_prefix_sum(const List<uint64_t> &l) {
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t rest = _result;
-      uint64_t sum = (a0 + rest);
+      uint64_t sum = a0 + rest;
       if (rest == UINT64_C(0)) {
         _result = UINT64_C(0);
       } else if (rest < sum) {
@@ -666,7 +666,7 @@ uint64_t LoopifyAlgorithms::weighted_sum(uint64_t i, const List<uint64_t> &l) {
       _stack.pop_back();
       uint64_t i = _f.i;
       uint64_t a0 = _f.a0;
-      _result = ((i * a0) + _result);
+      _result = i * a0 + _result;
     }
   }
   return _result;
@@ -702,7 +702,7 @@ uint64_t LoopifyAlgorithms::step_sum(const List<uint64_t> &l) {
         if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
           contribution = a0;
         } else {
-          contribution = (a0 * UINT64_C(2));
+          contribution = a0 * UINT64_C(2);
         }
         _stack.emplace_back(_after_step_sum_in_Cons{contribution});
         _stack.emplace_back(_call{crane_raw(a1)});
@@ -711,7 +711,7 @@ uint64_t LoopifyAlgorithms::step_sum(const List<uint64_t> &l) {
       auto _f = std::move(std::get<_after_step_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t contribution = _f.contribution;
-      _result = (contribution + _result);
+      _result = contribution + _result;
     }
   }
   return _result;
@@ -761,7 +761,7 @@ List<uint64_t> LoopifyAlgorithms::suffix_sums(const List<uint64_t> &l) {
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<uint64_t> rest = std::move(_result);
-      _result = List<uint64_t>::cons((a0 + head_nat(UINT64_C(0), rest)), rest);
+      _result = List<uint64_t>::cons(a0 + head_nat(UINT64_C(0), rest), rest);
     }
   }
   return _result;

@@ -23,7 +23,7 @@ uint64_t stmtest::io_inc(uint64_t x) {
 uint64_t stmtest::stm_add_self(uint64_t x) {
   stm::TVar<uint64_t> c = stm::newTVar<uint64_t>(x);
   uint64_t v = stm::readTVar(c);
-  stm::writeTVar(c, (v + x));
+  stm::writeTVar(c, v + x);
   return stm::readTVar(std::move(c));
 }
 

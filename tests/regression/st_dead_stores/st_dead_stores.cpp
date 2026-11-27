@@ -38,7 +38,7 @@ uint64_t written_in_branch(bool b) {
       return UINT64_C(2);
     }
   }();
-  return (x + UINT64_C(10));
+  return x + UINT64_C(10);
 }
 
 uint64_t written_in_unused_branch(bool b) {

@@ -134,7 +134,7 @@ struct ImplicitArgs {
       return UINT64_C(0);
     } else {
       const auto &[_, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-      return (UINT64_C(1) + length<T1>(*a1));
+      return UINT64_C(1) + length<T1>(*a1);
     }
   }
 
@@ -159,7 +159,7 @@ struct ImplicitArgs {
   }
 
   static inline const uint64_t use_apply_implicit = apply_implicit(
-      [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
+      [](uint64_t _x0) -> uint64_t { return UINT64_C(1) + _x0; },
       UINT64_C(5));
   static uint64_t with_base(uint64_t x0_, uint64_t x1_);
   static uint64_t from_zero(uint64_t x0_);
@@ -203,7 +203,7 @@ struct ImplicitArgs {
   static inline const uint64_t test_compose =
       compose<uint64_t, uint64_t, uint64_t>(
           double_nat,
-          [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
+          [](uint64_t _x0) -> uint64_t { return UINT64_C(1) + _x0; },
           UINT64_C(3));
   static inline const uint64_t test_length =
       length<uint64_t>(

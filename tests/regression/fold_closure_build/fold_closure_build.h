@@ -169,12 +169,12 @@ struct FoldClosureBuild {
           fold_left<crane::fn<uint64_t(uint64_t)>, uint64_t>(
               [](crane::fn<uint64_t(uint64_t)> acc, uint64_t h) {
                 return [=, acc = std::move(acc)](uint64_t x) {
-                  return acc((h + x));
+                  return acc(h + x);
                 };
               },
               [](uint64_t x) { return x; },
               std::move(l));
-      return (f(UINT64_C(0)) + f(UINT64_C(100)));
+      return f(UINT64_C(0)) + f(UINT64_C(100));
     }();
   }();
   /// Pattern 3: Fold producing a list of closures (not composing them).

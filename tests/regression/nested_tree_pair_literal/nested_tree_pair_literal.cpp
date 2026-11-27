@@ -10,6 +10,6 @@ uint64_t NestedTreePairLiteral::size(const NestedTreePairLiteral::tree &t) {
   } else {
     const auto &[a0] =
         std::get<typename NestedTreePairLiteral::tree::Nd>(t.v());
-    return (UINT64_C(2) * size(*a0));
+    return UINT64_C(2) * size(*a0);
   }
 }

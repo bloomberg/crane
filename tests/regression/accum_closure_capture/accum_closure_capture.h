@@ -224,11 +224,11 @@ struct AccumClosureCapture {
       } else {
         const auto &[_, a1, _] = std::get<typename tree::Node>(this->v());
         return fn_list::fcons(
-            [=](uint64_t x) { return (x + _self_val.tree_sum()); },
+            [=](uint64_t x) { return x + _self_val.tree_sum(); },
             fn_list::fcons(
-                [=](uint64_t x) { return (x + a1); },
+                [=](uint64_t x) { return x + a1; },
                 fn_list::fcons(
-                    [=](uint64_t x) { return (x + _self_val.tree_sum()); },
+                    [=](uint64_t x) { return x + _self_val.tree_sum(); },
                     fn_list::fnil())));
       }
     }
@@ -282,7 +282,7 @@ struct AccumClosureCapture {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;

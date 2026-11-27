@@ -183,11 +183,10 @@ struct HistoricalEventSafetyTraceCase {
   static State step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
                          const PlantConfig &pconf, const State &s, uint64_t t) {
     uint64_t out = std::min(
-        (UINT64_C(100) ? (pconf.gate_capacity_cm * ctrl(s, t)) / UINT64_C(100)
-                       : 0),
-        (s.reservoir_level_cm + inflow(t)));
-    auto _once1 = (s.reservoir_level_cm + inflow(t));
-    uint64_t new_level = (((_once1 - out) > _once1 ? 0 : (_once1 - out)));
+        UINT64_C(100) ? pconf.gate_capacity_cm * ctrl(s, t) / UINT64_C(100) : 0,
+        s.reservoir_level_cm + inflow(t));
+    auto _once1 = s.reservoir_level_cm + inflow(t);
+    uint64_t new_level = (_once1 - out > _once1 ? 0 : _once1 - out);
     uint64_t new_stage = stage_fn(out);
     return State{new_level, new_stage, ctrl(s, t)};
   }

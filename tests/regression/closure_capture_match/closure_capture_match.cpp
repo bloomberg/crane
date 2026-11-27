@@ -7,6 +7,6 @@ ClosureCaptureMatch::box_from_match(const ClosureCaptureMatch::tree &t) {
   } else {
     const auto &[_, a1, _] =
         std::get<typename ClosureCaptureMatch::tree::Node>(t.v());
-    return fn_box::box([=](uint64_t x) { return (a1 + x); });
+    return fn_box::box([=](uint64_t x) { return a1 + x; });
   }
 }

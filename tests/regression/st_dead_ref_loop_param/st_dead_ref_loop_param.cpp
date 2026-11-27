@@ -16,5 +16,5 @@ uint64_t st_1() {
   };
   uint64_t y = h(UINT64_C(4), UINT64_C(1));
   auto [a, b] = r0;
-  return (((y * UINT64_C(10)) + a) + b);
+  return y * UINT64_C(10) + a + b;
 }

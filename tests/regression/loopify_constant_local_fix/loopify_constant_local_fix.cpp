@@ -73,7 +73,7 @@ uint64_t Nat::pow(uint64_t n, uint64_t m) {
     } else {
       auto _f = std::move(std::get<_after_pow_in_S>(_popped));
       _stack.pop_back();
-      _result = (n * _result);
+      _result = n * _result;
     }
   }
   return _result;

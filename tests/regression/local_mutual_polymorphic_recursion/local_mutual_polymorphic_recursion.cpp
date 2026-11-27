@@ -37,7 +37,7 @@ uint64_t LocalMutualPolymorphicRecursion::run(uint64_t n) {
          crane::obj x, uint64_t n0)
            -> uint64_t {
         if (n0 <= 0) {
-          return (h(x) + UINT64_C(1));
+          return h(x) + UINT64_C(1);
         } else {
           uint64_t m = n0 - 1;
           return _self_f(_self_f, _self_g, h, x, m);

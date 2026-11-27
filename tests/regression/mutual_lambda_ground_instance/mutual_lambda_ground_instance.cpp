@@ -8,7 +8,7 @@
 /// ground type instantiates the partner like any other constant.  g
 /// calls back with a named function, whose type is the same at every
 /// instance; a lambda there is mutual_lambda_other_instance.
-uint64_t MutualLambdaGroundInstance::dbl(uint64_t k) { return (k + k); }
+uint64_t MutualLambdaGroundInstance::dbl(uint64_t k) { return k + k; }
 
 uint64_t MutualLambdaGroundInstance::run(uint64_t n) {
   return f<List<uint64_t>>(

@@ -60,8 +60,8 @@ uint64_t bitwise(F0 &&op, uint64_t n, uint64_t a, uint64_t b) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    return ((op(odd(a), odd(b)) ? UINT64_C(1) : UINT64_C(0)) +
-            (UINT64_C(2) * bitwise(op, n_, div2(a), div2(b))));
+    return (op(odd(a), odd(b)) ? UINT64_C(1) : UINT64_C(0)) +
+           UINT64_C(2) * bitwise(op, n_, div2(a), div2(b));
   }
 }
 

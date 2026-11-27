@@ -99,10 +99,10 @@ struct FixSharedPtrField {
                                      uint64_t x)
                  -> uint64_t {
               if (x <= 0) {
-                return (a0 + a1_value.mylist_sum());
+                return a0 + a1_value.mylist_sum();
               } else {
                 uint64_t x_ = x - 1;
-                return (UINT64_C(1) + _self_compute(_self_compute, x_));
+                return UINT64_C(1) + _self_compute(_self_compute, x_);
               }
             };
         auto compute =
@@ -147,7 +147,7 @@ struct FixSharedPtrField {
           auto _f =
               std::move(std::get<_after_mylist_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -188,7 +188,7 @@ struct FixSharedPtrField {
           auto _f = std::move(std::get<_after_mylist_sum_in_Mycons>(_popped));
           _stack.pop_back();
           uint64_t a0 = _f.a0;
-          _result = (a0 + _result);
+          _result = a0 + _result;
         }
       }
       return _result;

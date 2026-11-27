@@ -377,8 +377,7 @@ struct TypedFitKnownClass {
                                                                     AskE::ASK)),
               [=](uint64_t y) {
                 return Itree<AskE, uint64_t>::go(
-                    ItreeF<AskE, uint64_t, Itree<AskE, uint64_t>>::retf((x +
-                                                                         y)));
+                    ItreeF<AskE, uint64_t, Itree<AskE, uint64_t>>::retf(x + y));
               });
         });
   }();

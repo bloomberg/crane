@@ -124,10 +124,10 @@ struct SrcUsesPairValue {
                                            UINT64_C(0), UINT64_C(0),
                                            UINT64_C(0), UINT64_C(0)};
   static inline const state after = execute_src(sample, UINT64_C(3));
-  static inline const bool t =
-      (after.sel_rom == UINT64_C(1) &&
-       (after.sel_chip == UINT64_C(0) &&
-        (after.sel_reg == UINT64_C(1) && after.sel_char == UINT64_C(11))));
+  static inline const bool t = (
+      (after.sel_rom == UINT64_C(1)) &&
+      ((after.sel_chip == UINT64_C(0)) &&
+       ((after.sel_reg == UINT64_C(1)) && (after.sel_char == UINT64_C(11)))));
 };
 
 template <typename T1>

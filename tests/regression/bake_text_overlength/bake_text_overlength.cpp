@@ -26,7 +26,7 @@ Positive Pos::pred_double(const Positive &x) {
 
 uint64_t Pos::to_nat(const Positive &x) {
   return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; },
       x,
       UINT64_C(1));
 }
@@ -98,7 +98,7 @@ List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
 bool Uint63Axioms::is_zero(int64_t i) { return i == INT64_C(0); }
 
 bool Uint63Axioms::is_even(int64_t i) {
-  return Uint63Axioms::is_zero((i & INT64_C(1)));
+  return Uint63Axioms::is_zero(i & INT64_C(1));
 }
 
 Z Uint63Axioms::to_Z_rec(uint64_t n, int64_t i) {
@@ -134,13 +134,13 @@ int64_t Uint63Axioms::of_pos_rec(uint64_t n, const Positive &p) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
       return (
-          (INT64_C(1) >= 63
-               ? 0
-               : static_cast<int64_t>((
-                     static_cast<uint64_t>(Uint63Axioms::of_pos_rec(n0, *a0)) <<
+          INT64_C(1) >= 63
+              ? 0
+              : static_cast<int64_t>(
+                    (static_cast<uint64_t>(Uint63Axioms::of_pos_rec(n0, *a0)) <<
                      (INT64_C(1) & 63)) &
-                                      0x7FFFFFFFFFFFFFFFULL)) |
-          INT64_C(1));
+                    UINT64_C(9223372036854775807))) |
+             INT64_C(1);
     } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XO>(p.v());
       return (
@@ -149,7 +149,7 @@ int64_t Uint63Axioms::of_pos_rec(uint64_t n, const Positive &p) {
               : static_cast<int64_t>(
                     (static_cast<uint64_t>(Uint63Axioms::of_pos_rec(n0, *a0)) <<
                      (INT64_C(1) & 63)) &
-                    0x7FFFFFFFFFFFFFFFULL));
+                    UINT64_C(9223372036854775807)));
     } else {
       return INT64_C(1);
     }
@@ -169,9 +169,8 @@ int64_t Uint63Axioms::of_Z(const Z &z) {
   } else {
     const auto &[a0] = std::get<typename Z::Zneg>(z.v());
     return static_cast<int64_t>(
-        (static_cast<uint64_t>(INT64_C(0)) -
-         static_cast<uint64_t>(Uint63Axioms::of_pos(a0))) &
-        0x7FFFFFFFFFFFFFFFULL);
+        (UINT64_C(0) - static_cast<uint64_t>(Uint63Axioms::of_pos(a0))) &
+        UINT64_C(9223372036854775807));
   }
 }
 

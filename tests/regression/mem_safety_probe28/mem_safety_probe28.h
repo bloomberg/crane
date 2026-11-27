@@ -318,6 +318,6 @@ struct MemSafetyProbe28 {
     tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                          UINT64_C(20),
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    return (zip_trees(t1, t2) + zip_depth(t1, t2));
+    return zip_trees(t1, t2) + zip_depth(t1, t2);
   }();
 };

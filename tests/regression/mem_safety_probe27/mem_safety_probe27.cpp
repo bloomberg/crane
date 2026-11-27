@@ -47,7 +47,7 @@ uint64_t MemSafetyProbe27::tree_sum(const MemSafetyProbe27::tree &t) {
       auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + a1) + _result);
+      _result = _f._tmp2 + a1 + _result;
     }
   }
   return _result;
@@ -96,7 +96,7 @@ uint64_t MemSafetyProbe27::tree_depth(const MemSafetyProbe27::tree &t) {
     } else {
       auto _f = std::move(std::get<_after_tree_depth_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + std::max(_f._tmp2, _result));
+      _result = UINT64_C(1) + std::max(_f._tmp2, _result);
     }
   }
   return _result;
@@ -108,8 +108,9 @@ uint64_t MemSafetyProbe27::tree_depth(const MemSafetyProbe27::tree &t) {
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 MemSafetyProbe27::pair_with_fn(MemSafetyProbe27::tree t) {
   return std::make_pair(
-      crane::fn<uint64_t(uint64_t)>(
-          [=](uint64_t x) { return (x + tree_sum(t)); }),
+      crane::fn<uint64_t(uint64_t)>([=](uint64_t x) {
+        return x + tree_sum(t);
+      }),
       tree_sum(t));
 }
 
@@ -121,12 +122,12 @@ MemSafetyProbe27::cond_pair_fn(MemSafetyProbe27::tree t, bool b) {
   if (b) {
     return std::make_pair(
         crane::fn<uint64_t(uint64_t)>(
-            [=, t = std::move(t)](uint64_t x) { return (x + tree_sum(t)); }),
+            [=, t = std::move(t)](uint64_t x) { return x + tree_sum(t); }),
         UINT64_C(1));
   } else {
     return std::make_pair(
         crane::fn<uint64_t(uint64_t)>(
-            [=, t = std::move(t)](uint64_t x) { return (x + tree_depth(t)); }),
+            [=, t = std::move(t)](uint64_t x) { return x + tree_depth(t); }),
         UINT64_C(2));
   }
 }
@@ -137,7 +138,7 @@ MemSafetyProbe27::pair_two_trees(MemSafetyProbe27::tree t1,
                                  MemSafetyProbe27::tree t2) {
   return std::make_pair(
       crane::fn<uint64_t(uint64_t)>([=, t2 = std::move(t2)](uint64_t x) {
-        return ((x + tree_sum(t1)) + tree_sum(t2));
+        return x + tree_sum(t1) + tree_sum(t2);
       }),
       tree_sum(t1));
 }
@@ -148,7 +149,7 @@ MemSafetyProbe27::opt_tree_fn(MemSafetyProbe27::tree t, bool b) {
   if (b) {
     return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
         crane::fn<uint64_t(uint64_t)>(
-            [=, t = std::move(t)](uint64_t x) { return (x + tree_sum(t)); }));
+            [=, t = std::move(t)](uint64_t x) { return x + tree_sum(t); }));
   } else {
     return std::optional<crane::fn<uint64_t(uint64_t)>>();
   }
@@ -158,8 +159,7 @@ MemSafetyProbe27::opt_tree_fn(MemSafetyProbe27::tree t, bool b) {
 /// Tests that the inner closure correctly clones the tree.
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 MemSafetyProbe27::nested_closure_pair(MemSafetyProbe27::tree t) {
-  crane::fn<uint64_t(uint64_t)> f =
-      [=](uint64_t x) { return (x + tree_sum(t)); };
+  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t x) { return x + tree_sum(t); };
   return std::make_pair(
       crane::fn<uint64_t(uint64_t)>(
           [=, f = std::move(f)](uint64_t x) { return f(f(x)); }),
@@ -173,10 +173,10 @@ std::pair<
   return std::make_pair(
       std::make_pair(
           crane::fn<uint64_t(uint64_t)>(
-              [=](uint64_t x) { return (x + tree_sum(t)); }),
+              [=](uint64_t x) { return x + tree_sum(t); }),
           crane::fn<uint64_t(uint64_t)>(
-              [=](uint64_t x) { return (x + tree_depth(t)); })),
-      (tree_sum(t) + tree_depth(t)));
+              [=](uint64_t x) { return x + tree_depth(t); })),
+      tree_sum(t) + tree_depth(t));
 }
 
 /// TEST 7: Closure and tree value stored together in a pair.
@@ -185,8 +185,9 @@ std::pair<
 std::pair<crane::fn<uint64_t(uint64_t)>, MemSafetyProbe27::tree>
 MemSafetyProbe27::fn_and_tree(MemSafetyProbe27::tree t) {
   return std::make_pair(
-      crane::fn<uint64_t(uint64_t)>(
-          [=](uint64_t x) { return (x + tree_sum(t)); }),
+      crane::fn<uint64_t(uint64_t)>([=](uint64_t x) {
+        return x + tree_sum(t);
+      }),
       t);
 }
 
@@ -197,7 +198,7 @@ MemSafetyProbe27::wrapped_fn(MemSafetyProbe27::tree t, bool b) {
   return std::make_pair(
       (b ? std::make_optional<crane::fn<uint64_t(uint64_t)>>(
                crane::fn<uint64_t(uint64_t)>(
-                   [=](uint64_t x) { return (x + tree_sum(t)); }))
+                   [=](uint64_t x) { return x + tree_sum(t); }))
          : std::optional<crane::fn<uint64_t(uint64_t)>>()),
       tree_sum(t));
 }

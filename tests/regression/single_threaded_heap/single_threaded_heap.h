@@ -233,13 +233,11 @@ struct SingleThreadedHeap {
         ListDef::seq(UINT64_C(0), UINT64_C(200)).template fold_left<tree>(
             [](const tree &t0, uint64_t k) { return insert(k, t0); },
             tree::leaf());
-    return (size(std::move(t)) +
-            adder(UINT64_C(5), ListDef::seq(UINT64_C(0),
-                                            UINT64_C(1000))
-                                   .template map<uint64_t>(
-                                   [](uint64_t x) {
-                                     return (x + 1);
-                                   })
-                                   .length()));
+    return size(std::move(t)) +
+           adder(
+               UINT64_C(5),
+               ListDef::seq(UINT64_C(0), UINT64_C(1000)).template map<uint64_t>(
+                   [](uint64_t x) { return (x + 1); })
+                   .length());
   }();
 };

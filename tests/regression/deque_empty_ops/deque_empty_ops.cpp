@@ -1,6 +1,6 @@
 #include "deque_empty_ops.h"
 
-uint64_t DequeEmptyOps::double_(uint64_t n) { return (n * UINT64_C(2)); }
+uint64_t DequeEmptyOps::double_(uint64_t n) { return n * UINT64_C(2); }
 
 std::deque<uint64_t> DequeEmptyOps::dup(uint64_t n) {
   return [](auto _a0, auto _a1) {

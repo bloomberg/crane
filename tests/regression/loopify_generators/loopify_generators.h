@@ -251,7 +251,7 @@ struct LoopifyGenerators {
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
           seed = next_seed;
-          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
           fuel = g;
           continue;
         }
@@ -303,8 +303,8 @@ struct LoopifyGenerators {
         auto _f = std::move(std::get<_after_go_in_S>(_popped));
         _lc1_stack.pop_back();
         uint64_t _lc1_i = _f.i;
-        _lc1_result = List<uint64_t>::cons(
-            f((((n - _lc1_i) > n ? 0 : (n - _lc1_i)))), std::move(_lc1_result));
+        _lc1_result = List<uint64_t>::cons(f((n - _lc1_i > n ? 0 : n - _lc1_i)),
+                                           std::move(_lc1_result));
       }
     }
     return _lc1_result;

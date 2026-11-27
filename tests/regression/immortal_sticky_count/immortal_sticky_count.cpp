@@ -30,6 +30,6 @@ uint64_t ImmortalStickyCount::sizes(uint64_t n, uint64_t acc) {
     return acc;
   } else {
     uint64_t k = n - 1;
-    return sizes(k, (acc + size(table)));
+    return sizes(k, acc + size(table));
   }
 }

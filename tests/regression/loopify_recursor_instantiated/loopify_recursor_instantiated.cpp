@@ -105,7 +105,7 @@ LoopifyRecursorInstantiated::size(const LoopifyRecursorInstantiated::expr &e) {
     } else if (std::holds_alternative<_after_size_in_Ite_3>(_popped)) {
       auto _f = std::move(std::get<_after_size_in_Ite_3>(_popped));
       _stack.pop_back();
-      _result = (((_f._tmp4 + _f._tmp3) + _result) + 1);
+      _result = ((_f._tmp4 + _f._tmp3 + _result) + 1);
     } else if (std::holds_alternative<_after_size_in_PairE>(_popped)) {
       auto _f = std::move(std::get<_after_size_in_PairE>(_popped));
       _stack.pop_back();

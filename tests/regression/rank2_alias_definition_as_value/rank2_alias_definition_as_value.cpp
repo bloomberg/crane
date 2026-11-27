@@ -5,7 +5,7 @@ uint64_t Rank2AliasDefinitionAsValue::csum(
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto erased_fn = crane::immortal(crane_erase_fn<crane::obj>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }));
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; }));
   return crane::any_cast<uint64_t>(l(erased_fn, UINT64_C(0)));
 }
 
@@ -14,7 +14,7 @@ Rank2AliasDefinitionAsValue::fsum(const Rank2AliasDefinitionAsValue::nfold &l) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto erased_fn = crane::immortal(crane_erase_fn<crane::obj>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }));
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; }));
   return crane::any_cast<uint64_t>(l(erased_fn, UINT64_C(0)));
 }
 

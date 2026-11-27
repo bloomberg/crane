@@ -266,7 +266,7 @@ uint64_t LoopifyGrouping::count_elem(uint64_t x, const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_count_elem_in_true>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;

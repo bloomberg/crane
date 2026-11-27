@@ -243,7 +243,7 @@ struct LiftedHelperFramePointer {
         auto _f =
             std::move(std::get<_after_zigzag_crane_go_in_Node_2>(_popped));
         _stack.pop_back();
-        _result = (_f._tmp2 + _result);
+        _result = _f._tmp2 + _result;
       }
     }
     return _result;
@@ -302,7 +302,7 @@ struct LiftedHelperFramePointer {
       } else {
         auto _f = std::move(std::get<_after_go_ref_in_Node_2>(_popped));
         _stack.pop_back();
-        _result = (_f._tmp2 + _result);
+        _result = _f._tmp2 + _result;
       }
     }
     return _result;

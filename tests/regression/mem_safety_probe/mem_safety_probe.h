@@ -94,7 +94,7 @@ struct MemSafetyProbe {
     /// A function that creates a closure capturing TWO different trees.
     /// Both must be correctly cloned or captured by value.
     uint64_t combine_trees(const tree &t2, uint64_t x) const {
-      return (this->sum_values(x) + t2.sum_values(x));
+      return this->sum_values(x) + t2.sum_values(x);
     }
 
     /// ---- TEST 9: Map tree with closure ----
@@ -180,15 +180,15 @@ struct MemSafetyProbe {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
-          return (a1 + x);
+          return a1 + x;
         } else {
           const auto &[_, a10, _] = std::get<typename tree::Node>(_sv0.v());
           auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
-            return (a10 + x);
+            return a10 + x;
           } else {
             const auto &[_, a11, _] = std::get<typename tree::Node>(_sv1.v());
-            return (((a10 + a11) + a1) + x);
+            return a10 + a11 + a1 + x;
           }
         }
       }
@@ -471,7 +471,7 @@ struct MemSafetyProbe {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
         t.pair_of_closures();
-    return (p.first(UINT64_C(10)) + p.second(UINT64_C(100)));
+    return p.first(UINT64_C(10)) + p.second(UINT64_C(100));
   }();
   /// ---- TEST 4: Fold composing closures ----
   /// Each iteration wraps the accumulator in a new closure that captures
@@ -513,7 +513,7 @@ struct MemSafetyProbe {
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     fn_box b = make_box(std::move(t));
-    return (b.apply_box(UINT64_C(0)) + b.apply_box(UINT64_C(99)));
+    return b.apply_box(UINT64_C(0)) + b.apply_box(UINT64_C(99));
   }();
   /// ---- TEST 8: Two closures capture the same tree ----
   /// Both must independently own data. The second partial application
@@ -525,14 +525,14 @@ struct MemSafetyProbe {
           [=](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); };
       crane::fn<uint64_t(uint64_t)> g =
           [&](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); };
-      return (f(UINT64_C(1)) + g(UINT64_C(2)));
+      return f(UINT64_C(1)) + g(UINT64_C(2));
     }();
   }();
   static inline const uint64_t test_map_tree = []() {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    tree t2 = t.map_tree([](uint64_t n) { return (n + UINT64_C(1)); });
+    tree t2 = t.map_tree([](uint64_t n) { return n + UINT64_C(1); });
     return t2.sum_values(UINT64_C(0));
   }();
   /// ---- TEST 10: Partial application stored in Box via match ----

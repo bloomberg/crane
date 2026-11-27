@@ -19,7 +19,7 @@ uint64_t RecursiveMonadic::sum_list(const List<uint64_t> &xs) {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
     std::cout << std::string("adding") << '\n';
     uint64_t s = sum_list(*a1);
-    return (a0 + s);
+    return a0 + s;
   }
 }
 
@@ -31,7 +31,7 @@ List<int64_t> RecursiveMonadic::collect_lengths(const List<std::string> &xs) {
     const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
     std::cout << a0 << '\n';
     return List<int64_t>::cons(
-        static_cast<int64_t>((std::string_view{a0}).size()),
+        static_cast<int64_t>(std::string_view{a0}.size()),
         collect_lengths(*a1));
   }
 }

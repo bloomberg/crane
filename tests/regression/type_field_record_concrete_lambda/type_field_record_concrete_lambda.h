@@ -134,6 +134,6 @@ struct TypeFieldRecordConcreteLambda {
   static inline const List<alg> algs =
       List<alg>::cons(nat_alg, List<alg>::cons(bool_alg, List<alg>::nil()));
   static inline const uint64_t result = algs.template fold_left<uint64_t>(
-      [](uint64_t acc, const alg &a) { return (acc + run(a)); },
+      [](uint64_t acc, const alg &a) { return acc + run(a); },
       UINT64_C(0));
 };

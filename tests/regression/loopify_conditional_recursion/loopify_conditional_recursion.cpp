@@ -34,8 +34,7 @@ LoopifyConditionalRecursion::cached_sum(std::optional<uint64_t> cache,
           const uint64_t &v = *cache;
           sub = std::make_pair(v, UINT64_C(0));
           {
-            _result =
-                std::make_pair((a0 + sub.first), (sub.second + UINT64_C(1)));
+            _result = std::make_pair(a0 + sub.first, sub.second + UINT64_C(1));
           }
         } else {
           _stack.emplace_back(_after_cached_sum_in_None{a0});
@@ -47,7 +46,7 @@ LoopifyConditionalRecursion::cached_sum(std::optional<uint64_t> cache,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
-      _result = std::make_pair((a0 + sub.first), (sub.second + UINT64_C(1)));
+      _result = std::make_pair(a0 + sub.first, sub.second + UINT64_C(1));
     }
   }
   return _result;
@@ -82,8 +81,8 @@ LoopifyConditionalRecursion::find_or_recurse(uint64_t target,
         if (a0 == target) {
           sub = std::make_pair(a0, *a1);
           {
-            _result = std::make_pair((sub.first + UINT64_C(1)),
-                                     std::move(sub).second);
+            _result =
+                std::make_pair(sub.first + UINT64_C(1), std::move(sub.second));
           }
         } else {
           _stack.emplace_back(_after_find_or_recurse_in_false{});
@@ -94,8 +93,7 @@ LoopifyConditionalRecursion::find_or_recurse(uint64_t target,
       auto _f = std::move(std::get<_after_find_or_recurse_in_false>(_popped));
       _stack.pop_back();
       auto sub = std::move(_result);
-      _result =
-          std::make_pair((sub.first + UINT64_C(1)), std::move(sub).second);
+      _result = std::make_pair(sub.first + UINT64_C(1), std::move(sub.second));
     }
   }
   return _result;
@@ -131,7 +129,7 @@ LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
           if (a0 <= hi) {
             sub = std::make_pair(a0, true);
             {
-              _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
+              _result = sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0));
             }
           } else if (a0 <= threshold) {
             _stack.emplace_back(_after_nested_cond_in_true{});
@@ -139,13 +137,13 @@ LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
           } else {
             sub = std::make_pair(UINT64_C(0), true);
             {
-              _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
+              _result = sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0));
             }
           }
         } else {
           sub = std::make_pair(UINT64_C(0), true);
           {
-            _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
+            _result = sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0));
           }
         }
       }
@@ -153,7 +151,7 @@ LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
       auto _f = std::move(std::get<_after_nested_cond_in_true>(_popped));
       _stack.pop_back();
       std::pair<uint64_t, bool> sub = std::make_pair(_result, false);
-      _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
+      _result = sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0));
     }
   }
   return _result;
@@ -203,14 +201,13 @@ LoopifyConditionalRecursion::multi_return(
             if (payload.has_value()) {
               const std::pair<uint64_t, uint64_t> &p = *payload;
               const auto &[a, b] = p;
-              _result =
-                  std::make_pair(
-                      (count + UINT64_C(1)),
-                      std::make_optional<std::pair<uint64_t, uint64_t>>(
-                          std::make_pair((a + a0), b)));
+              _result = std::make_pair(
+                  count + UINT64_C(1),
+                  std::make_optional<std::pair<uint64_t, uint64_t>>(
+                      std::make_pair(a + a0, b)));
             } else {
               _result = std::make_pair(
-                  (count + UINT64_C(1)),
+                  count + UINT64_C(1),
                   std::optional<std::pair<uint64_t, uint64_t>>());
             }
           }
@@ -230,13 +227,13 @@ LoopifyConditionalRecursion::multi_return(
       if (payload.has_value()) {
         const std::pair<uint64_t, uint64_t> &p = *payload;
         const auto &[a, b] = p;
-        _result = std::make_pair(
-            (count + UINT64_C(1)),
-            std::make_optional<std::pair<uint64_t, uint64_t>>(
-                std::make_pair((a + a0), b)));
+        _result =
+            std::make_pair(count + UINT64_C(1),
+                           std::make_optional<std::pair<uint64_t, uint64_t>>(
+                               std::make_pair(a + a0, b)));
       } else {
         _result =
-            std::make_pair((count + UINT64_C(1)),
+            std::make_pair(count + UINT64_C(1),
                            std::optional<std::pair<uint64_t, uint64_t>>());
       }
     }
@@ -273,7 +270,7 @@ LoopifyConditionalRecursion::accum_with_cache(uint64_t key,
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         std::optional<uint64_t> cached;
         if (a0 == key) {
-          cached = std::make_optional<uint64_t>((a0 * UINT64_C(2)));
+          cached = std::make_optional<uint64_t>(a0 * UINT64_C(2));
         } else {
           cached = std::optional<uint64_t>();
         }
@@ -282,8 +279,7 @@ LoopifyConditionalRecursion::accum_with_cache(uint64_t key,
           const uint64_t &v = *cached;
           sub = std::make_pair(v, UINT64_C(0));
           {
-            _result =
-                std::make_pair((sub.first + a0), (sub.second + UINT64_C(1)));
+            _result = std::make_pair(sub.first + a0, sub.second + UINT64_C(1));
           }
         } else {
           _stack.emplace_back(_after_accum_with_cache_in_None{a0});
@@ -295,7 +291,7 @@ LoopifyConditionalRecursion::accum_with_cache(uint64_t key,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
-      _result = std::make_pair((sub.first + a0), (sub.second + UINT64_C(1)));
+      _result = std::make_pair(sub.first + a0, sub.second + UINT64_C(1));
     }
   }
   return _result;

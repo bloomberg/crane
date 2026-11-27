@@ -1,39 +1,5 @@
 #include "functor_record_proj_as_static.h"
 
-bool Coq_Pos::eq_dec(const Positive &p, const Positive &x0) {
-  if (std::holds_alternative<typename Positive::XI>(p.v())) {
-    const auto &[a0] = std::get<typename Positive::XI>(p.v());
-    if (std::holds_alternative<typename Positive::XI>(x0.v())) {
-      const auto &[a00] = std::get<typename Positive::XI>(x0.v());
-      if (eq_dec(*a0, *a00)) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
-  } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
-    const auto &[a0] = std::get<typename Positive::XO>(p.v());
-    if (std::holds_alternative<typename Positive::XO>(x0.v())) {
-      const auto &[a00] = std::get<typename Positive::XO>(x0.v());
-      if (eq_dec(*a0, *a00)) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
-  } else {
-    if (std::holds_alternative<typename Positive::XH>(x0.v())) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-}
-
 Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(x.v());
@@ -198,6 +164,40 @@ bool Pos::eqb(const Positive &p, const Positive &q) {
     }
   } else {
     if (std::holds_alternative<typename Positive::XH>(q.v())) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+}
+
+bool Coq_Pos::eq_dec(const Positive &p, const Positive &x0) {
+  if (std::holds_alternative<typename Positive::XI>(p.v())) {
+    const auto &[a0] = std::get<typename Positive::XI>(p.v());
+    if (std::holds_alternative<typename Positive::XI>(x0.v())) {
+      const auto &[a00] = std::get<typename Positive::XI>(x0.v());
+      if (eq_dec(*a0, *a00)) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
+    const auto &[a0] = std::get<typename Positive::XO>(p.v());
+    if (std::holds_alternative<typename Positive::XO>(x0.v())) {
+      const auto &[a00] = std::get<typename Positive::XO>(x0.v());
+      if (eq_dec(*a0, *a00)) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } else {
+    if (std::holds_alternative<typename Positive::XH>(x0.v())) {
       return true;
     } else {
       return false;

@@ -149,9 +149,9 @@ struct ClosuresInData {
       List<crane::fn<uint64_t(uint64_t)>>::cons(
           [](uint64_t x) { return (x + 1); },
           List<crane::fn<uint64_t(uint64_t)>>::cons(
-              [](uint64_t x) { return (x + x); },
+              [](uint64_t x) { return x + x; },
               List<crane::fn<uint64_t(uint64_t)>>::cons(
-                  [](uint64_t x) { return (x * x); },
+                  [](uint64_t x) { return x * x; },
                   List<crane::fn<uint64_t(uint64_t)>>::nil())));
   /// apply_all fns x applies every function in fns to x,
   /// returning the list of results.
@@ -166,7 +166,7 @@ struct ClosuresInData {
 
   /// A transform that doubles via addition and halves via division.
   static inline const transform double_transform = transform{
-      [](uint64_t x) { return (x + x); },
+      [](uint64_t x) { return x + x; },
       [](uint64_t x) { return (UINT64_C(2) ? x / UINT64_C(2) : 0); }};
   static uint64_t apply_forward(const transform &t, uint64_t x);
   static uint64_t apply_backward(const transform &t, uint64_t x);
@@ -177,11 +177,11 @@ struct ClosuresInData {
   /// A pipeline of transformations: increment, double, then add 10.
   static inline const List<crane::fn<uint64_t(uint64_t)>> pipeline =
       List<crane::fn<uint64_t(uint64_t)>>::cons(
-          [](uint64_t x) { return (x + UINT64_C(1)); },
+          [](uint64_t x) { return x + UINT64_C(1); },
           List<crane::fn<uint64_t(uint64_t)>>::cons(
-              [](uint64_t x) { return (x * UINT64_C(2)); },
+              [](uint64_t x) { return x * UINT64_C(2); },
               List<crane::fn<uint64_t(uint64_t)>>::cons(
-                  [](uint64_t x) { return (x + UINT64_C(10)); },
+                  [](uint64_t x) { return x + UINT64_C(10); },
                   List<crane::fn<uint64_t(uint64_t)>>::nil())));
   /// maybe_apply mf x applies function mf to x if present,
   /// otherwise returns x unchanged.

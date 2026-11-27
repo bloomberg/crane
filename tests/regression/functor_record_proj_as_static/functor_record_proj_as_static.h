@@ -24,10 +24,6 @@ struct Datatypes {
   static Comparison CompOpp(Comparison r);
 };
 
-struct Coq_Pos {
-  static bool eq_dec(const Positive &p, const Positive &x0);
-};
-
 struct Pos {
   static Positive succ(const Positive &x);
   static Positive add(const Positive &x, const Positive &y);
@@ -38,6 +34,10 @@ struct Pos {
                                  const Positive &y);
   static Comparison compare(const Positive &x0_, const Positive &x1_);
   static bool eqb(const Positive &p, const Positive &q);
+};
+
+struct Coq_Pos {
+  static bool eq_dec(const Positive &p, const Positive &x0);
 };
 
 struct Nat {
@@ -275,10 +275,6 @@ public:
 };
 
 enum class Comparison { EQ, LT, GT };
-template <typename M>
-concept EqLtLe = requires {
-  typename M::t;
-};
 
 struct Positive {
   // TYPES
@@ -395,7 +391,29 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+template <typename M>
+concept EqLtLe = requires {
+  typename M::t;
+};
+
 template <EqLtLe O, typename P> struct MakeOrderTac {};
+
+struct BinInt {
+  static Z double_(const Z &x);
+  static Z succ_double(const Z &x);
+  static Z pred_double(const Z &x);
+  static Z pos_sub(const Positive &x, const Positive &y);
+  static Z add(const Z &x, const Z &y);
+  static Z opp(const Z &x);
+  static Z sub(const Z &m, const Z &n);
+  static Z mul(const Z &x, const Z &y);
+  static Comparison compare(const Z &x, const Z &y);
+  static bool leb(const Z &x, const Z &y);
+  static bool ltb(const Z &x, const Z &y);
+  static bool eqb(const Z &x, const Z &y);
+  static Z max(Z n, Z m);
+  static bool eq_dec(const Z &x, const Z &y);
+};
 
 template <typename X> struct Compare {
   // TYPES
@@ -480,21 +498,105 @@ template <OrderedType O> struct KeyOrderedType {
   using MO = OrderedTypeFacts<O>;
 };
 
-struct BinInt {
-  static Z double_(const Z &x);
-  static Z succ_double(const Z &x);
-  static Z pred_double(const Z &x);
-  static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(const Z &x, const Z &y);
-  static Z opp(const Z &x);
-  static Z sub(const Z &m, const Z &n);
-  static Z mul(const Z &x, const Z &y);
-  static Comparison compare(const Z &x, const Z &y);
-  static bool leb(const Z &x, const Z &y);
-  static bool ltb(const Z &x, const Z &y);
-  static bool eqb(const Z &x, const Z &y);
-  static Z max(Z n, Z m);
-  static bool eq_dec(const Z &x, const Z &y);
+template <typename M>
+concept Int = requires {
+  typename M::t;
+  { M::i2z(std::declval<typename M::t>()) } -> std::same_as<Z>;
+  requires (requires {
+    {
+      M::_0
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::_0()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
+  requires (requires {
+    {
+      M::_1
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::_1()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
+  requires (requires {
+    {
+      M::_2
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::_2()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
+  requires (requires {
+    {
+      M::_3
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::_3()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
+  {
+    M::add(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<typename M::t>;
+  { M::opp(std::declval<typename M::t>()) } -> std::same_as<typename M::t>;
+  {
+    M::sub(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<typename M::t>;
+  {
+    M::mul(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<typename M::t>;
+  {
+    M::max(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<typename M::t>;
+  {
+    M::eqb(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<bool>;
+  {
+    M::ltb(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<bool>;
+  {
+    M::leb(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<bool>;
+  {
+    M::gt_le_dec(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<bool>;
+  {
+    M::ge_lt_dec(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<bool>;
+  {
+    M::eq_dec(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<bool>;
+};
+
+struct Z_as_Int {
+  using t = Z;
+  static inline const Z _0 = Z::z0();
+  static inline const Z _1 = Z::zpos(Positive::xh());
+  static inline const Z _2 = Z::zpos(Positive::xo(Positive::xh()));
+  static inline const Z _3 = Z::zpos(Positive::xi(Positive::xh()));
+  static Z add(const Z &x0_, const Z &x1_);
+  static Z opp(const Z &x0_);
+  static Z sub(const Z &x0_, const Z &x1_);
+  static Z mul(const Z &x0_, const Z &x1_);
+  static Z max(Z x0_, Z x1_);
+  static bool eqb(const Z &x0_, const Z &x1_);
+  static bool ltb(const Z &x0_, const Z &x1_);
+  static bool leb(const Z &x0_, const Z &x1_);
+  static bool eq_dec(const Z &x0_, const Z &x1_);
+  static bool gt_le_dec(const Z &i, const Z &j);
+  static bool ge_lt_dec(const Z &i, const Z &j);
+  static Z i2z(Z n);
 };
 
 template <OrderedType X> struct Coq_Raw {
@@ -928,107 +1030,6 @@ template <OrderedType X> struct Coq_Raw {
   }
 };
 
-template <typename M>
-concept Int = requires {
-  typename M::t;
-  { M::i2z(std::declval<typename M::t>()) } -> std::same_as<Z>;
-  requires (requires {
-    {
-      M::_0
-    }
-    -> std::convertible_to<typename M::t>;
-  } || requires {
-    {
-      M::_0()
-    }
-    -> std::convertible_to<typename M::t>;
-  });
-  requires (requires {
-    {
-      M::_1
-    }
-    -> std::convertible_to<typename M::t>;
-  } || requires {
-    {
-      M::_1()
-    }
-    -> std::convertible_to<typename M::t>;
-  });
-  requires (requires {
-    {
-      M::_2
-    }
-    -> std::convertible_to<typename M::t>;
-  } || requires {
-    {
-      M::_2()
-    }
-    -> std::convertible_to<typename M::t>;
-  });
-  requires (requires {
-    {
-      M::_3
-    }
-    -> std::convertible_to<typename M::t>;
-  } || requires {
-    {
-      M::_3()
-    }
-    -> std::convertible_to<typename M::t>;
-  });
-  {
-    M::add(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<typename M::t>;
-  { M::opp(std::declval<typename M::t>()) } -> std::same_as<typename M::t>;
-  {
-    M::sub(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<typename M::t>;
-  {
-    M::mul(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<typename M::t>;
-  {
-    M::max(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<typename M::t>;
-  {
-    M::eqb(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<bool>;
-  {
-    M::ltb(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<bool>;
-  {
-    M::leb(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<bool>;
-  {
-    M::gt_le_dec(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<bool>;
-  {
-    M::ge_lt_dec(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<bool>;
-  {
-    M::eq_dec(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<bool>;
-};
-
-struct Z_as_Int {
-  using t = Z;
-  static inline const Z _0 = Z::z0();
-  static inline const Z _1 = Z::zpos(Positive::xh());
-  static inline const Z _2 = Z::zpos(Positive::xo(Positive::xh()));
-  static inline const Z _3 = Z::zpos(Positive::xi(Positive::xh()));
-  static Z add(const Z &x0_, const Z &x1_);
-  static Z opp(const Z &x0_);
-  static Z sub(const Z &x0_, const Z &x1_);
-  static Z mul(const Z &x0_, const Z &x1_);
-  static Z max(Z x0_, Z x1_);
-  static bool eqb(const Z &x0_, const Z &x1_);
-  static bool ltb(const Z &x0_, const Z &x1_);
-  static bool leb(const Z &x0_, const Z &x1_);
-  static bool eq_dec(const Z &x0_, const Z &x1_);
-  static bool gt_le_dec(const Z &i, const Z &j);
-  static bool ge_lt_dec(const Z &i, const Z &j);
-  static Z i2z(Z n);
-};
-
 struct Z_as_OT {
   using t = Z;
   static Compare<Z> compare(const Z &x, const Z &y);
@@ -1449,7 +1450,7 @@ template <Int I, OrderedType X> struct Raw {
         const auto &[a00, a10, a20, a30, _] =
             std::get<typename tree<T1>::Node>(m2.v());
         auto [m2_, xd] = remove_min<T1>(*a00, a10, a20, *a30);
-        return join<T1>(m1, std::move(xd).first, std::move(xd).second,
+        return join<T1>(m1, std::move(xd.first), std::move(xd.second),
                         std::move(m2_));
       }
     }

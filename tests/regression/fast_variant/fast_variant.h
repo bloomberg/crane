@@ -317,7 +317,7 @@ struct FastVariant {
           auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -497,10 +497,10 @@ struct FastVariant {
     uint64_t area() const {
       if (crane::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = crane::get<typename shape::Circle>(this->v());
-        return ((UINT64_C(3) * a0) * a0);
+        return UINT64_C(3) * a0 * a0;
       } else if (crane::holds_alternative<typename shape::Rect>(this->v())) {
         const auto &[a0, a1] = crane::get<typename shape::Rect>(this->v());
-        return (a0 * a1);
+        return a0 * a1;
       } else {
         return UINT64_C(0);
       }

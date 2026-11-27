@@ -2,8 +2,7 @@
 
 uint64_t array_simp_fixed_init() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
-      std::make_shared<crane::array_storage<uint64_t>>(
-          static_cast<std::size_t>(UINT64_C(6)), UINT64_C(5));
+      std::make_shared<crane::array_storage<uint64_t>>(6uz, UINT64_C(5));
   return std::span{std::as_const(*arr)}[UINT64_C(1)];
 }
 
@@ -28,8 +27,8 @@ List<uint64_t> swap_first_and_last_list(const List<uint64_t> &xs) {
   auto _once1 = xs.length();
   std::swap(
       std::span{*arr}[UINT64_C(0)],
-      std::span{*arr}[
-          (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1))))]);
+      std::span{*arr}[_once1 - UINT64_C(1) > _once1 ? 0
+                                                    : _once1 - UINT64_C(1)]);
   return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
 }
 

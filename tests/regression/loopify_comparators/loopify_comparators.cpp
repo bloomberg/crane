@@ -165,7 +165,7 @@ List<uint64_t> LoopifyComparators::merge_by(const List<uint64_t> &l1,
                                             const List<uint64_t> &l2) {
   uint64_t len1 = l1.length();
   uint64_t len2 = l2.length();
-  return merge_by_fuel((len1 + len2), l1, l2);
+  return merge_by_fuel(len1 + len2, l1, l2);
 }
 
 List<uint64_t> LoopifyComparators::insert_sorted(uint64_t x,

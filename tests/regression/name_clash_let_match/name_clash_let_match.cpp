@@ -11,7 +11,7 @@ NameClashLetMatch::let_shadows_match(const NameClashLetMatch::either &e) {
   } else {
     const auto &[a0] =
         std::get<typename NameClashLetMatch::either::Right>(e.v());
-    return (a0 + a);
+    return a0 + a;
   }
 }
 
@@ -23,11 +23,11 @@ NameClashLetMatch::same_name_branches(const NameClashLetMatch::either &e,
     const auto &[a0] =
         std::get<typename NameClashLetMatch::either::Left>(e.v());
     const auto &[a00, a10, a20] = t;
-    return (((a0 + a00) + a10) + a20);
+    return a0 + a00 + a10 + a20;
   } else {
     const auto &[a0] =
         std::get<typename NameClashLetMatch::either::Right>(e.v());
     const auto &[a00, a10, a20] = t;
-    return (((a0 * a00) * a10) * a20);
+    return a0 * a00 * a10 * a20;
   }
 }

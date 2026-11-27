@@ -43,7 +43,7 @@ struct ModuleAliasShadowsGlobal {
     }
 
     static const uint64_t &r() {
-      static const uint64_t v = dbl((X::x + seven()));
+      static const uint64_t v = dbl(X::x + seven());
       return v;
     }
   };
@@ -64,7 +64,7 @@ struct ModuleAliasShadowsGlobal {
   struct Q {
     static uint64_t dbl(uint64_t n);
     static inline const uint64_t seven =
-        (ModuleAliasShadowsGlobal::seven + UINT64_C(1));
+        ModuleAliasShadowsGlobal::seven + UINT64_C(1);
     static inline const uint64_t u = dbl(seven);
   };
 };

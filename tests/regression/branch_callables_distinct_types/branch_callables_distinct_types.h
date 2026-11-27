@@ -158,7 +158,7 @@ struct BranchCallablesDistinctTypes {
                 }
               },
               [](uint64_t) { return pt{UINT64_C(0), true}; });
-      return (w(UINT64_C(0)).px + w(UINT64_C(3)).px);
+      return w(UINT64_C(0)).px + w(UINT64_C(3)).px;
     }();
   }();
 
@@ -288,7 +288,7 @@ struct BranchCallablesDistinctTypes {
   }
 
   static ptree<crane::fn<uint64_t(uint64_t)>> f(bool b, List<uint64_t> l);
-  static inline const uint64_t u = ([]() {
+  static inline const uint64_t u = []() {
     auto &&_sv =
         f(false, List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
     if (std::holds_alternative<
@@ -311,5 +311,5 @@ struct BranchCallablesDistinctTypes {
               _sv0.v());
       return a10(UINT64_C(7));
     }
-  }());
+  }();
 };

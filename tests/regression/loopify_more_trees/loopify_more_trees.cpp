@@ -224,7 +224,7 @@ uint64_t LoopifyMoreTrees::count_nodes(const LoopifyMoreTrees::tree &t) {
     } else {
       auto _f = std::move(std::get<_after_count_nodes_in_Node_2>(_popped));
       _stack.pop_back();
-      _result = ((UINT64_C(1) + _f._tmp2) + _result);
+      _result = UINT64_C(1) + _f._tmp2 + _result;
     }
   }
   return _result;
@@ -355,7 +355,7 @@ LoopifyMoreTrees::sum_of_max_branches(const LoopifyMoreTrees::tree &t) {
           std::move(std::get<_after_sum_of_max_branches_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = (a1 + std::max(_f._tmp2, _result));
+      _result = a1 + std::max(_f._tmp2, _result);
     }
   }
   return _result;

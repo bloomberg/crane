@@ -108,7 +108,7 @@ struct MemSafetyProbe18 {
       tree t2 =
           tree::node(crane::shared_child(this), s1, crane::shared_child(this));
       uint64_t s2 = t2.tree_sum();
-      return (s1 + s2);
+      return s1 + s2;
     }
 
     /// TEST 7: Use a value type in a chain of let-bindings where
@@ -134,7 +134,7 @@ struct MemSafetyProbe18 {
     /// The tree should NOT be consumed by tree_sum.
     uint64_t let_reuse() const {
       uint64_t s = this->tree_sum();
-      return (s + this->tree_sum());
+      return s + this->tree_sum();
     }
 
     /// TEST 1: Same tree used in TWO different positions of a single
@@ -193,7 +193,7 @@ struct MemSafetyProbe18 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -481,7 +481,7 @@ struct MemSafetyProbe18 {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(7), tree::leaf());
       crane::fn<uint64_t(uint64_t)> f =
-          [=, t = std::move(t)](uint64_t n) { return (t.tree_sum() + n); };
+          [=, t = std::move(t)](uint64_t n) { return t.tree_sum() + n; };
       return apply_twice(std::move(f), UINT64_C(0));
     }();
   }();

@@ -10,7 +10,7 @@ uint64_t
 BoxedElementBlockTemplate::total(const BoxedElementBlockTemplate::rose &r) {
   const auto &[n0, kids] =
       std::get<typename BoxedElementBlockTemplate::rose::Node>(r.v());
-  return (n0 + [&]() {
+  return n0 + [&]() {
     auto go_impl =
         [](auto &_self_go,
            const crane::list<crane::box<BoxedElementBlockTemplate::rose>> &l)
@@ -20,7 +20,7 @@ BoxedElementBlockTemplate::total(const BoxedElementBlockTemplate::rose &r) {
           } else {
             const BoxedElementBlockTemplate::rose &k = l.front();
             auto t = l.tail();
-            return (total(k) + _self_go(_self_go, std::move(t)));
+            return total(k) + _self_go(_self_go, std::move(t));
           }
         };
     auto go =
@@ -28,7 +28,7 @@ BoxedElementBlockTemplate::total(const BoxedElementBlockTemplate::rose &r) {
           return go_impl(go_impl, l);
         };
     return go(kids);
-  }());
+  }();
 }
 
 crane::list<uint64_t>

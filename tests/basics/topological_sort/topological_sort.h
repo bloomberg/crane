@@ -382,9 +382,9 @@ struct ToString {
                                     const std::pair<T1, T2> &x) {
     const auto &[a, b] = x;
     return (std::string("(") +
-            (p1(a) + (std::string(", ") +
-                      (p2(b) + std::string(")")).substr(0, 16777211))
-                         .substr(0, 16777211))
+            (p1(a) + ((std::string(", ") +
+                       (p2(b) + std::string(")")).substr(0, 16777211))
+                          .substr(0, 16777211)))
                 .substr(0, 16777211))
                .substr(0, 16777211);
   }
@@ -422,9 +422,9 @@ struct ToString {
                 (p(a0) + std::string("]")).substr(0, 16777211))
                    .substr(0, 16777211);
       } else {
-        return (std::string("[") + (p(a0) + (intersperse<T1>(p, "; ", *a1) +
-                                             std::string("]"))
-                                                .substr(0, 16777211))
+        return (std::string("[") + (p(a0) + ((intersperse<T1>(p, "; ", *a1) +
+                                              std::string("]"))
+                                                 .substr(0, 16777211)))
                                        .substr(0, 16777211))
                    .substr(0, 16777211);
       }

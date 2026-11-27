@@ -167,6 +167,6 @@ struct InstructionSequenceExec {
             List<instruction>::cons(instruction::inc_pc(),
                                     List<instruction>::nil()))),
                             sample);
-    return (s_.pc_ + s_.acc_);
+    return s_.pc_ + s_.acc_;
   }();
 };

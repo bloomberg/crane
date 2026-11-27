@@ -95,9 +95,7 @@ struct MemSafetyProbe10 {
     /// TEST 8: Closure returned from function, capturing a TREE value.
     /// The tree is a value type with unique_ptr self-references.
     /// Tests whether = capture correctly deep-copies the tree.
-    uint64_t make_tree_summer(uint64_t n) const {
-      return (this->tree_sum() + n);
-    }
+    uint64_t make_tree_summer(uint64_t n) const { return this->tree_sum() + n; }
 
     /// TEST 5: Closure capturing value from OUTER match,
     /// returned from INNER match. Tests nested match +
@@ -108,9 +106,9 @@ struct MemSafetyProbe10 {
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         if (b) {
-          return ((a0->tree_sum() + a1) + n);
+          return a0->tree_sum() + a1 + n;
         } else {
-          return ((a2->tree_sum() + a1) + n);
+          return a2->tree_sum() + a1 + n;
         }
       }
     }
@@ -128,7 +126,7 @@ struct MemSafetyProbe10 {
             [&](uint64_t _x0) -> uint64_t { return a0->tree_to_adder(_x0); };
         crane::fn<uint64_t(uint64_t)> fr =
             [&](uint64_t _x0) -> uint64_t { return a2->tree_to_adder(_x0); };
-        return fl((a1 + fr(x0_)));
+        return fl(a1 + fr(x0_));
       }
     }
 
@@ -181,7 +179,7 @@ struct MemSafetyProbe10 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -436,7 +434,7 @@ struct MemSafetyProbe10 {
         [](uint64_t _x0) -> uint64_t {
           return choose_fn(std::optional<bool>(), UINT64_C(99), _x0);
         };
-    return ((f1(UINT64_C(5)) + f2(UINT64_C(7))) + f3(UINT64_C(42)));
+    return f1(UINT64_C(5)) + f2(UINT64_C(7)) + f3(UINT64_C(42));
   }();
   static inline const uint64_t test_nested = []() {
     return []() {
@@ -451,7 +449,7 @@ struct MemSafetyProbe10 {
           [&](uint64_t _x0) -> uint64_t {
             return t.nested_match_closure(false, _x0);
           };
-      return (f1(UINT64_C(0)) + f2(UINT64_C(0)));
+      return f1(UINT64_C(0)) + f2(UINT64_C(0));
     }();
   }();
   /// TEST 6: Function returning closure in pair.
@@ -461,7 +459,7 @@ struct MemSafetyProbe10 {
   static inline const uint64_t test_pair_fn = []() {
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
         pair_with_fn(UINT64_C(10));
-    return (p.first(UINT64_C(5)) + p.second);
+    return p.first(UINT64_C(5)) + p.second;
   }();
   /// TEST 7: Mutually recursive functions using a fixpoint
   /// where one captures the other's result as a closure.

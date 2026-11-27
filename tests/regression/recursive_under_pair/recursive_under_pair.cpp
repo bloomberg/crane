@@ -17,6 +17,6 @@ uint64_t RecursiveUnderPair::depth(const RecursiveUnderPair::c &x) {
     return UINT64_C(0);
   } else {
     const auto &[a0] = std::get<typename RecursiveUnderPair::c::N>(x.v());
-    return (depth((*a0).second) + 1);
+    return (depth(a0->second) + 1);
   }
 }

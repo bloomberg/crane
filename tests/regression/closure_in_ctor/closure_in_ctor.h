@@ -103,7 +103,7 @@ struct ClosureInCtor {
       auto &[a0] = std::get<typename box::Box0>(b1.v_mut());
       if (std::holds_alternative<typename box::Box0>(b2.v_mut())) {
         auto &[a00] = std::get<typename box::Box0>(b2.v_mut());
-        return (a0(UINT64_C(0)) + a00(UINT64_C(0)));
+        return a0(UINT64_C(0)) + a00(UINT64_C(0));
       } else {
         return UINT64_C(999);
       }

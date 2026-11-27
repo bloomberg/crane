@@ -69,7 +69,7 @@ uint64_t InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) {
       auto _f = std::move(std::get<_after_outer_in_Cons>(_popped));
       _stack.pop_back();
       std::shared_ptr<InnerFixCapturesInd::lst> a1 = std::move(_f.a1);
-      _result = ([&]() {
+      _result = [&]() {
         auto inner =
             [&](const InnerFixCapturesInd::lst &m, uint64_t a) -> uint64_t {
               // Loop replaces the tail recursion: each recursive call updates
@@ -83,13 +83,13 @@ uint64_t InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) {
                   const auto &[_, a3] =
                       std::get<typename InnerFixCapturesInd::lst::Cons>(
                           _loop_m->v());
-                  a = (a + len(*a1));
+                  a = a + len(*a1);
                   _loop_m = crane_raw(a3);
                 }
               }
             };
         return inner(*a1, UINT64_C(0));
-      }() + _result);
+      }() + _result;
     }
   }
   return _result;

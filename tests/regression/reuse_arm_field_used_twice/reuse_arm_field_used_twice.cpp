@@ -96,7 +96,7 @@ ReuseArmFieldUsedTwice::pairs(ReuseArmFieldUsedTwice::lst l) {
           *std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a1);
       return lst::cons_crane_reuse(std::move(
           std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a1),
-                                   (x + len(xs)), pairs(xs));
+                                   x + len(xs), pairs(xs));
     } else {
       if (std::holds_alternative<typename ReuseArmFieldUsedTwice::lst::Nil>(
               l.v_mut())) {
@@ -104,7 +104,7 @@ ReuseArmFieldUsedTwice::pairs(ReuseArmFieldUsedTwice::lst l) {
       } else {
         auto &[a0, a1] =
             std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut());
-        return lst::cons((a0 + len(*a1)), pairs(*a1));
+        return lst::cons(a0 + len(*a1), pairs(*a1));
       }
     }
   } else {
@@ -114,7 +114,7 @@ ReuseArmFieldUsedTwice::pairs(ReuseArmFieldUsedTwice::lst l) {
     } else {
       auto &[a0, a1] =
           std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut());
-      return lst::cons((a0 + len(*a1)), pairs(*a1));
+      return lst::cons(a0 + len(*a1), pairs(*a1));
     }
   }
 }
@@ -125,6 +125,6 @@ uint64_t ReuseArmFieldUsedTwice::sum(const ReuseArmFieldUsedTwice::lst &l) {
   } else {
     const auto &[a0, a1] =
         std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v());
-    return (a0 + sum(*a1));
+    return a0 + sum(*a1);
   }
 }

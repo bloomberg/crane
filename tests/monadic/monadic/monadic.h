@@ -191,12 +191,12 @@ struct Monadic {
   static inline const std::optional<uint64_t> test_bind_some =
       option_bind<uint64_t, uint64_t>(
           std::make_optional<uint64_t>(UINT64_C(10)), [](uint64_t x) {
-            return std::make_optional<uint64_t>((x + UINT64_C(1)));
+            return std::make_optional<uint64_t>(x + UINT64_C(1));
           });
   static inline const std::optional<uint64_t> test_bind_none =
       option_bind<uint64_t, uint64_t>(
           std::optional<uint64_t>(), [](uint64_t x) {
-            return std::make_optional<uint64_t>((x + UINT64_C(1)));
+            return std::make_optional<uint64_t>(x + UINT64_C(1));
           });
   static inline const std::optional<uint64_t> test_safe_div_ok =
       safe_div(UINT64_C(10), UINT64_C(3));

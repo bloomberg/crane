@@ -73,7 +73,7 @@ LoopifyReuseCursorReadsField::sum(const LoopifyReuseCursorReadsField::lst &l) {
       auto _f = std::move(std::get<_after_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -98,7 +98,7 @@ LoopifyReuseCursorReadsField::pairs(LoopifyReuseCursorReadsField::lst l) {
       const auto &[a0, a1] =
           std::get<typename LoopifyReuseCursorReadsField::lst::Cons>(
               _loop_l->v());
-      auto _read = (a0 + len(*a1));
+      auto _read = a0 + len(*a1);
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token),
@@ -139,8 +139,7 @@ LoopifyReuseCursorReadsField::weigh(uint64_t acc,
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token),
-          typename LoopifyReuseCursorReadsField::lst::Cons((a0 * acc),
-                                                           nullptr));
+          typename LoopifyReuseCursorReadsField::lst::Cons(a0 * acc, nullptr));
       _write =
           &std::get<typename LoopifyReuseCursorReadsField::lst::Cons>(
               (*_write)->v_mut())

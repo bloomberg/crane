@@ -35,7 +35,7 @@ uint64_t MemSafetyProbe9::sum_fns(
       auto _f = std::move(std::get<_after_sum_fns_in_Mycons>(_popped));
       _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
-      _result = (a0(UINT64_C(0)) + _result);
+      _result = a0(UINT64_C(0)) + _result;
     }
   }
   return _result;
@@ -79,7 +79,7 @@ MemSafetyProbe9::collect_subtree_sums(
         const MemSafetyProbe9::tree &a2_value = *a2;
         crane::fn<uint64_t(uint64_t)> f =
             [=, a0_value = a0_value, a2_value = a2_value](uint64_t) {
-              return ((a0_value.tree_sum() + a1) + a2_value.tree_sum());
+              return a0_value.tree_sum() + a1 + a2_value.tree_sum();
             };
         _stack.emplace_back(_after_collect_subtree_sums_in_Node{crane_raw(a0)});
         _stack.emplace_back(_call{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
@@ -173,8 +173,7 @@ MemSafetyProbe9::list_accum_closures(
               _loop_l->v());
       const MemSafetyProbe9::mylist<uint64_t> &a1_value = *a1;
       uint64_t tail_len = a1_value.length();
-      crane::fn<uint64_t(uint64_t)> f =
-          [=](uint64_t) { return (a0 * tail_len); };
+      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) { return a0 * tail_len; };
       _loop_acc = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
           std::move(f), std::move(_loop_acc));
       _loop_l = &a1_value;

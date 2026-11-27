@@ -66,7 +66,7 @@ uint64_t LoopifyLists::step_sum(const LoopifyLists::list<uint64_t> &l) {
         if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
           contribution = a0;
         } else {
-          contribution = (a0 * UINT64_C(2));
+          contribution = a0 * UINT64_C(2);
         }
         _stack.emplace_back(_after_step_sum_in_Cons{contribution});
         _stack.emplace_back(_call{crane_raw(a1)});
@@ -75,7 +75,7 @@ uint64_t LoopifyLists::step_sum(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_step_sum_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t contribution = _f.contribution;
-      _result = (contribution + _result);
+      _result = contribution + _result;
     }
   }
   return _result;
@@ -112,9 +112,9 @@ uint64_t LoopifyLists::sum_abs(const LoopifyLists::list<uint64_t> &l,
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
         uint64_t abs_val;
         if (base <= a0) {
-          abs_val = (((a0 - base) > a0 ? 0 : (a0 - base)));
+          abs_val = (a0 - base > a0 ? 0 : a0 - base);
         } else {
-          abs_val = (((base - a0) > base ? 0 : (base - a0)));
+          abs_val = (base - a0 > base ? 0 : base - a0);
         }
         _stack.emplace_back(_after_sum_abs_in_Cons{abs_val});
         _stack.emplace_back(_call{crane_raw(a1)});
@@ -123,7 +123,7 @@ uint64_t LoopifyLists::sum_abs(const LoopifyLists::list<uint64_t> &l,
       auto _f = std::move(std::get<_after_sum_abs_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t abs_val = _f.abs_val;
-      _result = (abs_val + _result);
+      _result = abs_val + _result;
     }
   }
   return _result;
@@ -195,7 +195,7 @@ uint64_t LoopifyLists::four_elem(const LoopifyLists::list<uint64_t> &l) {
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
       uint64_t a02 = _f.a02;
-      _result = ((a0 + a00) + ((a01 + a02) + _result));
+      _result = a0 + a00 + (a01 + a02 + _result);
     }
   }
   return _result;
@@ -221,7 +221,7 @@ LoopifyLists::between(uint64_t lo, uint64_t hi,
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
-      if ((lo <= a0 && a0 <= hi)) {
+      if (((lo <= a0) && (a0 <= hi))) {
         auto _cell = typename LoopifyLists::list<uint64_t>::Cons(a0, nullptr);
         LoopifyLists::list<uint64_t> &_node = (
             _write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
@@ -286,7 +286,7 @@ uint64_t LoopifyLists::categorize(uint64_t k,
       auto _f = std::move(std::get<_after_categorize_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t score = _f.score;
-      _result = (score + _result);
+      _result = score + _result;
     }
   }
   return _result;
@@ -328,7 +328,7 @@ uint64_t LoopifyLists::max_prefix_sum(const LoopifyLists::list<uint64_t> &l) {
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t rest = _result;
-      uint64_t sum = (a0 + rest);
+      uint64_t sum = a0 + rest;
       if (UINT64_C(0) <= sum) {
         _result = sum;
       } else {
@@ -370,7 +370,7 @@ LoopifyLists::pairwise_sum(const LoopifyLists::list<uint64_t> &l) {
         const auto &[a00, a10] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
         auto _cell =
-            typename LoopifyLists::list<uint64_t>::Cons((a0 + a00), nullptr);
+            typename LoopifyLists::list<uint64_t>::Cons(a0 + a00, nullptr);
         LoopifyLists::list<uint64_t> &_node = (
             _write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                            std::move(_cell)))
@@ -427,7 +427,7 @@ uint64_t LoopifyLists::weighted_sum(uint64_t i,
       _stack.pop_back();
       uint64_t i = _f.i;
       uint64_t a0 = _f.a0;
-      _result = ((i * a0) + _result);
+      _result = i * a0 + _result;
     }
   }
   return _result;
@@ -460,7 +460,7 @@ LoopifyLists::prefix_sums(uint64_t acc, const LoopifyLists::list<uint64_t> &l) {
       _write =
           &std::get<typename LoopifyLists::list<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
-      acc = (acc + a0);
+      acc = acc + a0;
       continue;
     }
   }
@@ -810,7 +810,7 @@ uint64_t LoopifyLists::product(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_product_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 * _result);
+      _result = a0 * _result;
     }
   }
   return _result;
@@ -851,7 +851,7 @@ uint64_t LoopifyLists::sum_list(const LoopifyLists::list<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -956,7 +956,7 @@ uint64_t LoopifyLists::sum_list_lengths(
       auto _f = std::move(std::get<_after_sum_list_lengths_in_Cons>(_popped));
       _stack.pop_back();
       LoopifyLists::list<uint64_t> a0 = std::move(_f.a0);
-      _result = (len_list(std::move(a0)) + _result);
+      _result = len_list(std::move(a0)) + _result;
     }
   }
   return _result;
@@ -1446,7 +1446,7 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<uint64_t> &l) {
       } else {
         const auto &[a00, _] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
-        if ((UINT64_C(2) ? (a0 + a00) % UINT64_C(2) : (a0 + a00)) ==
+        if ((UINT64_C(2) ? (a0 + a00) % UINT64_C(2) : a0 + a00) ==
             UINT64_C(0)) {
           _loop_l = crane_raw(a1);
           continue;
@@ -1506,9 +1506,9 @@ LoopifyLists::split_at(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
           _result = std::make_pair(list<uint64_t>::nil(), l);
         } else {
           _stack.emplace_back(_after_split_at_in_false{a0});
-          _stack.emplace_back(_call{
-              crane_raw(a1),
-              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+          _stack.emplace_back(
+              _call{crane_raw(a1),
+                    (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1))});
         }
       }
     } else {
@@ -1591,7 +1591,7 @@ uint64_t LoopifyLists::nth(uint64_t n, const LoopifyLists::list<uint64_t> &l,
         return a0;
       } else {
         _loop_l = crane_raw(a1);
-        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+        n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
       }
     }
   }
@@ -1638,7 +1638,7 @@ LoopifyLists::drop(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
         return *_loop_l;
       } else {
         _loop_l = crane_raw(a1);
-        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+        n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
       }
     }
   }
@@ -1854,7 +1854,7 @@ LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
               typename LoopifyLists::list<uint64_t>::Cons>(_loop_l.v());
           _loop_l =
               app_helper(*a1, list<uint64_t>::cons(a0, list<uint64_t>::nil()));
-          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
           fuel = f;
         }
       }
@@ -1972,7 +1972,7 @@ LoopifyLists::majority(const LoopifyLists::list<uint64_t> &l) {
         _result = std::make_pair(a0, UINT64_C(1));
       } else {
         _result = std::make_pair(
-            cand, (((cnt - UINT64_C(1)) > cnt ? 0 : (cnt - UINT64_C(1)))));
+            cand, (cnt - UINT64_C(1) > cnt ? 0 : cnt - UINT64_C(1)));
       }
     }
   }
@@ -2096,7 +2096,7 @@ LoopifyLists::sum_and_count(const LoopifyLists::list<uint64_t> &l) {
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto [s, c] = std::move(_result);
-      _result = std::make_pair((a0 + s), (c + 1));
+      _result = std::make_pair(a0 + s, (c + 1));
     }
   }
   return _result;
@@ -2119,7 +2119,7 @@ LoopifyLists::elem_at(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
         return std::make_optional<uint64_t>(a0);
       } else {
         _loop_l = crane_raw(a1);
-        n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+        n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
       }
     }
   }

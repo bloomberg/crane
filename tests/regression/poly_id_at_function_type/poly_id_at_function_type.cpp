@@ -4,7 +4,7 @@ uint64_t PolyIdAtFunctionType::apply_id(uint64_t n) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto id2_1 = crane::immortal(id2<crane::fn<uint64_t(uint64_t)>>(
-      [](uint64_t k) { return (k + UINT64_C(1)); }));
+      [](uint64_t k) { return k + UINT64_C(1); }));
   return id2_1(n);
 }
 
@@ -17,6 +17,6 @@ uint64_t PolyIdAtFunctionType::apply_id2(uint64_t n) {
              uint64_t x) { return f(f(x)); }));
   return id2_1(
       id2<crane::fn<uint64_t(uint64_t)>>(
-          [](uint64_t k) { return (k * UINT64_C(3)); }),
+          [](uint64_t k) { return k * UINT64_C(3); }),
       n);
 }

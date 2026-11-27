@@ -230,6 +230,6 @@ struct DependentExtractionTargets {
   }
 
   static inline const uint64_t result =
-      ((Inner::Deep::g + B::use) +
-       rep<uint64_t>(UINT64_C(7), UINT64_C(3)).length());
+      Inner::Deep::g + B::use +
+      rep<uint64_t>(UINT64_C(7), UINT64_C(3)).length();
 };

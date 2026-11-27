@@ -107,7 +107,7 @@ uint64_t LoopifyEquationsWithClause::plain(const List<uint64_t> &x) {
       auto _f = std::move(std::get<_after_plain_in_Cons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -118,7 +118,7 @@ uint64_t LoopifyEquationsWithClause::plain_unfold(const List<uint64_t> &l) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    return (a0 + plain(*a1));
+    return a0 + plain(*a1);
   }
 }
 

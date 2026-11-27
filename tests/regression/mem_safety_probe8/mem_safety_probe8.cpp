@@ -53,7 +53,7 @@ uint64_t MemSafetyProbe8::tree_sum_ext(uint64_t _x,
       auto _f = std::move(std::get<_after_tree_sum_ext_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + a1) + _result);
+      _result = _f._tmp2 + a1 + _result;
     }
   }
   return _result;
@@ -105,7 +105,7 @@ MemSafetyProbe8::tree_weighted(uint64_t _x, const MemSafetyProbe8::tree &t,
         _stack.emplace_back(
             _after_tree_weighted_in_Node{depth, a1, crane_raw(a2)});
         _stack.emplace_back(
-            _call{(UINT64_C(1) + depth), crane_raw(a0), UINT64_C(0)});
+            _call{UINT64_C(1) + depth, crane_raw(a0), UINT64_C(0)});
       }
     } else if (std::holds_alternative<_after_tree_weighted_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_tree_weighted_in_Node>(_popped));
@@ -114,13 +114,13 @@ MemSafetyProbe8::tree_weighted(uint64_t _x, const MemSafetyProbe8::tree &t,
       uint64_t a1 = _f.a1;
       const MemSafetyProbe8::tree &a2 = *_f.a2;
       _stack.emplace_back(_after_tree_weighted_in_Node_2{depth, a1, _result});
-      _stack.emplace_back(_call{(UINT64_C(1) + depth), &a2, UINT64_C(0)});
+      _stack.emplace_back(_call{UINT64_C(1) + depth, &a2, UINT64_C(0)});
     } else {
       auto _f = std::move(std::get<_after_tree_weighted_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t depth = _f.depth;
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 + (a1 * depth)) + _result);
+      _result = _f._tmp2 + a1 * depth + _result;
     }
   }
   return _result;
@@ -211,7 +211,7 @@ uint64_t MemSafetyProbe8::tree_collect(uint64_t _x,
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       uint64_t left = _f.left;
-      _result = ((left + a1) + _result);
+      _result = left + a1 + _result;
     }
   }
   return _result;
@@ -269,7 +269,7 @@ uint64_t MemSafetyProbe8::tree_flatten(uint64_t _x,
       auto _f = std::move(std::get<_after_tree_flatten_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ((_f._tmp2 * a1) * _result);
+      _result = _f._tmp2 * a1 * _result;
     }
   }
   return _result;
@@ -323,7 +323,7 @@ uint64_t MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
     } else {
       auto _f = std::move(std::get<_after_go_in_Node_2>(_popped));
       _lc1_stack.pop_back();
-      _lc1_result = ((UINT64_C(1) + _f._tmp2) + _lc1_result);
+      _lc1_result = UINT64_C(1) + _f._tmp2 + _lc1_result;
     }
   }
   return _lc1_result;

@@ -57,7 +57,7 @@ uint64_t LoopifyTailPtrAlias::rot(uint64_t n, const LoopifyTailPtrAlias::lst &l,
             std::get<typename LoopifyTailPtrAlias::lst::Cons>(_loop_l.v());
         if (a0 <= 0) {
           LoopifyTailPtrAlias::lst _next_acc = LoopifyTailPtrAlias::lst(*a1);
-          s = (s + hd(_loop_acc));
+          s = s + hd(_loop_acc);
           _loop_l = lst::cons(UINT64_C(0), lst::cons(m, lst::nil()));
           n = m;
           _loop_acc = std::move(_next_acc);

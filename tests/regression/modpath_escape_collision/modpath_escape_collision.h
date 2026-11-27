@@ -16,5 +16,5 @@ struct ModpathEscapeCollision {
   };
 
   static inline const uint64_t t =
-      (A::Token_::f(UINT64_C(0)) + B::Token_::g(UINT64_C(0)));
+      A::Token_::f(UINT64_C(0)) + B::Token_::g(UINT64_C(0));
 };

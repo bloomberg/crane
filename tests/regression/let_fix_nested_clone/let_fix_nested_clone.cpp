@@ -24,12 +24,12 @@ uint64_t LetFixNestedClone::sum_nested(const List<List<uint64_t>> &ll) {
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_loop_ys->v());
-            a = (a + a00);
+            a = a + a00;
             _loop_ys = crane_raw(a10);
           }
         }
       };
-      _lc1_loop_acc = (inner(a0, UINT64_C(0)) + _lc1_loop_acc);
+      _lc1_loop_acc = inner(a0, UINT64_C(0)) + _lc1_loop_acc;
       _lc1_loop_xss = crane_raw(a1);
     }
   }
@@ -59,12 +59,12 @@ uint64_t LetFixNestedClone::count_nested(const List<List<uint64_t>> &ll) {
           } else {
             const auto &[_, a10] =
                 std::get<typename List<uint64_t>::Cons>(_loop_ys->v());
-            n = (UINT64_C(1) + n);
+            n = UINT64_C(1) + n;
             _loop_ys = crane_raw(a10);
           }
         }
       };
-      _lc1_loop_acc = (inner(a0, UINT64_C(0)) + _lc1_loop_acc);
+      _lc1_loop_acc = inner(a0, UINT64_C(0)) + _lc1_loop_acc;
       _lc1_loop_xss = crane_raw(a1);
     }
   }

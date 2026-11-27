@@ -440,6 +440,6 @@ struct StringLiteralAsCharPointer {
         return std::string("ab");
       })
           .template fold_left<uint64_t>(
-          [](uint64_t a, const std::string &w) { return (a + len(w)); },
+          [](uint64_t a, const std::string &w) { return a + len(w); },
           UINT64_C(0));
 };

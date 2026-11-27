@@ -29,7 +29,7 @@ uint64_t LoopifyListWindows::len(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_len_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -168,7 +168,7 @@ List<uint64_t> LoopifyListWindows::differences(const List<uint64_t> &l) {
           const auto &[a01, _] =
               std::get<typename List<uint64_t>::Cons>(_sv1.v());
           auto _cell = typename List<uint64_t>::Cons(
-              (((a01 - a0) > a01 ? 0 : (a01 - a0))), nullptr);
+              (a01 - a0 > a01 ? 0 : a01 - a0), nullptr);
           List<uint64_t> &_node =
               (_write ? *(*_write = std::make_shared<List<uint64_t>>(
                               std::move(_cell)))

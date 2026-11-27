@@ -35,7 +35,7 @@ uint64_t NestedFixLoopify::outer(const NestedFixLoopify::lst &l) {
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       std::shared_ptr<NestedFixLoopify::lst> a1 = std::move(_f.a1);
-      _result = ([&]() {
+      _result = [&]() {
         auto inner =
             [&](const NestedFixLoopify::lst &m, uint64_t a) -> uint64_t {
               // Loop replaces the tail recursion: each recursive call updates
@@ -49,13 +49,13 @@ uint64_t NestedFixLoopify::outer(const NestedFixLoopify::lst &l) {
                   const auto &[a2, a3] =
                       std::get<typename NestedFixLoopify::lst::Cons>(
                           _loop_m->v());
-                  a = (a + (a2 * a0));
+                  a = a + a2 * a0;
                   _loop_m = crane_raw(a3);
                 }
               }
             };
         return inner(*a1, UINT64_C(0));
-      }() + _result);
+      }() + _result;
     }
   }
   return _result;

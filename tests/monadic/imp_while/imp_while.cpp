@@ -12,17 +12,17 @@ uint64_t eval(std::span<const uint64_t> vars, const Expr &e) {
     const auto &[a0, b0] = std::get<typename Expr::Add>(e.v());
     uint64_t x = eval(vars, *a0);
     uint64_t y = eval(vars, *b0);
-    return (x + y);
+    return x + y;
   } else if (std::holds_alternative<typename Expr::Sub>(e.v())) {
     const auto &[a0, b0] = std::get<typename Expr::Sub>(e.v());
     uint64_t x = eval(vars, *a0);
     uint64_t y = eval(vars, *b0);
-    return (((x - y) > x ? 0 : (x - y)));
+    return (x - y > x ? 0 : x - y);
   } else if (std::holds_alternative<typename Expr::Mul>(e.v())) {
     const auto &[a0, b0] = std::get<typename Expr::Mul>(e.v());
     uint64_t x = eval(vars, *a0);
     uint64_t y = eval(vars, *b0);
-    return (x * y);
+    return x * y;
   } else {
     const auto &[a0, b0] = std::get<typename Expr::Lt>(e.v());
     uint64_t x = eval(vars, *a0);
@@ -44,7 +44,7 @@ uint64_t exec_body(std::span<uint64_t> vars, const Stmt &s) {
     const auto &[s3, s4] = std::get<typename Stmt::Seq>(s.v());
     uint64_t n1 = crane::rec_call<Stmt, uint64_t>(*s3);
     uint64_t n2 = crane::rec_call<Stmt, uint64_t>(*s4);
-    return (n1 + n2);
+    return n1 + n2;
   } else if (std::holds_alternative<typename Stmt::If>(s.v())) {
     const auto &[c0, s3, s4] = std::get<typename Stmt::If>(s.v());
     uint64_t v = eval(std::span<const uint64_t>{vars}, c0);
@@ -79,8 +79,9 @@ std::pair<uint64_t, List<uint64_t>> run(uint64_t n, const Stmt &s) {
       std::make_shared<crane::array_storage<uint64_t>>(
           static_cast<std::size_t>(n), UINT64_C(0));
   uint64_t steps = exec(vars, s);
-  return std::make_pair(
-      steps, crane::st::elems<List<uint64_t>>(std::span{std::as_const(*vars)}));
+  List<uint64_t> vs =
+      crane::st::elems<List<uint64_t>>(std::span{std::as_const(*vars)});
+  return std::make_pair(steps, std::move(vs));
 }
 
 /// x1 := k!, counting x0 down from k.

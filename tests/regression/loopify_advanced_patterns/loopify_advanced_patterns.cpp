@@ -29,7 +29,7 @@ uint64_t LoopifyAdvancedPatterns::len_impl(const List<uint64_t> &l) {
     } else {
       auto _f = std::move(std::get<_after_len_impl_in_Cons>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     }
   }
   return _result;
@@ -109,12 +109,12 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(const List<uint64_t> &l) {
     } else if (std::holds_alternative<_after_multi_guard_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_multi_guard_in_false>(_popped));
       _stack.pop_back();
-      _result = (UINT64_C(1) + _result);
+      _result = UINT64_C(1) + _result;
     } else {
       auto _f = std::move(std::get<_after_multi_guard_in_true>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -179,7 +179,7 @@ uint64_t LoopifyAdvancedPatterns::four_elem(const List<uint64_t> &l) {
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
       uint64_t a02 = _f.a02;
-      _result = ((((a0 + a00) + a01) + a02) + _result);
+      _result = a0 + a00 + a01 + a02 + _result;
     }
   }
   return _result;
@@ -226,7 +226,7 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
       uint64_t c = _f.c;
       uint64_t a = _f.a;
       uint64_t b = _f.b;
-      _result = (((a + b) + c) + _result);
+      _result = a + b + c + _result;
     }
   }
   return _result;
@@ -245,13 +245,13 @@ uint64_t LoopifyAdvancedPatterns::guard_accum(uint64_t acc,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (UINT64_C(100) < a0) {
         _loop_l = crane_raw(a1);
-        acc = (acc * UINT64_C(2));
+        acc = acc * UINT64_C(2);
       } else if (UINT64_C(50) < a0) {
         _loop_l = crane_raw(a1);
-        acc = (acc + a0);
+        acc = acc + a0;
       } else if (UINT64_C(0) < a0) {
         _loop_l = crane_raw(a1);
-        acc = (acc + UINT64_C(1));
+        acc = acc + UINT64_C(1);
       } else {
         _loop_l = crane_raw(a1);
       }
@@ -277,7 +277,7 @@ List<uint64_t> LoopifyAdvancedPatterns::cons_computed(uint64_t n,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t next_n;
       if (UINT64_C(0) < n) {
-        next_n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+        next_n = (n - UINT64_C(1) > n ? 0 : n - UINT64_C(1));
       } else {
         next_n = n;
       }
@@ -350,7 +350,7 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
       auto _f = std::move(std::get<_after_sum_shapes_in_Cons>(_popped));
       _stack.pop_back();
       LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
-      _result = (extract_value(std::move(a0)) + _result);
+      _result = extract_value(std::move(a0)) + _result;
     }
   }
   return _result;
@@ -397,16 +397,16 @@ LoopifyAdvancedPatterns::count_by_shape(
       const auto &[circles, squares] = p;
       if (std::holds_alternative<
               typename LoopifyAdvancedPatterns::shape::Circle>(a0.v_mut())) {
-        _result = std::make_pair(
-            std::make_pair((circles + UINT64_C(1)), squares), triangles);
+        _result = std::make_pair(std::make_pair(circles + UINT64_C(1), squares),
+                                 triangles);
       } else if (
           std::holds_alternative<
               typename LoopifyAdvancedPatterns::shape::Square>(a0.v_mut())) {
-        _result = std::make_pair(
-            std::make_pair(circles, (squares + UINT64_C(1))), triangles);
+        _result = std::make_pair(std::make_pair(circles, squares + UINT64_C(1)),
+                                 triangles);
       } else {
         _result = std::make_pair(std::make_pair(circles, squares),
-                                 (triangles + UINT64_C(1)));
+                                 triangles + UINT64_C(1));
       }
     }
   }
@@ -443,7 +443,7 @@ List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        idx = (((idx - UINT64_C(1)) > idx ? 0 : (idx - UINT64_C(1))));
+        idx = (idx - UINT64_C(1) > idx ? 0 : idx - UINT64_C(1));
         continue;
       }
     }

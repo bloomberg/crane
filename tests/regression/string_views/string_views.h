@@ -24,7 +24,7 @@ struct StringViews {
   static inline const int64_t literal_length =
       static_cast<int64_t>(std::string_view("abc").size());
   static inline const int64_t literal_prefix_size = static_cast<int64_t>(
-      (std::string_view("crane").substr(0, INT64_C(3))).size());
+      std::string_view("crane").substr(0, INT64_C(3)).size());
   static inline const std::string with_nul = std::string("a\000b", 3);
   static inline const int64_t nul_size = size_of(std::string_view("a\000b", 3));
   static inline const int64_t nul_length =

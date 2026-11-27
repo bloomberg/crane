@@ -71,13 +71,13 @@ struct NameClashScrutinee {
         const auto &[a0] = std::get<typename shape::Circle>(this->v());
         switch (c) {
         case Color::RED: {
-          return (a0 + UINT64_C(10));
+          return a0 + UINT64_C(10);
         }
         case Color::GREEN: {
-          return (a0 + UINT64_C(20));
+          return a0 + UINT64_C(20);
         }
         case Color::BLUE: {
-          return (a0 + UINT64_C(30));
+          return a0 + UINT64_C(30);
         }
         default:
           std::unreachable();
@@ -86,10 +86,10 @@ struct NameClashScrutinee {
         const auto &[a0, a1] = std::get<typename shape::Square>(this->v());
         switch (c) {
         case Color::RED: {
-          return (a0 * a1);
+          return a0 * a1;
         }
         case Color::GREEN: {
-          return (a0 + a1);
+          return a0 + a1;
         }
         case Color::BLUE: {
           return UINT64_C(0);
@@ -123,10 +123,10 @@ struct NameClashScrutinee {
           return a0;
         } else {
           const auto &[a0, a1] = std::get<typename shape::Square>(this->v());
-          return (a0 + a1);
+          return a0 + a1;
         }
       }();
-      return (color_val + shape_val);
+      return color_val + shape_val;
     }
 
     template <typename T1, typename F0, typename F1>
@@ -195,10 +195,10 @@ struct NameClashScrutinee {
             return a00;
           }
           case Color::GREEN: {
-            return (a00 * UINT64_C(2));
+            return a00 * UINT64_C(2);
           }
           case Color::BLUE: {
-            return (a00 * UINT64_C(3));
+            return a00 * UINT64_C(3);
           }
           default:
             std::unreachable();
@@ -207,10 +207,10 @@ struct NameClashScrutinee {
           const auto &[a00, a10] = std::get<typename shape::Square>(a1.v());
           switch (a0) {
           case Color::RED: {
-            return (a00 + a10);
+            return a00 + a10;
           }
           case Color::GREEN: {
-            return (a00 * a10);
+            return a00 * a10;
           }
           case Color::BLUE: {
             return UINT64_C(0);

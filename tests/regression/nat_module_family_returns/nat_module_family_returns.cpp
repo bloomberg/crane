@@ -113,7 +113,7 @@ uint64_t Nat::pow(uint64_t n, uint64_t m) {
     return UINT64_C(1);
   } else {
     uint64_t m0 = m - 1;
-    return (n * pow(n, m0));
+    return n * pow(n, m0);
   }
 }
 
@@ -421,7 +421,7 @@ uint64_t Nat::gcd(uint64_t a, uint64_t b) {
   }
 }
 
-uint64_t Nat::square(uint64_t n) { return (n * n); }
+uint64_t Nat::square(uint64_t n) { return n * n; }
 
 uint64_t Nat::sqrt_iter(uint64_t k, uint64_t p, uint64_t q, uint64_t r) {
   if (k <= 0) {
@@ -488,7 +488,7 @@ uint64_t Nat::shiftl(uint64_t a, uint64_t n) {
   } else {
     uint64_t n0 = n - 1;
     auto _once1 = shiftl(a, n0);
-    return (_once1 + _once1);
+    return _once1 + _once1;
   }
 }
 
@@ -607,12 +607,12 @@ uint64_t Nat::log2_up(uint64_t a) {
 
 uint64_t Nat::Private_NLcmProp::lcm(uint64_t a, uint64_t b) {
   auto _once1 = gcd(a, b);
-  return (a * (_once1 ? b / _once1 : 0));
+  return a * (_once1 ? b / _once1 : 0);
 }
 
 uint64_t Nat::lcm(uint64_t a, uint64_t b) {
   auto _once1 = gcd(a, b);
-  return (a * (_once1 ? b / _once1 : 0));
+  return a * (_once1 ? b / _once1 : 0);
 }
 
 Reflect Nat::eqb_spec(uint64_t x, uint64_t y) {

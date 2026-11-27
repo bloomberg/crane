@@ -275,7 +275,7 @@ struct TypedFitCaseArgument {
             [](uint64_t x) { return x; },
             _pa0);
       };
-      return (cf(UINT64_C(1)) + cf(UINT64_C(2)));
+      return cf(UINT64_C(1)) + cf(UINT64_C(2));
     }();
   }();
   static uint64_t plain_f(const tree &t);

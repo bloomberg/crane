@@ -167,10 +167,10 @@ struct SharedVariantNested {
     uint64_t rsum() const {
       const auto &[a0, a1] = crane::get<typename rose::RNode>(this->v());
       const List<rose> &a1_value = *a1;
-      return (a0 + a1_value.template fold_left<uint64_t>(
-                       [](uint64_t acc,
-                          const rose &t0) { return (acc + t0.rsum()); },
-                       UINT64_C(0)));
+      return a0 +
+             a1_value.template fold_left<uint64_t>(
+                 [](uint64_t acc, const rose &t0) { return acc + t0.rsum(); },
+                 UINT64_C(0));
     }
 
     template <typename T1, typename F0> T1 rose_rec(F0 &&f) const {
@@ -469,7 +469,7 @@ struct SharedVariantNested {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = crane::get<typename shape::Box3>(this->v());
-        return ((a0 * a1) * a2);
+        return a0 * a1 * a2;
       }
     }
 
@@ -497,8 +497,8 @@ struct SharedVariantNested {
           List<shape>::cons(shape::box3(UINT64_C(1), UINT64_C(1), UINT64_C(1)),
                             List<shape>::nil()))));
   static inline const uint64_t result =
-      ((((r0.rsum() + r1.rsum()) + c0.clen()) + ssize(s0)) +
-       shapes.template fold_left<uint64_t>(
-           [](uint64_t n, const shape &s) { return (n + s.volume()); },
-           UINT64_C(0)));
+      r0.rsum() + r1.rsum() + c0.clen() + ssize(s0) +
+      shapes.template fold_left<uint64_t>(
+          [](uint64_t n, const shape &s) { return n + s.volume(); },
+          UINT64_C(0));
 };

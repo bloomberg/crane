@@ -35,7 +35,7 @@ MemSafetyProbe15::sum_list(const MemSafetyProbe15::mylist<uint64_t> &l) {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       _stack.pop_back();
       uint64_t a0 = _f.a0;
-      _result = (a0 + _result);
+      _result = a0 + _result;
     }
   }
   return _result;
@@ -157,9 +157,8 @@ MemSafetyProbe15::subtree_sums(const MemSafetyProbe15::tree &t) {
       std::shared_ptr<MemSafetyProbe15::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe15::tree &a2 = *_f.a2;
-      _result =
-          mylist<uint64_t>::mycons(((a0->tree_sum() + a1) + a2.tree_sum()),
-                                   _f._tmp2.myapp(std::move(_result)));
+      _result = mylist<uint64_t>::mycons(a0->tree_sum() + a1 + a2.tree_sum(),
+                                         _f._tmp2.myapp(std::move(_result)));
     }
   }
   return _result;

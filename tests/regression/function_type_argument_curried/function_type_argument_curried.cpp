@@ -5,12 +5,12 @@ uint64_t FunctionTypeArgumentCurried::f2(uint64_t x0_, uint64_t x1_) {
   // touching its counts.
   static const auto idp_1 =
       crane::immortal(idp<crane::fn<uint64_t(uint64_t, uint64_t)>>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }));
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return _x0 + _x1; }));
   return idp_1(x0_, x1_);
 }
 
 uint64_t
 FunctionTypeArgumentCurried::ev(const FunctionTypeArgumentCurried::t &x) {
   const auto &[a0, a1, a2] = x;
-  return ((a0 + a1) + a2);
+  return a0 + a1 + a2;
 }

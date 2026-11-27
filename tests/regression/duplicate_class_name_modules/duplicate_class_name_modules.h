@@ -41,5 +41,5 @@ struct M2 {
 };
 
 struct DuplicateClassNameModules {
-  static inline const uint64_t run = (M1::i::m(UINT64_C(1)) + M2::i::m(true));
+  static inline const uint64_t run = M1::i::m(UINT64_C(1)) + M2::i::m(true);
 };

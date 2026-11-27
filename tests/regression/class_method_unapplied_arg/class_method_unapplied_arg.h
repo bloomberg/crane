@@ -153,7 +153,7 @@ concept Op = requires {
 
 struct ClassMethodUnappliedArg {
   struct opN {
-    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return a0 + a1; }
   };
 
   static_assert(Op<opN, uint64_t>);

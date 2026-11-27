@@ -151,7 +151,7 @@ struct MemSafetyProbe16 {
           auto _f = std::move(std::get<_after_tree_map_val_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = tree::node(std::move(_f._tmp2), (a1 + UINT64_C(1)),
+          _result = tree::node(std::move(_f._tmp2), a1 + UINT64_C(1),
                                std::move(_result));
         }
       }
@@ -166,20 +166,17 @@ struct MemSafetyProbe16 {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
-          return ((a1 + a2->tree_sum()) + n);
+          return a1 + a2->tree_sum() + n;
         } else {
           const auto &[a00, a10, a20] = std::get<typename tree::Node>(_sv0.v());
           auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
-            return ((((a00->tree_sum() + a10) + a20->tree_sum()) + a1) + n);
+            return a00->tree_sum() + a10 + a20->tree_sum() + a1 + n;
           } else {
             const auto &[a01, a11, a21] =
                 std::get<typename tree::Node>(_sv1.v());
-            return (((((((a00->tree_sum() + a10) + a20->tree_sum()) + a1) +
-                       a01->tree_sum()) +
-                      a11) +
-                     a21->tree_sum()) +
-                    n);
+            return a00->tree_sum() + a10 + a20->tree_sum() + a1 +
+                   a01->tree_sum() + a11 + a21->tree_sum() + n;
           }
         }
       }
@@ -188,13 +185,13 @@ struct MemSafetyProbe16 {
     /// TEST 5: A function that takes TWO trees and returns a closure
     /// capturing both. Tests double ownership.
     uint64_t pair_closure(const tree &t2, uint64_t n) const {
-      return ((this->tree_sum() + t2.tree_sum()) + n);
+      return this->tree_sum() + t2.tree_sum() + n;
     }
 
     /// TEST 1: Store a closure derived from a tree in a list,
     /// then invoke it after the tree goes out of scope.
     /// The closure should capture by value.
-    uint64_t make_summer(uint64_t n) const { return (this->tree_sum() + n); }
+    uint64_t make_summer(uint64_t n) const { return this->tree_sum() + n; }
 
     uint64_t tree_sum() const {
       const tree *_self = this;
@@ -245,7 +242,7 @@ struct MemSafetyProbe16 {
           auto _f = std::move(std::get<_after_tree_sum_in_Node_2>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
-          _result = ((_f._tmp2 + a1) + _result);
+          _result = _f._tmp2 + a1 + _result;
         }
       }
       return _result;
@@ -434,7 +431,7 @@ struct MemSafetyProbe16 {
         } else {
           auto _f = std::move(std::get<_after_length_in_Mycons>(_popped));
           _stack.pop_back();
-          _result = (UINT64_C(1) + _result);
+          _result = UINT64_C(1) + _result;
         }
       }
       return _result;
@@ -587,7 +584,7 @@ struct MemSafetyProbe16 {
           [=, t1 = std::move(t1), t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
             return t1.pair_closure(std::move(t2), _x0);
           };
-      return (f(UINT64_C(0)) + f(UINT64_C(0)));
+      return f(UINT64_C(0)) + f(UINT64_C(0));
     }();
   }();
   static inline const uint64_t test_deep_nested = []() {

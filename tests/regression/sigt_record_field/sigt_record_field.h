@@ -145,5 +145,5 @@ struct SigtRecordField {
                                          List<crane::obj>::nil()))),
                                        UINT64_C(2)};
   static uint64_t peek(const boxed &b);
-  static inline const uint64_t run = (peek(b1) + peek(b2));
+  static inline const uint64_t run = peek(b1) + peek(b2);
 };
