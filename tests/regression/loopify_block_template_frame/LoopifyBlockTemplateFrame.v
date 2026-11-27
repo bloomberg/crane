@@ -1,5 +1,12 @@
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Set Crane Loopify.
 
@@ -14,7 +21,9 @@ Set Crane Loopify.
     undeclared [d]. *)
 
 Axiom twice : forall {E} `{consoleE -< E}, nat -> itree E nat.
-Crane Extract Inlined Constant twice => "%result = %a0 * 2".
+#[global] Instance twice_mapping : OperationMapping (Ref (@twice)) :=
+  effect_cpp [] ["x0"]
+    (WithBody "" "%result = %arg(x0) * 2").
 
 Module LoopifyBlockTemplateFrame.
 

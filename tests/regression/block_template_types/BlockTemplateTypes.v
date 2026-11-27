@@ -6,22 +6,34 @@
    Verifies that %result expansion emits the correct C++ type declaration
    for non-string return types: unsigned int (nat), bool, and mixed.
 *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Local Open Scope pstring_scope.
 
 (** Block templates returning non-string types. *)
 
 Axiom read_nat : forall {E} `{consoleE -< E}, itree E nat.
-Crane Extract Inlined Constant read_nat => "std::cin >> %result".
+#[global] Instance read_nat_mapping : OperationMapping (Ref (@read_nat)) :=
+  effect_cpp [] []
+    (WithBody "" "std::cin >> %result").
 
 Axiom is_positive : forall {E} `{consoleE -< E}, nat -> itree E bool.
-Crane Extract Inlined Constant is_positive => "%result = (%a0 > 0u)".
+#[global] Instance is_positive_mapping : OperationMapping (Ref (@is_positive)) :=
+  effect_cpp [] ["x0"]
+    (WithBody "" "%result = (%arg(x0) > 0u)").
 
 Axiom parse_nat : forall {E} `{consoleE -< E}, string -> itree E nat.
-Crane Extract Inlined Constant parse_nat =>
-  "%result = static_cast<unsigned int>(std::stoul(%a0))".
+#[global] Instance parse_nat_mapping : OperationMapping (Ref (@parse_nat)) :=
+  effect_cpp [] ["x0"]
+    (WithBody "" "%result = static_cast<unsigned int>(std::stoul(%arg(x0)))").
 
 Module BlockTemplateTypes.
 

@@ -12,10 +12,17 @@
     three arguments.  The suite compiles with [CRANE_STRICT_ARITY], so a
     crossing lowering misses is a compile error. *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import List PeanoNat.
 Import ListNotations.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.NatInt.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Module CallableCrossingMatrix.
 
@@ -25,7 +32,9 @@ Definition add3 (a b c : nat) : nat := a + b + c.
 (** An inline mapping whose parameter is a type variable: C++ deduces
     [auto]. *)
 Definition keep {A} (x : A) : A := x.
-Crane Extract Inlined Constant keep => "%a0".
+#[global] Instance keep_mapping : OperationMapping (Ref (@keep)) :=
+  pure_cpp [] ["x"]
+    (Structured (Arg "x")).
 
 Definition idp {A} (x : A) : A := x.
 

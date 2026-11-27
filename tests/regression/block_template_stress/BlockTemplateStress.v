@@ -11,8 +11,15 @@
    - block templates in option-returning functions
    - block templates with multiple semicolons in template body
 *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Local Open Scope pstring_scope.
 
@@ -20,18 +27,21 @@ Local Open Scope pstring_scope.
 
 (** A block template with multiple semicolons in the template body *)
 Axiom scan_nat : forall {E} `{consoleE -< E}, itree E nat.
-Crane Extract Inlined Constant scan_nat =>
-  "std::cin >> %result" From "iostream".
+#[global] Instance scan_nat_mapping : OperationMapping (Ref (@scan_nat)) :=
+  effect_cpp ["iostream"] []
+    (WithBody "" "std::cin >> %result").
 
 (** A pure (non-monadic) block template *)
 Axiom scan_nat_pure : nat.
-Crane Extract Inlined Constant scan_nat_pure =>
-  "std::cin >> %result" From "iostream".
+#[global] Instance scan_nat_pure_mapping : OperationMapping (Ref (@scan_nat_pure)) :=
+  pure_cpp ["iostream"] []
+    (WithBody "" "std::cin >> %result").
 
 (** A block template with both %result and %a0 that has multi-statement body *)
 Axiom read_or_default : forall {E} `{fileE -< E}, string -> itree E string.
-Crane Extract Inlined Constant read_or_default =>
-  "{ std::ifstream _f(%a0); if (_f.good()) std::getline(_f, %result); else %result = %a0; }" From "fstream".
+#[global] Instance read_or_default_mapping : OperationMapping (Ref (@read_or_default)) :=
+  effect_cpp ["fstream"] ["x0"]
+    (WithBody "" "{ std::ifstream _f(%arg(x0)); if (_f.good()) std::getline(_f, %result); else %result = %arg(x0); }").
 
 Module BlockTemplateStress.
 

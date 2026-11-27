@@ -42,8 +42,17 @@ Section Ops.
     trigger (NewRef I v).
 End Ops.
 
-Crane Extract Inlined Constant Ref => "%t0".
-Crane Extract Inlined Constant myNew => "%a0".
+Local Notation ClassRef := (@Ref) (only parsing).
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
+Import PrimString.PStringNotations List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+
+#[global] Instance Ref_mapping (I : Type) (H : RefClass I) (A : Type) : TypeMapping (ClassRef I H A) :=
+  value_type [] (SourceType A) UnknownCopy.
+#[global] Instance myNew_mapping : OperationMapping (Ref (@myNew)) :=
+  pass_through [] "v" [].
 
 Definition newOnly : itree (MyEvent nat) nat :=
   myNew 5 ;;

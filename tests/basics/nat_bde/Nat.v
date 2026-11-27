@@ -52,20 +52,34 @@ Module Nat.
 End Nat.
 
 Require Crane.Extraction.
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 Require Import Crane.Mapping.BDE.
 
 
-Crane Extract Inlined Constant Nat.int => "int".
-Crane Extract Inlined Constant Nat.zero => "0".
-Crane Extract Inlined Constant Nat.one => "1".
-Crane Extract Inlined Constant Nat.iplus => "%a0 + %a1".
-Crane Extract Inlined Constant Nat.iminus => "%a0 - %a1".
-Crane Extract Inlined Constant Nat.positive => "%a0 > 0". (*
-Crane Extract Inlined Constant Nat.fuel => "FUEL".
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive bool => "bool" [ "true" "false" ] "if(%scrut){%br0} else{%br1}".
-Crane Extract Inlined Constant negb => "!(%a0)".
-*)
+#[global] Instance int_mapping : TypeMapping Nat.int :=
+  value_type [] (Int I32) BitCopy.
+#[global] Instance zero_mapping : OperationMapping (Ref (@Nat.zero)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "0")).
+#[global] Instance one_mapping : OperationMapping (Ref (@Nat.one)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "1")).
+#[global] Instance iplus_mapping : OperationMapping (Ref (@Nat.iplus)) :=
+  pure_cpp [] ["x0"; "x1"]
+    (Structured (Binop (Add Unchecked) (Arg "x0") (Arg "x1"))).
+#[global] Instance iminus_mapping : OperationMapping (Ref (@Nat.iminus)) :=
+  pure_cpp [] ["x0"; "x1"]
+    (Structured (Binop (Sub Unchecked) (Arg "x0") (Arg "x1"))).
+#[global] Instance positive_mapping : OperationMapping (Ref (@Nat.positive)) :=
+  pure_cpp [] ["x0"]
+    (Structured (Binop Greater (Arg "x0") (Verbatim "0"))).
 
 
 Set Crane BDE Directory "~/bde_install/".

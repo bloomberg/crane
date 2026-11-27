@@ -6,9 +6,16 @@
    Demonstrates multiple effect types defined as inductives, composed
    with [+'], and lifted via [embed].
 *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString.
 Require Import Crane.Extraction.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 (** ------------------------------------------------------------------ *)
 (** Effect types                                                        *)
@@ -48,12 +55,18 @@ Definition get_time : itree appE nat := embed GetTime.
 (** Extraction mappings                                                 *)
 (** ------------------------------------------------------------------ *)
 
-Crane Extract Inlined Constant print_endline => "std::cout << %a0 << '\n'" From "iostream".
-Crane Extract Inlined Constant get_line =>
-  "std::getline(std::cin, %result)" From "iostream".
-Crane Extract Inlined Constant random_nat => "(std::rand() % %a0)" From "cstdlib".
-Crane Extract Inlined Constant get_time =>
-  "static_cast<unsigned int>(std::time(nullptr))" From "ctime".
+#[global] Instance print_endline_mapping : OperationMapping (Ref (@print_endline)) :=
+  effect_cpp ["iostream"] ["s"]
+    (Expr "std::cout << %arg(s) << '\n'").
+#[global] Instance get_line_mapping : OperationMapping (Ref (@get_line)) :=
+  effect_cpp ["iostream"] []
+    (WithBody "" "std::getline(std::cin, %result)").
+#[global] Instance random_nat_mapping : OperationMapping (Ref (@random_nat)) :=
+  effect_cpp ["cstdlib"] ["bound"]
+    (Expr "(std::rand() % %arg(bound))").
+#[global] Instance get_time_mapping : OperationMapping (Ref (@get_time)) :=
+  effect_cpp ["ctime"] []
+    (Expr "static_cast<unsigned int>(std::time(nullptr))").
 
 (** ------------------------------------------------------------------ *)
 (** Test programs                                                       *)

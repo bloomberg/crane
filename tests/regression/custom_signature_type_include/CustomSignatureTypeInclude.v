@@ -9,8 +9,15 @@
     spells [point] -- the value lives in a temporary -- so only the type the
     call to [origin_at] returns asks for [<complex>]. *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Module CustomSignatureTypeInclude.
 
@@ -22,7 +29,12 @@ Definition is_real (b : bool) : bool := on_axis (origin_at b).
 
 End CustomSignatureTypeInclude.
 
-Crane Extract Inlined Constant CustomSignatureTypeInclude.point => "std::complex<double>" From "complex".
-Crane Extract Inlined Constant CustomSignatureTypeInclude.origin_at => "std::complex<double>(%a0 ? 1.0 : 0.0, 0.0)".
-Crane Extract Inlined Constant CustomSignatureTypeInclude.on_axis => "(%a0.imag() == 0.0)".
+#[global] Instance point_mapping : TypeMapping CustomSignatureTypeInclude.point :=
+  value_type ["complex"] (Apply "std::complex" [TypeArg (Name "double")]) UnknownCopy.
+#[global] Instance origin_at_mapping : OperationMapping (Ref (@CustomSignatureTypeInclude.origin_at)) :=
+  pure_cpp [] ["x0"]
+    (Expr "std::complex<double>(%arg(x0) ? 1.0 : 0.0, 0.0)").
+#[global] Instance on_axis_mapping : OperationMapping (Ref (@CustomSignatureTypeInclude.on_axis)) :=
+  pure_cpp [] ["x0"]
+    (Expr "(%arg(x0).imag() == 0.0)").
 Crane Extraction "custom_signature_type_include" CustomSignatureTypeInclude.

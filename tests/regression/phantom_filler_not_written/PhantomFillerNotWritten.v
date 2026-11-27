@@ -9,9 +9,16 @@
     written so that [E'] could be written after it, was read as the call's
     instantiation of [S], and the typed-fit check failed. *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import Arith.PeanoNat List PrimString.
 From ITree Require Import ITree Events.Exception.
 From Crane Require Import Extraction Mapping.NatInt Monads.ITree Monads.Error Mapping.Descriptor.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 Import Monads.
 Import ListNotations.
 Local Open Scope monad_scope.
@@ -53,5 +60,7 @@ Axiom run : forall {A : Type}, itree (exceptE Err) A -> A.
 Definition run_count (c : Cell unit nat) (n : nat) : nat := run (count_down c n).
 End PhantomFillerNotWritten.
 
-Crane Extract Inlined Constant PhantomFillerNotWritten.run => "%a0".
+#[global] Instance run_mapping : OperationMapping (Ref (@PhantomFillerNotWritten.run)) :=
+  effect_cpp [] ["x0"]
+    (Structured (Arg "x0")).
 Crane Extraction "phantom_filler_not_written" PhantomFillerNotWritten.

@@ -1,5 +1,12 @@
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Crane Require Import Mapping.Std Mapping.NatInt.
 From Crane Require Extraction.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Module LastUsePlaces.
 
@@ -10,10 +17,17 @@ Axiom big : Type.
 Axiom mk_big : nat -> big.
 Axiom big_val : big -> nat.
 Axiom twice_val : big -> nat.
-Crane Extract Inlined Constant big => "Big" From "big_support.h".
-Crane Extract Inlined Constant mk_big => "Big(%a0)".
-Crane Extract Inlined Constant big_val => "%a0.v".
-Crane Extract Inlined Constant twice_val => "sum_twice(%a0, %a0)".
+#[global] Instance big_mapping : TypeMapping big :=
+  value_type ["big_support.h"] (Name "Big") UnknownCopy.
+#[global] Instance mk_big_mapping : OperationMapping (Ref (@mk_big)) :=
+  pure_cpp [] ["x0"]
+    (Structured (Call "Big" [] [Arg "x0"])).
+#[global] Instance big_val_mapping : OperationMapping (Ref (@big_val)) :=
+  pure_cpp [] ["x0"]
+    (Structured (Member (Arg "x0") "v")).
+#[global] Instance twice_val_mapping : OperationMapping (Ref (@twice_val)) :=
+  pure_cpp [] ["x0"]
+    (Structured (Call "sum_twice" [] [Arg "x0"; Arg "x0"])).
 
 Definition split (n : nat) : big * big := (mk_big n, mk_big (S n)).
 

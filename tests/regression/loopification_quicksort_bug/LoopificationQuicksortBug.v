@@ -1,4 +1,7 @@
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Crane Require Monads.ST.
 
 From Stdlib Require Import
@@ -80,9 +83,15 @@ Module QuicksortFun.
 End QuicksortFun.
 
 Require Import Crane.Mapping.NatInt.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 
-Crane Extract Inlined Constant QuicksortFun.int_to_string => "std::to_string(%a0)".
+#[global] Instance int_to_string_mapping : OperationMapping (Ref (@QuicksortFun.int_to_string)) :=
+  pure_cpp [] ["n"]
+    (Structured (Call "std::to_string" [] [Arg "n"])).
 
 Set Crane Loopify.
 Crane Extraction "loopification_quicksort_bug" QuicksortFun.test_quicksort_fun.

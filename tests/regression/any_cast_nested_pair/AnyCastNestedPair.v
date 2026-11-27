@@ -10,10 +10,17 @@
    SemVal must NOT get any_cast<std::any> — they should pass through
    directly since the value IS already std::any. *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import Lists.List.
 Import ListNotations.
 Require Crane.Extraction.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Module AnyCastNestedPair.
 
@@ -37,7 +44,11 @@ Definition test_pred (a b : nat) : nat :=
 
 End AnyCastNestedPair.
 
-Crane Extract Inlined Constant AnyCastNestedPair.mkSemVal => "crane::obj(%a0)".
-Crane Extract Inlined Constant AnyCastNestedPair.getSemVal => "crane::any_cast<uint64_t>(%a0)".
+#[global] Instance mkSemVal_mapping : OperationMapping (Ref (@AnyCastNestedPair.mkSemVal)) :=
+  pure_cpp [] ["x0"]
+    (Structured (Call "crane::obj" [] [Arg "x0"])).
+#[global] Instance getSemVal_mapping : OperationMapping (Ref (@AnyCastNestedPair.getSemVal)) :=
+  pure_cpp [] ["x0"]
+    (Expr "crane::any_cast<uint64_t>(%arg(x0))").
 
 Crane Extraction "any_cast_nested_pair" AnyCastNestedPair.

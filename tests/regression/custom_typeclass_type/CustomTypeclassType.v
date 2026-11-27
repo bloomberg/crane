@@ -1,7 +1,7 @@
 (* Regression test: custom extraction of typeclass Type-valued field.
 
    When a typeclass has a Type-valued projection (Ref : Type -> Type) with
-   a custom extraction directive, the extraction's mlt_env typedef cache
+   a type mapping, the extraction's mlt_env typedef cache
    must NOT expand the constant's body, otherwise it extracts the projection to std::any. *)
 
 From Crane Require Import Mapping.NatInt Monads.ITree.
@@ -30,8 +30,7 @@ Section Ops.
     Ret (mkRef nat idx).
 End Ops.
 
-Crane Extract Inlined Constant Ref => "%t1".
-Crane Extract Inlined Constant newRef => "%result = %a0".
+
 
 (* Concrete instantiation: returns Ref nat = uint64_t.
    With the bug, the internal variable becomes std::any causing a type
@@ -39,5 +38,17 @@ Crane Extract Inlined Constant newRef => "%result = %a0".
 Definition test_new : itree void1 (Ref nat) :=
   r <- newRef 5 ;;
   Ret r.
+
+Local Notation ClassRef := (@Ref) (only parsing).
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
+Import PrimString.PStringNotations List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+
+#[global] Instance Ref_mapping (I : Type) (H : RefClass I) (A : Type) : TypeMapping (ClassRef I H A) :=
+  value_type [] (SourceType A) UnknownCopy.
+#[global] Instance newRef_mapping : OperationMapping (Ref (@newRef)) :=
+  effect_cpp [] ["idx"] (WithBody "" "%result = %arg(idx)").
 
 Crane Extraction "custom_typeclass_type" test_new.

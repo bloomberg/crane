@@ -12,13 +12,21 @@
    the IIFE body only uses its own local _r variable and global objects
    (like std::cin).
 *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 (** A non-monadic block template *)
 Axiom scan_nat_pure : nat.
-Crane Extract Inlined Constant scan_nat_pure =>
-  "std::cin >> %result" From "iostream".
+#[global] Instance scan_nat_pure_mapping : OperationMapping (Ref (@scan_nat_pure)) :=
+  pure_cpp ["iostream"] []
+    (WithBody "" "std::cin >> %result").
 
 Module BlockTemplateNonlocal.
 

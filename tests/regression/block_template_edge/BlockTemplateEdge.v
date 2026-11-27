@@ -4,16 +4,24 @@
 (** Edge cases for block template (%result) expansion.
     Tests unusual type combinations and nested block templates. *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString PrimInt63.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Local Open Scope pstring_scope.
 
 (** Custom block template axioms for testing *)
 
 Axiom read_bool : forall {E} `{consoleE -< E}, itree E bool.
-Crane Extract Inlined Constant read_bool =>
-  "%result = true" From "iostream".
+#[global] Instance read_bool_mapping : OperationMapping (Ref (@read_bool)) :=
+  effect_cpp ["iostream"] []
+    (WithBody "" "%result = true").
 
 Module BlockTemplateEdge.
 

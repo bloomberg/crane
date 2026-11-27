@@ -10,6 +10,9 @@
  * found in https://rocq-prover.org/doc/V9.0.0/corelib/Corelib.Init.Wf.html
  *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import Arith List Sorted Permutation.
 Import ListNotations.
 Open Scope list_scope.
@@ -446,5 +449,11 @@ End Sort.
 
 Require Crane.Extraction.
 From Crane Require Import Mapping.Std Mapping.NatInt.
-Crane Extract Inlined Constant Compare_dec.le_lt_dec => "%a0 <= %a1".
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+#[global] Instance le_lt_dec_mapping : OperationMapping (Ref (@Compare_dec.le_lt_dec)) :=
+  pure_cpp [] ["n"; "m"]
+    (Structured (Binop LessEq (Arg "n") (Arg "m"))).
 Crane Extraction "sort" Sort.

@@ -1,6 +1,13 @@
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import Nat.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITreeReified.
 Require Crane.Extraction.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Set Crane Loopify.
 
@@ -53,7 +60,9 @@ Definition pass {R} : itree ioE R -> itree ioE R :=
 
 (** Simple tree for testing: Ret 42 (no effects, no Tau). *)
 Definition test_tree : itree ioE nat := Ret 42.
-Crane Extract Inlined Constant test_tree => "ITree<uint64_t>::ret(UINT64_C(42))".
+#[global] Instance test_tree_mapping : OperationMapping (Ref (@test_tree)) :=
+  effect_cpp [] []
+    (Expr "ITree<uint64_t>::ret(UINT64_C(42))").
 
 Definition test_count := count_taus 100 test_tree.
 

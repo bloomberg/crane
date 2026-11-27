@@ -16,13 +16,21 @@
      std::getline(_f, s);
      };
 *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 (** Block template with %a0 that will receive a string containing ';' *)
 Axiom read_trimmed : forall {E} `{fileE -< E}, string -> itree E string.
-Crane Extract Inlined Constant read_trimmed =>
-  "{ std::ifstream _f(%a0); std::getline(_f, %result); }" From "fstream".
+#[global] Instance read_trimmed_mapping : OperationMapping (Ref (@read_trimmed)) :=
+  effect_cpp ["fstream"] ["x0"]
+    (WithBody "" "{ std::ifstream _f(%arg(x0)); std::getline(_f, %result); }").
 
 Module BlockTemplateSemicolon.
 

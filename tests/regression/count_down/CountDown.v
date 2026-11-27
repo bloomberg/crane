@@ -1,6 +1,13 @@
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree Monads.IO.
 From Crane Require Extraction.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Local Open Scope pstring_scope.
 Local Open Scope itree_scope.
@@ -121,7 +128,8 @@ CoFixpoint co_repeat (msg : string) : itree ioE unit :=
 
 End CountDown.
 
-Crane Extract Inlined Constant CountDown.nat_to_string =>
-  "std::to_string(%a0)".
+#[global] Instance nat_to_string_mapping : OperationMapping (Ref (@CountDown.nat_to_string)) :=
+  pure_cpp [] ["x0"]
+    (Structured (Call "std::to_string" [] [Arg "x0"])).
 
 Crane Extraction "count_down" CountDown.

@@ -24,6 +24,9 @@
     - [Ring A] has a borrow-only read view: a subrange of one escaping its
       owner is refused at extraction. *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import List.
 From ITree Require Import ITree Events.Exception.
 From Crane Require Import
@@ -33,6 +36,10 @@ From Crane Require Import
   Mapping.Descriptor.
 Import ListNotations.
 From Corelib Require Import PrimString.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 Import Monads.
 Local Open Scope monad_scope.
 Local Open Scope pstring_scope.
@@ -191,7 +198,9 @@ Module StructuralSpans.
 
 End StructuralSpans.
 
-Crane Extract Inlined Constant StructuralSpans.run => "%a0".
+#[global] Instance run_mapping : OperationMapping (Ref (@StructuralSpans.run)) :=
+  effect_cpp [] ["x0"]
+    (Structured (Arg "x0")).
 
 Crane Extraction "structural_spans" StructuralSpans.
 

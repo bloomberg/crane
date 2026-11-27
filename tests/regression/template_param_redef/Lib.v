@@ -6,13 +6,30 @@ From Crane Require Extraction.
     used to repeat the default argument, which C++ rejects as a redefinition
     of it.
 
-    The mapping says where [ex]'s parameter goes: a mapped name that does
-    not ({!Cpp_ir.Foreign_template.custom_template_with_args}) takes it as a
-    template argument, and [std::monostate<A>] is no type. *)
+    The mapping says where [ex]'s parameter goes ([SourceType A]), so the
+    type is no [std::monostate<A>]. *)
 Variant ex (A : Type) : Type := mk_box.
 
-Crane Extract Inductive ex => "std::conditional_t<true, std::monostate, %t0>"
-  [ "std::monostate{}" ]
-From "variant" "type_traits".
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
+Import PrimString.PStringNotations List.ListNotations.
+Local Open Scope pstring_scope.
+
+#[global] Instance ex_mapping (A : Type) : TypeMapping (ex A) :=
+  {| type_headers := ["variant"; "type_traits"];
+     type_cpp :=
+       Crane.Cpp.Apply "std::conditional_t"
+         [Crane.Cpp.ValueArg "true"; Crane.Cpp.TypeArg (Crane.Cpp.Name "std::monostate");
+          Crane.Cpp.TypeArg (Crane.Cpp.SourceType A)];
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews (ex A);
+     type_interface := AlgebraicInterface [event (Ref (@mk_box A)) "std::monostate{}"];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
 
 Definition f {A : Type} (b : ex A) : unit := tt.

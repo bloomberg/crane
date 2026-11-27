@@ -55,22 +55,55 @@ Module Nat.
 End Nat.
 
 Require Crane.Extraction.
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 
-Crane Extract Inductive bool =>
-  "bool"
-  [ "true" "false" ]
-  "if (%scrut) { %br0 } else { %br1 }".
+Module BoolMapping.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+#[global] Instance bool_mapping : TypeMapping bool :=
+  {| type_headers := [];
+     type_cpp := Crane.Cpp.Bool;
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews bool;
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref true; ctor_build := Expr "true";
+             ctor_view := Some {| view_requirement := CanonicalObservation; case_test := "%scrut"; case_fields := [] |} |};
+          {| ctor_source := Ref false; ctor_build := Expr "false";
+             ctor_view := Some {| view_requirement := CanonicalObservation; case_test := "!%scrut"; case_fields := [] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+End BoolMapping.
 
-Crane Extract Inlined Constant Nat.int => "int".
-Crane Extract Inlined Constant Nat.zero => "0".
-Crane Extract Inlined Constant Nat.one => "1".
-Crane Extract Inlined Constant Nat.iplus => "%a0 + %a1".
-Crane Extract Inlined Constant Nat.iminus => "%a0 - %a1".
-Crane Extract Inlined Constant Nat.positive => "%a0 > 0". (*
-Crane Extract Inlined Constant Nat.fuel => "FUEL".
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive bool => "bool" [ "true" "false" ] "if(%scrut){%br0} else{%br1}".
-Crane Extract Inlined Constant negb => "!(%a0)".
-*)
+#[global] Instance int_mapping : TypeMapping Nat.int :=
+  value_type [] (Int I32) BitCopy.
+#[global] Instance zero_mapping : OperationMapping (Ref (@Nat.zero)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "0")).
+#[global] Instance one_mapping : OperationMapping (Ref (@Nat.one)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "1")).
+#[global] Instance iplus_mapping : OperationMapping (Ref (@Nat.iplus)) :=
+  pure_cpp [] ["x0"; "x1"]
+    (Structured (Binop (Add Unchecked) (Arg "x0") (Arg "x1"))).
+#[global] Instance iminus_mapping : OperationMapping (Ref (@Nat.iminus)) :=
+  pure_cpp [] ["x0"; "x1"]
+    (Structured (Binop (Sub Unchecked) (Arg "x0") (Arg "x1"))).
+#[global] Instance positive_mapping : OperationMapping (Ref (@Nat.positive)) :=
+  pure_cpp [] ["x0"]
+    (Structured (Binop Greater (Arg "x0") (Verbatim "0"))).
 
 Crane Extraction "nat" Nat.

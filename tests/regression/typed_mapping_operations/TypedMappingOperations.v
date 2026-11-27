@@ -7,11 +7,10 @@
       its argument twice ([counter_double]), and an effectful one
       ([counter_log]).
     - [combine] splices its second argument twice and its first after it;
-      [ignore_first] ignores its first argument.  Called on [tick]s (a
-      legacy inline constant with an effect), each argument is evaluated
-      once: the repeated one is bound ahead and the ignored
-      one evaluated as a statement; the others stay in place, since both
-      operations are pure and a legacy mapping declares no effect.
+      [ignore_first] ignores its first argument.  Called on [tick]s (an
+      operation with an effect), each argument is evaluated once, in
+      source order: each is bound ahead, and the ignored one evaluated as
+      a statement.
     - [Buffer], mapped to a copy-counting C++ type passed by [const&]:
       [buffer_push] takes its buffer ([Take]), so a function passing its
       parameter there owns it, moves it at its last use and copies it where
@@ -23,8 +22,7 @@
       argument.
 
     The diagnostics: an argument list that does not match the retained
-    runtime binders, [Write] on a read-only type, and an operation mapped
-    both by a legacy command and by an instance. *)
+    runtime binders, and [Write] on a read-only type. *)
 
 From Corelib Require Import PrimString.
 From Stdlib Require Import List.
@@ -44,8 +42,11 @@ Axiom counter_double : Counter -> Counter.
 Axiom counter_log : Counter -> Counter.
 
 Axiom tick : nat -> nat.
-Crane Extract Inlined Constant tick => "ops_support::tick(%a0)"
-  From "typed_mapping_operations_support.h".
+#[export] Instance tick_mapping : OperationMapping (Ref tick) :=
+  {| operation_headers := [support];
+     operation_cpp := Structured (Crane.Cpp.Call "ops_support::tick" [] [Crane.Cpp.Arg "n"]);
+     operation_contract :=
+       EffectfulOperation [{| argument_name := "n"; argument_use := Read |}] ReturnValue [] |}.
 
 Axiom combine : nat -> nat -> nat.
 Axiom ignore_first : nat -> nat -> nat.
@@ -341,21 +342,3 @@ Module WriteReadOnly.
     "argument ""c"" is written, but its type's access model is read-only".
 End WriteReadOnly.
 
-(** An operation mapped both by a legacy command and by an instance. *)
-Axiom dual_op : nat -> nat.
-Crane Extract Inlined Constant dual_op => "(%a0 + 1)".
-
-Module DualMapping.
-  #[export] Instance dual_op_mapping : OperationMapping (Ref dual_op) :=
-    {| operation_headers := [];
-       operation_cpp := Expr "(%arg(n) + 2)";
-       operation_contract :=
-         PureOperation [{| argument_name := "n"; argument_use := Read |}] ReturnValue [] |}.
-End DualMapping.
-
-Module UsesDual.
-Definition dual_three : nat := dual_op 3.
-End UsesDual.
-
-Import DualMapping.
-Fail Crane Extraction "typed_mapping_operations_dual" UsesDual.

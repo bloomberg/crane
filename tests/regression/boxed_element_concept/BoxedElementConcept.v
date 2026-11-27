@@ -1,3 +1,6 @@
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
@@ -45,12 +48,39 @@ Definition total : nat := M.total.
 
 End BoxedElementConcept.
 
-Crane Extract Inductive list =>
-  "crane::list<%elem>"
-  [ "crane::list<%elem>{}"
-    "crane::cons(%a0, %a1)" ]
-  "if (%scrut.empty()) { %br0 } else { const %t0& %b1a0 = %scrut.front(); auto %b1a1 = %scrut.tail(); %br1 }"
-  Boxed Element "crane::box<%t0>"
-  From "conslist.h".
+Module ListMapping.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+
+#[global] Instance list_mapping (A : Type) : TypeMapping (list A) :=
+  {| type_headers := ["conslist.h"];
+     type_cpp := Crane.Cpp.Apply "crane::list" [Crane.Cpp.TypeArg (Crane.Cpp.BoxedComponent "element" (Crane.Cpp.Apply "crane::box" [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "element")]))];
+     type_components :=
+       [{| component_name := "element"; component_type := FieldType (Ref (@cons A)) 0 |}];
+     type_copy := UnknownCopy;
+     type_access := ReadOnlyValue ReadByConstReference;
+     type_views := NoViews (list A);
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref (@nil A);
+             ctor_build := Expr "crane::list<%stored(element)>{}";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "%scrut.empty()"; case_fields := [] |} |};
+          {| ctor_source := Ref (@cons A);
+             ctor_build := Expr "crane::cons(%a0, %a1)";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "!%scrut.empty()";
+                       case_fields :=
+                         [(0, CanonicalBorrowProjection "%scrut.front()");
+                          (1, OwnedProjection "%scrut.tail()")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+End ListMapping.
 
 Crane Extraction "boxed_element_concept" BoxedElementConcept.

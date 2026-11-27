@@ -3,14 +3,23 @@
    [Cpp_build.return_into_void] treated an inline custom's text (and foreign
    template text) as a pure value and dropped it; only the text says what it
    does, so it is now kept as an expression statement before the [return;]. *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Crane Require Import Extraction.
 From Crane Require Import Monads.ITree.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Variant giveupE : Type -> Type := GiveUp : giveupE unit.
 
 Definition give_up : itree giveupE unit := embed GiveUp.
 
-Crane Extract Inlined Constant give_up => "throw 0".
+#[global] Instance give_up_mapping : OperationMapping (Ref (@give_up)) :=
+  effect_cpp [] []
+    (Expr "throw 0").
 
 Module NullaryUnitEffectDropped.
   Definition f (u : unit) : itree giveupE unit := give_up.

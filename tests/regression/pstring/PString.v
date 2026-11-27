@@ -1,5 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 Require Import PrimString.
 From Stdlib Require Import Lists.List.
 Import ListNotations.
@@ -33,10 +36,22 @@ End PString.
 
 Require Crane.Extraction.
 
-Crane Extract Inlined Constant int => "int".
-Crane Extract Inlined Constant zero => "0".
-Crane Extract Inlined Constant one => "1".
-Crane Extract Inlined Constant iplus => "%a0 + %a1".
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+
+#[global] Instance int_mapping : TypeMapping int :=
+  value_type [] (Int I32) BitCopy.
+#[global] Instance zero_mapping : OperationMapping (Ref (@zero)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "0")).
+#[global] Instance one_mapping : OperationMapping (Ref (@one)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "1")).
+#[global] Instance iplus_mapping : OperationMapping (Ref (@iplus)) :=
+  pure_cpp [] ["x0"; "x1"]
+    (Structured (Binop (Add Unchecked) (Arg "x0") (Arg "x1"))).
 
 Require Import Crane.Mapping.Std.
 Crane Extraction "pstring" PString.

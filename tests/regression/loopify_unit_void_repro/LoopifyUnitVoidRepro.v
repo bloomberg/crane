@@ -1,6 +1,13 @@
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import Lists.List.
 From Crane Require Import Mapping.Std Mapping.NatInt Monads.ITree.
 From Crane Require Extraction.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 Import ListNotations.
 
 Set Crane Loopify.
@@ -35,11 +42,16 @@ Definition run : itree reproE c_int :=
 
 End LoopifyUnitVoidRepro.
 
-Crane Extract Inlined Constant LoopifyUnitVoidRepro.c_int => "int".
-Crane Extract Inlined Constant LoopifyUnitVoidRepro.c_zero => "0".
-Crane Extract Inlined Constant LoopifyUnitVoidRepro.draw_hidden_tile =>
-  "((void)%a0, (void)%a1)".
-Crane Extract Inlined Constant LoopifyUnitVoidRepro.draw_revealed_tile =>
-  "((void)%a0, (void)%a1)".
+#[global] Instance c_int_mapping : TypeMapping LoopifyUnitVoidRepro.c_int :=
+  value_type [] (Int I32) BitCopy.
+#[global] Instance c_zero_mapping : OperationMapping (Ref (@LoopifyUnitVoidRepro.c_zero)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "0")).
+#[global] Instance draw_hidden_tile_mapping : OperationMapping (Ref (@LoopifyUnitVoidRepro.draw_hidden_tile)) :=
+  effect_cpp [] ["x0"; "x1"]
+    (Expr "((void)%arg(x0), (void)%arg(x1))").
+#[global] Instance draw_revealed_tile_mapping : OperationMapping (Ref (@LoopifyUnitVoidRepro.draw_revealed_tile)) :=
+  effect_cpp [] ["x0"; "x1"]
+    (Expr "((void)%arg(x0), (void)%arg(x1))").
 
 Crane Extraction "loopify_unit_void_repro" LoopifyUnitVoidRepro.

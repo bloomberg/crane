@@ -22,8 +22,10 @@ Definition wrong_type (_ : unit) : nat := 0.
 End BenchmarkMatrix.
 
 (* The C++ build only succeeds if [With] flags are really forwarded. *)
-Crane Extract Inlined Constant BenchmarkMatrix.compiler_flag_enabled =>
-  "CRANE_BENCHMARK_FLAG == 1".
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+#[global] Instance compiler_flag_enabled_mapping
+  : OperationMapping (Ref BenchmarkMatrix.compiler_flag_enabled) :=
+  pure [] [] (Crane.Cpp.Binop Crane.Cpp.Equal (Crane.Cpp.Verbatim "CRANE_BENCHMARK_FLAG") (lit (BinNums.Zpos BinNums.xH))).
 
 (* Give Rocq's built-in OCaml extraction an implementation for the axiom. *)
 Extract Inductive bool => "bool" [ "true" "false" ].

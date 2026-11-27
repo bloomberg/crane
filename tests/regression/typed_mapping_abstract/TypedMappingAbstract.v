@@ -4,19 +4,17 @@
     using a mapped type the way its mapping forbids.
 
     - [Counter]: an axiomatised type mapped to [std::int64_t] with
-      [AbstractInterface], used only through legacy inline constants
-      (operation mappings come later): the type side is the typed mapping.
+      [AbstractInterface], used only through operation mappings.
     - [Token]: an inductive mapped abstractly.  Matching on it, or building
       it, in source is refused.
     - [Bead]: given a legacy [Crane Extract Numeral] and a typed mapping,
-      which is refused.
-    - [Pin]: mapped both by [Crane Extract Inductive] and by a typed
-      mapping, which is refused. *)
+      which is refused. *)
 
 From Corelib Require Import PrimString.
 From Stdlib Require Import List.
 Import ListNotations.
 From Crane Require Import Extraction Mapping.Descriptor.
+From Crane Require Mapping.Cpp.
 From Crane Require Import Mapping.Std Mapping.NatInt.
 
 Open Scope pstring_scope.
@@ -26,9 +24,12 @@ Axiom counter_zero : Counter.
 Axiom counter_tick : Counter -> Counter.
 Axiom counter_value : Counter -> nat.
 
-Crane Extract Inlined Constant counter_zero => "std::int64_t{0}".
-Crane Extract Inlined Constant counter_tick => "(%a0 + 1)".
-Crane Extract Inlined Constant counter_value => "static_cast<uint64_t>(%a0)".
+#[export] Instance counter_zero_mapping : OperationMapping (Ref counter_zero) :=
+  Cpp.pure ["cstdint"] [] (Crane.Cpp.IntLit Crane.Cpp.I64 (BinNums.Z0)).
+#[export] Instance counter_tick_mapping : OperationMapping (Ref counter_tick) :=
+  Cpp.pure [] ["c"] (Crane.Cpp.Binop (Crane.Cpp.Add Crane.Cpp.Unchecked) (Crane.Cpp.Arg "c") (Cpp.lit (BinNums.Zpos BinNums.xH))).
+#[export] Instance counter_value_mapping : OperationMapping (Ref counter_value) :=
+  Cpp.pure ["cstdint"] ["c"] (Cpp.wrap Crane.Cpp.U64 (Crane.Cpp.Arg "c")).
 
 #[export] Instance counter_mapping : TypeMapping Counter :=
   {| type_headers := ["cstdint"];
@@ -114,31 +115,3 @@ Module UsesBead.
   Fail Crane Extraction "typed_mapping_abstract_numeral_conflict" keep.
 End UsesBead.
 
-(** A type mapped both by a legacy command and by a typed mapping. *)
-Inductive Pin : Type := pin.
-Crane Extract Inductive Pin => "int" [ "0" ] "%br0".
-
-Module PinMapping.
-  #[export] Instance pin_mapping : TypeMapping Pin :=
-    {| type_headers := [];
-       type_cpp := Crane.Cpp.Name "int";
-       type_components := [];
-       type_copy := BitCopy;
-       type_access := ReadOnlyValue ReadByValue;
-       type_views := NoViews Pin;
-       type_interface :=
-         AlgebraicInterface
-           [{| ctor_source := Ref pin; ctor_build := Expr "0"; ctor_view := None |}];
-       type_model := Structural;
-       type_lifetime := NativeRAII;
-       type_release := OrdinaryRelease;
-       type_numerals := None |}.
-End PinMapping.
-
-Module UsesPin.
-Definition the_pin : Pin := pin.
-End UsesPin.
-
-(* With both mappings active, extraction is refused. *)
-Import PinMapping.
-Fail Crane Extraction "typed_mapping_abstract_pin_conflict" UsesPin.

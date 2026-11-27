@@ -7,6 +7,9 @@
     primitive one: a literal spelled through it would be cast to [int8_t],
     and [300] would come out as [44]. *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import PrimInt63.
 
 Module ShadowedPrimInt.
@@ -20,5 +23,10 @@ Axiom int : Type.
 
 Require Crane.Extraction.
 From Crane Require Import Mapping.Std.
-Crane Extract Inlined Constant int => "int8_t" From "cstdint".
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+#[global] Instance int_mapping : TypeMapping int :=
+  value_type ["cstdint"] (Int I8) BitCopy.
 Crane Extraction "shadowed_prim_int" ShadowedPrimInt.

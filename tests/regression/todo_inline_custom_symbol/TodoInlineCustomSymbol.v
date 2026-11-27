@@ -22,5 +22,11 @@ End TodoInlineCustomSymbol.
 Require Crane.Extraction.
 From Crane Require Import Mapping.Std Mapping.NatInt.
 
-Crane Extract Inlined Constant TodoInlineCustomSymbol.foreign_inc => "inline_inc_impl" From "todo_inline_custom_symbol_support.h".
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
+Import PrimString.PStringNotations List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+#[global] Instance foreign_inc_mapping : OperationMapping (Ref TodoInlineCustomSymbol.foreign_inc) :=
+  pure ["todo_inline_custom_symbol_support.h"] ["n"] (Call "inline_inc_impl" [] [Arg "n"]).
 Crane Extraction "todo_inline_custom_symbol" TodoInlineCustomSymbol.

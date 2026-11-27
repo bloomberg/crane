@@ -9,11 +9,19 @@
     lambda, which has to capture the locals its arguments read -- and only
     then: a lambda at namespace scope may not have a capture default. *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Crane Require Import Mapping.Std Mapping.NatInt.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Axiom first_at_least : nat -> nat.
-Crane Extract Inlined Constant first_at_least =>
-  "for (unsigned int _i = 0;; ++_i) { if (_i >= %a0) { %result = _i; break; } }".
+#[global] Instance first_at_least_mapping : OperationMapping (Ref (@first_at_least)) :=
+  pure_cpp [] ["x0"]
+    (WithBody "" "for (unsigned int _i = 0;; ++_i) { if (_i >= %arg(x0)) { %result = _i; break; } }").
 
 Module BlockTemplateForHeader.
 

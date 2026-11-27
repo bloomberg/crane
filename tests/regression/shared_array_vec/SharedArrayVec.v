@@ -5,6 +5,9 @@
     tables: built from a list, nested, indexed, matched on, extended at the
     front, and copied into a list, whose copies share the arrays. *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import List PeanoNat.
 Import ListNotations.
 From Crane Require Import Extraction.
@@ -47,18 +50,80 @@ End SharedArrayVec.
 
 (* Lists as [crane::list], as ParseALot's ConsList.v has them: an array is
    built from one by walking it. *)
-Crane Extract Inductive list =>
-  "crane::list<%t0>"
-  [ "crane::list<%t0>{}"
-    "crane::cons(%a0, %a1)" ]
-  "if (%scrut.empty()) { %br0 } else { const %t0& %b1a0 = %scrut.front(); auto %b1a1 = %scrut.tail(); %br1 }"
-  From "conslist.h".
-Crane Extract Inductive SharedArrayVec.vec =>
-  "crane::shared_array<%t0>"
-  [ "crane::shared_array<%t0>{}"
-    "%a1.push_front(%a0)" ]
-  "if (%scrut.empty()) { %br0 } else { const %t0& %b1a0 = %scrut.front(); auto %b1a1 = %scrut.drop(1); %br1 }"
-  From "shared_array.h".
-Crane Extract Inlined Constant SharedArrayVec.vec_of_list =>
-  "crane::shared_array<%t0>::of_range(%a0)" From "shared_array.h".
+Module ListMapping.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+
+#[global] Instance list_mapping (A : Type) : TypeMapping (list A) :=
+  {| type_headers := ["conslist.h"];
+     type_cpp := Crane.Cpp.Apply "crane::list" [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "element")];
+     type_components :=
+       [{| component_name := "element"; component_type := FieldType (Ref (@cons A)) 0 |}];
+     type_copy := UnknownCopy;
+     type_access := ReadOnlyValue ReadByConstReference;
+     type_views := NoViews (list A);
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref (@nil A);
+             ctor_build := Expr "crane::list<%stored(element)>{}";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "%scrut.empty()"; case_fields := [] |} |};
+          {| ctor_source := Ref (@cons A);
+             ctor_build := Expr "crane::cons(%a0, %a1)";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "!%scrut.empty()";
+                       case_fields :=
+                         [(0, CanonicalBorrowProjection "%scrut.front()");
+                          (1, OwnedProjection "%scrut.tail()")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+End ListMapping.
+Module VecMapping.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+
+#[global] Instance vec_mapping (A : Type) : TypeMapping (SharedArrayVec.vec A) :=
+  {| type_headers := ["shared_array.h"];
+     type_cpp := Crane.Cpp.Apply "crane::shared_array" [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "element")];
+     type_components :=
+       [{| component_name := "element"; component_type := FieldType (Ref (@SharedArrayVec.vcons A)) 0 |}];
+     type_copy := UnknownCopy;
+     type_access := ReadOnlyValue ReadByConstReference;
+     type_views := NoViews (SharedArrayVec.vec A);
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref (@SharedArrayVec.vnil A);
+             ctor_build := Expr "crane::shared_array<%stored(element)>{}";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "%scrut.empty()"; case_fields := [] |} |};
+          {| ctor_source := Ref (@SharedArrayVec.vcons A);
+             ctor_build := Expr "%a1.push_front(%a0)";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "!%scrut.empty()";
+                       case_fields :=
+                         [(0, CanonicalBorrowProjection "%scrut.front()");
+                          (1, OwnedProjection "%scrut.drop(1)")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+End VecMapping.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+
+#[global] Instance vec_of_list_mapping : OperationMapping (Ref (@SharedArrayVec.vec_of_list)) :=
+  pure_cpp ["shared_array.h"] ["l"]
+    (Expr "crane::shared_array<%t0>::of_range(%arg(l))").
 Crane Extraction "shared_array_vec" SharedArrayVec.

@@ -11,13 +11,21 @@
    - block templates carry %a0/%a1 arguments alongside %result
    - block templates appear inside let-bindings (not just monadic bind)
 *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString.
 From Crane Require Import Mapping.Std Monads.ITree Monads.IO.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 (** A custom block template with both %result and %a0. *)
 Axiom read_trimmed : forall {E} `{fileE -< E}, string -> itree E string.
-Crane Extract Inlined Constant read_trimmed =>
-  "{ std::ifstream _f(%a0); std::getline(_f, %result); }" From "fstream".
+#[global] Instance read_trimmed_mapping : OperationMapping (Ref (@read_trimmed)) :=
+  effect_cpp ["fstream"] ["x0"]
+    (WithBody "" "{ std::ifstream _f(%arg(x0)); std::getline(_f, %result); }").
 
 Module BlockTemplateHygiene.
 

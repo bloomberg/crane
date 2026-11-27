@@ -3,7 +3,7 @@
 
 // Regression test: embed-based effect smart constructors extract validly.
 // Verifies that smart constructors using embed with typeclass constraints
-// generate valid C++ without explicit Crane Extract Inlined Constant mappings.
+// generate valid C++ without an operation mapping for each smart constructor.
 
 #include <embed_effect.h>
 

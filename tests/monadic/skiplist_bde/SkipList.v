@@ -16,10 +16,17 @@
    shared_ptr-based nodes.
 *)
 
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import List Bool Arith Program.Wf Lia.
 From Crane Require Extraction.
 From Crane Require Import Mapping.BDE Mapping.NatIntBDE Monads.ITree Monads.IOBDE Monads.STMBDE.
 From Corelib Require Import PrimInt63.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 Import ListNotations.
 Set Implicit Arguments.
@@ -31,7 +38,9 @@ Set Implicit Arguments.
 (* Maximum number of levels - supports up to 2^16 elements efficiently *)
 Definition maxLevels : nat := 16.
 
-Crane Extract Inlined Constant maxLevels => "16u".
+#[global] Instance maxLevels_mapping : OperationMapping (Ref (@maxLevels)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "16u")).
 
 (* ========================================================================= *)
 (*                         Random Level Generation                           *)
@@ -47,8 +56,9 @@ Import Random_axioms.
 
 Definition randomInt (bound : int) : itree ioE int := ITree.trigger (irandomInt bound).
 
-Crane Extract Inlined Constant randomInt =>
-  "(std::rand() % %a0)" From "cstdlib".
+#[global] Instance randomInt_mapping : OperationMapping (Ref (@randomInt)) :=
+  effect_cpp ["cstdlib"] ["bound"]
+    (Expr "(std::rand() % %arg(bound))").
 
 (* Choose a random level for a new node *)
 Fixpoint chooseLevel_aux (fuel : nat) (acc : nat) (maxLvl : nat) : itree ioE nat :=
@@ -117,7 +127,9 @@ Definition writeNext {K V : Type} (n : NodeRef K V) (level : nat) (next : option
 
 (* Sufficient fuel for any reasonable skip list traversal *)
 Definition findPredFuel : nat := 10000.
-Crane Extract Inlined Constant findPredFuel => "10000u".
+#[global] Instance findPredFuel_mapping : OperationMapping (Ref (@findPredFuel)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "10000u")).
 
 (* ========================================================================= *)
 (*                     Path Type (extracts to fixed array)                   *)
@@ -140,10 +152,17 @@ Definition setPath {K V : Type} (p : Path K V) (lvl : nat) (n : NodeRef K V) : i
 Definition getPath {K V : Type} (p : Path K V) (lvl : nat) : itree stmE (NodeRef K V) :=
   ITree.trigger (igetPath p lvl).
 
-Crane Extract Inlined Constant Path => "SkipPath<%t0, %t1>" From "skipnode.h".
-Crane Extract Inlined Constant emptyPath => "SkipPath<%t0, %t1>{}".
-Crane Extract Inlined Constant setPath => "%a0.set(%a1, %a2)".
-Crane Extract Inlined Constant getPath => "%a0.get(%a1)".
+#[global] Instance Path_mapping (A0 : Type) (A1 : Type) : TypeMapping (Path A0 A1) :=
+  value_type ["skipnode.h"] (Apply "SkipPath" [TypeArg (SourceType A0); TypeArg (SourceType A1)]) UnknownCopy.
+#[global] Instance emptyPath_mapping : OperationMapping (Ref (@emptyPath)) :=
+  effect_cpp [] []
+    (Expr "SkipPath<%t0, %t1>{}").
+#[global] Instance setPath_mapping : OperationMapping (Ref (@setPath)) :=
+  effect_cpp [] ["p"; "lvl"; "n"]
+    (Structured (Method (Arg "p") "set" [Arg "lvl"; Arg "n"])).
+#[global] Instance getPath_mapping : OperationMapping (Ref (@getPath)) :=
+  effect_cpp [] ["p"; "lvl"]
+    (Structured (Method (Arg "p") "get" [Arg "lvl"])).
 
 Fixpoint findPred_go {K V : Type} (ltK : K -> K -> bool)
   (fuel : nat) (curr : NodeRef K V) (target : K) (level : nat)
@@ -167,16 +186,31 @@ Definition findPred {K V : Type} (ltK : K -> K -> bool) (curr : NodeRef K V) (ta
   findPred_go ltK findPredFuel curr target level.
 
 (* Extraction rules for Node operations *)
-Crane Extract Inlined Constant NodeRef => "bsl::shared_ptr<SkipNode<%t0, %t1>>" From "skipnode.h".
-Crane Extract Inlined Constant newNode => "SkipNode<%t0, %t1>::create(%a0, %a1, %a2)".
-Crane Extract Inlined Constant getKey => "%a0->key".
-Crane Extract Inlined Constant readValue => "stm::readTVar<%t1>(%a0->value)".
-Crane Extract Inlined Constant writeValue => "stm::writeTVar<%t1>(%a0->value, %a1)".
-Crane Extract Inlined Constant getLevel => "%a0->level".
+#[global] Instance NodeRef_mapping (A0 : Type) (A1 : Type) : TypeMapping (NodeRef A0 A1) :=
+  value_type ["skipnode.h"] (Apply "bsl::shared_ptr" [TypeArg (Apply "SkipNode" [TypeArg (SourceType A0); TypeArg (SourceType A1)])]) UnknownCopy.
+#[global] Instance newNode_mapping : OperationMapping (Ref (@newNode)) :=
+  effect_cpp [] ["k"; "v"; "level"]
+    (Expr "SkipNode<%t0, %t1>::create(%arg(k), %arg(v), %arg(level))").
+#[global] Instance getKey_mapping : OperationMapping (Ref (@getKey)) :=
+  pure_cpp [] ["n"]
+    (Expr "%arg(n)->key").
+#[global] Instance readValue_mapping : OperationMapping (Ref (@readValue)) :=
+  effect_cpp [] ["n"]
+    (Expr "stm::readTVar<%t1>(%arg(n)->value)").
+#[global] Instance writeValue_mapping : OperationMapping (Ref (@writeValue)) :=
+  effect_cpp [] ["n"; "v"]
+    (Expr "stm::writeTVar<%t1>(%arg(n)->value, %arg(v))").
+#[global] Instance getLevel_mapping : OperationMapping (Ref (@getLevel)) :=
+  pure_cpp [] ["n"]
+    (Expr "%arg(n)->level").
 (* Read returns shared_ptr, convert to optional for Rocq's option type *)
-Crane Extract Inlined Constant readNext => "ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<%t0, %t1>>>(%a0->forward[%a1]))".
+#[global] Instance readNext_mapping : OperationMapping (Ref (@readNext)) :=
+  effect_cpp [] ["n"; "level"]
+    (Expr "ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<%t0, %t1>>>(%arg(n)->forward[%arg(level)]))").
 (* Write takes optional, convert to shared_ptr (None -> nullptr) *)
-Crane Extract Inlined Constant writeNext => "stm::writeTVar<bsl::shared_ptr<SkipNode<%t0, %t1>>>(%a0->forward[%a1], opt_to_ptr(%a2))".
+#[global] Instance writeNext_mapping : OperationMapping (Ref (@writeNext)) :=
+  effect_cpp [] ["n"; "level"; "next"]
+    (Expr "stm::writeTVar<bsl::shared_ptr<SkipNode<%t0, %t1>>>(%arg(n)->forward[%arg(level)], opt_to_ptr(%arg(next)))").
 
 (* ========================================================================= *)
 (*                            Skip List Structure                            *)
@@ -186,7 +220,8 @@ Crane Extract Inlined Constant writeNext => "stm::writeTVar<bsl::shared_ptr<Skip
 (* In our STM context, NodeRef (shared_ptr) serves as the pair reference *)
 Definition Pair (K V : Type) := NodeRef K V.
 
-Crane Extract Inlined Constant Pair => "bsl::shared_ptr<SkipNode<%t0, %t1>>" From "skipnode.h".
+#[global] Instance Pair_mapping (K V : Type) : TypeMapping (Pair K V) :=
+  value_type ["skipnode.h"] (Apply "bsl::shared_ptr" [TypeArg (Apply "SkipNode" [TypeArg (SourceType K); TypeArg (SourceType V)])]) UnknownCopy.
 
 Record SkipList (K V : Type) := mkSkipList {
   slHead     : NodeRef K V;      (* Sentinel head node *)
@@ -1022,7 +1057,9 @@ Definition stm_test_delete : itree stmE bool :=
   Ret (andb c1 (andb c2 c3)).
 
 Definition fivehundred : nat := 500.
-Crane Extract Inlined Constant fivehundred => "500u".
+#[global] Instance fivehundred_mapping : OperationMapping (Ref (@fivehundred)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "500u")).
 
 Definition stm_test_update : itree stmE bool :=
   sl <- create 0 0 ;;

@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Crane bug: a value of a type computed from an index, built at a
-    container that a [Crane Extract Inductive] mapping provides, boxes its
+    container that a type mapping provides, boxes its
     payload but keeps the mapping's concrete type argument.  Deep erasure
     stores [den (TOpt a)] as an [option] of boxes, and Crane's own [List]
     is built that way ([regression/den_value_not_deep_erased]); a mapped

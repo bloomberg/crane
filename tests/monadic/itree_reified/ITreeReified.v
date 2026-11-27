@@ -10,9 +10,16 @@
      [itreeF] constructors (RetF, TauF, VisF).
    - A [main] function with automatic wrapper generation.
 *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Corelib Require Import PrimString.
 Require Import Crane.Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
 (** IO axioms defined inline to avoid importing Monads.IO which
     pulls in sequential-mode Monads.ITree. *)
@@ -26,15 +33,16 @@ Export IO_axioms.
 
 (* In reified mode, iprint_endline is used as an effect value inside Vis nodes.
    It must produce a std::function<std::any()> thunk. *)
-Crane Extract Inlined Constant iprint_endline =>
-  "[&]() -> std::any { std::cout << %a0 << '\n'; return std::any{}; }"
-  From "any" "iostream".
+#[global] Instance iprint_endline_mapping : OperationMapping (Ref (@iprint_endline)) :=
+  pure_cpp ["any"; "iostream"] ["x0"]
+    (Expr "[&]() -> std::any { std::cout << %arg(x0) << '\n'; return std::any{}; }").
 
 Definition print_endline (s : string) : itree ioE unit :=
   ITree.trigger (iprint_endline s).
 
-Crane Extract Inlined Constant print_endline =>
-  "std::cout << %a0 << '\n'" From "iostream".
+#[global] Instance print_endline_mapping : OperationMapping (Ref (@print_endline)) :=
+  effect_cpp ["iostream"] ["s"]
+    (Expr "std::cout << %arg(s) << '\n'").
 
 Module ITreeReified.
 

@@ -96,7 +96,6 @@ Import ITreeNotations.
 Inductive toyE : Type -> Type :=
 | Tick : state -> toyE unit.
 
-Crane Extract Skip toyE.
 
 Definition tick (s : state) : itree toyE unit :=
   embed (Tick s).
@@ -177,12 +176,27 @@ Definition axiom_nat_pair_frame (s0 : CraneMoveHunt.state) : CraneMoveHunt.state
 Definition exported_axiom_nat_pair_frame : CraneMoveHunt.state :=
   axiom_nat_pair_frame CraneMoveHunt.initial_state.
 
-Crane Extract Inlined Constant tick_state => "toy_tick(%a0)" From "toy_helpers.h".
-Crane Extract Inlined Constant tick_state_nat => "toy_tick_nat(%a0)" From "toy_helpers.h".
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive toyE => ""
-  [ "toy_tick(%a0)" ]
-  From "toy_helpers.h".
+#[global] Instance tick_state_mapping : OperationMapping (Ref (@tick_state)) :=
+  pure_cpp ["toy_helpers.h"] ["x0"]
+    (Structured (Call "toy_tick" [] [Arg "x0"])).
+#[global] Instance tick_state_nat_mapping : OperationMapping (Ref (@tick_state_nat)) :=
+  pure_cpp ["toy_helpers.h"] ["x0"]
+    (Structured (Call "toy_tick_nat" [] [Arg "x0"])).
+
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
+Module EventMapping.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp PrimString.PStringNotations List.ListNotations.
+Local Open Scope pstring_scope.
+#[global] Instance toyE_mapping (T : Type) : TypeMapping (toyE T) :=
+  event_family ["toy_helpers.h"] [event (Ref Tick) "toy_tick(%a0)"].
+End EventMapping.
 
 Crane Extraction "crane_move_hunt"
   exported_record_constant

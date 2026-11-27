@@ -19,5 +19,11 @@ End TodoInlineCustomPolyId.
 Require Crane.Extraction.
 From Crane Require Import Mapping.Std Mapping.NatInt.
 
-Crane Extract Inlined Constant TodoInlineCustomPolyId.foreign_id => "inline_id_impl" From "todo_inline_custom_poly_id_support.h".
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
+Import PrimString.PStringNotations List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+#[global] Instance foreign_id_mapping : OperationMapping (Ref (@TodoInlineCustomPolyId.foreign_id)) :=
+  pure ["todo_inline_custom_poly_id_support.h"] ["x"] (Call "inline_id_impl" [] [Arg "x"]).
 Crane Extraction "todo_inline_custom_poly_id" TodoInlineCustomPolyId.

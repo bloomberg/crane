@@ -1,5 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import PrimString.
 
 Module FreeMonad.
@@ -67,5 +70,11 @@ fun P : forall T : Type, IO T -> Set => IO_rect P
 End FreeMonad.
 
 Require Crane.Extraction.
-Crane Extract Inlined Constant string => "std::string" From "string".
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+#[global] Instance string_mapping : OperationMapping (Ref (@string)) :=
+  pure_cpp ["string"] []
+    (Structured (Verbatim "std::string")).
 Crane Extraction "free_monad" FreeMonad.

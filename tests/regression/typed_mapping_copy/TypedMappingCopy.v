@@ -10,9 +10,8 @@
       [CopyComponents ["element"]] and [ReadByComponents ["element"]]: by
       value at [Cell Flag], by [const&] at [Cell (Bag nat)].
 
-    The program also uses [option], mapped by the legacy
-    [Crane Extract Inductive] of [Mapping.Std]: legacy and typed mappings
-    coexist in one program. *)
+    The program also uses [option], mapped by the typed mapping of
+    [Mapping.Std]. *)
 
 From Corelib Require Import PrimString.
 From Stdlib Require Import List.
