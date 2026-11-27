@@ -816,20 +816,6 @@ let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
     else
       h
   in
-  (* [crane::writable], for an argument a callee writes in place (see
-     {!Cpp_passes.In_place_args}). *)
-  let h =
-    if Base.Table.demanded Cpp_ir.Crane_rt.writable_header then
-      h ++ mk_include_quoted Cpp_ir.Crane_rt.writable_header ++ fnl ()
-    else
-      h
-  in
-  let h =
-    if Base.Table.demanded Cpp_ir.Crane_rt.unreachable_header then
-      h ++ mk_include_quoted Cpp_ir.Crane_rt.unreachable_header ++ fnl ()
-    else
-      h
-  in
   let h =
     if Base.Table.demanded Cpp_ir.Crane_rt.obj_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.obj_header ++ fnl ()

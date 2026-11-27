@@ -38,11 +38,11 @@ Crane Extract Monad itree [ bind := ITree.bind , ret := Ret ] => "%t1".
 (** ITree's general recursion, [rec body a]: each [call x] of the body is a
     recursive call, answered by running the body on [x].  An erased tree
     performs its events where it is written, so the body is run with its
-    handler on a stack ([crane_rec.h]) and a call invokes the innermost
+    handler on a stack ([crane_fn.h]) and a call invokes the innermost
     handler of its types.  The recursion is C++ recursion: as deep as the
     nesting of calls. *)
 Crane Extract Inlined Constant ITree.Interp.Recursion.rec =>
-  "crane::rec<%t1, %t2>(%a0, %a1)" From "crane_rec.h".
+  "crane::rec<%t1, %t2>(%a0, %a1)" From "crane_fn.h".
 Crane Extract Inlined Constant ITree.Interp.Recursion.call =>
-  "crane::rec_call<%t1, %t2>(%a0)" From "crane_rec.h".
+  "crane::rec_call<%t1, %t2>(%a0)" From "crane_fn.h".
 Crane Extract Skip ITree.Interp.Recursion.callE.

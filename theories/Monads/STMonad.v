@@ -276,7 +276,7 @@ Crane Extract Inlined Constant cpp_refs => "STRefs::BUILD_STREFS".
     [std::span<A>]; all borrow-only (a copy would not be the same reference
     or array): a generated function that only reads one takes the read
     view, one that writes it the writable view, one that keeps it the
-    handle by value.  [crane::array_storage] (theories/cpp/array_storage.h)
+    handle by value.  [crane::array_storage] (theories/cpp/crane_st.h)
     stores one addressable element each, [bool] included, so the views are
     valid at every element type.  Shared pointers do not collect cycles of
     references. *)
@@ -359,7 +359,7 @@ Crane Extraction Implicit getElems [R].
           InvalidatesElementBorrows {| path_argument := "ref"; path_components := ["contents"] |}] |}%pstring.
 
 #[export] Instance st_array_mapping (R : STRefs) (A : Type) : TypeMapping (@STArray R A) :=
-  {| type_headers := ["array_storage.h"; "memory"];
+  {| type_headers := ["crane_st.h"; "memory"];
      type_cpp :=
        Crane.Cpp.Apply "std::shared_ptr"
          [Crane.Cpp.TypeArg
@@ -371,17 +371,17 @@ Crane Extraction Implicit getElems [R].
      type_access := MutableHandle HandleByConstReference;
      type_views :=
        ReadWriteViews
-         {| view_headers := ["span"];
+         {| view_headers := ["span"; "utility"];
             view_cpp :=
               Crane.Cpp.Apply "std::span"
                 [Crane.Cpp.TypeArg (Crane.Cpp.Const (Crane.Cpp.StoredComponent "contents"))];
-            view_from_canonical := "std::span<const %stored(contents)>{*%value}";
+            view_from_canonical := "std::span{std::as_const(*%value)}";
             view_escape := BorrowOnly |}
          {| view_headers := ["span"];
             view_cpp :=
               Crane.Cpp.Apply "std::span"
                 [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "contents")];
-            view_from_canonical := "std::span<%stored(contents)>{*%value}";
+            view_from_canonical := "std::span{*%value}";
             view_escape := BorrowOnly |}
          "std::span<const %stored(contents)>{%view}";
      type_interface := AbstractInterface;

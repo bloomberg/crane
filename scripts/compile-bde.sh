@@ -15,7 +15,7 @@ fi
 
 THEORIES_CPP_BDE="$PROJECT_ROOT/theories/cpp_bde"
 # The BDE flavor only re-implements the headers whose representation differs
-# (small_vector.h, mini_stm.h, ...); it shadows them by name.  Everything else
+# (small_vector.h, stm_adapter.h, ...); it shadows them by name.  Everything else
 # -- crane_fn.h and friends -- is flavor-independent, so the generic theories
 # directory is searched after it as a fallback.
 THEORIES_CPP="$PROJECT_ROOT/theories/cpp"

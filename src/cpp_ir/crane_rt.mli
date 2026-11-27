@@ -100,7 +100,9 @@ val obj : string
 val obj_cast : string
 (** [crane::any_cast<T>] -- reads a [crane::obj] back at [T]. *)
 
-val obj_header : string  (** [obj.h] *)
+val obj_header : string
+(** [obj.h]; also [crane::writable] and [crane::unreachable] (for a build
+    older than C++23). *)
 
 val lazy_header : string  (** [lazy.h] -- {!lazy_}. *)
 
@@ -144,12 +146,6 @@ val field : string
     constructor field: [T], or [T] boxed where copying it is not cheap. *)
 
 val field_header : string  (** [field.h] -- {!field} and [crane::unbox]. *)
-
-val writable_header : string  (** [writable.h] -- [crane::writable]. *)
-
-val unreachable_header : string
-(** [crane_unreachable.h] -- [crane::unreachable], for a build older than
-    C++23. *)
 
 val fn_header : string
 (** [fn.h], the header declaring {!fn}; demanded by the type printer. *)
@@ -200,7 +196,7 @@ type helper =
       (** [crane::writable(v)] -- a temporary holding [v], whose [ref()] is
           a mutable lvalue live to the end of the full expression: an
           argument a callee writes or replaces in place, when it is not a
-          variable the caller may write ({!writable_header}). *)
+          variable the caller may write ({!obj_header}). *)
 
 (** [crane_raw], in {!erasure_header}. *)
 val raw : string

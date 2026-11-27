@@ -877,7 +877,7 @@ let mk_std_names prefix =
       enable_from_this = p ^ "enable_shared_from_this";
       (* BDE builds as C++20, which has no [std::unreachable]... *)
       unreachable = "crane::unreachable";
-      unreachable_header = Base.Table.Runtime Cpp_ir.Crane_rt.unreachable_header;
+      unreachable_header = Base.Table.Runtime Cpp_ir.Crane_rt.obj_header;
       (* Nor placeholder variables: two [_] in one binding are C++26. *)
       placeholder = false }
   | _ -> default_std_names

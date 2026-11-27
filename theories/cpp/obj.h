@@ -22,9 +22,11 @@
 // Reading at the wrong type throws [std::bad_any_cast].
 #pragma once
 #include <any>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <new>
+#include <tuple>
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
@@ -340,5 +342,57 @@ template <class F, class X> using rebind_t = typename rebind<F, X>::type;
 template <class T> struct constant_tc {
   template <class> using c = T;
 };
+
+// crane::writable(v).ref(): a mutable lvalue holding v, for an argument a
+// callee writes or replaces in place (a typed mapping's Replace, or a write
+// of a mutable value, taken as T&) when the caller's argument is not a
+// variable it may write -- a call's result, or a value it only borrows.
+//
+// The slot is a temporary, so it lives to the end of the full expression
+// holding the call, and whatever the callee writes there is dropped with it:
+// the caller's own value is never written through a copy.
+
+template <class T> struct writable_slot {
+  T value;
+  T &ref() noexcept { return value; }
+};
+
+template <class V> writable_slot<std::remove_cvref_t<V>> writable(V &&v) {
+  return {std::forward<V>(v)};
+}
+
+// crane::unreachable(): std::unreachable() where the standard library has
+// it (C++23), the compiler's builtin otherwise.  A switch over every
+// constructor of an enum ends in it; the std flavor builds as C++26 and
+// writes std::unreachable() itself, the BDE flavor builds as C++20 and
+// writes this.
+
+[[noreturn]] inline void unreachable() {
+#if defined(__cpp_lib_unreachable)
+  std::unreachable();
+#elif defined(_MSC_VER) && !defined(__clang__)
+  __assume(false);
+#else
+  __builtin_unreachable();
+#endif
+}
+
+// crane::template_argument_t<T, I>: the I-th type argument of the class
+// template specialisation T names, references and cv-qualifiers removed.  A
+// typed mapping's view conversion names a component's C++ type
+// (%stored(c)); where Crane does not know the type a value was declared at
+// (a structured binding), it reads the component back from the value's
+// canonical type with this.
+
+template <class T, std::size_t I> struct template_argument;
+
+template <template <class...> class C, class... Ts, std::size_t I>
+struct template_argument<C<Ts...>, I> {
+  using type = std::tuple_element_t<I, std::tuple<Ts...>>;
+};
+
+template <class T, std::size_t I>
+using template_argument_t =
+    typename template_argument<std::remove_cvref_t<T>, I>::type;
 
 } // namespace crane

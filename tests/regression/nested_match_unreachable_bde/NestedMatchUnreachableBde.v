@@ -7,7 +7,7 @@
     Fixed: the outer [switch] ended in [default: std::unreachable();], which
     C++23 added: "no member named 'unreachable' in namespace 'std'" under
     the BDE build's [-std=c++20].  The BDE flavour now writes
-    [crane::unreachable()] (crane_unreachable.h), the builtin where the
+    [crane::unreachable()] (obj.h), the builtin where the
     standard library lacks [std::unreachable]. *)
 From Crane Require Import Mapping.NatIntBDE Mapping.BDE.
 From Crane Require Extraction.
