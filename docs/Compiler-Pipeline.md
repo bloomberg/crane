@@ -297,7 +297,16 @@ the same way (`id2<crane::fn<uint64_t(bool, uint64_t)>>`), so a value
 crosses no regrouping by passing through a polymorphic function. Where a
 declaration writes arrows around a type variable (`B -> A -> B` at a
 function `B`), its own arrows are one group and the variable's the next
-(`Cpp_ir.Types.arrow_site`, `Declared_at`).
+(`Cpp_ir.Types.arrow_site`, `Declared_at`). A call may write a type
+argument the way its expected result groups it (`twice`'s step at
+`A := nat -> nat` is `crane::fn<F(F)>`, so a call filling it writes
+`(nat -> nat) -> (nat -> nat)`); its instantiation is then read once,
+`Calls.grouped_instantiation`, and every type derived from it is spelled
+at that grouping: each argument's slot (`Calls.grouped_parameter`, in
+`Calls.argument_position`, shared by lowering and both plans), a
+constructor's fields and type arguments, a global's eta adapter
+(`Coerce.declared_cpp`). A box holds a callable at its Core spelling and
+is regrouped to the slot after recovery.
 
 **Typed fit.** Under `CRANE_CHECK_IR`, `Core_to_cpp.Typed_checks.fit`
 checks every value lowering puts in a destination (`Destination.finish`) or
@@ -362,7 +371,13 @@ alias (`Type_util.strip_arrows_through_aliases`); a returned value a
 substitution rebuilds keeps the type it was recorded at
 (`Lowering_state.carry_returns`); a typed-mapped type carries no term
 arguments, and a custom constructor is built at its slot where the slot
-regroups its annotation through an alias.
+regroups its annotation through an alias; every argument of a call is
+built at its parameter at the call's grouping (above), also a
+methodified callee's, a nested call's lambdas are planned so, and a type
+argument takes its expected result's grouping whatever namespaces the two
+are written in; an undeclared immediately invoked lambda is typed as what
+it returns (`Match_types.value_iife_typed`); a call given fewer arguments
+than it declares reads none of its variables off its position.
 
 ### 6.2 The single coercion
 

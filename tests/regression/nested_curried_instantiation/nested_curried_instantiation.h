@@ -178,6 +178,8 @@ struct NestedCurriedInstantiation {
                     crane::fn<uint64_t(uint64_t)>)>>::nil())),
         [](uint64_t n) { return (n * UINT64_C(2)); })(UINT64_C(3));
   }();
+  /// No transformer needed: a two-argument element, bool -> nat -> nat, at an
+  /// instantiation map reads as bool -> (nat -> nat).
   static inline const uint64_t result2 = []() {
     return List<bool>::cons(true,
                             List<bool>::cons(false,
@@ -205,6 +207,9 @@ struct NestedCurriedInstantiation {
         },
         UINT64_C(0));
   }();
+  /// The same under a fold: fold_left's step, at the transformer type, takes
+  /// its accumulator and returns its result at the curried type the member
+  /// fold_left's template argument writes.
   static inline const uint64_t result3 = []() {
     return twice<crane::fn<uint64_t(uint64_t)>>(
         List<uint64_t>::cons(

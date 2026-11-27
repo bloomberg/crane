@@ -39,9 +39,8 @@ Definition result2 : nat :=
        [true; false]) 0.
 
 (** The same under a fold: [fold_left]'s step, at the transformer type, takes
-    its accumulator as the flat [crane::fn<uint64_t(crane::fn<...>,
-    uint64_t)>] and returns a flat two-argument lambda, while the member
-    [fold_left]'s template argument is the curried type. *)
+    its accumulator and returns its result at the curried type the member
+    [fold_left]'s template argument writes. *)
 Definition result3 : nat :=
   twice (fold_left (fun (acc : (nat -> nat) -> nat -> nat) (e : nat) (g : nat -> nat) (n : nat) => g n + e)
            [1; 2] (fun (g : nat -> nat) (n : nat) => g n + 1))
