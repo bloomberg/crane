@@ -463,15 +463,14 @@ public:
 };
 
 /// The value of e, the variables read from vars.
-uint64_t eval(STRefs r, std::span<const uint64_t> vars, const Expr &e);
+uint64_t eval(std::span<const uint64_t> vars, const Expr &e);
 /// One statement: its substatements are run by call.
-uint64_t exec_body(STRefs r, std::span<uint64_t> vars, const Stmt &s);
-uint64_t exec(STRefs r,
-              const std::shared_ptr<crane::array_storage<uint64_t>> &vars,
+uint64_t exec_body(std::span<uint64_t> vars, const Stmt &s);
+uint64_t exec(const std::shared_ptr<crane::array_storage<uint64_t>> &vars,
               const Stmt &s);
 /// Runs s on n variables, all 0: the steps it took and the final
 /// variables.
-std::pair<uint64_t, List<uint64_t>> run(STRefs r, uint64_t n, const Stmt &s);
+std::pair<uint64_t, List<uint64_t>> run(uint64_t n, const Stmt &s);
 /// x1 := k!, counting x0 down from k.
 Stmt factorial(uint64_t k);
 /// x1 := fib k, counting x0 down from k with (x1, x2) := (x2, x1 + x2).

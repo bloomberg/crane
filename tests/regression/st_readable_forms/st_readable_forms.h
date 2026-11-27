@@ -158,25 +158,22 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-uint64_t pair_parts(STRefs _x);
-uint64_t fib_step(STRefs _x, uint64_t n);
-uint64_t add_at(STRefs _x, std::span<const uint64_t> arr, uint64_t acc,
-                uint64_t i);
-uint64_t sum_with(STRefs r);
-uint64_t count_back(STRefs r, std::span<uint64_t> arr, uint64_t k);
-uint64_t run_count_back(STRefs r);
-uint64_t ignore_ref(STRefs _x, const uint64_t *_x0, uint64_t n);
-uint64_t pass_view(STRefs r, uint64_t *r0);
-uint64_t unused_param(STRefs r);
+uint64_t pair_parts();
+uint64_t fib_step(uint64_t n);
+uint64_t add_at(std::span<const uint64_t> arr, uint64_t acc, uint64_t i);
+uint64_t sum_with();
+uint64_t count_back(std::span<uint64_t> arr, uint64_t k);
+uint64_t run_count_back();
+uint64_t ignore_ref(const uint64_t *_x0, uint64_t n);
+uint64_t pass_view(uint64_t *r0);
+uint64_t unused_param();
 
 struct StReadableForms {
-  static inline const uint64_t pair_parts = ::pair_parts(STRefs::BUILD_STREFS);
+  static inline const uint64_t pair_parts = ::pair_parts();
   static uint64_t fib_step(uint64_t n);
-  static inline const uint64_t sum_with = ::sum_with(STRefs::BUILD_STREFS);
-  static inline const uint64_t count_back =
-      run_count_back(STRefs::BUILD_STREFS);
-  static inline const uint64_t unused_param =
-      ::unused_param(STRefs::BUILD_STREFS);
+  static inline const uint64_t sum_with = ::sum_with();
+  static inline const uint64_t count_back = run_count_back();
+  static inline const uint64_t unused_param = ::unused_param();
 };
 
 template <typename T2, typename T3, typename F2>

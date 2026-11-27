@@ -100,4 +100,4 @@ template <typename T1> struct code_const {
 /// skipped STEvent.  Then, generated in place, Core_plan.Closures
 /// took go to escape, as a cofixpoint's body is suspended -- but a
 /// cofixpoint into a monad generated as sequencing is not.
-uint64_t fibst_repro(STRefs _x, uint64_t n);
+uint64_t fibst_repro(uint64_t n);

@@ -960,7 +960,7 @@ bool Z_as_Int::ge_lt_dec(const Z &i, const Z &j) {
 
 Z Z_as_Int::i2z(Z n) { return n; }
 
-void init_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t n,
+void init_ST(std::span<std::pair<uint64_t, uint64_t>> a, uint64_t n,
              uint64_t i) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
@@ -974,17 +974,17 @@ void init_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t n,
   }
 }
 
-std::shared_ptr<crane::array_storage<node>> make_ST(STRefs r, uint64_t n) {
+std::shared_ptr<crane::array_storage<node>> make_ST(uint64_t n) {
   std::shared_ptr<crane::array_storage<node>> a =
       std::make_shared<crane::array_storage<std::pair<uint64_t, uint64_t>>>(
           static_cast<std::size_t>(n),
           std::make_pair(UINT64_C(0), UINT64_C(0)));
-  init_ST(r, std::span{*a}, n, UINT64_C(0));
+  init_ST(std::span{*a}, n, UINT64_C(0));
   return a;
 }
 
-uint64_t find_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a,
-                 uint64_t fuel, uint64_t x) {
+uint64_t find_ST(std::span<std::pair<uint64_t, uint64_t>> a, uint64_t fuel,
+                 uint64_t x) {
   // Explicit stack replaces the non-tail recursion of find_ST: _call frames are
   // pending calls, _after frames resume a caller.
   struct _call {
@@ -1031,10 +1031,10 @@ uint64_t find_ST(STRefs, std::span<std::pair<uint64_t, uint64_t>> a,
   return _result;
 }
 
-void union_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
+void union_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
               uint64_t x, uint64_t y) {
-  uint64_t rx = find_ST(r, a, n, x);
-  uint64_t ry = find_ST(r, a, n, y);
+  uint64_t rx = find_ST(a, n, x);
+  uint64_t ry = find_ST(a, n, y);
   if (rx == ry) {
     return;
   } else {
@@ -1051,15 +1051,14 @@ void union_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
   }
 }
 
-bool same_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
-             uint64_t x, uint64_t y) {
-  uint64_t rx = find_ST(r, a, n, x);
-  uint64_t ry = find_ST(r, a, n, y);
+bool same_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t x,
+             uint64_t y) {
+  uint64_t rx = find_ST(a, n, x);
+  uint64_t ry = find_ST(a, n, y);
   return rx == ry;
 }
 
-List<bool> run_ST(STRefs r, uint64_t n,
-                  std::span<std::pair<uint64_t, uint64_t>> a,
+List<bool> run_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
                   const List<Op> &ops) {
   // Explicit stack replaces the non-tail recursion of run_ST: _call frames are
   // pending calls, _after frames resume a caller.
@@ -1087,11 +1086,11 @@ List<bool> run_ST(STRefs r, uint64_t n,
         const auto &[a0, a1] = std::get<typename List<Op>::Cons>(ops.v());
         if (std::holds_alternative<typename Op::Union>(a0.v())) {
           const auto &[x0, y0] = std::get<typename Op::Union>(a0.v());
-          union_ST(r, n, a, x0, y0);
+          union_ST(n, a, x0, y0);
           _stack.emplace_back(_call{crane_raw(a1)});
         } else {
           const auto &[x0, y0] = std::get<typename Op::Same>(a0.v());
-          bool b = same_ST(r, n, a, x0, y0);
+          bool b = same_ST(n, a, x0, y0);
           _stack.emplace_back(_after_run_ST_in_Same{b});
           _stack.emplace_back(_call{crane_raw(a1)});
         }
@@ -1107,10 +1106,10 @@ List<bool> run_ST(STRefs r, uint64_t n,
   return _result;
 }
 
-List<bool> union_find_ST(STRefs r, uint64_t n, const List<Op> &ops) {
+List<bool> union_find_ST(uint64_t n, const List<Op> &ops) {
   std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
-      make_ST(r, n);
-  return run_ST(r, n, std::span{*a}, ops);
+      make_ST(n);
+  return run_ST(n, std::span{*a}, ops);
 }
 
 node get(const NatMap::template bst<std::pair<uint64_t, uint64_t>> &s,
@@ -1251,7 +1250,7 @@ List<bool> run_fun(uint64_t n,
 }
 
 List<bool> UnionFind::union_find_ST(uint64_t x0_, const List<Op> &x1_) {
-  return ::union_find_ST(STRefs::BUILD_STREFS, x0_, x1_);
+  return ::union_find_ST(x0_, x1_);
 }
 
 List<bool> UnionFind::union_find_fun(uint64_t n, const List<Op> &ops) {

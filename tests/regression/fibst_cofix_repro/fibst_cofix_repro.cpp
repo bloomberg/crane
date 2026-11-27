@@ -17,7 +17,7 @@
 /// skipped STEvent.  Then, generated in place, Core_plan.Closures
 /// took go to escape, as a cofixpoint's body is suspended -- but a
 /// cofixpoint into a monad generated as sequencing is not.
-uint64_t fibst_repro(STRefs, uint64_t n) {
+uint64_t fibst_repro(uint64_t n) {
   auto go = [&](uint64_t *x_view, uint64_t *y_view) -> uint64_t {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
@@ -60,5 +60,5 @@ uint64_t fibst_repro(STRefs, uint64_t n) {
 /// took go to escape, as a cofixpoint's body is suspended -- but a
 /// cofixpoint into a monad generated as sequencing is not.
 uint64_t FibstCofixReproTests::fibst_repro(uint64_t x0_) {
-  return ::fibst_repro(STRefs::BUILD_STREFS, x0_);
+  return ::fibst_repro(x0_);
 }

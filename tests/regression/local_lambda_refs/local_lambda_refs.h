@@ -145,15 +145,14 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-uint64_t bump_twice(STRefs _x);
-std::pair<uint64_t, uint64_t> bump_each(STRefs _x);
-std::pair<List<uint64_t>, List<uint64_t>> fill_each(STRefs _x);
+uint64_t bump_twice();
+std::pair<uint64_t, uint64_t> bump_each();
+std::pair<List<uint64_t>, List<uint64_t>> fill_each();
 
 struct LocalLambdaRefs {
-  static inline const uint64_t bump_twice = ::bump_twice(STRefs::BUILD_STREFS);
-  static inline const std::pair<uint64_t, uint64_t> bump_each =
-      ::bump_each(STRefs::BUILD_STREFS);
+  static inline const uint64_t bump_twice = ::bump_twice();
+  static inline const std::pair<uint64_t, uint64_t> bump_each = ::bump_each();
   static inline const std::pair<List<uint64_t>, List<uint64_t>> fill_each =
-      ::fill_each(STRefs::BUILD_STREFS);
+      ::fill_each();
   static uint64_t nth(uint64_t n, const List<uint64_t> &l, uint64_t default0);
 };

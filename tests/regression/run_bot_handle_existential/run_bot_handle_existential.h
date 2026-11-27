@@ -485,12 +485,10 @@ struct RunBotHandleExistential {
       auto &&_sv0 = handle_bot<_tcI0>(x);
       if (std::holds_alternative<typename Sum<Run_error, crane::obj>::Inl>(
               _sv0.v())) {
-        const auto &[a00] =
-            std::get<typename Sum<Run_error, crane::obj>::Inl>(_sv0.v());
         return Itree<crane::obj, Sum<Run_error, T1>>::go(
             ItreeF<crane::obj, Sum<Run_error, T1>,
                    Itree<crane::obj, Sum<Run_error, T1>>>::retf(
-                Sum<Run_error, T1>::inl(crane::any_cast<Run_error>(a00))));
+                Sum<Run_error, T1>::inl(Run_error::FAILED)));
       } else {
         const auto &[a00] =
             std::get<typename Sum<Run_error, crane::obj>::Inr>(_sv0.v());

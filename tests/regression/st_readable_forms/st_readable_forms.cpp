@@ -1,6 +1,6 @@
 #include "st_readable_forms.h"
 
-uint64_t pair_parts(STRefs) {
+uint64_t pair_parts() {
   std::pair<uint64_t, uint64_t> r = std::make_pair(UINT64_C(3), UINT64_C(4));
   std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
       std::make_shared<crane::array_storage<std::pair<uint64_t, uint64_t>>>(
@@ -11,7 +11,7 @@ uint64_t pair_parts(STRefs) {
   return (x + y);
 }
 
-uint64_t fib_step(STRefs, uint64_t n) {
+uint64_t fib_step(uint64_t n) {
   uint64_t a = UINT64_C(0);
   uint64_t b = UINT64_C(1);
   auto go = [&]() -> void {
@@ -35,13 +35,12 @@ uint64_t fib_step(STRefs, uint64_t n) {
   return a;
 }
 
-uint64_t add_at(STRefs, std::span<const uint64_t> arr, uint64_t acc,
-                uint64_t i) {
+uint64_t add_at(std::span<const uint64_t> arr, uint64_t acc, uint64_t i) {
   uint64_t v = arr[i];
   return (acc + v);
 }
 
-uint64_t sum_with(STRefs r) {
+uint64_t sum_with() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
           static_cast<std::size_t>(UINT64_C(4)), UINT64_C(3));
@@ -51,11 +50,11 @@ uint64_t sum_with(STRefs r) {
       [=, arr = std::move(arr)](uint64_t _x0,
                                 uint64_t _x1)
            -> uint64_t {
-        return add_at(r, std::span{std::as_const(*arr)}, _x0, _x1);
+        return add_at(std::span{std::as_const(*arr)}, _x0, _x1);
       });
 }
 
-uint64_t count_back(STRefs, std::span<uint64_t> arr, uint64_t k) {
+uint64_t count_back(std::span<uint64_t> arr, uint64_t k) {
   // Explicit stack replaces the non-tail recursion of count_back: _call frames
   // are pending calls, _after frames resume a caller.
   struct _call {
@@ -96,30 +95,26 @@ uint64_t count_back(STRefs, std::span<uint64_t> arr, uint64_t k) {
   return _result;
 }
 
-uint64_t run_count_back(STRefs r) {
+uint64_t run_count_back() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
           static_cast<std::size_t>(UINT64_C(4)), UINT64_C(0));
-  return count_back(r, std::span{*arr}, UINT64_C(5));
+  return count_back(std::span{*arr}, UINT64_C(5));
 }
 
-uint64_t ignore_ref(STRefs, const uint64_t *, uint64_t n) {
-  return (n + UINT64_C(1));
-}
+uint64_t ignore_ref(const uint64_t *, uint64_t n) { return (n + UINT64_C(1)); }
 
-uint64_t pass_view(STRefs r, uint64_t *r0) {
+uint64_t pass_view(uint64_t *r0) {
   *r0 = UINT64_C(2);
-  return ignore_ref(r, r0, UINT64_C(4));
+  return ignore_ref(r0, UINT64_C(4));
 }
 
-uint64_t unused_param(STRefs r) {
+uint64_t unused_param() {
   uint64_t r0 = UINT64_C(0);
-  return pass_view(r, &r0);
+  return pass_view(&r0);
 }
 
-uint64_t StReadableForms::fib_step(uint64_t n) {
-  return ::fib_step(STRefs::BUILD_STREFS, n);
-}
+uint64_t StReadableForms::fib_step(uint64_t n) { return ::fib_step(n); }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
   // Builds the result front to back: _write points at the empty tail the next

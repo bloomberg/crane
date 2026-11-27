@@ -64,8 +64,7 @@ uint64_t InstructionCycles::program_cycles5(
   }
 }
 
-uint64_t InstructionCycles::cycles6(const InstructionCycles::state6 &,
-                                    InstructionCycles::Instruction6) {
+uint64_t InstructionCycles::cycles6(const InstructionCycles::state6 &) {
   return UINT64_C(8);
 }
 
@@ -76,14 +75,13 @@ uint64_t InstructionCycles::program_cycles6(
           typename List<InstructionCycles::Instruction6>::Nil>(prog.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<
+    const auto &[_, a1] = std::get<
         typename List<InstructionCycles::Instruction6>::Cons>(prog.v());
-    return (cycles6(s, a0) + program_cycles6(s, *a1));
+    return (cycles6(s) + program_cycles6(s, *a1));
   }
 }
 
-uint64_t InstructionCycles::cycles7(const InstructionCycles::state7 &,
-                                    InstructionCycles::Instruction7) {
+uint64_t InstructionCycles::cycles7(const InstructionCycles::state7 &) {
   return UINT64_C(8);
 }
 
@@ -94,8 +92,8 @@ uint64_t InstructionCycles::program_cycles7(
           typename List<InstructionCycles::Instruction7>::Nil>(prog.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<
+    const auto &[_, a1] = std::get<
         typename List<InstructionCycles::Instruction7>::Cons>(prog.v());
-    return (cycles7(s, a0) + program_cycles7(s, *a1));
+    return (cycles7(s) + program_cycles7(s, *a1));
   }
 }

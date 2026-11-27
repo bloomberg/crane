@@ -1,14 +1,13 @@
 #include "st_arrays.h"
 
-uint64_t array_simp_fixed_init(STRefs) {
+uint64_t array_simp_fixed_init() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
           static_cast<std::size_t>(UINT64_C(6)), UINT64_C(5));
   return std::span{std::as_const(*arr)}[UINT64_C(1)];
 }
 
-std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
-array_simp_list(STRefs) {
+std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>> array_simp_list() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       crane::st::new_list_array<uint64_t>(List<uint64_t>::cons(
           UINT64_C(5),
@@ -23,7 +22,7 @@ array_simp_list(STRefs) {
   return std::make_pair(std::make_pair(elem, lst.length()), lst);
 }
 
-List<uint64_t> swap_first_and_last_list(STRefs, const List<uint64_t> &xs) {
+List<uint64_t> swap_first_and_last_list(const List<uint64_t> &xs) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       crane::st::new_list_array<uint64_t>(xs);
   auto _once1 = xs.length();
@@ -34,17 +33,15 @@ List<uint64_t> swap_first_and_last_list(STRefs, const List<uint64_t> &xs) {
   return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
 }
 
-uint64_t StArrays::array_simp_fixed_init() {
-  return ::array_simp_fixed_init(STRefs::BUILD_STREFS);
-}
+uint64_t StArrays::array_simp_fixed_init() { return ::array_simp_fixed_init(); }
 
 std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
 StArrays::array_simp_list() {
-  return ::array_simp_list(STRefs::BUILD_STREFS);
+  return ::array_simp_list();
 }
 
 List<uint64_t> StArrays::swap_first_and_last_list(const List<uint64_t> &x0_) {
-  return ::swap_first_and_last_list(STRefs::BUILD_STREFS, x0_);
+  return ::swap_first_and_last_list(x0_);
 }
 
 uint64_t StArrays::nth(uint64_t n, const List<uint64_t> &l, uint64_t default0) {

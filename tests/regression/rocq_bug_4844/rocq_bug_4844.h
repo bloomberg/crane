@@ -94,16 +94,15 @@ struct RocqBug4844 {
     static box box0(Sum<ST, ST> a0) { return {std::move(a0)}; }
   };
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, const Sum<ST, ST> &>
-  static T1 box_rect(SomeType, F1 &&f, const box &b) {
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, const Sum<ST, ST> &>
+  static T1 box_rect(F0 &&f, const box &b) {
     const auto &[a0] = b;
     return f(a0);
   }
 
-  template <typename T1, typename F1>
-  static T1 box_rec(SomeType _x, F1 &&f, const box &b) {
-    return box_rect<T1>(_x, f, b);
+  template <typename T1, typename F0> static T1 box_rec(F0 &&f, const box &b) {
+    return box_rect<T1>(f, b);
   }
 
   static inline const box boxed_semilogic = box::box0(semilogic);

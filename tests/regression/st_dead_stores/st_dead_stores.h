@@ -59,16 +59,14 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-uint64_t written_only(STRefs _x);
-uint64_t read_by_dead_store(STRefs _x);
-uint64_t written_in_branch(STRefs _x, bool b);
-uint64_t written_in_unused_branch(STRefs _x, bool b);
+uint64_t written_only();
+uint64_t read_by_dead_store();
+uint64_t written_in_branch(bool b);
+uint64_t written_in_unused_branch(bool b);
 
 struct StDeadStores {
-  static inline const uint64_t written_only =
-      ::written_only(STRefs::BUILD_STREFS);
-  static inline const uint64_t read_by_dead_store =
-      ::read_by_dead_store(STRefs::BUILD_STREFS);
+  static inline const uint64_t written_only = ::written_only();
+  static inline const uint64_t read_by_dead_store = ::read_by_dead_store();
   static uint64_t written_in_branch(bool b);
   static uint64_t written_in_unused_branch(bool b);
 };

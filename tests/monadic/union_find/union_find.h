@@ -3032,19 +3032,18 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-void init_ST(STRefs r, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t n,
+void init_ST(std::span<std::pair<uint64_t, uint64_t>> a, uint64_t n,
              uint64_t i);
-std::shared_ptr<crane::array_storage<node>> make_ST(STRefs r, uint64_t n);
-uint64_t find_ST(STRefs r, std::span<std::pair<uint64_t, uint64_t>> a,
-                 uint64_t fuel, uint64_t x);
-void union_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
+std::shared_ptr<crane::array_storage<node>> make_ST(uint64_t n);
+uint64_t find_ST(std::span<std::pair<uint64_t, uint64_t>> a, uint64_t fuel,
+                 uint64_t x);
+void union_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
               uint64_t x, uint64_t y);
-bool same_ST(STRefs r, uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
-             uint64_t x, uint64_t y);
-List<bool> run_ST(STRefs r, uint64_t n,
-                  std::span<std::pair<uint64_t, uint64_t>> a,
+bool same_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t x,
+             uint64_t y);
+List<bool> run_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
                   const List<Op> &ops);
-List<bool> union_find_ST(STRefs r, uint64_t n, const List<Op> &ops);
+List<bool> union_find_ST(uint64_t n, const List<Op> &ops);
 using NatMap = Make<Nat_as_OT>;
 using uf = NatMap::template t<node>;
 [[gnu::used]] inline const uf empty_uf = NatMap::template empty<node>();

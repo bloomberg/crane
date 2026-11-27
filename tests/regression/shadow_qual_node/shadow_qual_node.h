@@ -6,13 +6,13 @@ struct ShadowQualNode {
   struct Node {
     enum class Shadow { TAG };
 
-    template <typename T1> static T1 shadow_rect(T1 f, Shadow) { return f; }
+    template <typename T1> static T1 shadow_rect(T1 f) { return f; }
 
-    template <typename T1> static T1 shadow_rec(T1 f, Shadow _x) {
-      return shadow_rect<T1>(std::move(f), _x);
+    template <typename T1> static T1 shadow_rec(T1 f) {
+      return shadow_rect<T1>(std::move(f));
     }
   };
 
-  static Node::Shadow id(Node::Shadow x);
-  static inline const Node::Shadow t = id(Node::Shadow::TAG);
+  static Node::Shadow id();
+  static inline const Node::Shadow t = id();
 };

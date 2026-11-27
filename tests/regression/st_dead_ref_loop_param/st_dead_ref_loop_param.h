@@ -58,8 +58,8 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-uint64_t st_1(STRefs _x);
+uint64_t st_1();
 
 struct StDeadRefLoopParam {
-  static inline const uint64_t result = st_1(STRefs::BUILD_STREFS);
+  static inline const uint64_t result = st_1();
 };

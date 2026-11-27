@@ -60,25 +60,22 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-std::pair<uint64_t, uint64_t> new_and_read_both_nat(STRefs _x);
-uint64_t tree_simp_nat(STRefs _x);
-uint64_t tree_simp_another_nat(STRefs _x);
-void swap(STRefs _x, uint64_t *v, uint64_t *w);
-std::pair<uint64_t, uint64_t> swapped(STRefs r);
-std::pair<bool, bool> new_and_read_both_bool(STRefs _x);
-bool tree_simp_bool(STRefs _x);
+std::pair<uint64_t, uint64_t> new_and_read_both_nat();
+uint64_t tree_simp_nat();
+uint64_t tree_simp_another_nat();
+void swap(uint64_t *v, uint64_t *w);
+std::pair<uint64_t, uint64_t> swapped();
+std::pair<bool, bool> new_and_read_both_bool();
+bool tree_simp_bool();
 
 struct StRefs {
   static inline const std::pair<uint64_t, uint64_t> new_and_read_both_nat =
-      ::new_and_read_both_nat(STRefs::BUILD_STREFS);
-  static inline const uint64_t tree_simp_nat =
-      ::tree_simp_nat(STRefs::BUILD_STREFS);
+      ::new_and_read_both_nat();
+  static inline const uint64_t tree_simp_nat = ::tree_simp_nat();
   static inline const uint64_t tree_simp_another_nat =
-      ::tree_simp_another_nat(STRefs::BUILD_STREFS);
-  static inline const std::pair<uint64_t, uint64_t> swapped =
-      ::swapped(STRefs::BUILD_STREFS);
+      ::tree_simp_another_nat();
+  static inline const std::pair<uint64_t, uint64_t> swapped = ::swapped();
   static inline const std::pair<bool, bool> new_and_read_both_bool =
-      ::new_and_read_both_bool(STRefs::BUILD_STREFS);
-  static inline const bool tree_simp_bool =
-      ::tree_simp_bool(STRefs::BUILD_STREFS);
+      ::new_and_read_both_bool();
+  static inline const bool tree_simp_bool = ::tree_simp_bool();
 };

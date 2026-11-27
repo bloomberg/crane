@@ -192,7 +192,6 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-uint64_t array_simp_fixed_init(STRefs _x);
-std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
-array_simp_list(STRefs _x);
-List<uint64_t> swap_first_and_last_list(STRefs _x, const List<uint64_t> &xs);
+uint64_t array_simp_fixed_init();
+std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>> array_simp_list();
+List<uint64_t> swap_first_and_last_list(const List<uint64_t> &xs);

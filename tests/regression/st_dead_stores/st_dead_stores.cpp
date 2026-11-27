@@ -1,6 +1,6 @@
 #include "st_dead_stores.h"
 
-uint64_t written_only(STRefs) {
+uint64_t written_only() {
   uint64_t _lc1_k = UINT64_C(3);
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
@@ -15,7 +15,7 @@ uint64_t written_only(STRefs) {
   }
 }
 
-uint64_t read_by_dead_store(STRefs) {
+uint64_t read_by_dead_store() {
   uint64_t _lc1_k = UINT64_C(4);
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
@@ -30,7 +30,7 @@ uint64_t read_by_dead_store(STRefs) {
   }
 }
 
-uint64_t written_in_branch(STRefs, bool b) {
+uint64_t written_in_branch(bool b) {
   uint64_t x = [&]() -> uint64_t {
     if (b) {
       return UINT64_C(1);
@@ -41,7 +41,7 @@ uint64_t written_in_branch(STRefs, bool b) {
   return (x + UINT64_C(10));
 }
 
-uint64_t written_in_unused_branch(STRefs, bool b) {
+uint64_t written_in_unused_branch(bool b) {
   uint64_t s = UINT64_C(3);
   [&]() -> uint64_t {
     if (b) {
@@ -55,9 +55,9 @@ uint64_t written_in_unused_branch(STRefs, bool b) {
 }
 
 uint64_t StDeadStores::written_in_branch(bool b) {
-  return ::written_in_branch(STRefs::BUILD_STREFS, b);
+  return ::written_in_branch(b);
 }
 
 uint64_t StDeadStores::written_in_unused_branch(bool b) {
-  return ::written_in_unused_branch(STRefs::BUILD_STREFS, b);
+  return ::written_in_unused_branch(b);
 }

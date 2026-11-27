@@ -12,10 +12,10 @@
 struct FactoryNameCollision {
   enum class Other { ONLY };
 
-  template <typename T1> static T1 other_rect(T1 f, Other) { return f; }
+  template <typename T1> static T1 other_rect(T1 f) { return f; }
 
-  template <typename T1> static T1 other_rec(T1 f, Other _x) {
-    return other_rect<T1>(std::move(f), _x);
+  template <typename T1> static T1 other_rec(T1 f) {
+    return other_rect<T1>(std::move(f));
   }
 
   struct lst {

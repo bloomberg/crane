@@ -1,6 +1,6 @@
 #include "local_lambda_refs.h"
 
-uint64_t bump_twice(STRefs) {
+uint64_t bump_twice() {
   uint64_t r = UINT64_C(0);
   auto bump = [&](uint64_t k) -> void {
     // Loop replaces the tail recursion: each recursive call updates the loop
@@ -21,7 +21,7 @@ uint64_t bump_twice(STRefs) {
   return r;
 }
 
-std::pair<uint64_t, uint64_t> bump_each(STRefs) {
+std::pair<uint64_t, uint64_t> bump_each() {
   uint64_t r = UINT64_C(0);
   uint64_t s = UINT64_C(10);
   auto bump = [](uint64_t k, uint64_t *x_view) -> void {
@@ -44,7 +44,7 @@ std::pair<uint64_t, uint64_t> bump_each(STRefs) {
   return std::make_pair(r, s);
 }
 
-std::pair<List<uint64_t>, List<uint64_t>> fill_each(STRefs) {
+std::pair<List<uint64_t>, List<uint64_t>> fill_each() {
   std::shared_ptr<crane::array_storage<uint64_t>> a =
       std::make_shared<crane::array_storage<uint64_t>>(
           static_cast<std::size_t>(UINT64_C(3)), UINT64_C(0));

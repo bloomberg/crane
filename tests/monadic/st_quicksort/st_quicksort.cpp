@@ -1,6 +1,6 @@
 #include "st_quicksort.h"
 
-uint64_t lomuto_scan(STRefs, std::span<uint64_t> arr, uint64_t pv, uint64_t,
+uint64_t lomuto_scan(std::span<uint64_t> arr, uint64_t pv, uint64_t,
                      uint64_t hi, uint64_t i, uint64_t s) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
@@ -18,23 +18,23 @@ uint64_t lomuto_scan(STRefs, std::span<uint64_t> arr, uint64_t pv, uint64_t,
   }
 }
 
-uint64_t partition(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
+uint64_t partition(std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
                    uint64_t pividx) {
   uint64_t pv = arr[pividx];
   std::swap(arr[pividx], arr[hi]);
-  uint64_t p = lomuto_scan(r, arr, pv, lo, hi, lo, lo);
+  uint64_t p = lomuto_scan(arr, pv, lo, hi, lo, lo);
   std::swap(arr[p], arr[hi]);
   return p;
 }
 
-void quicksort_ST(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi) {
+void quicksort_ST(std::span<uint64_t> arr, uint64_t lo, uint64_t hi) {
   if (lo < hi) {
     uint64_t p = partition(
-        r, arr, lo, hi,
+        arr, lo, hi,
         (lo +
          (UINT64_C(2) ? (((hi - lo) > hi ? 0 : (hi - lo))) / UINT64_C(2) : 0)));
-    quicksort_ST(r, arr, lo, (((p - UINT64_C(1)) > p ? 0 : (p - UINT64_C(1)))));
-    quicksort_ST(r, arr, (p + UINT64_C(1)), hi);
+    quicksort_ST(arr, lo, (((p - UINT64_C(1)) > p ? 0 : (p - UINT64_C(1)))));
+    quicksort_ST(arr, (p + UINT64_C(1)), hi);
   }
 }
 
@@ -105,7 +105,7 @@ List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
         crane::st::new_list_array<uint64_t>(xs);
     auto _once1 = xs.length();
     quicksort_ST(
-        STRefs::BUILD_STREFS, std::span{*arr}, UINT64_C(0),
+        std::span{*arr}, UINT64_C(0),
         (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
     return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
   }

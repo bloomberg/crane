@@ -1,6 +1,6 @@
 #include "st_dead_ref_loop_param.h"
 
-uint64_t st_1(STRefs) {
+uint64_t st_1() {
   std::pair<uint64_t, uint64_t> r0 = std::make_pair(UINT64_C(2), UINT64_C(1));
   auto h = [](uint64_t k, uint64_t) -> uint64_t {
     // Loop replaces the tail recursion: each recursive call updates the loop

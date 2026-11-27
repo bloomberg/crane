@@ -552,19 +552,17 @@ struct InstructionCycles {
                                        List<instruction5>::nil()))));
   enum class Instruction6 { NOP6 };
 
-  template <typename T1> static T1 instruction6_rect(T1 f, Instruction6) {
-    return f;
-  }
+  template <typename T1> static T1 instruction6_rect(T1 f) { return f; }
 
-  template <typename T1> static T1 instruction6_rec(T1 f, Instruction6 _x) {
-    return instruction6_rect<T1>(std::move(f), _x);
+  template <typename T1> static T1 instruction6_rec(T1 f) {
+    return instruction6_rect<T1>(std::move(f));
   }
 
   struct state6 {
     uint64_t acc6;
   };
 
-  static uint64_t cycles6(const state6 &_x, Instruction6 _x0);
+  static uint64_t cycles6(const state6 &_x);
   static uint64_t program_cycles6(const state6 &s,
                                   const List<Instruction6> &prog);
   static inline const uint64_t singleton_cycles6 = program_cycles6(
@@ -582,19 +580,17 @@ struct InstructionCycles {
       std::make_pair(singleton_cycles6, three_nop_cycles6);
   enum class Instruction7 { NOP7 };
 
-  template <typename T1> static T1 instruction7_rect(T1 f, Instruction7) {
-    return f;
-  }
+  template <typename T1> static T1 instruction7_rect(T1 f) { return f; }
 
-  template <typename T1> static T1 instruction7_rec(T1 f, Instruction7 _x) {
-    return instruction7_rect<T1>(std::move(f), _x);
+  template <typename T1> static T1 instruction7_rec(T1 f) {
+    return instruction7_rect<T1>(std::move(f));
   }
 
   struct state7 {
     uint64_t acc7;
   };
 
-  static uint64_t cycles7(const state7 &_x, Instruction7 _x0);
+  static uint64_t cycles7(const state7 &_x);
   static uint64_t program_cycles7(const state7 &s,
                                   const List<Instruction7> &prog);
   static inline const uint64_t test_program_cycles_single = program_cycles7(

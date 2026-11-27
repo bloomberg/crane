@@ -1,7 +1,7 @@
 #include "imp_while.h"
 
 /// The value of e, the variables read from vars.
-uint64_t eval(STRefs r, std::span<const uint64_t> vars, const Expr &e) {
+uint64_t eval(std::span<const uint64_t> vars, const Expr &e) {
   if (std::holds_alternative<typename Expr::Num>(e.v())) {
     const auto &[n0] = std::get<typename Expr::Num>(e.v());
     return n0;
@@ -10,34 +10,34 @@ uint64_t eval(STRefs r, std::span<const uint64_t> vars, const Expr &e) {
     return vars[x0];
   } else if (std::holds_alternative<typename Expr::Add>(e.v())) {
     const auto &[a0, b0] = std::get<typename Expr::Add>(e.v());
-    uint64_t x = eval(r, vars, *a0);
-    uint64_t y = eval(r, vars, *b0);
+    uint64_t x = eval(vars, *a0);
+    uint64_t y = eval(vars, *b0);
     return (x + y);
   } else if (std::holds_alternative<typename Expr::Sub>(e.v())) {
     const auto &[a0, b0] = std::get<typename Expr::Sub>(e.v());
-    uint64_t x = eval(r, vars, *a0);
-    uint64_t y = eval(r, vars, *b0);
+    uint64_t x = eval(vars, *a0);
+    uint64_t y = eval(vars, *b0);
     return (((x - y) > x ? 0 : (x - y)));
   } else if (std::holds_alternative<typename Expr::Mul>(e.v())) {
     const auto &[a0, b0] = std::get<typename Expr::Mul>(e.v());
-    uint64_t x = eval(r, vars, *a0);
-    uint64_t y = eval(r, vars, *b0);
+    uint64_t x = eval(vars, *a0);
+    uint64_t y = eval(vars, *b0);
     return (x * y);
   } else {
     const auto &[a0, b0] = std::get<typename Expr::Lt>(e.v());
-    uint64_t x = eval(r, vars, *a0);
-    uint64_t y = eval(r, vars, *b0);
+    uint64_t x = eval(vars, *a0);
+    uint64_t y = eval(vars, *b0);
     return (x < y ? UINT64_C(1) : UINT64_C(0));
   }
 }
 
 /// One statement: its substatements are run by call.
-uint64_t exec_body(STRefs r, std::span<uint64_t> vars, const Stmt &s) {
+uint64_t exec_body(std::span<uint64_t> vars, const Stmt &s) {
   if (std::holds_alternative<typename Stmt::Skip>(s.v())) {
     return UINT64_C(1);
   } else if (std::holds_alternative<typename Stmt::Assign>(s.v())) {
     const auto &[x0, e0] = std::get<typename Stmt::Assign>(s.v());
-    uint64_t v = eval(r, std::span<const uint64_t>{vars}, e0);
+    uint64_t v = eval(std::span<const uint64_t>{vars}, e0);
     vars[x0] = v;
     return UINT64_C(1);
   } else if (std::holds_alternative<typename Stmt::Seq>(s.v())) {
@@ -47,13 +47,13 @@ uint64_t exec_body(STRefs r, std::span<uint64_t> vars, const Stmt &s) {
     return (n1 + n2);
   } else if (std::holds_alternative<typename Stmt::If>(s.v())) {
     const auto &[c0, s3, s4] = std::get<typename Stmt::If>(s.v());
-    uint64_t v = eval(r, std::span<const uint64_t>{vars}, c0);
+    uint64_t v = eval(std::span<const uint64_t>{vars}, c0);
     uint64_t n = (v == UINT64_C(0) ? crane::rec_call<Stmt, uint64_t>(*s4)
                                    : crane::rec_call<Stmt, uint64_t>(*s3));
     return (n + 1);
   } else {
     const auto &[c0, body0] = std::get<typename Stmt::While>(s.v());
-    uint64_t v = eval(r, std::span<const uint64_t>{vars}, c0);
+    uint64_t v = eval(std::span<const uint64_t>{vars}, c0);
     if (v == UINT64_C(0)) {
       return UINT64_C(1);
     } else {
@@ -65,21 +65,20 @@ uint64_t exec_body(STRefs r, std::span<uint64_t> vars, const Stmt &s) {
   }
 }
 
-uint64_t exec(STRefs r,
-              const std::shared_ptr<crane::array_storage<uint64_t>> &vars,
+uint64_t exec(const std::shared_ptr<crane::array_storage<uint64_t>> &vars,
               const Stmt &s) {
   return crane::rec<Stmt, uint64_t>(
-      [=](Stmt _x0) -> uint64_t { return exec_body(r, std::span{*vars}, _x0); },
+      [=](Stmt _x0) -> uint64_t { return exec_body(std::span{*vars}, _x0); },
       s);
 }
 
 /// Runs s on n variables, all 0: the steps it took and the final
 /// variables.
-std::pair<uint64_t, List<uint64_t>> run(STRefs r, uint64_t n, const Stmt &s) {
+std::pair<uint64_t, List<uint64_t>> run(uint64_t n, const Stmt &s) {
   std::shared_ptr<crane::array_storage<uint64_t>> vars =
       std::make_shared<crane::array_storage<uint64_t>>(
           static_cast<std::size_t>(n), UINT64_C(0));
-  uint64_t steps = exec(r, vars, s);
+  uint64_t steps = exec(vars, s);
   return std::make_pair(
       steps, crane::st::elems<List<uint64_t>>(std::span{std::as_const(*vars)}));
 }
@@ -151,15 +150,15 @@ Stmt square(uint64_t k) {
 }
 
 std::pair<uint64_t, List<uint64_t>> ImpWhile::run_factorial(uint64_t k) {
-  return run(STRefs::BUILD_STREFS, UINT64_C(2), factorial(k));
+  return run(UINT64_C(2), factorial(k));
 }
 
 std::pair<uint64_t, List<uint64_t>> ImpWhile::run_fibonacci(uint64_t k) {
-  return run(STRefs::BUILD_STREFS, UINT64_C(4), fibonacci(k));
+  return run(UINT64_C(4), fibonacci(k));
 }
 
 std::pair<uint64_t, List<uint64_t>> ImpWhile::run_square(uint64_t k) {
-  return run(STRefs::BUILD_STREFS, UINT64_C(3), square(k));
+  return run(UINT64_C(3), square(k));
 }
 
 uint64_t ImpWhile::nth(uint64_t n, const List<uint64_t> &l, uint64_t default0) {

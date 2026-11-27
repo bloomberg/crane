@@ -247,11 +247,11 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
-uint64_t lomuto_scan(STRefs r, std::span<uint64_t> arr, uint64_t pv,
-                     uint64_t lo, uint64_t hi, uint64_t i, uint64_t s);
-uint64_t partition(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
+uint64_t lomuto_scan(std::span<uint64_t> arr, uint64_t pv, uint64_t lo,
+                     uint64_t hi, uint64_t i, uint64_t s);
+uint64_t partition(std::span<uint64_t> arr, uint64_t lo, uint64_t hi,
                    uint64_t pividx);
-void quicksort_ST(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi);
+void quicksort_ST(std::span<uint64_t> arr, uint64_t lo, uint64_t hi);
 
 template <typename F1>
   requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
