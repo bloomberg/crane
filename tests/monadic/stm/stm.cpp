@@ -12,7 +12,8 @@ uint64_t stmtest::io_basic_counter() {
 
 uint64_t stmtest::stm_inc(uint64_t x) {
   stm::TVar<uint64_t> c = stm::newTVar<uint64_t>(x);
-  STMDefs::template modifyTVar<uint64_t>(c, [](uint64_t n) { return (n + 1); });
+  STMDefs::template modify_tvar<uint64_t>(c,
+                                          [](uint64_t n) { return (n + 1); });
   return stm::readTVar(std::move(c));
 }
 

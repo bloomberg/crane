@@ -129,7 +129,7 @@ public:
 struct STMDefs {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, T1 &&>
-  static void modifyTVar(stm::TVar<T1> a, F1 &&f);
+  static void modify_tvar(stm::TVar<T1> a, F1 &&f);
 };
 
 struct stmtest {
@@ -160,7 +160,7 @@ struct stmtest {
 
 template <typename T1, typename F1>
   requires std::is_invocable_r_v<T1, F1 &, T1 &&>
-void STMDefs::modifyTVar(stm::TVar<T1> a, F1 &&f) {
+void STMDefs::modify_tvar(stm::TVar<T1> a, F1 &&f) {
   T1 val = stm::readTVar(a);
   stm::writeTVar(std::move(a), f(std::move(val)));
 }
