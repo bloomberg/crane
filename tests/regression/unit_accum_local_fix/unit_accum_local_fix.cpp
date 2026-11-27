@@ -28,11 +28,11 @@ uint64_t UnitAccumLocalFix::fill(uint64_t n) {
         };
     return for_each_with(ListDef::seq(UINT64_C(0), n), std::monostate{},
                          [=](std::monostate, uint64_t i) {
-                           std::span<uint64_t>{*a}[i] = (i * UINT64_C(2));
+                           std::span{*a}[i] = (i * UINT64_C(2));
                            return std::monostate{};
                          });
   }();
-  return std::span<const uint64_t>{*a}[
+  return std::span{std::as_const(*a)}[
       (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))];
 }
 
@@ -41,10 +41,10 @@ uint64_t UnitAccumLocalFix::fill_top(uint64_t n) {
       std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(n),
                                                        UINT64_C(0));
   each_unit(ListDef::seq(UINT64_C(0), n), [=](std::monostate, uint64_t i) {
-    std::span<uint64_t>{*a}[i] = (i * UINT64_C(3));
+    std::span{*a}[i] = (i * UINT64_C(3));
     return std::monostate{};
   });
-  return std::span<const uint64_t>{*a}[
+  return std::span{std::as_const(*a)}[
       (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))];
 }
 

@@ -7,7 +7,7 @@ uint64_t pair_parts(STRefs) {
           crane::st::extent(UINT64_C(2)),
           std::make_pair(UINT64_C(5), UINT64_C(6)));
   auto [x, _] = r;
-  auto [_, y] = std::span<const std::pair<uint64_t, uint64_t>>{*a}[UINT64_C(1)];
+  auto [_, y] = std::span{std::as_const(*a)}[UINT64_C(1)];
   return (x + y);
 }
 
@@ -45,13 +45,13 @@ uint64_t sum_with(STRefs r) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
           crane::st::extent(UINT64_C(4)), UINT64_C(3));
-  std::span<uint64_t>{*arr}[UINT64_C(2)] = UINT64_C(10);
+  std::span{*arr}[UINT64_C(2)] = UINT64_C(10);
   return STMonad::template for_each_with<uint64_t, uint64_t>(
       ListDef::seq(UINT64_C(0), UINT64_C(4)), UINT64_C(0),
       [=, arr = std::move(arr)](uint64_t _x0,
                                 uint64_t _x1)
            -> uint64_t {
-        return add_at(r, std::span<const uint64_t>{*arr}, _x0, _x1);
+        return add_at(r, std::span{std::as_const(*arr)}, _x0, _x1);
       });
 }
 
@@ -100,7 +100,7 @@ uint64_t run_count_back(STRefs r) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
           crane::st::extent(UINT64_C(4)), UINT64_C(0));
-  return count_back(r, std::span<uint64_t>{*arr}, UINT64_C(5));
+  return count_back(r, std::span{*arr}, UINT64_C(5));
 }
 
 uint64_t ignore_ref(STRefs, const uint64_t *, uint64_t n) {

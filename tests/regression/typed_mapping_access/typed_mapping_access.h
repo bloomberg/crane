@@ -3,7 +3,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include "writable.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>

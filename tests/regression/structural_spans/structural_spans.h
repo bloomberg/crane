@@ -7,11 +7,11 @@
 #include <cstdint>
 #include <memory>
 #include <numeric>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <template_argument.h>
 #include <utility>
 #include <variant>
 #include <vector>
