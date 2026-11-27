@@ -491,12 +491,11 @@ struct TopologicalSort {
           } else {
             if (eqb_node(e1, e2)) {
               _lc1_loop_h = List<T1>::cons(e1, bsl::move(_lc1_loop_h));
-              _lc1_loop_l0 = &d_a1_value;
             } else {
               _lc1_loop_h = List<T1>::cons(
                   e1, List<T1>::cons(e2, bsl::move(_lc1_loop_h)));
-              _lc1_loop_l0 = &d_a1_value;
             }
+            _lc1_loop_l0 = &d_a1_value;
           }
         }
       }

@@ -1232,11 +1232,10 @@ LoopifyLists::group_fuel(uint64_t fuel, const LoopifyLists::list<uint64_t> &l) {
                 std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
             if (a0 == a00) {
               _stack.emplace_back(_after_group_fuel_in_true{a0});
-              _stack.emplace_back(_call{crane_raw(a1), f});
             } else {
               _stack.emplace_back(_after_group_fuel_in_false{a0});
-              _stack.emplace_back(_call{crane_raw(a1), f});
             }
+            _stack.emplace_back(_call{crane_raw(a1), f});
           }
         }
       }
@@ -1720,10 +1719,8 @@ uint64_t LoopifyLists::count(uint64_t x,
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
         if (x == a0) {
           _stack.emplace_back(_after_count_in_true{});
-          _stack.emplace_back(_call{crane_raw(a1)});
-        } else {
-          _stack.emplace_back(_call{crane_raw(a1)});
         }
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<_after_count_in_true>(_popped));

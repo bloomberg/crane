@@ -276,10 +276,8 @@ uint64_t LoopifySpecialRecursion::sum_odd_indices_aux(const List<uint64_t> &l,
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         if ((UINT64_C(2) ? idx % UINT64_C(2) : idx) == UINT64_C(1)) {
           _stack.emplace_back(_after_sum_odd_indices_aux_in_true{a0});
-          _stack.emplace_back(_call{(idx + UINT64_C(1)), crane_raw(a1)});
-        } else {
-          _stack.emplace_back(_call{(idx + UINT64_C(1)), crane_raw(a1)});
         }
+        _stack.emplace_back(_call{(idx + UINT64_C(1)), crane_raw(a1)});
       }
     } else {
       auto _f =
@@ -328,14 +326,12 @@ uint64_t LoopifySpecialRecursion::categorize_by(uint64_t k,
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         if (k < a0) {
           _stack.emplace_back(_after_categorize_by_in_true{});
-          _stack.emplace_back(_call{crane_raw(a1)});
         } else if (a0 == k) {
           _stack.emplace_back(_after_categorize_by_in_true_2{});
-          _stack.emplace_back(_call{crane_raw(a1)});
         } else {
           _stack.emplace_back(_after_categorize_by_in_false{});
-          _stack.emplace_back(_call{crane_raw(a1)});
         }
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else if (std::holds_alternative<_after_categorize_by_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_categorize_by_in_false>(_popped));

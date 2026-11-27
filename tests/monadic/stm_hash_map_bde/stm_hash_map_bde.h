@@ -144,7 +144,6 @@ template <typename K, typename V> struct CHT {
         CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
                                                               v, bsl::move(xs));
     stm::writeTVar(bsl::move(b), bsl::move(xs_));
-    return;
   }
 
   bsl::optional<V> stm_delete(const K &k) const {

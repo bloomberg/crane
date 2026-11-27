@@ -6,7 +6,6 @@ void ITreeEffects::greet() {
   std::string name;
   std::getline(std::cin, name);
   std::cout << std::move(name) << '\n';
-  return;
 }
 
 uint64_t ITreeEffects::roll_dice(uint64_t sides) {
@@ -23,7 +22,6 @@ void ITreeEffects::timed_greeting() {
       return "Good afternoon";
     }
   }() << '\n';
-  return;
 }
 
 void ITreeEffects::echo_loop(uint64_t n) {
@@ -43,6 +41,5 @@ void ITreeEffects::echo_loop(uint64_t n) {
           return acc;
         },
         std::monostate{});
-    return;
   }
 }

@@ -56,13 +56,11 @@ void ReuseScrutineeConcurrentUnit::test() {
   crane::thread t2 = crane::thread(worker, UINT64_C(20));
   std::move(t1).join();
   std::move(t2).join();
-  return;
 }
 
 void ReuseScrutineeConcurrentUnit::run() {
   {
     test();
-    return;
   }
 }
 

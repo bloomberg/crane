@@ -10,7 +10,7 @@ void UnitVoidStress::consume(uint64_t n) {
   }
 }
 
-void UnitVoidStress::discard(uint64_t) { return; }
+void UnitVoidStress::discard(uint64_t) {}
 
 std::pair<uint64_t, std::monostate>
 UnitVoidStress::pair_with_void_call(uint64_t n) {
@@ -27,10 +27,7 @@ std::optional<std::monostate> UnitVoidStress::some_void_call(uint64_t n) {
   }());
 }
 
-void UnitVoidStress::id_void_call(uint64_t x0_) {
-  consume(x0_);
-  return;
-}
+void UnitVoidStress::id_void_call(uint64_t x0_) { consume(x0_); }
 
 std::pair<uint64_t, std::monostate>
 UnitVoidStress::pair_with_discard(uint64_t n) {
@@ -40,10 +37,7 @@ UnitVoidStress::pair_with_discard(uint64_t n) {
   }());
 }
 
-void UnitVoidStress::store_and_call(uint64_t x0_) {
-  consume(x0_);
-  return;
-}
+void UnitVoidStress::store_and_call(uint64_t x0_) { consume(x0_); }
 
 std::pair<uint64_t, std::monostate> UnitVoidStress::pair_via_let(uint64_t n) {
   consume(n);
@@ -53,10 +47,8 @@ std::pair<uint64_t, std::monostate> UnitVoidStress::pair_via_let(uint64_t n) {
 void UnitVoidStress::cond_void(bool b, uint64_t n) {
   if (b) {
     consume(n);
-    return;
   } else {
     discard(n);
-    return;
   }
 }
 

@@ -113,7 +113,6 @@ struct EffectRecursiveList {
       const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
       f(a0);
       map_effect(f, *a1);
-      return;
     }
   }
 

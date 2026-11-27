@@ -168,6 +168,16 @@ val drop_dead_stores : settled -> settled
     value. *)
 val propagate_copies : settled -> settled
 
+(** [drop_trailing_returns decl]: a [return;] ending a function's body,
+    or a branch of the conditional or match ending it, is dropped
+    ({!Branch_tails.drop_trailing_returns}). *)
+val drop_trailing_returns : settled -> settled
+
+(** [hoist_common_suffixes decl]: the plain statements both branches of an
+    [if] end with are written once after it
+    ({!Branch_tails.hoist_common_suffixes}). *)
+val hoist_common_suffixes : settled -> settled
+
 (** [lower_qualifiers decl] spells each type qualifying a member in value
     position as what the printer writes there: a named global becomes the
     value it names.  After {!instantiate_foreign}, which turns a mapped

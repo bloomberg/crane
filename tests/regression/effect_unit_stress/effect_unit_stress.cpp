@@ -1,13 +1,12 @@
 #include "effect_unit_stress.h"
 
 /// 1. Ret tt at different nesting depths
-void EffectUnitStress::ret_tt_simple() { return; }
+void EffectUnitStress::ret_tt_simple() {}
 
-void EffectUnitStress::ret_tt_after_bind() { return; }
+void EffectUnitStress::ret_tt_after_bind() {}
 
 void EffectUnitStress::ret_tt_after_effect() {
   std::cout << std::string("x") << '\n';
-  return;
 }
 
 /// 2. Bind where RHS is Ret of the LHS binding
@@ -29,9 +28,6 @@ uint64_t EffectUnitStress::bind_ignore() {
 /// 4. Multiple Ret tt in if-then-else
 void EffectUnitStress::conditional_tt(bool b) {
   if (b) {
-    return;
-  } else {
-    return;
   }
 }
 
@@ -39,9 +35,6 @@ void EffectUnitStress::conditional_tt(bool b) {
 void EffectUnitStress::conditional_mixed(bool b) {
   if (b) {
     std::cout << std::string("yes") << '\n';
-    return;
-  } else {
-    return;
   }
 }
 

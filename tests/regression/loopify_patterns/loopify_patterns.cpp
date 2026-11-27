@@ -62,17 +62,15 @@ uint64_t LoopifyPatterns::nested_if_fuel(uint64_t fuel, uint64_t n) {
           if ((UINT64_C(2) ? n_ % UINT64_C(2) : n_) == UINT64_C(0)) {
             if (UINT64_C(10) < n_) {
               n = (UINT64_C(2) ? n_ / UINT64_C(2) : 0);
-              fuel = f;
             } else {
               n = m;
-              fuel = f;
             }
           } else {
             n = (m == UINT64_C(0)
                      ? UINT64_C(0)
                      : (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))));
-            fuel = f;
           }
+          fuel = f;
         }
       }
     }
@@ -327,11 +325,10 @@ LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<uint64_t> &l,
           typename LoopifyPatterns::list<uint64_t>::Cons>(_loop_l->v());
       if (base <= a0) {
         _loop_pos = list<uint64_t>::cons(a0, std::move(_loop_pos));
-        _loop_l = crane_raw(a1);
       } else {
         _loop_neg = list<uint64_t>::cons(a0, std::move(_loop_neg));
-        _loop_l = crane_raw(a1);
       }
+      _loop_l = crane_raw(a1);
     }
   }
 }
@@ -495,11 +492,10 @@ uint64_t LoopifyPatterns::alternating_ops(uint64_t n) {
         uint64_t m = n - 1;
         if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
           _stack.emplace_back(_after_alternating_ops_in_true{n});
-          _stack.emplace_back(_call{m});
         } else {
           _stack.emplace_back(_after_alternating_ops_in_false{n});
-          _stack.emplace_back(_call{m});
         }
+        _stack.emplace_back(_call{m});
       }
     } else if (std::holds_alternative<_after_alternating_ops_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_alternating_ops_in_false>(_popped));

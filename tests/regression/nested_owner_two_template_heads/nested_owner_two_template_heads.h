@@ -210,10 +210,8 @@ template <typename F0> Nat Bag::bag<A>::countIf(F0 &&p) const {
         const auto &[a0, a1] = std::get<typename Bag::bag<A>::Add>(_sv.v());
         if (p(a0)) {
           _stack.emplace_back(_after_countIf_in_true{});
-          _stack.emplace_back(_call{crane_raw(a1)});
-        } else {
-          _stack.emplace_back(_call{crane_raw(a1)});
         }
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<_after_countIf_in_true>(_popped));

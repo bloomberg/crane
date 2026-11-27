@@ -70,11 +70,10 @@ uint64_t LoopifyNumericMisc::alternating_ops(uint64_t n) {
         uint64_t n_ = n - 1;
         if ((UINT64_C(2) ? (n_ + 1) % UINT64_C(2) : (n_ + 1)) == UINT64_C(0)) {
           _stack.emplace_back(_after_alternating_ops_in_true{n_});
-          _stack.emplace_back(_call{n_});
         } else {
           _stack.emplace_back(_after_alternating_ops_in_false{n_});
-          _stack.emplace_back(_call{n_});
         }
+        _stack.emplace_back(_call{n_});
       }
     } else if (std::holds_alternative<_after_alternating_ops_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_alternating_ops_in_false>(_popped));
@@ -116,10 +115,8 @@ uint64_t LoopifyNumericMisc::count_even(const List<uint64_t> &l) {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
           _stack.emplace_back(_after_count_even_in_true{});
-          _stack.emplace_back(_call{crane_raw(a1)});
-        } else {
-          _stack.emplace_back(_call{crane_raw(a1)});
         }
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<_after_count_even_in_true>(_popped));
@@ -155,10 +152,8 @@ uint64_t LoopifyNumericMisc::count_odd(const List<uint64_t> &l) {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(1)) {
           _stack.emplace_back(_after_count_odd_in_true{});
-          _stack.emplace_back(_call{crane_raw(a1)});
-        } else {
-          _stack.emplace_back(_call{crane_raw(a1)});
         }
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<_after_count_odd_in_true>(_popped));

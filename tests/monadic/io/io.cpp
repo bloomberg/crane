@@ -1,16 +1,10 @@
 #include "io.h"
 
-void iotest::test1(std::string_view) { return; }
+void iotest::test1(std::string_view) {}
 
-void iotest::test2(const std::string &s) {
-  std::cout << s;
-  return;
-}
+void iotest::test2(const std::string &s) { std::cout << s; }
 
-void iotest::test3(const std::string &s) {
-  std::cout << s << '\n';
-  return;
-}
+void iotest::test3(const std::string &s) { std::cout << s << '\n'; }
 
 std::string iotest::test4() {
   std::cout << std::string("what is your name?") << '\n';
@@ -33,5 +27,4 @@ void iotest::test5() {
                        std::istreambuf_iterator<char>());
   }();
   std::cout << std::move(s) << '\n';
-  return;
 }

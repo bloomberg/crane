@@ -35,7 +35,6 @@ void stmtest::stm_enqueue(stm::TVar<List<uint64_t>> q, uint64_t x) {
   List<uint64_t> xs = stm::readTVar(q);
   stm::writeTVar(std::move(q),
                  xs.app(List<uint64_t>::cons(x, List<uint64_t>::nil())));
-  return;
 }
 
 uint64_t stmtest::stm_dequeue(stm::TVar<List<uint64_t>> q) {

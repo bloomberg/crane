@@ -1,6 +1,6 @@
 #include "erased_unit_result.h"
 
-void ErasedUnitResult::touch(uint64_t) { return; }
+void ErasedUnitResult::touch(uint64_t) {}
 
 bool ErasedUnitResult::is_tt() { return true; }
 

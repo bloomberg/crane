@@ -7,13 +7,11 @@ uint64_t StructuralSpans::total(std::span<const uint64_t> x0_) {
 void StructuralSpans::bump(std::span<uint64_t> b, uint64_t i) {
   uint64_t x = b[i];
   b[i] = (x + 1);
-  return;
 }
 
 void StructuralSpans::grow(std::vector<uint64_t> &b, uint64_t n) {
   std::span<uint64_t>{b}[UINT64_C(0)] = UINT64_C(7);
   b.resize(n, UINT64_C(1));
-  return;
 }
 
 uint64_t StructuralSpans::window_total(std::span<const uint64_t> b) {
@@ -41,7 +39,6 @@ void StructuralSpans::self_append(std::vector<uint64_t> &b) {
   auto _view2 = std::vector<uint64_t>(_view1.begin(), _view1.end());
   b.insert(b.end(), (std::span<const uint64_t>{_view2}).begin(),
            (std::span<const uint64_t>{_view2}).end());
-  return;
 }
 
 std::pair<std::pair<std::pair<List<uint64_t>, uint64_t>, uint64_t>,

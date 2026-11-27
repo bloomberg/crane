@@ -55,7 +55,6 @@ void UnitAccumLocalFix::walk_top(const List<uint64_t> &xs) {
   } else {
     const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
     walk_top(*a1);
-    return;
   }
 }
 
@@ -78,7 +77,6 @@ void UnitAccumLocalFix::walk(const List<uint64_t> &l) {
   };
   {
     go(l, std::monostate{});
-    return;
   }
 }
 

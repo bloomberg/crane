@@ -52,16 +52,16 @@ uint64_t LoopifyNestedConstructs::nested_if_fuel(uint64_t fuel, uint64_t n) {
         return UINT64_C(0);
       } else if (n == UINT64_C(1)) {
         return UINT64_C(1);
-      } else if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
-        if (UINT64_C(10) < n) {
-          n = (UINT64_C(2) ? n / UINT64_C(2) : 0);
-          fuel = fuel_;
-        } else {
-          n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
-          fuel = fuel_;
-        }
       } else {
-        n = (((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2))));
+        if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
+          if (UINT64_C(10) < n) {
+            n = (UINT64_C(2) ? n / UINT64_C(2) : 0);
+          } else {
+            n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+          }
+        } else {
+          n = (((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2))));
+        }
         fuel = fuel_;
       }
     }
@@ -272,11 +272,10 @@ uint64_t LoopifyNestedConstructs::alternating_ops(uint64_t n) {
         uint64_t n_ = n - 1;
         if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
           _stack.emplace_back(_after_alternating_ops_in_true{n});
-          _stack.emplace_back(_call{n_});
         } else {
           _stack.emplace_back(_after_alternating_ops_in_false{n});
-          _stack.emplace_back(_call{n_});
         }
+        _stack.emplace_back(_call{n_});
       }
     } else if (std::holds_alternative<_after_alternating_ops_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_alternating_ops_in_false>(_popped));

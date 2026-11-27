@@ -10,10 +10,8 @@ uint64_t lomuto_scan(STRefs, std::span<uint64_t> arr, uint64_t pv, uint64_t,
       if (v <= pv) {
         std::swap(arr[i], arr[s]);
         s = (s + 1);
-        i = (i + 1);
-      } else {
-        i = (i + 1);
       }
+      i = (i + 1);
     } else {
       return s;
     }
@@ -37,9 +35,6 @@ void quicksort_ST(STRefs r, std::span<uint64_t> arr, uint64_t lo, uint64_t hi) {
          (UINT64_C(2) ? (((hi - lo) > hi ? 0 : (hi - lo))) / UINT64_C(2) : 0)));
     quicksort_ST(r, arr, lo, (((p - UINT64_C(1)) > p ? 0 : (p - UINT64_C(1)))));
     quicksort_ST(r, arr, (p + UINT64_C(1)), hi);
-    return;
-  } else {
-    return;
   }
 }
 
@@ -77,8 +72,8 @@ List<uint64_t> StQuicksort::quicksort_fun(const List<uint64_t> &x) {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(x.v());
         const List<uint64_t> &a1_value = *a1;
         _stack.emplace_back(_after_quicksort_fun_in_Cons{a0, a1});
-        _stack.emplace_back(_call{a1_value.filter(
-            [=, a0 = std::move(a0)](uint64_t x0) { return x0 < a0; })});
+        _stack.emplace_back(
+            _call{a1_value.filter([=](uint64_t x0) { return x0 < a0; })});
       }
     } else if (std::holds_alternative<_after_quicksort_fun_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_quicksort_fun_in_Cons>(_popped));
@@ -88,8 +83,8 @@ List<uint64_t> StQuicksort::quicksort_fun(const List<uint64_t> &x) {
       const List<uint64_t> &a1_value = *a1;
       _stack.emplace_back(
           _after_quicksort_fun_in_Cons_2{a0, std::move(_result)});
-      _stack.emplace_back(_call{a1_value.filter(
-          [=, a0 = std::move(a0)](uint64_t x0) { return a0 <= x0; })});
+      _stack.emplace_back(
+          _call{a1_value.filter([=](uint64_t x0) { return a0 <= x0; })});
     } else {
       auto _f = std::move(std::get<_after_quicksort_fun_in_Cons_2>(_popped));
       _stack.pop_back();

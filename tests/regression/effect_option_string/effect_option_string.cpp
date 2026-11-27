@@ -93,7 +93,6 @@ void EffectOptionString::option_then_effect(const std::string &name) {
     msg = "not_set";
   }
   std::cout << std::move(msg) << '\n';
-  return;
 }
 
 /// 6. Option match with int result

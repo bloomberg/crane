@@ -105,7 +105,6 @@ struct EffectHigherOrder {
     requires std::is_invocable_r_v<void, F0 &, const std::string &>
   static void apply_effect(F0 &&f, const std::string &x0_) {
     f(x0_);
-    return;
   }
 
   /// 2. Map-like function over a list with effects
@@ -118,7 +117,6 @@ struct EffectHigherOrder {
       const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
       f(a0);
       for_each_str(f, *a1);
-      return;
     }
   }
 

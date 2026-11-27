@@ -105,7 +105,6 @@ struct VoidCallback {
     } else {
       const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       for_each(f, *a1);
-      return;
     }
   }
 
@@ -128,7 +127,6 @@ struct VoidCallback {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       f(a0);
       for_each_m(f, *a1);
-      return;
     }
   }
 
@@ -161,7 +159,6 @@ struct VoidCallback {
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
   static void apply_twice(F0 &&f, uint64_t x0_) {
     f(x0_);
-    return;
   }
 
   static inline const std::monostate test_apply_twice = []() {

@@ -3,7 +3,6 @@
 void bug_create(const std::string &title) {
   {
     bug_create_impl(title);
-    return;
   }
 }
 

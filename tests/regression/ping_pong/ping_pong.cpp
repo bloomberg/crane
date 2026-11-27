@@ -36,11 +36,7 @@ void PingPong::run_game(uint64_t round) {
       return;
     }
   }
-  return;
 }
 
 /// Entry point.
-void PingPong::play() {
-  run_game(UINT64_C(1));
-  return;
-}
+void PingPong::play() { run_game(UINT64_C(1)); }

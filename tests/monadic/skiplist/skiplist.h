@@ -211,7 +211,6 @@ template <typename K, typename V> struct SkipList {
   void add(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
            uint64_t newLevel) const {
     this->insert(ltK, eqK, k, v, newLevel);
-    return;
   }
 
   template <typename F0, typename F1>
@@ -704,7 +703,6 @@ template <typename K, typename V> struct SkipList {
             std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(newNode)));
     stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
         std::move(newNode)->forward[level], opt_to_ptr(std::move(oldNext)));
-    return;
   }
 
   template <typename T1, typename T2>
@@ -724,7 +722,6 @@ template <typename K, typename V> struct SkipList {
         level = level_;
       }
     }
-    return;
   }
 
   template <typename T1, typename T2>
@@ -747,7 +744,6 @@ template <typename K, typename V> struct SkipList {
         }
       }
     }
-    return;
   }
 
   template <typename T1, typename T2>
@@ -761,7 +757,6 @@ template <typename K, typename V> struct SkipList {
           std::move(path), std::move(head),
           (((needed - UINT64_C(1)) > needed ? 0 : (needed - UINT64_C(1)))),
           (currentMax + UINT64_C(1)));
-      return;
     }
   }
 
@@ -772,7 +767,6 @@ template <typename K, typename V> struct SkipList {
     uint64_t lvl = newNode->level;
     SkipList<int, int>::template linkNode_aux<T1, T2>(
         std::move(path), std::move(head), std::move(newNode), lvl);
-    return;
   }
 
   template <typename T1, typename T2>
@@ -784,7 +778,6 @@ template <typename K, typename V> struct SkipList {
             std::move(target)->forward[level]));
     stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
         std::move(pred)->forward[level], opt_to_ptr(std::move(targetNext)));
-    return;
   }
 
   template <typename T1, typename T2>
@@ -804,7 +797,6 @@ template <typename K, typename V> struct SkipList {
         level = level_;
       }
     }
-    return;
   }
 
   template <typename T1, typename T2>
@@ -813,7 +805,6 @@ template <typename K, typename V> struct SkipList {
     uint64_t lvl = target->level;
     SkipList<int, int>::template unlinkNode_aux<T1, T2>(std::move(path),
                                                         std::move(target), lvl);
-    return;
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
@@ -918,7 +909,6 @@ template <typename K, typename V> struct SkipList {
         lvl = lvl_;
       }
     }
-    return;
   }
 
   template <typename T1, typename T2>
@@ -927,7 +917,6 @@ template <typename K, typename V> struct SkipList {
                                     uint64_t lvl) {
     SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(
         std::move(head), std::move(node), lvl);
-    return;
   }
 
   template <typename T1, typename T2>

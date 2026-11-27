@@ -60,12 +60,10 @@ void ReuseSummaryConcurrentUnit::test() {
   crane::thread t2 = crane::thread(worker, UINT64_C(20));
   std::move(t1).join();
   std::move(t2).join();
-  return;
 }
 
 void ReuseSummaryConcurrentUnit::run() {
   {
     test();
-    return;
   }
 }

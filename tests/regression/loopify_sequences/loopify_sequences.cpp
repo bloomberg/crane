@@ -331,11 +331,10 @@ LoopifySequences::split_by_sign(const List<uint64_t> &l, uint64_t base,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (base <= a0) {
         _loop_pos = List<uint64_t>::cons(a0, std::move(_loop_pos));
-        _loop_l = crane_raw(a1);
       } else {
         _loop_neg = List<uint64_t>::cons(a0, std::move(_loop_neg));
-        _loop_l = crane_raw(a1);
       }
+      _loop_l = crane_raw(a1);
     }
   }
 }
@@ -964,11 +963,10 @@ List<List<uint64_t>> LoopifySequences::group_fuel(uint64_t fuel,
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());
             if (a0 == a00) {
               _stack.emplace_back(_after_group_fuel_in_true{a0});
-              _stack.emplace_back(_call{crane_raw(a1), f});
             } else {
               _stack.emplace_back(_after_group_fuel_in_false{a0});
-              _stack.emplace_back(_call{crane_raw(a1), f});
             }
+            _stack.emplace_back(_call{crane_raw(a1), f});
           }
         }
       }

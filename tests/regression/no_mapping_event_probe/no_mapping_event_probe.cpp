@@ -3,14 +3,12 @@
 void NoMappingEventProbe::draw_hidden_tile(uint64_t x, uint64_t y) {
   {
     reproE::hidden(x, y);
-    return;
   }
 }
 
 void NoMappingEventProbe::draw_revealed_tile(uint64_t x, uint64_t y) {
   {
     reproE::revealed(x, y);
-    return;
   }
 }
 
@@ -30,6 +28,5 @@ void NoMappingEventProbe::loop(uint64_t x, uint64_t y,
       }
     }();
     loop((x + cell_size), y, *a1);
-    return;
   }
 }

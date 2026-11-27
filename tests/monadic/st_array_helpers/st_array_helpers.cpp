@@ -9,25 +9,21 @@ uint64_t StArrayHelpers::peek(std::span<const uint64_t> arr, uint64_t i) {
 void StArrayHelpers::bump(std::span<uint64_t> arr, uint64_t i) {
   uint64_t v = arr[i];
   arr[i] = (v + 1);
-  return;
 }
 
 /// A write two calls deep.
 void StArrayHelpers::middle(std::span<uint64_t> arr, uint64_t i) {
   arr[i] = UINT64_C(42);
-  return;
 }
 
 void StArrayHelpers::outer(std::span<uint64_t> arr) {
   middle(arr, UINT64_C(0));
   middle(arr, UINT64_C(2));
-  return;
 }
 
 /// Swaps the first and last cells: swapArray is called, not unfolded.
 void StArrayHelpers::swap_ends(std::span<uint64_t> arr, uint64_t last) {
   std::swap(arr[UINT64_C(0)], arr[last]);
-  return;
 }
 
 /// Returns one of its arrays: it keeps them, so takes them by value.
@@ -91,7 +87,6 @@ void StArrayHelpers::write_and_refill(
     const std::shared_ptr<crane::array_storage<uint64_t>> &arr, uint64_t v) {
   std::span<uint64_t>{*arr}[UINT64_C(0)] = v;
   std::ranges::fill(*arr, v);
-  return;
 }
 
 /// Replaces its array, then writes the new one.
@@ -99,14 +94,12 @@ void StArrayHelpers::regrow_then_write(
     std::shared_ptr<crane::array_storage<uint64_t>> &arr, uint64_t n) {
   arr = std::make_shared<crane::array_storage<uint64_t>>(n, 0);
   std::span<uint64_t>{*arr}[UINT64_C(0)] = n;
-  return;
 }
 
 /// A bool array: reads one cell and writes its negation back.
 void StArrayHelpers::flip(std::span<bool> arr, uint64_t i) {
   bool b = arr[i];
   arr[i] = !(b);
-  return;
 }
 
 List<uint64_t> StArrayHelpers::helpers_list(const List<uint64_t> &xs) {

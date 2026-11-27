@@ -25,7 +25,6 @@ void NonatomicRcStmShared::push(stm::TVar<NonatomicRcStmShared::lst> t,
         return std::monostate{};
       }();
     });
-    return;
   }
 }
 

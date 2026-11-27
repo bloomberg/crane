@@ -1018,11 +1018,12 @@ uint64_t LoopifyNumbers::power_mod_fuel(uint64_t fuel, uint64_t b, uint64_t e,
         uint64_t f = fuel - 1;
         if (e == UINT64_C(0)) {
           _result = UINT64_C(1);
-        } else if ((UINT64_C(2) ? e % UINT64_C(2) : e) == UINT64_C(0)) {
-          _stack.emplace_back(_after_power_mod_fuel_in_true{});
-          _stack.emplace_back(_call{(UINT64_C(2) ? e / UINT64_C(2) : 0), f});
         } else {
-          _stack.emplace_back(_after_power_mod_fuel_in_false{});
+          if ((UINT64_C(2) ? e % UINT64_C(2) : e) == UINT64_C(0)) {
+            _stack.emplace_back(_after_power_mod_fuel_in_true{});
+          } else {
+            _stack.emplace_back(_after_power_mod_fuel_in_false{});
+          }
           _stack.emplace_back(_call{(UINT64_C(2) ? e / UINT64_C(2) : 0), f});
         }
       }
@@ -1079,10 +1080,8 @@ uint64_t LoopifyNumbers::sum_divisors_aux(uint64_t n, uint64_t k) {
           uint64_t _x = k_ - 1;
           if ((k ? n % k : n) == UINT64_C(0)) {
             _stack.emplace_back(_after_sum_divisors_aux_in_true{k});
-            _stack.emplace_back(_call{k_});
-          } else {
-            _stack.emplace_back(_call{k_});
           }
+          _stack.emplace_back(_call{k_});
         }
       }
     } else {
@@ -1341,10 +1340,8 @@ uint64_t LoopifyNumbers::sum_divisible_by(uint64_t k, uint64_t n) {
         uint64_t m = n - 1;
         if ((k ? n % k : n) == UINT64_C(0)) {
           _stack.emplace_back(_after_sum_divisible_by_in_true{n});
-          _stack.emplace_back(_call{m});
-        } else {
-          _stack.emplace_back(_call{m});
         }
+        _stack.emplace_back(_call{m});
       }
     } else {
       auto _f = std::move(std::get<_after_sum_divisible_by_in_true>(_popped));

@@ -15,6 +15,5 @@ DependentElimStdexceptProbe::get_present(DependentElimStdexceptProbe::Avail a) {
         std::unreachable();
       }
     }();
-    return;
   }
 }

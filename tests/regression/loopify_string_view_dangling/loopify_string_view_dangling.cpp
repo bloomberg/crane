@@ -212,21 +212,15 @@ Z Uint63Axioms::to_Z_rec(uint64_t n, int64_t i) {
         uint64_t n0 = n - 1;
         if (Uint63Axioms::is_even(i)) {
           _stack.emplace_back(_after_to_Z_rec_in_true{});
-          _stack.emplace_back(
-              _call{(INT64_C(1) >= 63
-                         ? 0
-                         : static_cast<int64_t>(
-                               static_cast<uint64_t>(i) >> (INT64_C(1) & 63))),
-                    n0});
         } else {
           _stack.emplace_back(_after_to_Z_rec_in_false{});
-          _stack.emplace_back(
-              _call{(INT64_C(1) >= 63
-                         ? 0
-                         : static_cast<int64_t>(
-                               static_cast<uint64_t>(i) >> (INT64_C(1) & 63))),
-                    n0});
         }
+        _stack.emplace_back(
+            _call{(INT64_C(1) >= 63
+                       ? 0
+                       : static_cast<int64_t>(
+                             static_cast<uint64_t>(i) >> (INT64_C(1) & 63))),
+                  n0});
       }
     } else if (std::holds_alternative<_after_to_Z_rec_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_to_Z_rec_in_false>(_popped));

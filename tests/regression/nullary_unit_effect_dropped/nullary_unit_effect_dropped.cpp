@@ -3,6 +3,5 @@
 void NullaryUnitEffectDropped::f() {
   {
     throw 0;
-    return;
   }
 }

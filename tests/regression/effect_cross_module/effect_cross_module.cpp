@@ -3,7 +3,6 @@
 /// Inner module defines a helper that returns a value
 void EffectCrossModule::Inner::greet(const std::string &name) {
   std::cout << crane::string_capped(std::string("Hello, ") + name) << '\n';
-  return;
 }
 
 std::string EffectCrossModule::Inner::ask_name() {
@@ -16,10 +15,7 @@ std::string EffectCrossModule::Inner::ask_name() {
 }
 
 /// Outer code uses Inner's definitions
-void EffectCrossModule::test_greet() {
-  Inner::greet("world");
-  return;
-}
+void EffectCrossModule::test_greet() { Inner::greet("world"); }
 
 std::string EffectCrossModule::test_ask_name() { return Inner::ask_name(); }
 
@@ -38,7 +34,6 @@ void EffectCrossModule::greet_all(const List<std::string> &names) {
         std::get<typename List<std::string>::Cons>(names.v());
     Inner::greet(a0);
     greet_all(*a1);
-    return;
   }
 }
 

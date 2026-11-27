@@ -1,6 +1,6 @@
 #include "thread_handle_semantics.h"
 
-void ThreadHandleSemantics::work(uint64_t) { return; }
+void ThreadHandleSemantics::work(uint64_t) {}
 
 uint64_t ThreadHandleSemantics::never_joined(uint64_t n) {
   crane::thread _x = crane::thread(work, n);
@@ -32,6 +32,5 @@ void ThreadHandleSemantics::join_all(const List<crane::thread> &l) {
     const auto &[a0, a1] = std::get<typename List<crane::thread>::Cons>(l.v());
     a0.join();
     join_all(*a1);
-    return;
   }
 }

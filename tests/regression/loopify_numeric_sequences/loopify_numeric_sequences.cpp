@@ -388,13 +388,14 @@ uint64_t LoopifyNumericSequences::alternate_sum(bool sign, uint64_t acc,
         _loop_l = crane_raw(a1);
         acc = (acc + a0);
         sign = false;
-      } else if (a0 <= acc) {
-        _loop_l = crane_raw(a1);
-        acc = (((acc - a0) > acc ? 0 : (acc - a0)));
-        sign = true;
       } else {
-        _loop_l = crane_raw(a1);
-        acc = UINT64_C(0);
+        if (a0 <= acc) {
+          _loop_l = crane_raw(a1);
+          acc = (((acc - a0) > acc ? 0 : (acc - a0)));
+        } else {
+          _loop_l = crane_raw(a1);
+          acc = UINT64_C(0);
+        }
         sign = true;
       }
     }
@@ -428,10 +429,8 @@ uint64_t LoopifyNumericSequences::sum_divisors_aux(uint64_t n, uint64_t d) {
         uint64_t d_ = d - 1;
         if ((d ? n % d : n) == UINT64_C(0)) {
           _stack.emplace_back(_after_sum_divisors_aux_in_true{d});
-          _stack.emplace_back(_call{d_});
-        } else {
-          _stack.emplace_back(_call{d_});
         }
+        _stack.emplace_back(_call{d_});
       }
     } else {
       auto _f = std::move(std::get<_after_sum_divisors_aux_in_true>(_popped));

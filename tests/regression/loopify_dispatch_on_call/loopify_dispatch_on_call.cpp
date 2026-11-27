@@ -39,10 +39,8 @@ bool LoopifyDispatchOnCall::parity(const LoopifyDispatchOnCall::tree &t) {
       const LoopifyDispatchOnCall::tree &r0 = *_f.r0;
       if (_result) {
         _stack.emplace_back(_after_parity_in_true{});
-        _stack.emplace_back(_call{&r0});
-      } else {
-        _stack.emplace_back(_call{&r0});
       }
+      _stack.emplace_back(_call{&r0});
     } else {
       auto _f = std::move(std::get<_after_parity_in_true>(_popped));
       _stack.pop_back();

@@ -1137,6 +1137,14 @@ let drop_dead_stores (d : settled) : settled =
   in
   on_bodies (fun params ss -> fixpoint params ss 4) d
 
+(** The [return;] a function's body ends with, in any branch
+    ({!Branch_tails.drop_trailing_returns}). *)
+let drop_trailing_returns (d : settled) : settled = Branch_tails.drop_trailing_returns d
+
+(** Statements both branches of an [if] end with, written once after it
+    ({!Branch_tails.hoist_common_suffixes}). *)
+let hoist_common_suffixes (d : settled) : settled = Branch_tails.hoist_common_suffixes d
+
 (** Copies of a local, propagated: [T x = y;], where [x] and [y] are
     variables declared once by value at a type copied as its bits
     ({!Plain_moves.bit_copied}), is dropped, and what follows reads [y] for
@@ -1768,7 +1776,10 @@ let rec decide_captures (d : settled) : settled =
    field a borrowing match binds), and in the body of a lambda that is not
    [mutable], where what it captured is.  Declared at a type not worth
    moving, it is left to [\[=\]]; at a type not known, the capture of an
-   enclosing lambda, it is copied. *)
+   enclosing lambda, it is copied.  A variable the plan takes by move but
+   declared at a type copied as its bits ({!Plain_moves.bit_copied}) is
+   left to [\[=\]] too: moving it is copying it, and [a0 = std::move(a0)]
+   only says otherwise. *)
 and copy_const_captures (d : settled) : settled =
   let const_declared : ty -> bool = function
     | Const _ | Reference (_, Const _) -> true
@@ -1819,14 +1830,20 @@ and copy_const_captures (d : settled) : settled =
       let capture : phase Capture.t =
         match l.capture with
         | Written (By_copy c) ->
+          let bit_copied x =
+            match Id.Map.find_opt x consts with
+            | Some (_, Some (Reference (_, t) | t)) -> Plain_moves.bit_copied t
+            | _ -> false
+          in
+          let moved = List.filter (fun x -> not (bit_copied x)) c.moved in
           let copied =
             List.filter
               (fun x ->
-                (not (List.mem x c.moved))
+                (not (List.mem x moved))
                 && match Id.Map.find_opt x consts with Some (true, ty) -> worth ty | _ -> false )
               (List.sort_uniq Id.compare free)
           in
-          Written (By_copy {c with copied})
+          Written (By_copy {c with moved; copied})
         | k -> k
       in
       let consts =

@@ -13,7 +13,6 @@ void CountDown::count_down(uint64_t n) {
       n = n_;
     }
   }
-  return;
 }
 
 /// Two effects then recurse: effect ;; effect ;; recursive_call
@@ -31,7 +30,6 @@ void CountDown::two_prints(uint64_t n) {
       n = n_;
     }
   }
-  return;
 }
 
 /// Read from user, echo back, then recurse
@@ -49,7 +47,6 @@ void CountDown::echo_loop(uint64_t n) {
       n = n_;
     }
   }
-  return;
 }
 
 /// Effect in base case too: both branches do IO
@@ -68,7 +65,6 @@ void CountDown::announce(uint64_t n) {
       n = n_;
     }
   }
-  return;
 }
 
 /// Multiple arguments: two nat params, recurse on first
@@ -84,7 +80,6 @@ void CountDown::repeat_msg(uint64_t n, const std::string &msg) {
       n = n_;
     }
   }
-  return;
 }
 
 void CountDown::run_fixpoint() {
@@ -93,7 +88,6 @@ void CountDown::run_fixpoint() {
   echo_loop(UINT64_C(0));
   announce(UINT64_C(2));
   repeat_msg(UINT64_C(2), "hello");
-  return;
 }
 
 /// Helper: compare two strings
@@ -120,7 +114,6 @@ void CountDown::co_count_down() {
       std::cout << std::string("tick") << '\n';
     }
   }
-  return;
 }
 
 void CountDown::co_two_prints() {
@@ -136,7 +129,6 @@ void CountDown::co_two_prints() {
       std::cout << std::string("---") << '\n';
     }
   }
-  return;
 }
 
 void CountDown::co_echo_loop() {
@@ -151,7 +143,6 @@ void CountDown::co_echo_loop() {
       std::cout << crane::string_capped(std::string("echo: ") + line) << '\n';
     }
   }
-  return;
 }
 
 void CountDown::co_announce(uint64_t round) {
@@ -170,7 +161,6 @@ void CountDown::co_announce(uint64_t round) {
       round = (round + 1);
     }
   }
-  return;
 }
 
 void CountDown::co_repeat(const std::string &msg) {
@@ -185,5 +175,4 @@ void CountDown::co_repeat(const std::string &msg) {
       std::cout << msg << '\n';
     }
   }
-  return;
 }
