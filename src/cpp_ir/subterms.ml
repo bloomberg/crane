@@ -77,6 +77,11 @@ let expr : type p. expr:(p Expr.t -> unit) -> stmts:(p Stmt.t list -> unit) -> p
   | Braced es -> each es
   | Variant_get (_, e) -> Option.iter expr e
   | Foreign (_, f) -> each f.values
+  | Integer_conversion (_, _, e) | Mapped_operation (_, e) -> expr e
+  | Index (a, i) ->
+    expr a;
+    expr i
+  | Named_call (_, _, args) -> each args
 
 (** The expressions and statement lists a statement holds directly. *)
 let stmt : type p. expr:(p Expr.t -> unit) -> stmts:(p Stmt.t list -> unit) -> p Stmt.t -> unit =

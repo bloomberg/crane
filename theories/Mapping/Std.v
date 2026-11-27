@@ -21,11 +21,12 @@
     Sets the stdlib flavor to ["std"]. *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.StdCore.
-From Crane Require Import Mapping.Descriptor.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
 From Corelib Require Import PrimString.
 From Stdlib Require Import List.
 Import ListNotations.
 Local Open Scope pstring_scope.
+Import Crane.Cpp.
 
 #[export] Instance std_string_mapping : TypeMapping PrimString.string :=
   {| type_headers := ["string"; "string_view"];
@@ -47,7 +48,7 @@ Local Open Scope pstring_scope.
 
 #[export] Instance string_length_mapping : OperationMapping (Ref PrimString.length) :=
   {| operation_headers := ["cstdint"; "string_view"];
-     operation_cpp := Expr "static_cast<int64_t>(%arg(s).size())";
+     operation_cpp := Structured (exact I64 (Method (Arg "s") "size" []));
      operation_contract :=
        PureOperation [{| argument_name := "s"; argument_use := Read |}] ReturnValue [] |}.
 
@@ -58,7 +59,7 @@ Local Open Scope pstring_scope.
     [substr] of the temporary takes over its buffer (C++23). *)
 #[export] Instance string_cat_mapping : OperationMapping (Ref PrimString.cat) :=
   {| operation_headers := ["string"];
-     operation_cpp := Expr "(%arg(s1) + %arg(s2)).substr(0, 16777211)";
+     operation_cpp := Structured (Method (Binop (Add Unchecked) (Arg "s1") (Arg "s2")) "substr" [(lit 0); (lit 16777211)]);
      operation_contract :=
        PureOperation
          [{| argument_name := "s1"; argument_use := ReadCanonical |};
@@ -71,7 +72,7 @@ Local Open Scope pstring_scope.
 #[export] Instance string_get_mapping : OperationMapping (Ref PrimString.get) :=
   {| operation_headers := ["cstdint"; "cstddef"];
      operation_cpp :=
-       Expr "static_cast<std::int64_t>(static_cast<std::size_t>(%arg(i)) < %arg(s).size() ? static_cast<unsigned char>(%arg(s)[static_cast<std::size_t>(%arg(i))]) : 0)";
+       Structured (exact I64 (Cond (Binop Less (to_size (Arg "i")) (Method (Arg "s") "size" [])) (wrap UChar (Index (Arg "s") (to_size (Arg "i")))) (lit 0)));
      operation_contract :=
        PureOperation
          [{| argument_name := "s"; argument_use := Read |};
@@ -81,9 +82,9 @@ Local Open Scope pstring_scope.
 (** Total, as Rocq's: the length is clamped to [max_length] and the
     character to its low byte. *)
 #[export] Instance string_make_mapping : OperationMapping (Ref PrimString.make) :=
-  {| operation_headers := ["string"; "algorithm"; "cstdint"];
+  {| operation_headers := ["string"; "algorithm"; "cstdint"; "cstddef"];
      operation_cpp :=
-       Expr "std::string(static_cast<std::size_t>(std::min<std::int64_t>(%arg(n), 16777211)), static_cast<char>(%arg(c)))";
+       Structured (Build (Name "std::string") [to_size (Call "std::min" [Int I64] [(Arg "n"); (lit 16777211)]); (wrap Char (Arg "c"))]);
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -92,7 +93,7 @@ Local Open Scope pstring_scope.
 
 #[export] Instance string_max_length_mapping : OperationMapping (Ref PrimString.max_length) :=
   {| operation_headers := ["cstdint"];
-     operation_cpp := Expr "INT64_C(16777211)";
+     operation_cpp := Structured (IntLit I64 16777211);
      operation_contract := PureOperation [] ReturnValue [] |}.
 
 (** Lexicographic on the bytes read unsigned, as Rocq's.  The result is
@@ -101,7 +102,7 @@ Local Open Scope pstring_scope.
     compares the bytes unsigned ([std::char_traits<char>]). *)
 #[export] Instance string_compare_mapping : OperationMapping (Ref PrimString.compare) :=
   {| operation_headers := [];
-     operation_cpp := Expr "static_cast<%ret>((%arg(s1) < %arg(s2)) + 2 * (%arg(s1) > %arg(s2)))";
+     operation_cpp := Structured (Convert ToEnum ResultType (Binop (Add Unchecked) (Binop Less (Arg "s1") (Arg "s2")) (Binop (Mul Unchecked) (lit 2) (Binop Greater (Arg "s1") (Arg "s2")))));
      operation_contract :=
        PureOperation
          [{| argument_name := "s1"; argument_use := Read |};
@@ -114,7 +115,7 @@ Local Open Scope pstring_scope.
 #[export] Instance string_sub_mapping : OperationMapping (Ref PrimString.sub) :=
   {| operation_headers := ["string"; "cstddef"];
      operation_cpp :=
-       Expr "(static_cast<std::size_t>(%arg(off)) <= %arg(s).size() ? std::string(%arg(s).substr(static_cast<std::size_t>(%arg(off)), static_cast<std::size_t>(%arg(len)))) : std::string())";
+       Structured (Cond (Binop LessEq (to_size (Arg "off")) (Method (Arg "s") "size" [])) (Build (Name "std::string") [(Method (Arg "s") "substr" [to_size (Arg "off"); to_size (Arg "len")])]) (Build (Name "std::string") []));
      operation_contract :=
        PureOperation
          [{| argument_name := "s"; argument_use := Read |};

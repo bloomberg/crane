@@ -746,6 +746,21 @@ and bare_callee ~boxing r text tys : phase Cpp_ir.Foreign.t =
 
 and instantiated_expr ~boxing (e : expr) : expr =
   match e with
+  (* An operation with a structured body is lowered from it, given exactly
+     its arguments. *)
+  | Call (res, Entity (n, tys, Some {inline = Some _; _}), args)
+    when Base.Table.is_mapped_operation n
+         && Base.Table.inline_custom_arity n = Some (List.length args)
+         && Structured_operation.lowers n args ->
+    let yields = match res.yields with Typed t -> Some (instantiated_type ~boxing t) | _ -> None in
+    let values = List.map (instantiated_expr ~boxing) args in
+    Structured_operation.lower n ~types:(List.map (instantiated_type ~boxing) tys) ~yields ~values
+  | Entity (n, tys, Some {inline = Some _; custom_yields})
+    when Base.Table.is_mapped_operation n
+         && Base.Table.inline_custom_arity n = Some 0
+         && Structured_operation.lowers n [] ->
+    let yields = Option.map (instantiated_type ~boxing) custom_yields in
+    Structured_operation.lower n ~types:(List.map (instantiated_type ~boxing) tys) ~yields ~values:[]
   | Call (res, Entity (n, tys, Some {inline = Some ({form = Templated; _} as tmpl); _}), args) ->
     let tokens = Cpp_ir.Foreign_template.term_template tmpl.text in
     (* An argument past the last one the text names is not its own: the
@@ -1030,6 +1045,9 @@ let rec effect_free (e : expr) =
     | Call ({constructs = Some _; _}, _, _) -> true
     | Call (_, Entity (r, _, _), _) -> pure_global r
     | Foreign (Call, f) -> pure_global f.custom
+    (* A pure operation's body calls only what the mapping names. *)
+    | Mapped_operation (r, _) when pure_global r -> true
+    | Mapped_operation _ -> false
     | Call _ | Lambda _ | Foreign _ -> false
     | _ -> true
   in

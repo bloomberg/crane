@@ -194,6 +194,10 @@ and expr : l Expr.t -> r Expr.t = function
   | Container_cast (t, e, b) -> Container_cast (type_ t, expr e, b)
   | Variant_get_if (t, e) -> Variant_get_if (type_ t, expr e)
   | Foreign (u, f) -> Foreign (u, foreign f)
+  | Integer_conversion (k, t, e) -> Integer_conversion (k, type_ t, expr e)
+  | Index (a, i) -> Index (expr a, expr i)
+  | Named_call (f, ts, es) -> Named_call (f, list type_ ts, list expr es)
+  | Mapped_operation (r, e) -> Mapped_operation (r, expr e)
 
 (** [binding b] is the binding [b] at the resolved phase. *)
 and binding : l Binding.t -> r Binding.t = function

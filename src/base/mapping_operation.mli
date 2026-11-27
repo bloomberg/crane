@@ -62,7 +62,15 @@ type argument = {
 type t = {
   instance : Names.GlobRef.t;
   source : Names.GlobRef.t;
-  template : string;  (** in the legacy term-template vocabulary *)
+  template : string;
+      (** in the legacy term-template vocabulary; a structured body's text
+          ({!Mapping_term.text}) *)
+  structured : Mapping_term.t option;
+      (** a [Structured] body, compiled and folded: a call is lowered from
+          it ({!Cpp_passes.Structured_operation}) *)
+  argument_types : Cpp_ir.Integer_type.t option list;
+      (** by position, the integer type of each argument, where its mapped
+          type's canonical type is written [Int t] *)
   arguments : argument list;  (** one per retained runtime binder, in order *)
   binder_count : int;  (** every binder of the operation's type *)
   call_binders : int list;

@@ -134,14 +134,14 @@ let rec stored_names acc = function
       (fun acc -> function Cpp.Type_arg t -> stored_names acc t | Cpp.Value_arg _ -> acc)
       acc args
   | Cpp.Pointer t | Cpp.Const t -> stored_names acc t
-  | Cpp.Name _ | Cpp.Source_type _ | Cpp.Unsafe_verbatim _ -> acc
+  | Cpp.Name _ | Cpp.Source_type _ | Cpp.Unsafe_verbatim _ | Cpp.Int _ | Cpp.Bool | Cpp.Float64 | Cpp.Result_type -> acc
 
 let rec has_verbatim = function
   | Cpp.Unsafe_verbatim _ -> true
   | Cpp.Apply (_, args) ->
     List.exists (function Cpp.Type_arg t -> has_verbatim t | Cpp.Value_arg _ -> false) args
   | Cpp.Pointer t | Cpp.Const t -> has_verbatim t
-  | Cpp.Name _ | Cpp.Source_type _ | Cpp.Stored_component _ -> false
+  | Cpp.Name _ | Cpp.Source_type _ | Cpp.Stored_component _ | Cpp.Int _ | Cpp.Bool | Cpp.Float64 | Cpp.Result_type -> false
 
 let ends_with c s =
   let s = String.trim s in
@@ -202,6 +202,7 @@ let type_mapping env sigma ~instance ~source (m : type_mapping) =
     | With_body (i, b) ->
       check_template where allowed i;
       check_template where ("result" :: allowed) b
+    | Structured _ -> failf "%s is a Structured construction, which only an operation's body can be" where
   in
   (* Canonical type. *)
   List.iter (known "type_cpp") (List.rev (stored_names [] m.type_cpp));
@@ -405,6 +406,86 @@ let read_only = function
   | Read_only_value _ | Read_only_handle _ -> true
   | Mutable_value _ | Mutable_handle _ | Explicit_access _ -> false
 
+(* The holes a structured body names, as a template's: an [Arg x] is
+   [%arg(x)], a [StoredComponent c] [%stored(c)].  Its text (a [Verbatim], a
+   type's name) names none; a [Var] is bound by a [LetIn] around it; an
+   integer literal is in its type's range; [Exact], [Wrap] and [Saturate]
+   convert to an [Int]; and [<numeric>], which declares [std::saturate_cast]
+   and [std::add_sat], is a header where they are used. *)
+let structured_holes ~fail ~headers (body : Cpp.term) =
+  let found = ref [] in
+  let note h = found := h :: !found in
+  let plain where s =
+    if holes s <> [] then fail (Printf.sprintf "operation_cpp writes %s %s, which names a template hole; name an argument with Arg" where (quote s))
+  in
+  let saturates () =
+    if not (List.mem "numeric" headers) then
+      fail (Printf.sprintf "operation_cpp saturates, which needs <numeric>; list \"numeric\" in operation_headers")
+  in
+  let rec ty (t : Cpp.type_expr) =
+    match t with
+    | Stored_component c -> note (Named ("stored", c))
+    | Apply (s, args) ->
+      plain "the type" s;
+      List.iter (function Cpp.Type_arg t -> ty t | Cpp.Value_arg v -> plain "the type argument" v) args
+    | Pointer t | Const t -> ty t
+    | Name s | Unsafe_verbatim s -> plain "the type" s
+    | Source_type _ | Int _ | Bool | Float64 | Result_type -> ()
+  in
+  let rec term bound (e : Cpp.term) =
+    let go = term bound in
+    match e with
+    | Arg x -> note (Named ("arg", x))
+    | Int_lit (t, v) ->
+      if not (Cpp_ir.Integer_type.fits t v) then
+        fail (Printf.sprintf "operation_cpp writes the literal %s, which is not a %s" (Z.to_string v) (Cpp_ir.Integer_type.spelling t))
+    | Bool_lit _ | String_lit _ -> ()
+    | Unop (_, a) -> go a
+    | Binop (o, a, b) ->
+      (match o with Add Saturating | Sub Saturating | Mul Saturating -> saturates () | _ -> ());
+      go a;
+      go b
+    | Cond (c, a, b) ->
+      go c;
+      go a;
+      go b
+    | Convert (k, t, a) ->
+      ( match (k, t) with
+      | (Exact | Wrap | Saturate), (Int _ | Result_type) -> if k = Saturate then saturates ()
+      | (Exact | Wrap | Saturate), _ ->
+        fail (Printf.sprintf "operation_cpp converts with Exact, Wrap or Saturate to a type that is not an Int; use Build")
+      | To_enum, _ -> () );
+      ty t;
+      go a
+    | Call (f, ts, args) ->
+      plain "the callee" f;
+      List.iter ty ts;
+      List.iter go args
+    | Method (r, m, args) ->
+      plain "the method" m;
+      go r;
+      List.iter go args
+    | Member (r, f) ->
+      plain "the member" f;
+      go r
+    | Index (r, i) ->
+      go r;
+      go i
+    | Build (t, args) ->
+      ty t;
+      List.iter go args
+    | Enum_value (t, x) ->
+      ty t;
+      plain "the enumerator" x
+    | Let_in (x, v, b) ->
+      go v;
+      term (x :: bound) b
+    | Var x -> if not (List.mem x bound) then fail (Printf.sprintf "operation_cpp names Var %s, which no LetIn around it binds" (quote x))
+    | Verbatim s -> plain "the Verbatim" s
+  in
+  term [] body;
+  List.rev !found
+
 let operation_mapping env ~instance ~(source : declaration) cx (m : operation_mapping) =
   let subject = Mapping_decode.pr_declaration env source in
   let fail detail = error ~what:"operation mapping" instance ~subject detail in
@@ -416,6 +497,7 @@ let operation_mapping env ~instance ~(source : declaration) cx (m : operation_ma
     | With_body (i, b) ->
       List.map (fun h -> (h, template_allowed)) (holes i)
       @ List.map (fun h -> (h, "result" :: template_allowed)) (holes b)
+    | Structured body -> List.map (fun h -> (h, template_allowed)) (structured_holes ~fail:(fun s -> fail (Pp.strbrk s)) ~headers:m.operation_headers body)
   in
   List.iter
     (fun (h, allowed) ->

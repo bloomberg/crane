@@ -88,9 +88,59 @@ let spell_binop : I.Binary_operator.t -> _ = function
   | And -> "&&"
   | Or -> "||"
   | Assign -> "="
+  | Add -> "+"
+  | Subtract -> "-"
+  | Multiply -> "*"
+  | Divide -> "/"
+  | Modulo -> "%"
+  | Less -> "<"
+  | Less_equal -> "<="
+  | Greater -> ">"
+  | Greater_equal -> ">="
+  | Bit_and -> "&"
+  | Bit_or -> "|"
+  | Bit_xor -> "^"
+  | Shift_left -> "<<"
+  | Shift_right -> ">>"
+
+(** How tightly a binary operator binds, as C++'s grammar says: higher
+    binds tighter. *)
+let binop_precedence : I.Binary_operator.t -> int = function
+  | Multiply | Divide | Modulo -> 13
+  | Add | Subtract -> 12
+  | Shift_left | Shift_right -> 11
+  | Less | Less_equal | Greater | Greater_equal -> 9
+  | Equal | Not_equal -> 8
+  | Bit_and -> 7
+  | Bit_xor -> 6
+  | Bit_or -> 5
+  | And -> 4
+  | Or -> 3
+  | Assign -> 2
+
+(** The operators of an operation mapping's structured body
+    ({!Cpp_passes.Structured_operation}), which print their operands by
+    precedence; the others keep the spelling they always had. *)
+let structured_binop : I.Binary_operator.t -> bool = function
+  | Equal | Not_equal | And | Or | Assign -> false
+  | _ -> true
+
+(** How tightly [e] binds as an operand: a postfix expression or tighter is
+    16, a prefix one 15, a binary one its operator's; a mapping's text, whose
+    form nothing knows, 0. *)
+let rec expr_precedence (e : expr) =
+  match e with
+  | Mapped_operation (_, e) -> expr_precedence e
+  | Binary (op, _, _) -> binop_precedence op
+  | Unary _ | Dereference _ -> 15
+  | Literal (Int n) when n < 0 -> 15
+  | Literal (Integer (I32, v)) when Z.sign v < 0 && not (Z.equal v (fst (I.Integer_type.range I32))) -> 15
+  | Numeral (_, n) when String.length n.text > 0 && n.text.[0] = '-' -> 15
+  | Foreign _ | Foreign_text _ -> 0
+  | _ -> 16
 
 (** The C++ source spelling of a unary prefix operator. *)
-let spell_unop : I.Unary_operator.t -> _ = function Not -> "!" | Address_of -> "&"
+let spell_unop : I.Unary_operator.t -> _ = function Not -> "!" | Address_of -> "&" | Negate -> "-" | Bit_not -> "~"
 
 (** The C++ source spelling of a [double] literal.
 
@@ -1175,20 +1225,31 @@ and pp_cpp_expr ctx env args (t : expr) =
   | Foreign_text code -> str code
   | Binary (op, lhs, rhs) ->
     (* Parenthesize && subexpressions inside || to avoid
-       -Wlogical-op-parentheses warnings. *)
-    let paren_child (child : expr) =
-      match child with
-      | Binary (And, _, _) when op = Or ->
-        str "(" ++ pp_cpp_expr ctx env args child ++ str ")"
-      | Binary (Or, _, _) when op = And ->
-        str "(" ++ pp_cpp_expr ctx env args child ++ str ")"
+       -Wlogical-op-parentheses warnings.  A structured operator's operand
+       is parenthesised by precedence, and so is any binary operand of a
+       bitwise or shift operator, which clang warns about otherwise. *)
+    let p = binop_precedence op in
+    let parenthesised child = str "(" ++ pp_cpp_expr ctx env args child ++ str ")" in
+    let paren_child ~right (child : expr) =
+      let q = expr_precedence child in
+      match (match child with Mapped_operation (_, c) -> c | c -> c) with
+      | Binary (And, _, _) when op = Or -> parenthesised child
+      | Binary (Or, _, _) when op = And -> parenthesised child
+      | Binary (op', _, _) when structured_binop op' && q < p -> parenthesised child
+      | _ when not (structured_binop op) -> pp_cpp_expr ctx env args child
+      | _ when q < p || (right && q = p) -> parenthesised child
+      | Binary (op', _, _)
+        when op' <> op
+             && (match op with Bit_and | Bit_or | Bit_xor | Shift_left | Shift_right -> true | _ -> false) ->
+        parenthesised child
+      | Binary ((Bit_and | Bit_or | Bit_xor | Shift_left | Shift_right), _, _) when q > p -> parenthesised child
       | _ -> pp_cpp_expr ctx env args child
     in
-    paren_child lhs
+    paren_child ~right:false lhs
     ++ str " "
     ++ str (spell_binop op)
     ++ str " "
-    ++ paren_child rhs
+    ++ paren_child ~right:true rhs
   | Conditional (cond, then_expr, else_expr) ->
     (* Wrap the whole ternary in parentheses, so a conditional used as a
        subexpression cannot bind incorrectly against a surrounding operator. *)
@@ -1209,9 +1270,25 @@ and pp_cpp_expr ctx env args (t : expr) =
     let operand =
       match e with
       | Binary _ | Conditional _ -> str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
+      | _ when expr_precedence e < 15 -> str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
+      (* [- -x], never the decrement [--x]. *)
+      | _ when op = Negate && expr_precedence e = 15 -> str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
       | _ -> pp_cpp_expr ctx env args e
     in
     str (spell_unop op) ++ operand
+  | Literal (Integer (t, v)) -> str (I.Integer_type.spell_literal t v)
+  | Integer_conversion (k, ty, e) ->
+    str (I.Integer_conversion.cast k) ++ str "<" ++ pp_cpp_type ctx false [] ty ++ str ">("
+    ++ pp_delimited ctx env args e ++ str ")"
+  | Index (a, i) -> pp_object ctx env args a ++ str "[" ++ pp_delimited ctx env args i ++ str "]"
+  | Named_call (f, tys, es) ->
+    let templates =
+      match tys with [] -> mt () | _ -> str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
+    in
+    str f ++ templates ++ str "(" ++ pp_list (pp_delimited ctx env args) es ++ str ")"
+  | Mapped_operation (r, e) ->
+    Base.Common.writes_custom r;
+    pp_cpp_expr ctx env args e
   | Unbox (To ty, e) ->
     writes_obj ();
     str Cpp_ir.Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type ctx false [] ty ++ str ">("
@@ -1316,9 +1393,20 @@ and pp_cpp_expr ctx env args (t : expr) =
     Postfix operators bind tighter than the prefix ones, so an [e] that prints
     with a leading [*] has to be parenthesised for the access to apply to [e]
     as a whole rather than to its operand. *)
+(* [e] where brackets around it delimit it already: a conditional, which
+   parenthesises itself everywhere else, is written bare. *)
+and pp_delimited ctx env args (e : expr) =
+  match e with
+  | Conditional (c, a, b) | Mapped_operation (_, Conditional (c, a, b)) ->
+    pp_cpp_expr ctx env args c ++ str " ? " ++ pp_cpp_expr ctx env args a ++ str " : " ++ pp_cpp_expr ctx env args b
+  | _ -> pp_cpp_expr ctx env args e
+
 and pp_object ctx env args (e : expr) =
   match e with
   | Dereference _ -> str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
+  | Literal (Int _ | Integer _) -> str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
+  | (Binary _ | Unary _ | Mapped_operation _) when expr_precedence e < 16 ->
+    str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | Foreign_text s when String.length s > 0 && s.[0] = '*' ->
     str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | _ -> pp_cpp_expr ctx env args e
@@ -1788,7 +1876,7 @@ and pp_block_statements ctx env (fr : foreign) ~result =
 
 (* A value argument spliced into a mapping's text: a string literal as the
    [std::string] it stands for. *)
-and pp_spliced ctx env ~followed_by_dot (arg_expr : expr) =
+and pp_spliced ctx env ?(delimited = false) ~followed_by_dot (arg_expr : expr) =
   let arg = pp_cpp_expr ctx env [] arg_expr in
   let arg =
     match arg_expr with
@@ -1806,7 +1894,12 @@ and pp_spliced ctx env ~followed_by_dot (arg_expr : expr) =
     check_leading_pointer_operator arg_expr arg;
     if I.Written.spliced_in_parentheses arg_expr then str "(" ++ arg ++ str ")" else arg
   end
-  else arg
+  (* A structured operation's body is an operand of the text it is spliced
+     into, which nothing says binds looser than it. *)
+  else
+    match arg_expr with
+    | Mapped_operation _ when (not delimited) && expr_precedence arg_expr < 16 -> str "(" ++ arg ++ str ")"
+    | _ -> arg
 
 (* Under [CRANE_CHECK_IR]: [e], written [printed], has a leading prefix
    pointer operator exactly where the tree says so
@@ -1827,7 +1920,7 @@ and check_leading_pointer_operator e printed =
 and pp_foreign ?result ctx env vl (fr : foreign) =
   Base.Common.writes_custom fr.custom;
   let arg i = pp_cpp_type ctx false vl (Option.default I.Type.Any (List.nth_opt fr.types i)) in
-  let piece ~followed_by_dot : I.Foreign.piece -> _ = function
+  let piece ~delimited ~followed_by_dot : I.Foreign.piece -> _ = function
     | (Text _ | Type_argument _ | Element _) as p -> pp_type_piece fr.custom arg p
     | Yields -> (
       match fr.yields with
@@ -1836,7 +1929,7 @@ and pp_foreign ?result ctx env vl (fr : foreign) =
         CErrors.anomaly Pp.(str "Custom syntax: %ret with no type the call yields in " ++ GlobRef.print fr.custom) )
     | Value i -> (
       match List.nth_opt fr.values i with
-      | Some e -> pp_spliced ctx env ~followed_by_dot e
+      | Some e -> pp_spliced ctx env ~delimited ~followed_by_dot e
       | None -> CErrors.anomaly Pp.(str "Custom syntax: unbound term argument in " ++ GlobRef.print fr.custom) )
     | Result -> (
       match result with
@@ -1845,19 +1938,37 @@ and pp_foreign ?result ctx env vl (fr : foreign) =
     | Statement_end ->
       CErrors.anomaly Pp.(str "Custom syntax: a block's statement written as a term in " ++ GlobRef.print fr.custom)
   in
-  let rec pieces acc : I.Foreign.piece list -> _ = function
+  (* Whether the text around a hole delimits a whole expression there: an
+     opening bracket or a comma before it, a closing one or a comma after
+     it, or nothing. *)
+  let opens = function
+    | None -> true
+    | Some s ->
+      let s = String.trim s in
+      s = "" || String.contains "([{," s.[String.length s - 1]
+  in
+  let closes = function
+    | None -> true
+    | Some s ->
+      let s = String.trim s in
+      s = "" || String.contains ")]},;" s.[0]
+  in
+  let rec pieces prev acc : I.Foreign.piece list -> _ = function
     | [] -> acc
     | p :: rest ->
+      let next = match rest with Text s :: _ -> Some s | [] -> None | _ -> Some "?" in
       let followed_by_dot =
-        match rest with
-        | Text s :: _ ->
+        match next with
+        | Some s ->
           let s = String.trim s in
           String.length s > 0 && s.[0] = '.'
-        | _ -> false
+        | None -> false
       in
-      pieces (acc ++ piece ~followed_by_dot p) rest
+      let delimited = opens prev && closes next in
+      let prev' = match p with Text s -> Some s | _ -> Some "?" in
+      pieces prev' (acc ++ piece ~delimited ~followed_by_dot p) rest
   in
-  pieces (mt ()) fr.pieces
+  pieces None (mt ()) fr.pieces
 
 (** Pretty-print a type with no parenthesization and no type-variable
     context; the common-case shorthand for {!pp_cpp_type}. *)

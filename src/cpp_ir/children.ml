@@ -165,6 +165,16 @@ let expr : type p. p visitor -> p Expr.t -> unit =
     v.expr f;
     each v.expr es
   | Foreign (_, f) -> foreign v f
+  | Integer_conversion (_, t, e) ->
+    v.type_ t;
+    v.expr e
+  | Index (a, i) ->
+    v.expr a;
+    v.expr i
+  | Named_call (_, ts, es) ->
+    each v.type_ ts;
+    each v.expr es
+  | Mapped_operation (_, e) -> v.expr e
 
 (** The children of a statement. *)
 let stmt : type p. p visitor -> p Stmt.t -> unit =

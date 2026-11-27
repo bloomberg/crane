@@ -29,6 +29,8 @@ type t = {
   instance : GlobRef.t;
   source : GlobRef.t;
   template : string;
+  structured : Mapping_term.t option;
+  argument_types : Cpp_ir.Integer_type.t option list;
   arguments : argument list;
   binder_count : int;
   call_binders : int list;
@@ -314,14 +316,60 @@ let compile g =
       | _ -> None )
     | _ -> None
   in
-  let text =
+  (* An argument's integer type, where its mapped type's canonical type is
+     written [Int t]. *)
+  let argument_types =
+    List.map
+      (fun a ->
+        match List.find_opt (fun ((_ : Mapping_discovery.operation_binder), k, _) -> k = a.binder) runtime with
+        | Some (b, _, _) -> Option.bind (mapped_head b.binder_type) (fun g -> (Mapping_plan.find g).integer)
+        | None -> None)
+      arguments
+  in
+  let arg_type i = Stdlib.Option.join (List.nth_opt argument_types i) in
+  let rec plan_type : Cpp.type_expr -> Mapping_plan.type_expr = function
+    | Name s -> Name s
+    | Apply (s, args) ->
+      Apply (s, List.map (function Cpp.Type_arg t -> Mapping_plan.Type (plan_type t) | Cpp.Value_arg v -> Value v) args)
+    | Stored_component c -> Parameter (stored c)
+    | Pointer t -> Pointer (plan_type t)
+    | Const t -> Const (plan_type t)
+    | Unsafe_verbatim s -> Verbatim s
+    | Int t -> Name (Cpp_ir.Integer_type.spelling t)
+    | Bool -> Name "bool"
+    | Float64 -> Name "double"
+    | Result_type -> fail (Pp.strbrk "operation_cpp names ResultType inside another type, which is not supported yet.")
+    | Source_type _ ->
+      fail (Pp.strbrk "operation_cpp names a SourceType, which is not supported in an operation's body; use StoredComponent.")
+  in
+  let term_type : Cpp.type_expr -> Mapping_term.ty = function
+    | Int t -> Int t
+    | Bool -> Bool
+    | Float64 -> Float64
+    | Result_type -> Result
+    | t -> Plan (plan_type t)
+  in
+  let structured =
     match m.operation_cpp with
-    | Expr e -> template e
-    | With_body (i, b) -> "%result = " ^ template i ^ "; " ^ template b
+    | Structured body ->
+      let fail d = fail d in
+      let result_type = Option.bind (mapped_head binders.result_type) (fun g -> (Mapping_plan.find g).integer) in
+      let t = Mapping_term.resolve ~fail ~arg ~ty:term_type ~arg_type ~result_type body in
+      Some (Mapping_term.fold ~fail ~arg_type t)
+    | Expr _ | With_body _ -> None
+  in
+  let text =
+    match (m.operation_cpp, structured) with
+    | _, Some t -> Mapping_term.text t
+    | Expr e, _ -> template e
+    | With_body (i, b), _ -> "%result = " ^ template i ^ "; " ^ template b
+    | Structured _, None -> assert false
   in
   { instance = resolved.operation_instance;
     source = g;
     template = text;
+    structured;
+    argument_types;
     arguments;
     binder_count = List.length binders.binders;
     call_binders =

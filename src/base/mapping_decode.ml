@@ -127,7 +127,16 @@ let rec type_expr cx c : Cpp.type_expr =
   | 5, [t] -> Cpp.Pointer (type_expr cx t)
   | 6, [t] -> Cpp.Const (type_expr cx t)
   | 7, [s] -> Cpp.Unsafe_verbatim (string cx s)
+  | 8, [t] -> Cpp.Int (int_type cx t)
+  | 9, [] -> Cpp.Bool
+  | 10, [] -> Cpp.Float64
+  | 11, [] -> Cpp.Result_type
   | _ -> fail cx ~what:"a TypeExpr" c
+
+and int_type cx c : Cpp.int_type =
+  match constructor_of cx "IntType" c with
+  | i, [] when i >= 1 && i <= List.length Cpp_ir.Integer_type.all -> List.nth Cpp_ir.Integer_type.all (i - 1)
+  | _ -> fail cx ~what:"an IntType" c
 
 and type_argument cx c : Cpp.type_argument =
   match constructor_of cx "TypeArgument" c with
@@ -135,12 +144,128 @@ and type_argument cx c : Cpp.type_argument =
   | 2, [s] -> Cpp.Value_arg (string cx s)
   | _ -> fail cx ~what:"a TypeArgument" c
 
+let bool cx c =
+  match constructor cx ~what:"a bool" (inductive_of "core.bool.type") c with
+  | 1, [] -> true
+  | 2, [] -> false
+  | _ -> fail cx ~what:"a bool" c
+
+let rec positive cx c =
+  match constructor cx ~what:"a positive" (inductive_of "num.pos.type") c with
+  | 1, [p] -> Z.succ (Z.shift_left (positive cx p) 1)
+  | 2, [p] -> Z.shift_left (positive cx p) 1
+  | 3, [] -> Z.one
+  | _ -> fail cx ~what:"a positive" c
+
+let integer cx c =
+  match constructor cx ~what:"a Z" (inductive_of "num.Z.type") c with
+  | 1, [] -> Z.zero
+  | 2, [p] -> positive cx p
+  | 3, [p] -> Z.neg (positive cx p)
+  | _ -> fail cx ~what:"a Z" c
+
+let conversion cx c : Cpp.conversion =
+  match constructor_of cx "Conversion" c with
+  | 1, [] -> Exact
+  | 2, [] -> Wrap
+  | 3, [] -> Saturate
+  | 4, [] -> To_enum
+  | _ -> fail cx ~what:"a Conversion" c
+
+let overflow cx c : Cpp.overflow =
+  match constructor_of cx "Overflow" c with
+  | 1, [] -> Unchecked
+  | 2, [] -> Wrapping
+  | 3, [] -> Saturating
+  | _ -> fail cx ~what:"an Overflow" c
+
+let binop cx c : Cpp.binop =
+  match constructor_of cx "BinOp" c with
+  | 1, [o] -> Add (overflow cx o)
+  | 2, [o] -> Sub (overflow cx o)
+  | 3, [o] -> Mul (overflow cx o)
+  | 4, [] -> Div
+  | 5, [] -> Mod
+  | 6, [] -> Less
+  | 7, [] -> Less_eq
+  | 8, [] -> Greater
+  | 9, [] -> Greater_eq
+  | 10, [] -> Equal
+  | 11, [] -> Not_equal
+  | 12, [] -> And
+  | 13, [] -> Or
+  | 14, [] -> Bit_and
+  | 15, [] -> Bit_or
+  | 16, [] -> Bit_xor
+  | 17, [] -> Shl
+  | 18, [] -> Shr
+  | _ -> fail cx ~what:"a BinOp" c
+
+let unop cx c : Cpp.unop =
+  match constructor_of cx "UnOp" c with
+  | 1, [] -> Neg
+  | 2, [] -> Not
+  | 3, [] -> Bit_not
+  | _ -> fail cx ~what:"a UnOp" c
+
+let rec term cx c : Cpp.term =
+  match constructor_of cx "Term" c with
+  | 1, [x] -> Arg (string cx x)
+  | 2, [t; v] ->
+    let t = int_type cx t in
+    Int_lit (t, integer cx v)
+  | 3, [b] -> Bool_lit (bool cx b)
+  | 4, [s] -> String_lit (string cx s)
+  | 5, [o; e] ->
+    let o = unop cx o in
+    Unop (o, term cx e)
+  | 6, [o; a; b] ->
+    let o = binop cx o in
+    let a = term cx a in
+    Binop (o, a, term cx b)
+  | 7, [k; a; b] ->
+    let k = term cx k in
+    let a = term cx a in
+    Cond (k, a, term cx b)
+  | 8, [h; t; e] ->
+    let h = conversion cx h in
+    let t = type_expr cx t in
+    Convert (h, t, term cx e)
+  | 9, [f; ts; args] ->
+    let f = string cx f in
+    let ts = list cx type_expr ts in
+    Call (f, ts, list cx term args)
+  | 10, [e; m; args] ->
+    let e = term cx e in
+    let m = string cx m in
+    Method (e, m, list cx term args)
+  | 11, [e; f] ->
+    let e = term cx e in
+    Member (e, string cx f)
+  | 12, [e; i] ->
+    let e = term cx e in
+    Index (e, term cx i)
+  | 13, [t; args] ->
+    let t = type_expr cx t in
+    Build (t, list cx term args)
+  | 14, [t; x] ->
+    let t = type_expr cx t in
+    Enum_value (t, string cx x)
+  | 15, [x; v; b] ->
+    let x = string cx x in
+    let v = term cx v in
+    Let_in (x, v, term cx b)
+  | 16, [x] -> Var (string cx x)
+  | 17, [s] -> Verbatim (string cx s)
+  | _ -> fail cx ~what:"a Term" c
+
 let construction cx c =
   match constructor_of cx "Construction" c with
   | 1, [s] -> Expr (string cx s)
   | 2, [i; b] ->
     let i = string cx i in
     With_body (i, string cx b)
+  | 3, [t] -> Structured (term cx t)
   | _ -> fail cx ~what:"a Construction" c
 
 let strings cx c = list cx string c
@@ -484,6 +609,10 @@ let rec pr_type_expr env = function
   | Cpp.Pointer t -> str "Pointer (" ++ pr_type_expr env t ++ str ")"
   | Cpp.Const t -> str "Const (" ++ pr_type_expr env t ++ str ")"
   | Cpp.Unsafe_verbatim s -> str "UnsafeVerbatim " ++ pr_string s
+  | Cpp.Int t -> str "Int " ++ str (Cpp_ir.Integer_type.spelling t)
+  | Cpp.Bool -> str "Bool"
+  | Cpp.Float64 -> str "Float64"
+  | Cpp.Result_type -> str "ResultType"
 
 and pr_type_argument env = function
   | Cpp.Type_arg t -> str "TypeArg (" ++ pr_type_expr env t ++ str ")"
@@ -492,6 +621,7 @@ and pr_type_argument env = function
 let pr_construction = function
   | Expr s -> str "Expr " ++ pr_string s
   | With_body (i, b) -> str "WithBody " ++ pr_string i ++ spc () ++ pr_string b
+  | Structured _ -> str "Structured _"
 
 let pr_copy = function
   | Bit_copy -> str "BitCopy"

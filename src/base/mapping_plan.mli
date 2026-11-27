@@ -87,6 +87,9 @@ type t = {
   instance : Names.GlobRef.t;
   head : Names.GlobRef.t;
   canonical : type_expr;
+  integer : Cpp_ir.Integer_type.t option;
+      (** the canonical type, where it is written [Int t]: an operation's
+          structured body knows an argument of the type is a [t] *)
   components : (string * int) list;
       (** name, and the position of its parameter among the type arguments
           of a use (an instance or a value parameter takes none) *)
@@ -158,6 +161,9 @@ val view_arguments : t -> view_kind -> 'p Cpp_ir.Type.t -> 'p Cpp_ir.Type.t list
     ([std::optional<%t0>]), for the readers that reason about a mapping's
     text; the type itself is built by {!cpp_type}. *)
 val type_text : t -> string
+
+(** A type in the legacy type-template vocabulary: [Parameter i] is [%ti]. *)
+val text_of_type_expr : type_expr -> string
 
 (** The build template of a mapped constructor; a user error for a
     constructor of an abstract type or one the interface does not map. *)

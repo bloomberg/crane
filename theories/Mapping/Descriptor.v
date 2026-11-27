@@ -3,18 +3,31 @@
 (** Typed mapping descriptors (documented in the Reference Manual, Typed
     mappings).
 
-    The data a typed mapping is written in: inductive types and records only,
-    no helper functions.  A mapping is an instance of [TypeMapping T] for a
-    source type, or of [OperationMapping (Ref source)] for a source operation;
-    importing the file that exports an instance selects it.
+    The data a typed mapping is written in: inductive types and records.  A
+    mapping is an instance of [TypeMapping T] for a source type, or of
+    [OperationMapping (Ref source)] for a source operation; importing the
+    file that exports an instance selects it.  The plugin reads a descriptor
+    after reducing it, so a descriptor may be computed by Rocq functions
+    ([Crane.Mapping.Cpp] has a few for operation bodies).
 
     Names.  The structured C++ type grammar lives in the nested module
     [Crane.Cpp], so its constructors carry that prefix:
     [Crane.Cpp.Name], [Crane.Cpp.Apply], [Crane.Cpp.SourceType],
     [Crane.Cpp.StoredComponent], [Crane.Cpp.Pointer], [Crane.Cpp.Const],
     [Crane.Cpp.UnsafeVerbatim], [Crane.Cpp.TypeArg], [Crane.Cpp.ValueArg]
-    (fully qualified: [Crane.Mapping.Descriptor.Crane.Cpp.Name], ...).
-    Everything else is at the top level of this file.
+    (fully qualified: [Crane.Mapping.Descriptor.Crane.Cpp.Name], ...), and so
+    does the grammar of an operation's body, [Crane.Cpp.Term]; a mapping file
+    may [Import Crane.Cpp] to write them unqualified.  Everything else is at
+    the top level of this file.
+
+    Operation bodies.  An operation's C++ is a [Crane.Cpp.Term] (the
+    [Structured] construction) wherever the grammar can say it, so that Crane
+    sees the arithmetic and conversions in it: it folds a conversion of a
+    literal into a literal of the target type, drops a conversion to the type
+    the operand already has, and drops an [Exact] conversion to a type wide
+    enough for the operand under another conversion.  [Expr] text is the
+    escape hatch for what the grammar does not cover (statements, loops,
+    lambdas).  An integer literal is a [Z] of an [IntType], in its range.
 
     Every string is a [PrimString.string]; a mapping file opens
     [pstring_scope] to write string literals inside lists.
@@ -22,7 +35,7 @@
     Implicit arguments.  [ReadViews], [ReadWriteViews], [MaterialiseView]
     and [BorrowOnly] take the mapped type implicitly; [NoViews] takes it
     explicitly, as in [NoViews Example]. *)
-From Corelib Require Import PrimString.
+From Corelib Require Import PrimString BinNums.
 
 (** A Rocq declaration by identity.  The plugin keeps the argument of [Ref]
     as a reference and never unfolds it. *)
@@ -32,8 +45,17 @@ Inductive Declaration : Type :=
 Module Crane.
 Module Cpp.
 
+(** The C++ integer types: [int8_t] ... [uint64_t], [std::size_t], [char],
+    [unsigned char].  [Size] and [U64] are distinct types (they are on
+    macOS), and [Char]'s signedness is the platform's. *)
+Inductive IntType : Type :=
+| I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | Size | Char | UChar.
+
 (** A structured C++ type: pointers and const qualification are nodes, so
-    they print with correct declarator binding. *)
+    they print with correct declarator binding.  [Int], [Bool] and
+    [Float64] are the built-in types; a canonical type written [Int] lets
+    Crane know an operation's argument is that integer type.  [ResultType]
+    is the type a use of an operation yields. *)
 Inductive TypeExpr : Type :=
 | Name (qualified_name : string)
 | Apply (qualified_name : string) (arguments : list TypeArgument)
@@ -42,19 +64,75 @@ Inductive TypeExpr : Type :=
 | Pointer (pointee : TypeExpr)
 | Const (inner : TypeExpr)
 | UnsafeVerbatim (cpp : string)
+| Int (t : IntType)
+| Bool
+| Float64
+| ResultType
 
 with TypeArgument : Type :=
 | TypeArg (type_argument : TypeExpr)
 | ValueArg (value_argument : string).
 
+(** How a value is converted to an integer type: [Exact] asserts the value
+    is preserved (the mapping's claim, not checked); [Wrap] reduces it
+    modulo two to the target's width, as C++ converts an integer;
+    [Saturate] clamps it to the target's range ([std::saturate_cast]);
+    [ToEnum] converts to an enumeration. *)
+Inductive Conversion : Type :=
+| Exact | Wrap | Saturate | ToEnum.
+
+(** What an arithmetic operator does on overflow: what C++ does
+    ([Unchecked]), wrap modulo two to the width, or saturate
+    ([std::add_sat] ...). *)
+Inductive Overflow : Type :=
+| Unchecked | Wrapping | Saturating.
+
+Inductive BinOp : Type :=
+| Add (overflow : Overflow)
+| Sub (overflow : Overflow)
+| Mul (overflow : Overflow)
+| Div | Mod
+| Less | LessEq | Greater | GreaterEq | Equal | NotEqual
+| And | Or
+| BitAnd | BitOr | BitXor | Shl | Shr.
+
+Inductive UnOp : Type :=
+| Negate | Not | BitNot.
+
+(** An operation's C++ body.  [Arg x] is the contract's argument [x], each
+    evaluated once however often the body names it; [LetIn x v b] names [v]
+    as [Var x] in [b] (by substitution: [v] is written at each use).
+    [Call f ts args] is [f<ts>(args)], [Method e m args] is [e.m(args)],
+    [Build t args] is [t(args)], [EnumValue t c] is [t::c].  [Verbatim] is
+    C++ text naming no argument. *)
+Inductive Term : Type :=
+| Arg (name : string)
+| IntLit (t : IntType) (value : Z)
+| BoolLit (value : bool)
+| StringLit (value : string)
+| Unop (op : UnOp) (operand : Term)
+| Binop (op : BinOp) (lhs rhs : Term)
+| Cond (condition then_ else_ : Term)
+| Convert (how : Conversion) (target : TypeExpr) (operand : Term)
+| Call (callee : string) (type_arguments : list TypeExpr) (arguments : list Term)
+| Method (receiver : Term) (name : string) (arguments : list Term)
+| Member (object : Term) (field : string)
+| Index (object index : Term)
+| Build (type_ : TypeExpr) (arguments : list Term)
+| EnumValue (type_ : TypeExpr) (name : string)
+| LetIn (name : string) (value body : Term)
+| Var (name : string)
+| Verbatim (cpp : string).
+
 End Cpp.
 End Crane.
 
 (** How a value is created: an expression, or an initialiser of the owning
-    [%result] slot followed by a body. *)
+    [%result] slot followed by a body; for an operation, a structured body. *)
 Inductive Construction : Type :=
 | Expr (cpp : string)
-| WithBody (initialiser body : string).
+| WithBody (initialiser body : string)
+| Structured (body : Crane.Cpp.Term).
 
 Inductive CopyModel : Type :=
 | BitCopy
@@ -307,6 +385,12 @@ Class LocalStorage (T : Type) : Type := {
 Register Declaration as crane.mapping.Declaration.
 Register Crane.Cpp.TypeExpr as crane.mapping.TypeExpr.
 Register Crane.Cpp.TypeArgument as crane.mapping.TypeArgument.
+Register Crane.Cpp.IntType as crane.mapping.IntType.
+Register Crane.Cpp.Conversion as crane.mapping.Conversion.
+Register Crane.Cpp.Overflow as crane.mapping.Overflow.
+Register Crane.Cpp.BinOp as crane.mapping.BinOp.
+Register Crane.Cpp.UnOp as crane.mapping.UnOp.
+Register Crane.Cpp.Term as crane.mapping.Term.
 Register Construction as crane.mapping.Construction.
 Register CopyModel as crane.mapping.CopyModel.
 Register ReadStyle as crane.mapping.ReadStyle.

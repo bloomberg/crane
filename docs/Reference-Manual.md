@@ -133,9 +133,11 @@ Because typed instances activate on `Import`, a bare
 
 ## Typed mappings
 
-The descriptor library is `Crane.Mapping.Descriptor`. It contains inductive
-types and records only. Strings are `PrimString.string`, so a mapping file
-opens `pstring_scope`. How the pipeline compiles and uses a mapping is in
+The descriptor library is `Crane.Mapping.Descriptor`: inductive types and
+records. Crane reduces a descriptor before reading it, so a descriptor may be
+computed by Rocq functions; `Crane.Mapping.Cpp` has a few for operations
+(`pure headers args body`, `to_size`, `exact`, `wrap`, `lit`). Strings are
+`PrimString.string`, so a mapping file opens `pstring_scope`. How the pipeline compiles and uses a mapping is in
 [Compiler-Pipeline.md](Compiler-Pipeline.md#7-typed-mappings-in-the-pipeline).
 
 A typed mapping separates questions a C++ type string cannot answer: what a
@@ -405,8 +407,58 @@ Class OperationMapping (source : Declaration) : Type := {
 
 `Ref op` names the operation by identity; Crane never unfolds it.
 `Ref (@fst)` and `Ref (@PrimArray.get)` name polymorphic operations.
-`operation_cpp` is `Expr "..."` or `WithBody "init" "body"`, where the body
-completes the `%result` slot the initialiser declares.
+`operation_cpp` is `Structured term`, `Expr "..."`, or
+`WithBody "init" "body"`, where the body completes the `%result` slot the
+initialiser declares. Write the body as a `Structured` term wherever the
+term grammar can say it; text is the escape hatch for statements, loops and
+lambdas.
+
+#### Structured bodies
+
+`Crane.Cpp.Term` (a mapping file may `Import Crane.Cpp`):
+
+| Term | C++ |
+| --- | --- |
+| `Arg "x"` | the argument `x` of the contract |
+| `IntLit t v` | the integer `v : Z` of type `t`, in its range |
+| `BoolLit b`, `StringLit s` | `true`/`false`, a string literal |
+| `Unop op e` | `-e`, `!e`, `~e` (`Negate`, `Not`, `BitNot`) |
+| `Binop op a b` | `Add o`, `Sub o`, `Mul o`, `Div`, `Mod`, `Less`, `LessEq`, `Greater`, `GreaterEq`, `Equal`, `NotEqual`, `And`, `Or`, `BitAnd`, `BitOr`, `BitXor`, `Shl`, `Shr` |
+| `Cond c a b` | `c ? a : b` |
+| `Convert k t e` | `e` converted to `t` |
+| `Call f ts args` | `f<ts>(args)` |
+| `Method e m args`, `Member e x`, `Index e i` | `e.m(args)`, `e.x`, `e[i]` |
+| `Build t args` | `t(args)` |
+| `EnumValue t c` | `t::c` |
+| `LetIn x v b`, `Var x` | `b` with `v` for `Var x` (substituted) |
+| `Verbatim s` | the C++ text `s`, which names no argument |
+
+Types (`TypeExpr`) add `Int t`, `Bool`, `Float64` and `ResultType` (the
+type a use yields, the text templates' `%ret`). The integer types are
+`I8`..`I64`, `U8`..`U64`, `Size` (`std::size_t`, distinct from `U64`),
+`Char` and `UChar`. An overflow mode `o` is `Unchecked` (C++'s own),
+`Wrapping` (modulo two to the width; the operands must be of one known
+integer type) or `Saturating` (`std::add_sat` ...). A conversion `k` is
+`Exact` (the mapping asserts the value is preserved), `Wrap` (C++'s integral
+conversion), `Saturate` (`std::saturate_cast`) or `ToEnum`; the first three
+convert to an `Int`, or to `ResultType` where the result's type is mapped to
+an `Int`. Saturation needs `"numeric"` in `operation_headers`.
+
+Crane knows an argument's integer type where its mapped type's `type_cpp`
+is `Int t` (`nat`, `Z`, `int`, `char63` under the std mappings), and folds
+conversions where the operation is compiled and again at each call:
+
+- a conversion of a literal is the literal of the target type, the value
+  converted (`Wrap` modulo two to the width, `Saturate` clamped; an `Exact`
+  conversion of a literal that does not fit is an error);
+- a conversion to the type its operand already has is the operand;
+- `Convert k A (Convert Exact B e)` is `Convert k A e` where `B` holds every
+  value of `e`'s type; never through `Wrap`.
+
+A call with a literal argument folds a conversion of it:
+`Convert Exact (Int Size) (Arg "i")` called with the `int` literal `0` is
+`0uz`. Every `Arg` is evaluated once, in source order, however often the
+body names it.
 
 The contract is `PureOperation args result facts`,
 `EffectfulOperation args result facts`, or `OpaqueOperation`. `args` binds

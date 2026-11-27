@@ -11,11 +11,12 @@
     Sets the stdlib flavor to ["BDE"]. *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.Shared.
-From Crane Require Import Mapping.Descriptor.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
 From Corelib Require Import PrimString.
 From Stdlib Require Import List.
 Import ListNotations.
 Local Open Scope pstring_scope.
+Import Crane.Cpp.
 
 #[export] Set Crane StdLib "BDE".
 
@@ -87,14 +88,14 @@ Local Open Scope pstring_scope.
 
 #[export] Instance bde_fst_mapping : OperationMapping (Ref (@fst)) :=
   {| operation_headers := ["bsl_utility.h"];
-     operation_cpp := Expr "%arg(p).first";
+     operation_cpp := Structured (Member (Arg "p") "first");
      operation_contract :=
        PureOperation [{| argument_name := "p"; argument_use := Read |}]
          (ReturnBorrowed CanonicalBorrow {| path_argument := "p"; path_components := ["first"] |}) [] |}.
 
 #[export] Instance bde_snd_mapping : OperationMapping (Ref (@snd)) :=
   {| operation_headers := ["bsl_utility.h"];
-     operation_cpp := Expr "%arg(p).second";
+     operation_cpp := Structured (Member (Arg "p") "second");
      operation_contract :=
        PureOperation [{| argument_name := "p"; argument_use := Read |}]
          (ReturnBorrowed CanonicalBorrow {| path_argument := "p"; path_components := ["second"] |}) [] |}.
@@ -102,7 +103,7 @@ Local Open Scope pstring_scope.
 From Corelib Require Import PrimString.
 #[export] Instance bde_char63_mapping : TypeMapping PrimString.char63 :=
   {| type_headers := ["bsl_cstdint.h"];
-     type_cpp := Crane.Cpp.Name "int64_t";
+     type_cpp := Crane.Cpp.Int Crane.Cpp.I64;
      type_components := [];
      type_copy := BitCopy;
      type_access := ReadOnlyValue ReadByValue;
@@ -137,14 +138,14 @@ From Corelib Require Import PrimString.
 
 #[export] Instance bde_string_length_mapping : OperationMapping (Ref PrimString.length) :=
   {| operation_headers := ["bsl_cstdint.h"; "bsl_string_view.h"];
-     operation_cpp := Expr "static_cast<int64_t>(%arg(s).size())";
+     operation_cpp := Structured (exact I64 (Method (Arg "s") "size" []));
      operation_contract :=
        PureOperation [{| argument_name := "s"; argument_use := Read |}] ReturnValue [] |}.
 
 (** Cut to [max_length] bytes, as Rocq's. *)
 #[export] Instance bde_string_cat_mapping : OperationMapping (Ref PrimString.cat) :=
   {| operation_headers := ["bsl_string.h"];
-     operation_cpp := Expr "(%arg(s1) + %arg(s2)).substr(0, 16777211)";
+     operation_cpp := Structured (Method (Binop (Add Unchecked) (Arg "s1") (Arg "s2")) "substr" [(lit 0); (lit 16777211)]);
      operation_contract :=
        PureOperation
          [{| argument_name := "s1"; argument_use := ReadCanonical |};
@@ -153,7 +154,7 @@ From Corelib Require Import PrimString.
 
 #[export] Instance bde_string_get_mapping : OperationMapping (Ref PrimString.get) :=
   {| operation_headers := ["bsl_string_view.h"];
-     operation_cpp := Expr "((%arg(i) >= 0 && %arg(i) < static_cast<int64_t>(%arg(s).length())) ? static_cast<int64_t>(static_cast<unsigned char>(%arg(s)[%arg(i)])) : INT64_C(0))";
+     operation_cpp := Structured (Cond (Binop And (Binop GreaterEq (Arg "i") (lit 0)) (Binop Less (Arg "i") (exact I64 (Method (Arg "s") "length" [])))) (exact I64 (wrap UChar (Index (Arg "s") (Arg "i")))) (IntLit I64 0));
      operation_contract :=
        PureOperation
          [{| argument_name := "s"; argument_use := Read |};
@@ -162,7 +163,7 @@ From Corelib Require Import PrimString.
 
 #[export] Instance bde_string_make_mapping : OperationMapping (Ref PrimString.make) :=
   {| operation_headers := ["bsl_string.h"; "bsl_cstdint.h"];
-     operation_cpp := Expr "[](int64_t _n, int64_t _c) { return bsl::string(static_cast<std::size_t>(_n < INT64_C(16777211) ? _n : INT64_C(16777211)), static_cast<char>(static_cast<unsigned char>(_c & 255))); }(%arg(n), %arg(c))";
+     operation_cpp := Structured (Build (Name "bsl::string") [to_size (Cond (Binop Less (Arg "n") (IntLit I64 16777211)) (Arg "n") (IntLit I64 16777211)); (wrap Char (wrap UChar (Binop BitAnd (Arg "c") (lit 255))))]);
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -171,7 +172,7 @@ From Corelib Require Import PrimString.
 
 #[export] Instance bde_string_max_length_mapping : OperationMapping (Ref PrimString.max_length) :=
   {| operation_headers := ["bsl_cstdint.h"];
-     operation_cpp := Expr "INT64_C(16777211)";
+     operation_cpp := Structured (IntLit I64 16777211);
      operation_contract := PureOperation [] ReturnValue [] |}.
 
 #[export] Instance bde_string_compare_mapping : OperationMapping (Ref PrimString.compare) :=
@@ -185,7 +186,7 @@ From Corelib Require Import PrimString.
 
 #[export] Instance bde_string_sub_mapping : OperationMapping (Ref PrimString.sub) :=
   {| operation_headers := ["bsl_string.h"; "bsl_string_view.h"];
-     operation_cpp := Expr "((%arg(off) >= 0 && %arg(off) <= static_cast<int64_t>(%arg(s).length())) ? bsl::string(%arg(s).substr(%arg(off), %arg(len))) : bsl::string())";
+     operation_cpp := Structured (Cond (Binop And (Binop GreaterEq (Arg "off") (lit 0)) (Binop LessEq (Arg "off") (exact I64 (Method (Arg "s") "length" [])))) (Build (Name "bsl::string") [(Method (Arg "s") "substr" [(Arg "off"); (Arg "len")])]) (Build (Name "bsl::string") []));
      operation_contract :=
        PureOperation
          [{| argument_name := "s"; argument_use := Read |};
@@ -213,7 +214,7 @@ From Corelib Require Import PrimString.
 From Corelib Require Import PrimInt63.
 #[export] Instance bde_int63_mapping : TypeMapping PrimInt63.int :=
   {| type_headers := ["bsl_cstdint.h"];
-     type_cpp := Crane.Cpp.Name "int64_t";
+     type_cpp := Crane.Cpp.Int Crane.Cpp.I64;
      type_components := [];
      type_copy := BitCopy;
      type_access := ReadOnlyValue ReadByValue;
@@ -225,7 +226,7 @@ From Corelib Require Import PrimInt63.
      type_numerals := None |}.
 #[export] Instance bde_int63_add_mapping : OperationMapping (Ref PrimInt63.add) :=
   {| operation_headers := [];
-     operation_cpp := Expr "static_cast<int64_t>((static_cast<uint64_t>(%arg(x)) + static_cast<uint64_t>(%arg(y))) & 0x7FFFFFFFFFFFFFFFULL)";
+     operation_cpp := Structured (wrap I64 (Binop BitAnd (Binop (Add Unchecked) (wrap U64 (Arg "x")) (wrap U64 (Arg "y"))) (IntLit U64 9223372036854775807)));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -233,7 +234,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_sub_mapping : OperationMapping (Ref PrimInt63.sub) :=
   {| operation_headers := [];
-     operation_cpp := Expr "static_cast<int64_t>((static_cast<uint64_t>(%arg(x)) - static_cast<uint64_t>(%arg(y))) & 0x7FFFFFFFFFFFFFFFULL)";
+     operation_cpp := Structured (wrap I64 (Binop BitAnd (Binop (Sub Unchecked) (wrap U64 (Arg "x")) (wrap U64 (Arg "y"))) (IntLit U64 9223372036854775807)));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -241,7 +242,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_mul_mapping : OperationMapping (Ref PrimInt63.mul) :=
   {| operation_headers := [];
-     operation_cpp := Expr "static_cast<int64_t>((static_cast<uint64_t>(%arg(x)) * static_cast<uint64_t>(%arg(y))) & 0x7FFFFFFFFFFFFFFFULL)";
+     operation_cpp := Structured (wrap I64 (Binop BitAnd (Binop (Mul Unchecked) (wrap U64 (Arg "x")) (wrap U64 (Arg "y"))) (IntLit U64 9223372036854775807)));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -249,7 +250,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_div_mapping : OperationMapping (Ref PrimInt63.div) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(y) == 0 ? 0 : %arg(x) / (%arg(y) | (%arg(y) == 0)))";
+     operation_cpp := Structured (Cond (Binop Equal (Arg "y") (lit 0)) (lit 0) (Binop Div (Arg "x") (Binop BitOr (Arg "y") (Binop Equal (Arg "y") (lit 0)))));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -257,7 +258,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_mod_mapping : OperationMapping (Ref PrimInt63.mod) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(y) == 0 ? %arg(x) : %arg(x) % (%arg(y) | (%arg(y) == 0)))";
+     operation_cpp := Structured (Cond (Binop Equal (Arg "y") (lit 0)) (Arg "x") (Binop Mod (Arg "x") (Binop BitOr (Arg "y") (Binop Equal (Arg "y") (lit 0)))));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -265,7 +266,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_eqb_mapping : OperationMapping (Ref PrimInt63.eqb) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(x) == %arg(y)";
+     operation_cpp := Structured (Binop Equal (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -273,7 +274,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_ltb_mapping : OperationMapping (Ref PrimInt63.ltb) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(x) < %arg(y)";
+     operation_cpp := Structured (Binop Less (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -281,7 +282,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_leb_mapping : OperationMapping (Ref PrimInt63.leb) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(x) <= %arg(y)";
+     operation_cpp := Structured (Binop LessEq (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -289,7 +290,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_land_mapping : OperationMapping (Ref PrimInt63.land) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(x) & %arg(y))";
+     operation_cpp := Structured (Binop BitAnd (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -297,7 +298,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_lor_mapping : OperationMapping (Ref PrimInt63.lor) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(x) | %arg(y))";
+     operation_cpp := Structured (Binop BitOr (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -305,7 +306,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_lxor_mapping : OperationMapping (Ref PrimInt63.lxor) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(x) ^ %arg(y))";
+     operation_cpp := Structured (Binop BitXor (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -313,7 +314,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_lsl_mapping : OperationMapping (Ref PrimInt63.lsl) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(y) >= 63 ? 0 : static_cast<int64_t>((static_cast<uint64_t>(%arg(x)) << (%arg(y) & 63)) & 0x7FFFFFFFFFFFFFFFULL))";
+     operation_cpp := Structured (Cond (Binop GreaterEq (Arg "y") (lit 63)) (lit 0) (wrap I64 (Binop BitAnd (Binop Shl (wrap U64 (Arg "x")) (Binop BitAnd (Arg "y") (lit 63))) (IntLit U64 9223372036854775807))));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -321,7 +322,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_lsr_mapping : OperationMapping (Ref PrimInt63.lsr) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(y) >= 63 ? 0 : static_cast<int64_t>(static_cast<uint64_t>(%arg(x)) >> (%arg(y) & 63)))";
+     operation_cpp := Structured (Cond (Binop GreaterEq (Arg "y") (lit 63)) (lit 0) (wrap I64 (Binop Shr (wrap U64 (Arg "x")) (Binop BitAnd (Arg "y") (lit 63)))));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -333,7 +334,7 @@ From Corelib Require Import PrimInt63.
     [tail0].  A pair, carry or comparison result is built at [%ret]. *)
 #[export] Instance bde_int63_asr_mapping : OperationMapping (Ref PrimInt63.asr) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_asr(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_asr" [] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -341,7 +342,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_mulc_mapping : OperationMapping (Ref PrimInt63.mulc) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_mulc<%ret>(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_mulc" [ResultType] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -349,7 +350,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_divs_mapping : OperationMapping (Ref PrimInt63.divs) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_divs(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_divs" [] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -357,7 +358,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_mods_mapping : OperationMapping (Ref PrimInt63.mods) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_mods(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_mods" [] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -365,7 +366,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_ltsb_mapping : OperationMapping (Ref PrimInt63.ltsb) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_ltsb(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_ltsb" [] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -373,7 +374,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_lesb_mapping : OperationMapping (Ref PrimInt63.lesb) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_lesb(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_lesb" [] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -381,7 +382,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_addc_mapping : OperationMapping (Ref PrimInt63.addc) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_addc<%ret>(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_addc" [ResultType] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -389,7 +390,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_addcarryc_mapping : OperationMapping (Ref PrimInt63.addcarryc) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_addcarryc<%ret>(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_addcarryc" [ResultType] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -397,7 +398,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_subc_mapping : OperationMapping (Ref PrimInt63.subc) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_subc<%ret>(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_subc" [ResultType] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -405,7 +406,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_subcarryc_mapping : OperationMapping (Ref PrimInt63.subcarryc) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_subcarryc<%ret>(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_subcarryc" [ResultType] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -413,7 +414,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_diveucl_mapping : OperationMapping (Ref PrimInt63.diveucl) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_diveucl<%ret>(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_diveucl" [ResultType] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -421,7 +422,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_diveucl_21_mapping : OperationMapping (Ref PrimInt63.diveucl_21) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_diveucl_21<%ret>(%arg(xh), %arg(xl), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_diveucl_21" [ResultType] [(Arg "xh"); (Arg "xl"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "xh"; argument_use := Read |};
@@ -430,7 +431,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_addmuldiv_mapping : OperationMapping (Ref PrimInt63.addmuldiv) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_addmuldiv(%arg(p), %arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_addmuldiv" [] [(Arg "p"); (Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "p"; argument_use := Read |};
@@ -439,7 +440,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_compare_mapping : OperationMapping (Ref PrimInt63.compare) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_compare<%ret>(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_compare" [ResultType] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -447,7 +448,7 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_compares_mapping : OperationMapping (Ref PrimInt63.compares) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_compares<%ret>(%arg(x), %arg(y))";
+     operation_cpp := Structured (Call "crane::int63_compares" [ResultType] [(Arg "x"); (Arg "y")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -455,14 +456,14 @@ From Corelib Require Import PrimInt63.
          ReturnValue [] |}.
 #[export] Instance bde_int63_head0_mapping : OperationMapping (Ref PrimInt63.head0) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_head0(%arg(x))";
+     operation_cpp := Structured (Call "crane::int63_head0" [] [(Arg "x")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_int63_tail0_mapping : OperationMapping (Ref PrimInt63.tail0) :=
   {| operation_headers := ["crane_int63.h"];
-     operation_cpp := Expr "crane::int63_tail0(%arg(x))";
+     operation_cpp := Structured (Call "crane::int63_tail0" [] [(Arg "x")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
@@ -474,7 +475,7 @@ From Corelib Require Import PrimInt63.
 From Corelib Require Import PrimFloat.
 #[export] Instance bde_float_mapping : TypeMapping PrimFloat.float :=
   {| type_headers := [];
-     type_cpp := Crane.Cpp.Name "double";
+     type_cpp := Crane.Cpp.Float64;
      type_components := [];
      type_copy := BitCopy;
      type_access := ReadOnlyValue ReadByValue;
@@ -486,7 +487,7 @@ From Corelib Require Import PrimFloat.
      type_numerals := None |}.
 #[export] Instance bde_float_add_mapping : OperationMapping (Ref PrimFloat.add) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(x) + %arg(y))";
+     operation_cpp := Structured (Binop (Add Unchecked) (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -494,7 +495,7 @@ From Corelib Require Import PrimFloat.
          ReturnValue [] |}.
 #[export] Instance bde_float_sub_mapping : OperationMapping (Ref PrimFloat.sub) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(x) - %arg(y))";
+     operation_cpp := Structured (Binop (Sub Unchecked) (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -502,7 +503,7 @@ From Corelib Require Import PrimFloat.
          ReturnValue [] |}.
 #[export] Instance bde_float_mul_mapping : OperationMapping (Ref PrimFloat.mul) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(x) * %arg(y))";
+     operation_cpp := Structured (Binop (Mul Unchecked) (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -510,7 +511,7 @@ From Corelib Require Import PrimFloat.
          ReturnValue [] |}.
 #[export] Instance bde_float_div_mapping : OperationMapping (Ref PrimFloat.div) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(x) / %arg(y))";
+     operation_cpp := Structured (Binop Div (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -518,28 +519,28 @@ From Corelib Require Import PrimFloat.
          ReturnValue [] |}.
 #[export] Instance bde_float_opp_mapping : OperationMapping (Ref PrimFloat.opp) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(-%arg(x))";
+     operation_cpp := Structured (Unop Negate (Arg "x"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_abs_mapping : OperationMapping (Ref PrimFloat.abs) :=
   {| operation_headers := ["bsl_cmath.h"];
-     operation_cpp := Expr "bsl::abs(%arg(x))";
+     operation_cpp := Structured (Call "bsl::abs" [] [(Arg "x")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_sqrt_mapping : OperationMapping (Ref PrimFloat.sqrt) :=
   {| operation_headers := ["bsl_cmath.h"];
-     operation_cpp := Expr "bsl::sqrt(%arg(x))";
+     operation_cpp := Structured (Call "bsl::sqrt" [] [(Arg "x")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_eqb_mapping : OperationMapping (Ref PrimFloat.eqb) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(x) == %arg(y)";
+     operation_cpp := Structured (Binop Equal (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -547,7 +548,7 @@ From Corelib Require Import PrimFloat.
          ReturnValue [] |}.
 #[export] Instance bde_float_ltb_mapping : OperationMapping (Ref PrimFloat.ltb) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(x) < %arg(y)";
+     operation_cpp := Structured (Binop Less (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -555,7 +556,7 @@ From Corelib Require Import PrimFloat.
          ReturnValue [] |}.
 #[export] Instance bde_float_leb_mapping : OperationMapping (Ref PrimFloat.leb) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(x) <= %arg(y)";
+     operation_cpp := Structured (Binop LessEq (Arg "x") (Arg "y"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -563,7 +564,7 @@ From Corelib Require Import PrimFloat.
          ReturnValue [] |}.
 #[export] Instance bde_float_of_uint63_mapping : OperationMapping (Ref PrimFloat.of_uint63) :=
   {| operation_headers := [];
-     operation_cpp := Expr "static_cast<double>(%arg(x))";
+     operation_cpp := Structured (Build Float64 [(Arg "x")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
@@ -582,7 +583,7 @@ From Corelib Require Import PrimFloat.
     mapping writes them ({!Mapping.StdCore}). *)
 #[export] Instance bde_float_compare_mapping : OperationMapping (Ref PrimFloat.compare) :=
   {| operation_headers := [];
-     operation_cpp := Expr "static_cast<%ret>(%arg(x) < %arg(y) ? 1 : %arg(x) > %arg(y) ? 2 : %arg(x) == %arg(y) ? 0 : 3)";
+     operation_cpp := Structured (Convert ToEnum ResultType (Cond (Binop Less (Arg "x") (Arg "y")) (lit 1) (Cond (Binop Greater (Arg "x") (Arg "y")) (lit 2) (Cond (Binop Equal (Arg "x") (Arg "y")) (lit 0) (lit 3)))));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -591,7 +592,7 @@ From Corelib Require Import PrimFloat.
 #[export] Instance bde_float_normfr_mantissa_mapping : OperationMapping (Ref PrimFloat.normfr_mantissa) :=
   {| operation_headers := ["cmath"; "cstdint"];
      operation_cpp :=
-       Expr "(std::fabs(%arg(x)) >= 0.5 && std::fabs(%arg(x)) < 1.0 ? static_cast<std::int64_t>(std::ldexp(std::fabs(%arg(x)), 53)) : 0)";
+       Structured (Cond (Binop And (Binop GreaterEq (Call "std::fabs" [] [(Arg "x")]) (Verbatim "0.5")) (Binop Less (Call "std::fabs" [] [(Arg "x")]) (Verbatim "1.0"))) (exact I64 (Call "std::ldexp" [] [(Call "std::fabs" [] [(Arg "x")]); (lit 53)])) (lit 0));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
@@ -599,14 +600,14 @@ From Corelib Require Import PrimFloat.
 #[export] Instance bde_float_frshiftexp_mapping : OperationMapping (Ref PrimFloat.frshiftexp) :=
   {| operation_headers := ["cmath"; "cstdint"];
      operation_cpp :=
-       Expr "(std::isfinite(%arg(x)) && %arg(x) != 0.0 ? %ret{std::scalbn(%arg(x), -(std::ilogb(%arg(x)) + 1)), static_cast<std::int64_t>(std::ilogb(%arg(x))) + 2102} : %ret{%arg(x), 0})";
+       Structured (Cond (Binop And (Call "std::isfinite" [] [(Arg "x")]) (Binop NotEqual (Arg "x") (Verbatim "0.0"))) (Build ResultType [(Call "std::scalbn" [] [(Arg "x"); (Unop Negate (Binop (Add Unchecked) (Call "std::ilogb" [] [(Arg "x")]) (lit 1)))]); (Binop (Add Unchecked) (exact I64 (Call "std::ilogb" [] [(Arg "x")])) (lit 2102))]) (Build ResultType [(Arg "x"); (lit 0)]));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_ldshiftexp_mapping : OperationMapping (Ref PrimFloat.ldshiftexp) :=
   {| operation_headers := ["cmath"; "algorithm"; "cstdint"];
-     operation_cpp := Expr "std::ldexp(%arg(x), static_cast<int>(std::min<std::int64_t>(%arg(e), 4202) - 2101))";
+     operation_cpp := Structured (Call "std::ldexp" [] [(Arg "x"); (exact I32 (Binop (Sub Unchecked) (Call "std::min" [Int I64] [(Arg "e"); (lit 4202)]) (lit 2101)))]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -614,14 +615,14 @@ From Corelib Require Import PrimFloat.
          ReturnValue [] |}.
 #[export] Instance bde_float_next_up_mapping : OperationMapping (Ref PrimFloat.next_up) :=
   {| operation_headers := ["cmath"; "limits"];
-     operation_cpp := Expr "std::nextafter(%arg(x), std::numeric_limits<double>::infinity())";
+     operation_cpp := Structured (Call "std::nextafter" [] [(Arg "x"); (Call "std::numeric_limits<double>::infinity" [] [])]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_float_next_down_mapping : OperationMapping (Ref PrimFloat.next_down) :=
   {| operation_headers := ["cmath"; "limits"];
-     operation_cpp := Expr "std::nextafter(%arg(x), -std::numeric_limits<double>::infinity())";
+     operation_cpp := Structured (Call "std::nextafter" [] [(Arg "x"); (Unop Negate (Call "std::numeric_limits<double>::infinity" [] []))]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]

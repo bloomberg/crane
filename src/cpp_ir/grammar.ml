@@ -201,23 +201,70 @@ end =
   Precondition
 
 and Binary_operator : sig
-  (** A binary operator: [==], [!=], [&&], [||], [=]. *)
+  (** A binary operator: [==], [!=], [&&], [||], [=], and the arithmetic,
+      relational, bitwise and shift operators an operation mapping's
+      structured body applies. *)
   type t =
     | Equal
     | Not_equal
     | And
     | Or
     | Assign  (** [=] in expression position *)
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+    | Modulo
+    | Less
+    | Less_equal
+    | Greater
+    | Greater_equal
+    | Bit_and
+    | Bit_or
+    | Bit_xor
+    | Shift_left
+    | Shift_right
 end =
   Binary_operator
 
 and Unary_operator : sig
-  (** A unary operator: [!], or [&] taking an address. *)
+  (** A unary operator: [!], [&] taking an address, [-] negating, [~]. *)
   type t =
     | Not
     | Address_of
+    | Negate
+    | Bit_not
 end =
   Unary_operator
+
+and Integer_type : sig
+  (** A C++ integer type an operation mapping's structured body names
+      ({!Integer_type}): the fixed-width types of [<cstdint>], [std::size_t],
+      [char] and [unsigned char]. *)
+  type t =
+    | I8
+    | I16
+    | I32
+    | I64
+    | U8
+    | U16
+    | U32
+    | U64
+    | Size
+    | Char
+    | Uchar
+end =
+  Integer_type
+
+and Integer_conversion : sig
+  (** How a value is converted to an integer (or enumeration) type. *)
+  type t =
+    | Exact  (** the mapping asserts the value is preserved *)
+    | Wrap  (** modulo two to the target's width *)
+    | Saturate  (** clamped to the target's range, [std::saturate_cast] *)
+    | To_enum  (** to an enumeration *)
+end =
+  Integer_conversion
 
 and Allocation : sig
   (** Where an allocation's storage comes from. *)
@@ -608,6 +655,8 @@ and Literal : sig
     | Bool of bool
     | Int of int
     | Null_pointer
+    | Integer of Integer_type.t * Z.t
+        (** an integer of exactly this type, its value in its range *)
 end =
   Literal
 
@@ -770,6 +819,17 @@ and Expr : sig
     | Variant_get_if : 'p Type.t * 'p t -> 'p t  (** [std::get_if<T>(e)] *)
     | Foreign : Foreign.use * 'p Foreign.t -> 'p t
         (** an inline mapping's term template instantiated at one use *)
+    | Integer_conversion : Integer_conversion.t * 'p Type.t * 'p t -> 'p t
+        (** a value converted to an integer or enumeration type:
+            [static_cast<T>(e)], or [std::saturate_cast<T>(e)] *)
+    | Index : 'p t * 'p t -> 'p t  (** [e[i]] *)
+    | Named_call : string * 'p Type.t list * 'p t list -> 'p t
+        (** a function named by its C++ name, with explicit template
+            arguments, applied: [f<Ts...>(args)] *)
+    | Mapped_operation : GlobRef.t * 'p t -> 'p t
+        (** an operation mapping's structured body lowered at one use
+            ({!Cpp_passes.Structured_operation}): printed as the body, the
+            global named so that the mapping's headers are included *)
 end =
   Expr
 

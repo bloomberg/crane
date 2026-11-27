@@ -214,5 +214,6 @@ and foreign_written_with_leading_pointer_operator : type p. p Foreign.t -> bool 
 (** Whether a mapping's text parenthesises [e] where a member access
     follows it. *)
 and spliced_in_parentheses : type p. p Expr.t -> bool = function
-  | Binary _ | Foreign ((Call | Block_value _), _) | Call (_, Foreign _, _) -> true
+  | Binary _ | Unary _ | Foreign ((Call | Block_value _), _) | Call (_, Foreign _, _) -> true
+  | Mapped_operation (_, e) -> spliced_in_parentheses e
   | e -> written_with_leading_pointer_operator e

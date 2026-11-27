@@ -40,6 +40,7 @@ let iter (note : Names.GlobRef.t -> unit) (d : 'p Decl.t) =
     ( match e with
     | Entity (r, _, _)
     | Foreign (_, {custom = r; _})
+    | Mapped_operation (r, _)
     | Aggregate {struct_ = r; _}
     | Project (_, r, _)
     | Projection_value r

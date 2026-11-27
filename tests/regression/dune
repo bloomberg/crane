@@ -14790,6 +14790,17 @@
   (deps n_modulo_by_zero.t.exe)
   (action (run ./n_modulo_by_zero.t.exe))))
 
+(subdir structured_casts
+ (rule
+  (targets structured_casts.t.exe)
+  (deps StructuredCasts.vo structured_casts.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} structured_casts.t.exe structured_casts.t.cpp structured_casts.cpp)))
+ (rule
+  (alias runtest)
+  (deps structured_casts.t.exe)
+  (action (run ./structured_casts.t.exe))))
+
 (subdir pos_sub_saturates
  (rule
   (targets pos_sub_saturates.t.exe)

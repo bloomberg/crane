@@ -281,7 +281,8 @@ Crane Extract Inlined Constant cpp_refs => "STRefs::BUILD_STREFS".
     valid at every element type.  Shared pointers do not collect cycles of
     references. *)
 
-From Crane Require Import Mapping.Descriptor.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
+Import Crane.Cpp.
 
 (** The [STRefs] a program is written against is a C++ value with nothing
     in it: the operations take no such argument. *)
@@ -328,7 +329,7 @@ Crane Extraction Implicit getElems [R].
 
 #[export] Instance new_st_ref_mapping : OperationMapping (Ref (@newSTRef)) :=
   {| operation_headers := ["memory"];
-     operation_cpp := Expr "std::make_shared<%stored(contents)>(%arg(v))";
+     operation_cpp := Structured (Call "std::make_shared" [StoredComponent "contents"] [(Arg "v")]);
      operation_contract :=
        EffectfulOperation
          [{| argument_name := "v"; argument_use := Take |}]
@@ -391,9 +392,9 @@ Crane Extraction Implicit getElems [R].
      type_numerals := None |}%pstring.
 
 #[export] Instance new_array_mapping : OperationMapping (Ref (@newArray)) :=
-  {| operation_headers := ["crane_st.h"; "memory"];
+  {| operation_headers := ["crane_st.h"; "memory"; "cstddef"];
      operation_cpp :=
-       Expr "std::make_shared<crane::array_storage<%stored(contents)>>(static_cast<std::size_t>(%arg(n)), %arg(def))";
+       Structured (Call "std::make_shared" [Apply "crane::array_storage" [TypeArg (StoredComponent "contents")]] [to_size (Arg "n"); (Arg "def")]);
      operation_contract :=
        EffectfulOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -407,7 +408,7 @@ Crane Extraction Implicit getElems [R].
 #[export] Instance new_list_array_mapping : OperationMapping (Ref (@newListArray)) :=
   {| operation_headers := ["crane_st.h"];
      operation_cpp :=
-       Expr "crane::st::new_list_array<%stored(contents)>(%arg(elems))";
+       Structured (Call "crane::st::new_list_array" [StoredComponent "contents"] [(Arg "elems")]);
      operation_contract :=
        EffectfulOperation
          [{| argument_name := "elems"; argument_use := Read |}]
@@ -420,7 +421,7 @@ Crane Extraction Implicit getElems [R].
 (** [Read] gives the template the read view, [std::span<const A>]. *)
 #[export] Instance read_array_mapping : OperationMapping (Ref (@readArray)) :=
   {| operation_headers := ["span"];
-     operation_cpp := Expr "%arg(arr)[%arg(i)]";
+     operation_cpp := Structured (Index (Arg "arr") (Arg "i"));
      operation_contract :=
        PureOperation
          [{| argument_name := "arr"; argument_use := Read |};
@@ -445,7 +446,7 @@ Crane Extraction Implicit getElems [R].
 
 #[export] Instance get_elems_mapping : OperationMapping (Ref (@getElems)) :=
   {| operation_headers := ["crane_st.h"];
-     operation_cpp := Expr "crane::st::elems<List<%stored(contents)>>(%arg(arr))";
+     operation_cpp := Structured (Call "crane::st::elems" [Apply "List" [TypeArg (StoredComponent "contents")]] [(Arg "arr")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "arr"; argument_use := Read |}]
@@ -457,7 +458,7 @@ Crane Extraction Implicit swapArray [R].
 (** [Write] gives the template the writable view, [std::span<A>]. *)
 #[export] Instance swap_array_mapping : OperationMapping (Ref (@swapArray)) :=
   {| operation_headers := ["span"; "utility"];
-     operation_cpp := Expr "std::swap(%arg(arr)[%arg(i)], %arg(arr)[%arg(j)])";
+     operation_cpp := Structured (Call "std::swap" [] [(Index (Arg "arr") (Arg "i")); (Index (Arg "arr") (Arg "j"))]);
      operation_contract :=
        EffectfulOperation
          [{| argument_name := "arr"; argument_use := Write |};

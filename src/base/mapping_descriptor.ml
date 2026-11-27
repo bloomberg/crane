@@ -19,6 +19,20 @@
 type declaration = { reference : Names.GlobRef.t; parameters : Constr.t list }
 
 module Cpp = struct
+  (** [IntType]: CppIR's integer types, one to one. *)
+  type int_type = Cpp_ir.Integer_type.t =
+    | I8
+    | I16
+    | I32
+    | I64
+    | U8
+    | U16
+    | U32
+    | U64
+    | Size
+    | Char
+    | Uchar
+
   type type_expr =
     | Name of string
     | Apply of string * type_argument list
@@ -27,11 +41,62 @@ module Cpp = struct
     | Pointer of type_expr
     | Const of type_expr
     | Unsafe_verbatim of string
+    | Int of int_type
+    | Bool
+    | Float64
+    | Result_type  (** the type a use yields, a template's [%ret] *)
 
   and type_argument = Type_arg of type_expr | Value_arg of string
+
+  (** [Conversion]: CppIR's integer conversions, one to one. *)
+  type conversion = Cpp_ir.Integer_conversion.t = Exact | Wrap | Saturate | To_enum
+
+  type overflow = Unchecked | Wrapping | Saturating
+
+  type binop =
+    | Add of overflow
+    | Sub of overflow
+    | Mul of overflow
+    | Div
+    | Mod
+    | Less
+    | Less_eq
+    | Greater
+    | Greater_eq
+    | Equal
+    | Not_equal
+    | And
+    | Or
+    | Bit_and
+    | Bit_or
+    | Bit_xor
+    | Shl
+    | Shr
+
+  type unop = Neg | Not | Bit_not
+
+  (** [Term]: an operation's C++ body as a tree. *)
+  type term =
+    | Arg of string
+    | Int_lit of int_type * Z.t
+    | Bool_lit of bool
+    | String_lit of string
+    | Unop of unop * term
+    | Binop of binop * term * term
+    | Cond of term * term * term
+    | Convert of conversion * type_expr * term
+    | Call of string * type_expr list * term list
+    | Method of term * string * term list
+    | Member of term * string
+    | Index of term * term
+    | Build of type_expr * term list
+    | Enum_value of type_expr * string
+    | Let_in of string * term * term
+    | Var of string
+    | Verbatim of string
 end
 
-type construction = Expr of string | With_body of string * string
+type construction = Expr of string | With_body of string * string | Structured of Cpp.term
 
 type copy_model =
   | Bit_copy

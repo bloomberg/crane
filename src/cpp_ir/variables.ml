@@ -162,6 +162,7 @@ let rec pure : type p. p Expr.t -> bool = function
   | Call (_, Entity (GlobRef.ConstructRef _, _, _), args) -> List.for_all pure args
   | Binary (o, a, b) -> o <> Assign && pure a && pure b
   | Unary (o, a) -> o <> Address_of && pure a
+  | Integer_conversion (_, _, a) -> pure a
   | _ -> false
 
 (** Whether [e] evaluates each of its operands whenever it is evaluated: not

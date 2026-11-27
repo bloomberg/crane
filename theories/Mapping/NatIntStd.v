@@ -25,18 +25,19 @@
 *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.Std.
-From Crane Require Import Mapping.Descriptor.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
 From Corelib Require Import PrimString.
 From Stdlib Require Import List.
 Import ListNotations.
 Local Open Scope pstring_scope.
+Import Crane.Cpp.
 
 (** [nat] is a [uint64_t]: [O] is [0], [S n] is [n + 1], a match tests
     [n <= 0] and reads the predecessor as [n - 1], and a numeral is a
     [UINT64_C] literal. *)
 #[export] Instance std_nat_mapping : TypeMapping nat :=
   {| type_headers := ["cstdint"];
-     type_cpp := Crane.Cpp.Name "uint64_t";
+     type_cpp := Crane.Cpp.Int Crane.Cpp.U64;
      type_components := [];
      type_copy := BitCopy;
      type_access := ReadOnlyValue ReadByValue;
@@ -66,107 +67,35 @@ Local Open Scope pstring_scope.
                numeral_converters := [Ref Nat.of_num_uint] |} |}.
 
 #[export] Instance std_nat_add_mapping : OperationMapping (Ref Nat.add) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) + %arg(m))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"; "m"] (Binop (Add Unchecked) (Arg "n") (Arg "m")).
 #[export] Instance std_nat_mul_mapping : OperationMapping (Ref Nat.mul) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) * %arg(m))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"; "m"] (Binop (Mul Unchecked) (Arg "n") (Arg "m")).
 #[export] Instance std_nat_div_mapping : OperationMapping (Ref Nat.div) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(%arg(y) ? %arg(x) / %arg(y) : 0)";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "x"; argument_use := Read |};
-          {| argument_name := "y"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["x"; "y"] (Cond (Arg "y") (Binop Div (Arg "x") (Arg "y")) (lit 0)).
 #[export] Instance std_nat_modulo_mapping : OperationMapping (Ref Nat.modulo) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(%arg(y) ? %arg(x) % %arg(y) : %arg(x))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "x"; argument_use := Read |};
-          {| argument_name := "y"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["x"; "y"] (Cond (Arg "y") (Binop Mod (Arg "x") (Arg "y")) (Arg "x")).
 #[export] Instance std_nat_double_mapping : OperationMapping (Ref Nat.double) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) + %arg(n))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"] (Binop (Add Unchecked) (Arg "n") (Arg "n")).
 #[export] Instance std_nat_pred_mapping : OperationMapping (Ref Nat.pred) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) ? %arg(n) - 1 : %arg(n))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"] (Cond (Arg "n") (Binop (Sub Unchecked) (Arg "n") (lit 1)) (Arg "n")).
 #[export] Instance std_nat_sub_mapping : OperationMapping (Ref Nat.sub) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(((%arg(n) - %arg(m)) > %arg(n) ? 0 : (%arg(n) - %arg(m))))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"; "m"]
+    (LetIn "d" (Binop (Sub Unchecked) (Arg "n") (Arg "m"))
+       (Cond (Binop Greater (Var "d") (Arg "n")) (lit 0) (Var "d"))).
 #[export] Instance std_nat_max_mapping : OperationMapping (Ref Nat.max) :=
-  {| operation_headers := ["algorithm"];
-     operation_cpp := Expr "std::max(%arg(n), %arg(m))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure ["algorithm"] ["n"; "m"] (Call "std::max" [] [Arg "n"; Arg "m"]).
 #[export] Instance std_nat_min_mapping : OperationMapping (Ref Nat.min) :=
-  {| operation_headers := ["algorithm"];
-     operation_cpp := Expr "std::min(%arg(n), %arg(m))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure ["algorithm"] ["n"; "m"] (Call "std::min" [] [Arg "n"; Arg "m"]).
 #[export] Instance std_nat_eqb_mapping : OperationMapping (Ref Nat.eqb) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "%arg(n) == %arg(m)";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"; "m"] (Binop Equal (Arg "n") (Arg "m")).
 #[export] Instance std_nat_ltb_mapping : OperationMapping (Ref Nat.ltb) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "%arg(n) < %arg(m)";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"; "m"] (Binop Less (Arg "n") (Arg "m")).
 #[export] Instance std_nat_leb_mapping : OperationMapping (Ref Nat.leb) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "%arg(n) <= %arg(m)";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"; "m"] (Binop LessEq (Arg "n") (Arg "m")).
 #[export] Instance std_nat_compare_mapping : OperationMapping (Ref Nat.compare) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) < %arg(m) ? %ret::LT : (%arg(m) < %arg(n) ? %ret::GT : %ret::EQ))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"; "m"]
+    (Cond (Binop Less (Arg "n") (Arg "m")) (EnumValue ResultType "LT")
+       (Cond (Binop Less (Arg "m") (Arg "n")) (EnumValue ResultType "GT") (EnumValue ResultType "EQ"))).
 
 #[export] Instance std_nat_iter_mapping : OperationMapping (Ref Nat.iter) :=
   {| operation_headers := ["type_traits"; "utility"];
@@ -183,24 +112,13 @@ Local Open Scope pstring_scope.
 From Stdlib Require PeanoNat.
 
 #[export] Instance std_peano_nat_eq_dec_mapping : OperationMapping (Ref PeanoNat.Nat.eq_dec) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "%arg(n) == %arg(m)";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "n"; argument_use := Read |};
-          {| argument_name := "m"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["n"; "m"] (Binop Equal (Arg "n") (Arg "m")).
 
 
 From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.
 #[export] Instance std_nat_of_int_mapping : OperationMapping (Ref nat_of_int) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "static_cast<uint64_t>(%arg(x0))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "x0"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["x0"] (Convert Exact (Int U64) (Arg "x0")).
 
 Axiom nat_of_int_0 : nat_of_int 0 = 0%nat.
 Axiom nat_of_int_pos : forall n, eqb n 0 = false -> exists m, nat_of_int n = S m.
@@ -211,9 +129,4 @@ Axiom nat_of_int_gt1 : forall n, ltb 1 n = true -> exists m, nat_of_int n = S (S
 From Corelib Require Import PrimString.
 Axiom string_of_nat : nat -> string.
 #[export] Instance std_string_of_nat_mapping : OperationMapping (Ref string_of_nat) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "std::to_string(%arg(x0))";
-     operation_contract :=
-       PureOperation
-         [{| argument_name := "x0"; argument_use := Read |}]
-         ReturnValue [] |}.
+  pure [] ["x0"] (Call "std::to_string" [] [Arg "x0"]).

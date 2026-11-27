@@ -55,6 +55,7 @@ type t = {
   instance : GlobRef.t;
   head : GlobRef.t;
   canonical : type_expr;
+  integer : Cpp_ir.Integer_type.t option;
   components : (string * int) list;
   component_binders : (string * int) list;
   copy : copy_model;
@@ -292,6 +293,10 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     | Cpp.Pointer t -> Pointer (type_expr t)
     | Cpp.Const t -> Const (type_expr t)
     | Cpp.Unsafe_verbatim s -> Verbatim s
+    | Cpp.Int t -> Name (Cpp_ir.Integer_type.spelling t)
+    | Cpp.Bool -> Name "bool"
+    | Cpp.Float64 -> Name "double"
+    | Cpp.Result_type -> fail (Pp.strbrk "names ResultType, which only an operation's body can name.")
   in
   let template = compile_template ~fail ~stored in
   (* A view's conversions are term templates of one value argument: the
@@ -300,6 +305,8 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     | Expr e -> compile_template ~renamed:[(hole, "%a0")] ~fail ~stored e
     | With_body _ ->
       fail (Pp.strbrk "materialises a view with a WithBody construction, which is not supported yet; use Expr.")
+    | Structured _ ->
+      fail (Pp.strbrk "materialises a view with a Structured construction, which only an operation's body can be; use Expr.")
   in
   let view_plan (v : view_spec) =
     { view_type = type_expr v.view_cpp;
@@ -335,6 +342,8 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
                match c.ctor_build with
                | Expr e -> template e
                | With_body (i, b) -> "%result = " ^ template i ^ "; " ^ template b
+               | Structured _ ->
+                 fail (Pp.strbrk "builds a constructor with a Structured construction, which only an operation's body can be; use Expr.")
              in
              (* A field declared at a type parameter is spelled as that
                 parameter's [%tN]; a recursive field as the matched value's
@@ -398,6 +407,7 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     numerals;
     head;
     canonical = type_expr m.type_cpp;
+    integer = (match m.type_cpp with Cpp.Int t -> Some t | _ -> None);
     components = List.map (fun (x, i) -> (x, position i)) components;
     component_binders = components;
     copy = m.type_copy;

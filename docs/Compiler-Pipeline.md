@@ -464,7 +464,13 @@ A typed mapping is data, read once and compiled once:
    operation: its `ArgumentSpec`s bound to the retained runtime binders in
    source order, `%arg(x)` and `%stored(c)` compiled into the
    `Cpp_ir.Foreign_template` hole vocabulary, and the contract (input uses,
-   result, facts, purity).
+   result, facts, purity).  A `Structured` body is compiled by
+   `Base.Mapping_term` (arguments resolved to positions, `LetIn`
+   substituted, conversions folded) and also written as text in the hole
+   vocabulary, which the passes reading a mapping's text read; the
+   `foreign` pass lowers a call from the term instead
+   (`Cpp_passes.Structured_operation`), folding conversions of literal
+   arguments, into a `Mapped_operation` node naming the operation.
 3. **Analysis.** Access summaries (section 4) read operation contracts;
    ownership reads `Take` and `RetainsArgument`; copy cost and by-value
    reads come from the copy model and read style

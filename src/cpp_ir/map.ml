@@ -281,6 +281,16 @@ let expr : type p. p t -> p Expr.t -> p Expr.t =
     let e = ex e in
     Variant_get_if (ty t, e)
   | Foreign (u, f) -> Foreign (u, foreign m f)
+  | Integer_conversion (k, t, e) ->
+    let e = ex e in
+    Integer_conversion (k, ty t, e)
+  | Index (a, i) ->
+    let i = ex i in
+    Index (ex a, i)
+  | Named_call (f, ts, es) ->
+    let es = list ex es in
+    Named_call (f, list ty ts, es)
+  | Mapped_operation (r, e) -> Mapped_operation (r, ex e)
 
 (** [stmt m s] is [s] with each child rewritten by [m]. *)
 let stmt : type p. p t -> p Stmt.t -> p Stmt.t =

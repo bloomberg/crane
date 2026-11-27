@@ -25,11 +25,12 @@
 *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.BDE.
-From Crane Require Import Mapping.Descriptor.
+From Crane Require Import Mapping.Descriptor Mapping.Cpp.
 From Corelib Require Import PrimString.
 From Stdlib Require Import List.
 Import ListNotations.
 Local Open Scope pstring_scope.
+Import Crane.Cpp.
 
 (** [nat] is an [unsigned int]: [O] is [0], [S n] is [n + 1], a match
     tests [n <= 0] and reads the predecessor as [n - 1], and a numeral is
@@ -67,7 +68,7 @@ Local Open Scope pstring_scope.
 
 #[export] Instance bde_nat_add_mapping : OperationMapping (Ref Nat.add) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) + %arg(m))";
+     operation_cpp := Structured (Binop (Add Unchecked) (Arg "n") (Arg "m"));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -75,7 +76,7 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_mul_mapping : OperationMapping (Ref Nat.mul) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) * %arg(m))";
+     operation_cpp := Structured (Binop (Mul Unchecked) (Arg "n") (Arg "m"));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -83,7 +84,7 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_div_mapping : OperationMapping (Ref Nat.div) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(y) ? %arg(x) / %arg(y) : 0)";
+     operation_cpp := Structured (Cond (Arg "y") (Binop Div (Arg "x") (Arg "y")) (lit 0));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -91,7 +92,7 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_modulo_mapping : OperationMapping (Ref Nat.modulo) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(y) ? %arg(x) % %arg(y) : %arg(x))";
+     operation_cpp := Structured (Cond (Arg "y") (Binop Mod (Arg "x") (Arg "y")) (Arg "x"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |};
@@ -99,21 +100,21 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_double_mapping : OperationMapping (Ref Nat.double) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) + %arg(n))";
+     operation_cpp := Structured (Binop (Add Unchecked) (Arg "n") (Arg "n"));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_nat_pred_mapping : OperationMapping (Ref Nat.pred) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) ? %arg(n) - 1 : %arg(n))";
+     operation_cpp := Structured (Cond (Arg "n") (Binop (Sub Unchecked) (Arg "n") (lit 1)) (Arg "n"));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
 #[export] Instance bde_nat_sub_mapping : OperationMapping (Ref Nat.sub) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(((%arg(n) - %arg(m)) > %arg(n) ? 0 : (%arg(n) - %arg(m))))";
+     operation_cpp := Structured (LetIn "d" (Binop (Sub Unchecked) (Arg "n") (Arg "m")) (Cond (Binop Greater (Var "d") (Arg "n")) (lit 0) (Var "d")));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -121,7 +122,7 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_max_mapping : OperationMapping (Ref Nat.max) :=
   {| operation_headers := ["bsl_algorithm.h"];
-     operation_cpp := Expr "bsl::max(%arg(n), %arg(m))";
+     operation_cpp := Structured (Call "bsl::max" [] [(Arg "n"); (Arg "m")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -129,7 +130,7 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_min_mapping : OperationMapping (Ref Nat.min) :=
   {| operation_headers := ["bsl_algorithm.h"];
-     operation_cpp := Expr "bsl::min(%arg(n), %arg(m))";
+     operation_cpp := Structured (Call "bsl::min" [] [(Arg "n"); (Arg "m")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -137,7 +138,7 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_eqb_mapping : OperationMapping (Ref Nat.eqb) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(n) == %arg(m)";
+     operation_cpp := Structured (Binop Equal (Arg "n") (Arg "m"));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -145,7 +146,7 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_ltb_mapping : OperationMapping (Ref Nat.ltb) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(n) < %arg(m)";
+     operation_cpp := Structured (Binop Less (Arg "n") (Arg "m"));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -153,7 +154,7 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_leb_mapping : OperationMapping (Ref Nat.leb) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(n) <= %arg(m)";
+     operation_cpp := Structured (Binop LessEq (Arg "n") (Arg "m"));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -161,7 +162,7 @@ Local Open Scope pstring_scope.
          ReturnValue [] |}.
 #[export] Instance bde_nat_compare_mapping : OperationMapping (Ref Nat.compare) :=
   {| operation_headers := [];
-     operation_cpp := Expr "(%arg(n) < %arg(m) ? %ret::LT : (%arg(m) < %arg(n) ? %ret::GT : %ret::EQ))";
+     operation_cpp := Structured (three_way (Arg "n") (Arg "m"));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -184,7 +185,7 @@ From Stdlib Require PeanoNat.
 
 #[export] Instance bde_peano_nat_eq_dec_mapping : OperationMapping (Ref PeanoNat.Nat.eq_dec) :=
   {| operation_headers := [];
-     operation_cpp := Expr "%arg(n) == %arg(m)";
+     operation_cpp := Structured (Binop Equal (Arg "n") (Arg "m"));
      operation_contract :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |};
@@ -196,7 +197,7 @@ From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.
 #[export] Instance bde_nat_of_int_mapping : OperationMapping (Ref nat_of_int) :=
   {| operation_headers := [];
-     operation_cpp := Expr "static_cast<unsigned int>(%arg(x0))";
+     operation_cpp := Structured (Convert Wrap ResultType (Arg "x0"));
      operation_contract :=
        PureOperation
          [{| argument_name := "x0"; argument_use := Read |}]
@@ -208,7 +209,7 @@ From Corelib Require Import PrimString.
 Axiom string_of_nat : nat -> string.
 #[export] Instance bde_string_of_nat_mapping : OperationMapping (Ref string_of_nat) :=
   {| operation_headers := ["bsl_string.h"];
-     operation_cpp := Expr "bsl::to_string(%arg(x0))";
+     operation_cpp := Structured (Call "bsl::to_string" [] [(Arg "x0")]);
      operation_contract :=
        PureOperation
          [{| argument_name := "x0"; argument_use := Read |}]
