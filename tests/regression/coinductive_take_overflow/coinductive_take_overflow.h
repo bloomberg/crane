@@ -222,10 +222,10 @@ struct CoinductiveTakeOverflow {
   }
 
   static inline const uint64_t total =
-      take<uint64_t>(
-          UINT64_C(50000),
-          smap<uint64_t, uint64_t>([](uint64_t n) { return (n * UINT64_C(2)); },
-                                   from(UINT64_C(0))))
+      take<uint64_t>(UINT64_C(50000),
+                     smap<uint64_t, uint64_t>(
+                         [](uint64_t n) { return (n * UINT64_C(2)); },
+                         from(UINT64_C(0))))
           .template fold_left<uint64_t>(
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           UINT64_C(0));

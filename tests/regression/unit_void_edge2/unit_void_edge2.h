@@ -50,8 +50,9 @@ struct UnitVoidEdge2 {
   }
 
   static inline const uint64_t apply_take_unit =
-      apply<std::monostate, uint64_t>([](const auto &) { return take_unit(); },
-                                      std::monostate{});
+      apply<std::monostate, uint64_t>(
+          [](const auto &) { return take_unit(); },
+          std::monostate{});
   static std::optional<std::monostate> make_some_unit(bool b);
   static uint64_t use_option_unit(std::optional<std::monostate> o);
   static uint64_t compose_option_unit(bool b1, bool b2);

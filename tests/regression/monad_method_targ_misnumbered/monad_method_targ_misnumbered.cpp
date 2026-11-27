@@ -4,5 +4,6 @@ std::optional<Nat> MonadMethodTargMisnumbered::use(const List<Nat> &l) {
   return monad_fold_right<Monad_option, Nat, Nat>(
       [](const Nat &b,
          Nat a) { return std::make_optional<Nat>(b.add(std::move(a))); },
-      l, Nat::o());
+      l,
+      Nat::o());
 }

@@ -98,7 +98,8 @@ Positive Coq_Pos::mul(const Positive &x, Positive y) {
 
 Nat Pos::to_nat(const Positive &x) {
   return iter_op<Nat>(
-      [](const Nat &_x0, const Nat &_x1) { return _x0.add(_x1); }, x,
+      [](const Nat &_x0, const Nat &_x1) { return _x0.add(_x1); },
+      x,
       Nat::s(Nat::o()));
 }
 

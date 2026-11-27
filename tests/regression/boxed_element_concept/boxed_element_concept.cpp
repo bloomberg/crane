@@ -35,7 +35,8 @@ uint64_t BoxedElementConcept::Forest::count(
   return List::template fold_left<uint64_t, BoxedElementConcept::rose>(
       [](uint64_t n,
          const BoxedElementConcept::rose &r) { return (n + size(r)); },
-      l, UINT64_C(0));
+      l,
+      UINT64_C(0));
 }
 
 crane::list<crane::box<BoxedElementConcept::rose>>

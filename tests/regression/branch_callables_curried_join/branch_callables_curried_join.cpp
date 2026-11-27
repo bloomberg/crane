@@ -102,8 +102,10 @@ uint64_t BranchCallablesCurriedJoin::v3(std::optional<uint64_t> x) {
               }
             };
         return [=](uint64_t _pa0) {
-          return go(List<uint64_t>::nil(), [](uint64_t) { return UINT64_C(0); },
-                    _pa0);
+          return go(
+              List<uint64_t>::nil(),
+              [](uint64_t) { return UINT64_C(0); },
+              _pa0);
         };
       }()));
     }

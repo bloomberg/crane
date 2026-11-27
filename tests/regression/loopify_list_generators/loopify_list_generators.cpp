@@ -131,8 +131,8 @@ List<uint64_t> LoopifyListGenerators::replicate_each(uint64_t n,
         _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        List<uint64_t> reps = replicate_elem(n, a0);
-        _stack.emplace_back(_after_replicate_each_in_Cons{std::move(reps)});
+        _stack.emplace_back(
+            _after_replicate_each_in_Cons{replicate_elem(n, a0)});
         _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {

@@ -113,13 +113,17 @@ using grammar_entry = SigT<production, production_semty>;
         [](auto _a0, auto _a1) {
           _a1.push_front(_a0);
           return _a1;
-        }(SigT<std::pair<crane::obj, std::deque<Symbol>>,
-               std::pair<crane::obj, crane::obj>>::existt(
-            std::make_pair(crane::obj(crane::obj()), std::deque<Symbol>{}),
-            std::make_pair(
-                crane::obj(crane_erase_fn([](const auto &) { return true; })),
-                crane::obj(crane_erase_fn(
-                    [](const auto &) { return std::deque<crane::obj>{}; })))),
-          std::deque<SigT<std::pair<crane::obj, std::deque<Symbol>>,
-                          std::pair<crane::obj, crane::obj>>>{}));
+        }(
+            SigT<std::pair<crane::obj, std::deque<Symbol>>,
+                 std::pair<crane::obj, crane::obj>>::existt(
+                std::make_pair(crane::obj(crane::obj()), std::deque<Symbol>{}),
+                std::make_pair(
+                    crane::obj(
+                        crane_erase_fn([](const auto &) { return true; })),
+                    crane::obj(crane_erase_fn(
+                        [](const auto &) {
+                          return std::deque<crane::obj>{};
+                        })))),
+            std::deque<SigT<std::pair<crane::obj, std::deque<Symbol>>,
+                            std::pair<crane::obj, crane::obj>>>{}));
 uint64_t num_entries();

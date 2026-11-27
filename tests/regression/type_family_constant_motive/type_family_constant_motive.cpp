@@ -20,8 +20,12 @@ bool Nat::max_dec(uint64_t x0_, uint64_t x1_) {
 }
 
 bool TypeFamilyConstantMotive::larger_is_first(uint64_t n, uint64_t m) {
-  return pick<bool>(n, m, [](uint64_t, uint64_t, bool b) { return b; }, true,
-                    false);
+  return pick<bool>(
+      n,
+      m,
+      [](uint64_t, uint64_t, bool b) { return b; },
+      true,
+      false);
 }
 
 CompareSpecT Datatypes::CompareSpec2Type(Comparison c) {

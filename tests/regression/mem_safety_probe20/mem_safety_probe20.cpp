@@ -38,8 +38,9 @@ MemSafetyProbe20::pair_from_if(MemSafetyProbe20::tree t, bool b) {
         wrapped::wrap([=](uint64_t n) { return (t.tree_sum() + n); }),
         t.tree_sum());
   } else {
-    return std::make_pair(wrapped::wrap([](uint64_t n) { return n; }),
-                          UINT64_C(0));
+    return std::make_pair(
+        wrapped::wrap([](uint64_t n) { return n; }),
+        UINT64_C(0));
   }
 }
 

@@ -118,8 +118,9 @@ struct IfBranchFunctionParams {
     }
   }
 
-  static inline const Nat run =
-      h(Bool0::FALSE_, [](const Nat &x) { return Nat::s(x); },
-        [](const Nat &x) { return x.add(Nat::s(Nat::s(Nat::o()))); },
-        Nat::s(Nat::o()));
+  static inline const Nat run = h(
+      Bool0::FALSE_,
+      [](const Nat &x) { return Nat::s(x); },
+      [](const Nat &x) { return x.add(Nat::s(Nat::s(Nat::o()))); },
+      Nat::s(Nat::o()));
 };

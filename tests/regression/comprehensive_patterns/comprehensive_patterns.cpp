@@ -49,7 +49,8 @@ std::pair<crane::fn<uint64_t(uint64_t)>, ComprehensivePatterns::S>
 ComprehensivePatterns::lambda_proj(ComprehensivePatterns::S s) {
   const auto &s_s_a = s.s_a;
   return std::make_pair(
-      crane::fn<uint64_t(uint64_t)>([=](uint64_t) { return s_s_a; }), s);
+      crane::fn<uint64_t(uint64_t)>([=](uint64_t) { return s_s_a; }),
+      s);
 }
 
 std::pair<std::pair<std::pair<ComprehensivePatterns::S, uint64_t>, uint64_t>,
@@ -185,10 +186,13 @@ ComprehensivePatterns::rebind(const ComprehensivePatterns::S &s1) {
 std::pair<crane::fn<uint64_t(std::monostate)>,
           crane::fn<uint64_t(std::monostate)>>
 ComprehensivePatterns::closure_pair(ComprehensivePatterns::S s) {
-  return std::make_pair(crane::fn<uint64_t(std::monostate)>(
-      [=](std::monostate) { return s.s_a; }),
-                        crane::fn<uint64_t(std::monostate)>(
-                            [=](std::monostate) { return s.s_b; }));
+  return std::make_pair(
+      crane::fn<uint64_t(std::monostate)>([=](std::monostate) {
+        return s.s_a;
+      }),
+      crane::fn<uint64_t(std::monostate)>([=](std::monostate) {
+        return s.s_b;
+      }));
 }
 
 ComprehensivePatterns::S
@@ -740,7 +744,8 @@ uint64_t ComprehensivePatterns::sum_proj(uint64_t n,
 
 uint64_t ComprehensivePatterns::hof_test(const ComprehensivePatterns::NC &r) {
   return apply(
-      [](const ComprehensivePatterns::NC &x) { return (x.nc_a + x.nc_b); }, r);
+      [](const ComprehensivePatterns::NC &x) { return (x.nc_a + x.nc_b); },
+      r);
 }
 
 uint64_t ComprehensivePatterns::use_two_fc(uint64_t x0_, uint64_t x1_) {
@@ -864,15 +869,12 @@ ComprehensivePatterns::side_effect(ComprehensivePatterns::RSeq r) {
 
 uint64_t
 ComprehensivePatterns::after_side_effect(ComprehensivePatterns::RSeq r) {
-  ComprehensivePatterns::RSeq r2 = side_effect(std::move(r));
-  return std::move(r2).seq_val;
+  return side_effect(std::move(r)).seq_val;
 }
 
 uint64_t
 ComprehensivePatterns::two_side_effects(ComprehensivePatterns::RSeq r) {
-  ComprehensivePatterns::RSeq r2 = side_effect(std::move(r));
-  ComprehensivePatterns::RSeq r3 = side_effect(std::move(r2));
-  return std::move(r3).seq_val;
+  return side_effect(side_effect(std::move(r))).seq_val;
 }
 
 uint64_t

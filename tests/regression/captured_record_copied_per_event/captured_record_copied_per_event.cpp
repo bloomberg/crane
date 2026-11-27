@@ -23,10 +23,11 @@ CapturedRecordCopiedPerEvent::ticks(const Nat &k) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
-      crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
-    return crane_erase_global<Function::Id_IFun, crane::obj>();
-  },
-                                                     crane::obj()));
+      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+      [](crane::obj) {
+        return crane_erase_global<Function::Id_IFun, crane::obj>();
+      },
+      crane::obj()));
   if (std::holds_alternative<typename Nat::O>(k.v())) {
     return Itree<CapturedRecordCopiedPerEvent::TickE, std::monostate>::go(
         ItreeF<CapturedRecordCopiedPerEvent::TickE, std::monostate,

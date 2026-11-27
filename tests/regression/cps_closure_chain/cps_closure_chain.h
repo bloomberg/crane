@@ -143,20 +143,21 @@ struct CpsClosureChain {
       const crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)> &combine,
       const crane::fn<uint64_t(uint64_t)> &k);
   /// Test: fold with multiplication: each node multiplies (left + right + n)
-  static inline const uint64_t test_fold =
-      tree_fold_cps(tree::node(
-          tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(3),
-          tree::node(tree::leaf(), UINT64_C(4), tree::leaf())),
-                    UINT64_C(1), [](uint64_t l, uint64_t n,
-                                    uint64_t r) { return ((l + n) + r); },
-                    [](uint64_t x) { return x; });
+  static inline const uint64_t test_fold = tree_fold_cps(
+      tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
+                 UINT64_C(3),
+                 tree::node(tree::leaf(), UINT64_C(4), tree::leaf())),
+      UINT64_C(1),
+      [](uint64_t l, uint64_t n, uint64_t r) { return ((l + n) + r); },
+      [](uint64_t x) { return x; });
   /// Store CPS result in a pair with another computation to test
   /// that the continuation chain doesn't interfere with other data.
   static inline const std::pair<uint64_t, uint64_t> test_pair = []() {
     tree t = build_left(UINT64_C(4));
     uint64_t s = tree_sum(t);
     uint64_t f = tree_fold_cps(
-        std::move(t), UINT64_C(0),
+        std::move(t),
+        UINT64_C(0),
         [](uint64_t l, uint64_t n, uint64_t r) { return ((l + n) + r); },
         [](uint64_t x) { return x; });
     return std::make_pair(s, f);

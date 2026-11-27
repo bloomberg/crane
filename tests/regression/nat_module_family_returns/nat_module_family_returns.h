@@ -1268,8 +1268,12 @@ struct Nat {
     template <typename T1, typename F2>
     static T1 max_case(uint64_t n, uint64_t m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return max_case_strong<T1>(n, m, x, [=, x0 = x0]() { return x0; }(),
-                                 [=, x1 = x1]() { return x1; }());
+      return max_case_strong<T1>(
+          n,
+          m,
+          x,
+          [=, x0 = x0]() { return x0; }(),
+          [=, x1 = x1]() { return x1; }());
     }
 
     static bool max_dec(uint64_t n, uint64_t m);
@@ -1294,8 +1298,12 @@ struct Nat {
     template <typename T1, typename F2>
     static T1 min_case(uint64_t n, uint64_t m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return min_case_strong<T1>(n, m, x, [=, x0 = x0]() { return x0; }(),
-                                 [=, x1 = x1]() { return x1; }());
+      return min_case_strong<T1>(
+          n,
+          m,
+          x,
+          [=, x0 = x0]() { return x0; }(),
+          [=, x1 = x1]() { return x1; }());
     }
 
     static bool min_dec(uint64_t n, uint64_t m);
@@ -1304,13 +1312,20 @@ struct Nat {
   template <typename T1>
   static T1 max_case_strong(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
     return Private_Dec::template max_case_strong<T1>(
-        n, m, [](uint64_t, uint64_t, T1 x1) { return x1; }, x, x0);
+        n,
+        m,
+        [](uint64_t, uint64_t, T1 x1) { return x1; },
+        x,
+        x0);
   }
 
   template <typename T1>
   static T1 max_case(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
-    return max_case_strong<T1>(n, m, [=, x = x]() { return x; }(),
-                               [=, x0 = x0]() { return x0; }());
+    return max_case_strong<T1>(
+        n,
+        m,
+        [=, x = x]() { return x; }(),
+        [=, x0 = x0]() { return x0; }());
   }
 
   static bool max_dec(uint64_t x0_, uint64_t x1_);
@@ -1318,13 +1333,20 @@ struct Nat {
   template <typename T1>
   static T1 min_case_strong(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
     return Private_Dec::template min_case_strong<T1>(
-        n, m, [](uint64_t, uint64_t, T1 x1) { return x1; }, x, x0);
+        n,
+        m,
+        [](uint64_t, uint64_t, T1 x1) { return x1; },
+        x,
+        x0);
   }
 
   template <typename T1>
   static T1 min_case(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
-    return min_case_strong<T1>(n, m, [=, x = x]() { return x; }(),
-                               [=, x0 = x0]() { return x0; }());
+    return min_case_strong<T1>(
+        n,
+        m,
+        [=, x = x]() { return x; }(),
+        [=, x0 = x0]() { return x0; }());
   }
 
   static bool min_dec(uint64_t x0_, uint64_t x1_);

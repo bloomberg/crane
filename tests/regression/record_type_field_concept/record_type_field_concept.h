@@ -173,19 +173,15 @@ struct RecordTypeFieldConcept {
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
               crane_erase_fn<uint64_t>(
                   [](const List<uint64_t> &_x) { return _x.length(); })},
-          List<dyn>::cons(dyn{std::make_pair(UINT64_C(3), UINT64_C(4)),
-                              crane_erase_fn<uint64_t>(
-                                  [](const auto &p) {
-                                    return (crane_any_cast<
-                                                std::pair<uint64_t, uint64_t>>(
-                                                p)
-                                                .first *
-                                            crane_any_cast<
-                                                std::pair<uint64_t, uint64_t>>(
-                                                p)
-                                                .second);
-                                  })},
-                          List<dyn>::nil())));
+          List<dyn>::cons(
+              dyn{std::make_pair(UINT64_C(3), UINT64_C(4)),
+                  crane_erase_fn<uint64_t>([](const auto &p) {
+                    return (
+                        crane_any_cast<std::pair<uint64_t, uint64_t>>(p).first *
+                        crane_any_cast<std::pair<uint64_t, uint64_t>>(p).second);
+                  })},
+              List<dyn>::nil())));
   static inline const uint64_t total = ds.template fold_left<uint64_t>(
-      [](uint64_t acc, const dyn &d) { return (acc + read(d)); }, UINT64_C(0));
+      [](uint64_t acc, const dyn &d) { return (acc + read(d)); },
+      UINT64_C(0));
 };

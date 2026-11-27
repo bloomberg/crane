@@ -413,7 +413,8 @@ struct TfunctorListOfTriples {
                                                List<metadata<Nat>>::nil())),
       List<std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::nil())};
   static inline const block<Nat> b1 = TFunctor_block::template tfmap<Nat, Nat>(
-      [](const Nat &x) { return Nat::s(x); }, b0);
+      [](const Nat &x) { return Nat::s(x); },
+      b0);
   static inline const Nat total = []() {
     auto &&_sv = b1.blk_phis;
     if (std::holds_alternative<typename List<

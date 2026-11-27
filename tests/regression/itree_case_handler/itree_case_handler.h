@@ -712,11 +712,12 @@ struct ItreeCaseHandler {
   }();
   static inline const Itree<noE, Nat> out = Interp::template interp<
       MonadIter_itree<noE>, Monad_itree<noE>, Functor_itree<noE>,
-      Sum1<AE, BE, crane::obj>, Nat>([](const auto &a0) -> Itree<noE,
-                                                                 crane::obj> {
-    return h<crane::obj>(crane_convert<Sum1<AE, BE, crane::obj>>(a0));
-  },
-                                     prog);
+      Sum1<AE, BE, crane::obj>, Nat>(
+      [](const auto &a0) -> Itree<noE,
+                                  crane::obj> {
+        return h<crane::obj>(crane_convert<Sum1<AE, BE, crane::obj>>(a0));
+      },
+      prog);
   static std::optional<Nat> run(const Nat &fuel, const Itree<noE, Nat> &t);
   static inline const bool is_three = []() -> bool {
     auto _cs = []() {

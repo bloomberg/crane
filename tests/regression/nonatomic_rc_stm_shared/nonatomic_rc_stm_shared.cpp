@@ -20,8 +20,7 @@ void NonatomicRcStmShared::push(stm::TVar<NonatomicRcStmShared::lst> t,
   {
     stm::atomically([&] {
       return [&]() {
-        NonatomicRcStmShared::lst l = stm::readTVar(t);
-        stm::writeTVar(t, lst::cons(n, std::move(l)));
+        stm::writeTVar(t, lst::cons(n, stm::readTVar(t)));
         return std::monostate{};
       }();
     });
@@ -30,9 +29,6 @@ void NonatomicRcStmShared::push(stm::TVar<NonatomicRcStmShared::lst> t,
 
 uint64_t NonatomicRcStmShared::size(stm::TVar<NonatomicRcStmShared::lst> t) {
   return stm::atomically([&] {
-    return [&]() {
-      NonatomicRcStmShared::lst l = stm::readTVar(t);
-      return len(std::move(l));
-    }();
+    return [&]() { return len(stm::readTVar(t)); }();
   });
 }

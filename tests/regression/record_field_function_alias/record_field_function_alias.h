@@ -109,13 +109,15 @@ struct RecordFieldFunctionAlias {
   };
 
   static bool apply_test(const Box &b, const Nat &n);
-  static inline const holder h =
-      holder{[](const Nat &n) { return n.eqb(Nat::o()); },
-             [](const Nat &_x0, const Nat &_x1) { return _x0.eqb(_x1); }};
+  static inline const holder h = holder{
+      [](const Nat &n) { return n.eqb(Nat::o()); },
+      [](const Nat &_x0, const Nat &_x1) { return _x0.eqb(_x1); }};
   static inline const bool t1 = apply_run(h, Nat::o());
   static inline const bool t2 =
       apply_same(h, Nat::s(Nat::s(Nat::o())), Nat::s(Nat::s(Nat::o())));
-  static inline const bool t3 = apply_test(Box{
-      [](const Nat &n) { return n.eqb(Nat::s(Nat::o())); }, Nat::s(Nat::o())},
-                                           Nat::o());
+  static inline const bool t3 = apply_test(
+      Box{
+          [](const Nat &n) { return n.eqb(Nat::s(Nat::o())); },
+          Nat::s(Nat::o())},
+      Nat::o());
 };

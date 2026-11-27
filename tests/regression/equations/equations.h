@@ -890,13 +890,16 @@ struct Equations {
       T1 f, T1 f0, std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f2,
       std::type_identity_t<crane::fn<T1(uint64_t, T1)>> f3, uint64_t n) {
     return collatz_steps_graph_mut<T1, T1>(
-        std::move(f), std::move(f0),
+        std::move(f),
+        std::move(f0),
         [](uint64_t, collatz_steps_clause_3_graph, const T1 &x) { return x; },
         [=, f2 = std::move(f2)](uint64_t n0, collatz_steps_graph,
                                 const T1 &eta0_) { return f2(n0, eta0_); },
         [=, f3 = std::move(f3)](uint64_t n0, collatz_steps_graph,
                                 const T1 &eta0_) { return f3(n0, eta0_); },
-        n, collatz_steps(n), collatz_steps_graph_correct(n));
+        n,
+        collatz_steps(n),
+        collatz_steps_graph_correct(n));
   }
 
   template <typename F2, typename F3>

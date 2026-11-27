@@ -23,7 +23,8 @@ ReuseTokenInClosure::lst ReuseTokenInClosure::g(ReuseTokenInClosure::lst l) {
       return lst::cons_crane_reuse(
           std::move(
               std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut()).a1),
-          twice([=](uint64_t y) { return suml(lst::cons(y, t)); }, x), g(t));
+          twice([=](uint64_t y) { return suml(lst::cons(y, t)); }, x),
+          g(t));
     } else {
       if (std::holds_alternative<typename ReuseTokenInClosure::lst::Nil>(
               l.v_mut())) {
@@ -32,11 +33,13 @@ ReuseTokenInClosure::lst ReuseTokenInClosure::g(ReuseTokenInClosure::lst l) {
         auto &[a0, a1] =
             std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut());
         const ReuseTokenInClosure::lst &a1_value = *a1;
-        return lst::cons(twice([=, a1_value = a1_value](uint64_t y) {
-          return suml(lst::cons(y, a1_value));
-        },
-                               std::move(a0)),
-                         g(a1_value));
+        return lst::cons(
+            twice(
+                [=, a1_value = a1_value](uint64_t y) {
+                  return suml(lst::cons(y, a1_value));
+                },
+                std::move(a0)),
+            g(a1_value));
       }
     }
   } else {
@@ -47,11 +50,13 @@ ReuseTokenInClosure::lst ReuseTokenInClosure::g(ReuseTokenInClosure::lst l) {
       auto &[a0, a1] =
           std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut());
       const ReuseTokenInClosure::lst &a1_value = *a1;
-      return lst::cons(twice([=, a1_value = a1_value](uint64_t y) {
-        return suml(lst::cons(y, a1_value));
-      },
-                             std::move(a0)),
-                       g(a1_value));
+      return lst::cons(
+          twice(
+              [=, a1_value = a1_value](uint64_t y) {
+                return suml(lst::cons(y, a1_value));
+              },
+              std::move(a0)),
+          g(a1_value));
     }
   }
 }

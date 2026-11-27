@@ -106,7 +106,8 @@ struct Rank2FamilyArgumentAdapter {
   template <typename T1> static uint64_t len2(const List<T1> &l) {
     return grect2<uint64_t, T1>(
         []() { return UINT64_C(0); }(),
-        [](const auto &, const auto &, uint64_t k) { return (k + 1); }, l);
+        [](const auto &, const auto &, uint64_t k) { return (k + 1); },
+        l);
   }
 
   static inline const uint64_t result = len2<uint64_t>(List<uint64_t>::cons(

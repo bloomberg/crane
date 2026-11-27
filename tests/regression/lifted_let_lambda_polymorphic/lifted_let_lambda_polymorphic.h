@@ -133,9 +133,10 @@ struct LiftedLetLambdaPolymorphic {
           [](uint64_t _x0) -> uint64_t {
             return (UINT64_C(2) * _x0);
           })
-          .template fold_left<uint64_t>([](
-          uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) { return f(a); },
-                                        UINT64_C(1));
+          .template fold_left<uint64_t>(
+          [](uint64_t a,
+             const crane::fn<uint64_t(uint64_t)> &f) { return f(a); },
+          UINT64_C(1));
 
   template <typename T1>
   static T1 quad(std::type_identity_t<crane::fn<T1(T1, T1)>> op,

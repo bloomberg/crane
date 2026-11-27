@@ -1797,9 +1797,8 @@ template <Int I, OrderedType X> struct Raw {
         _stack.pop_back();
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         typename X::t a1 = std::move(_f.a1);
-        auto a2 = std::move(_f.a2);
         _result =
-            bal<T1>(*a0, std::move(a1), std::move(a2), std::move(_result));
+            bal<T1>(*a0, std::move(a1), std::move(_f.a2), std::move(_result));
       } else {
         auto _f = std::move(std::get<_after_add_in_LT>(_popped));
         _stack.pop_back();
@@ -1941,9 +1940,8 @@ template <Int I, OrderedType X> struct Raw {
         _stack.pop_back();
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         typename X::t a1 = std::move(_f.a1);
-        auto a2 = std::move(_f.a2);
         _result =
-            bal<T1>(*a0, std::move(a1), std::move(a2), std::move(_result));
+            bal<T1>(*a0, std::move(a1), std::move(_f.a2), std::move(_result));
       } else {
         auto _f = std::move(std::get<_after_remove_in_LT>(_popped));
         _stack.pop_back();
@@ -2211,10 +2209,9 @@ template <Int I, OrderedType X> struct Raw {
         _stack.pop_back();
         const tree<T1> &a0 = *_f.a0;
         typename X::t a1 = std::move(_f.a1);
-        auto a2 = std::move(_f.a2);
         _stack.emplace_back(
             _call{&a0, List<std::pair<typename X::t, T1>>::cons(
-                           std::make_pair(std::move(a1), std::move(a2)),
+                           std::make_pair(std::move(a1), std::move(_f.a2)),
                            std::move(_result))});
       }
     }
@@ -2474,11 +2471,14 @@ template <Int I, OrderedType X> struct Raw {
         _loop_cont =
             [=, a1 = a1, a2 = a2, a3_value = a3_value](enumeration<T1> _x0) -> bool {
               return equal_more<T1>(
-                  cmp, a1, a2, [=, _loop_cont = _loop_cont, a3_value = a3_value,
-                                cmp = cmp](enumeration<T1> _x0) -> bool {
-                                 return equal_cont<T1>(cmp, a3_value,
-                                                       _loop_cont, _x0);
-                               },
+                  cmp,
+                  a1,
+                  a2,
+                  [=, _loop_cont = _loop_cont, a3_value = a3_value, cmp = cmp](
+                      enumeration<T1> _x0)
+                       -> bool {
+                    return equal_cont<T1>(cmp, a3_value, _loop_cont, _x0);
+                  },
                   _x0);
             };
         _loop_m1 = &a0_value;
@@ -2703,16 +2703,14 @@ template <Int I, OrderedType X> struct Raw {
         _stack.pop_back();
         typename X::t a1 = std::move(_f.a1);
         const tree<T1> &a3 = *_f.a3;
-        auto d_ = std::move(_f.d_);
         _stack.emplace_back(_after_map_option_in_Some_2{
-            std::move(a1), std::move(d_), std::move(_result)});
+            std::move(a1), std::move(_f.d_), std::move(_result)});
         _stack.emplace_back(_call{&a3});
       } else {
         auto _f = std::move(std::get<_after_map_option_in_Some_2>(_popped));
         _stack.pop_back();
         typename X::t a1 = std::move(_f.a1);
-        auto d_ = std::move(_f.d_);
-        _result = join<T2>(std::move(_f._tmp2), std::move(a1), std::move(d_),
+        _result = join<T2>(std::move(_f._tmp2), std::move(a1), std::move(_f.d_),
                            std::move(_result));
       }
     }
@@ -2813,16 +2811,14 @@ template <Int I, OrderedType X> struct Raw {
         typename X::t a1 = std::move(_f.a1);
         const tree<T1> &a3 = *_f.a3;
         tree<T2> r2_ = std::move(_f.r2_);
-        auto e = std::move(_f.e);
         _stack.emplace_back(_after_map2_opt_in_Some_2{
-            std::move(a1), std::move(e), std::move(_result)});
+            std::move(a1), std::move(_f.e), std::move(_result)});
         _stack.emplace_back(_call{std::move(r2_), &a3});
       } else {
         auto _f = std::move(std::get<_after_map2_opt_in_Some_2>(_popped));
         _stack.pop_back();
         typename X::t a1 = std::move(_f.a1);
-        auto e = std::move(_f.e);
-        _result = join<T3>(std::move(_f._tmp2), std::move(a1), std::move(e),
+        _result = join<T3>(std::move(_f._tmp2), std::move(a1), std::move(_f.e),
                            std::move(_result));
       }
     }
@@ -2839,18 +2835,20 @@ template <Int I, OrderedType X> struct Raw {
           return f(std::make_optional<T1>(d), o);
         },
         [=](tree<T1> _x0) -> tree<T3> {
-          return map_option<T1, T3>([=, f = f](key,
-                                               const T1 &d) {
-            return f(std::make_optional<T1>(d), std::optional<T2>());
-          },
-                                    _x0);
+          return map_option<T1, T3>(
+              [=, f = f](key,
+                         const T1 &d) {
+                return f(std::make_optional<T1>(d), std::optional<T2>());
+              },
+              _x0);
         },
         [=](tree<T2> _x0) -> tree<T3> {
-          return map_option<T2, T3>([=, f = f](key,
-                                               const T2 &d_) {
-            return f(std::optional<T1>(), std::make_optional<T2>(d_));
-          },
-                                    _x0);
+          return map_option<T2, T3>(
+              [=, f = f](key,
+                         const T2 &d_) {
+                return f(std::optional<T1>(), std::make_optional<T2>(d_));
+              },
+              _x0);
         },
         x0_,
         x1_);

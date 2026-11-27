@@ -31,7 +31,8 @@ FoldClosureBuild::collect_adders(const FoldClosureBuild::mylist<uint64_t> &l) {
       [](const FoldClosureBuild::mylist<crane::fn<uint64_t(uint64_t)>> &acc,
          uint64_t h) {
         return mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-            [=](uint64_t x) { return (h + x); }, acc);
+            [=](uint64_t x) { return (h + x); },
+            acc);
       },
       mylist<crane::fn<uint64_t(uint64_t)>>::mynil(),
       l);

@@ -169,10 +169,11 @@ MemSafetyProbe5::collect_left_vals(
         const MemSafetyProbe5::tree &a0_value = *a0;
         const MemSafetyProbe5::tree &a2_value = *a2;
         _stack.emplace_back(_after_collect_left_vals_in_Node{a0});
-        _stack.emplace_back(_call{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-            [=](uint64_t _x0) -> uint64_t { return t.get_left_val(_x0); },
-            std::move(acc)),
-                                  a2_value});
+        _stack.emplace_back(_call{
+            mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+                [=](uint64_t _x0) -> uint64_t { return t.get_left_val(_x0); },
+                std::move(acc)),
+            a2_value});
       }
     } else {
       auto _f = std::move(std::get<_after_collect_left_vals_in_Node>(_popped));

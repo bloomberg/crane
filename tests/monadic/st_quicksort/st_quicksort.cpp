@@ -187,8 +187,7 @@ std::string StQuicksort::list_to_string(const List<uint64_t> &l) {
 }
 
 std::string StQuicksort::test_quicksort_ST() {
-  List<uint64_t> out = quicksort_ST_mine(input_lst1);
-  return list_to_string(std::move(out));
+  return list_to_string(quicksort_ST_mine(input_lst1));
 }
 
 std::string StQuicksort::test_quicksort_fun() {

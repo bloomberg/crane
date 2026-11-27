@@ -717,10 +717,11 @@ struct IntrinsicTableCurry {
   static_assert(Params<natParams>);
   static inline const Nat count =
       defined<natParams, FailE>(CategoryOps::template ReSum_id<
-          crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
-        return crane_erase_global<Function::Id_IFun, crane::obj>();
-      },
-                                                         crane::obj()))
+          crane::obj, crane::fn<crane::obj(crane::obj)>>(
+          [](crane::obj) {
+            return crane_erase_global<Function::Id_IFun, crane::obj>();
+          },
+          crane::obj()))
           .length();
   static inline const bool is_six =
       count.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));

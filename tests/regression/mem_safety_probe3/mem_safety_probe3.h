@@ -181,13 +181,16 @@ struct MemSafetyProbe3 {
         std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>,
         uint64_t> nested_pair() const {
       tree _self_val = *this;
-      return std::make_pair(std::make_pair(
-          crane::fn<uint64_t(uint64_t)>(
-              [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
+      return std::make_pair(
+          std::make_pair(
+              crane::fn<uint64_t(uint64_t)>([=,
+                                             _self_val = std::move(_self_val)](
+                  uint64_t _x0)
+                                                 -> uint64_t {
                 return _self_val.sum_values(_x0);
               }),
-          crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; })),
-                            this->sum_values(UINT64_C(0)));
+              crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; })),
+          this->sum_values(UINT64_C(0)));
     }
 
     /// TEST 5: Mutual use: tree used BOTH as partial application arg
@@ -674,10 +677,12 @@ struct MemSafetyProbe3 {
   static inline const uint64_t test_apply_n = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      return apply_n_times([=, t = std::move(t)](uint64_t _x0) -> uint64_t {
-        return t.sum_values(_x0);
-      },
-                           UINT64_C(5), UINT64_C(0));
+      return apply_n_times(
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+            return t.sum_values(_x0);
+          },
+          UINT64_C(5),
+          UINT64_C(0));
     }();
   }();
   /// TEST 12: Closure that partially applies a fixpoint.
@@ -691,7 +696,8 @@ struct MemSafetyProbe3 {
                 [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
                   return t.sum_values(_x0);
                 },
-                UINT64_C(3), _x0);
+                UINT64_C(3),
+                _x0);
           };
       return (f(UINT64_C(0)) + f(UINT64_C(10)));
     }();

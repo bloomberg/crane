@@ -166,7 +166,8 @@ Comparison Pos::compare(const Positive &x0_, const Positive &x1_) {
 
 uint64_t Pos::to_nat(const Positive &x) {
   return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      x,
       UINT64_C(1));
 }
 
@@ -315,10 +316,9 @@ List<uint64_t> ReuseListShapes::bump(List<uint64_t> l) {
       const auto &[a0, a1] =
           crane::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto _rs = crane::reuse_step(_own, _uniq, a1);
-      auto _cell = crane::make_rc_reusing_unchecked(
+      *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token),
           typename List<uint64_t>::Cons((crane::unbox(a0) + 1), nullptr));
-      *_write = std::move(_cell);
       _write = &crane::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _own = std::move(_rs.next);
       _loop_l = _own.get();

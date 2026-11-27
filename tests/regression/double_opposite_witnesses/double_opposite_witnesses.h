@@ -184,8 +184,9 @@ struct DoubleOppositeWitnessesCase {
     static const auto erased_fn = crane::immortal(crane_erase_fn<Hom>(
         [](const typename _tcI0::Obj &, const typename _tcI0::Obj &,
            const auto &f) { return f; }));
-    return Functor<typename _tcI0::Obj>{[](typename _tcI0::Obj x) { return x; },
-                                        erased_fn};
+    return Functor<typename _tcI0::Obj>{
+        [](typename _tcI0::Obj x) { return x; },
+        erased_fn};
   }
 
   template <PreCategory _tcI0>

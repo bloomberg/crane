@@ -17,9 +17,8 @@ List<uint64_t> FrameKeptConsumedBeforeCall::snoc(List<uint64_t> x) {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_x->v());
       auto _rs = crane::reuse_step(_own, _uniq, a1);
-      auto _cell = crane::make_rc_reusing_unchecked(
+      *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token), typename List<uint64_t>::Cons(a0, nullptr));
-      *_write = std::move(_cell);
       _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _own = std::move(_rs.next);
       _loop_x = _own.get();
@@ -137,8 +136,7 @@ FrameKeptConsumedBeforeCall::again(uint64_t fuel, List<List<uint64_t>> l) {
           } else {
             const auto &[_, a10] =
                 std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
-            List<uint64_t> y = snoc(a0);
-            _stack.emplace_back(_after_again_in_Cons{a0, std::move(y)});
+            _stack.emplace_back(_after_again_in_Cons{a0, snoc(a0)});
             _stack.emplace_back(_call{
                 List<List<uint64_t>>::cons(std::move(a0), crane::child(a10)),
                 k});

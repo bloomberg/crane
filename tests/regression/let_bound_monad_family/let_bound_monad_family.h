@@ -758,37 +758,35 @@ struct LetBoundMonadFamily {
   gen(const Itree<Sum1<getE, outE, crane::obj>, Nat> &arg);
   static inline const Itree<BotE<crane::obj>, Nat> result = []() {
     return gen(
-        ITree::template trigger<TopE<crane::obj>, Nat>(
-            Subevent::template subevent<getE, Sum1<getE, outE, crane::obj>,
-                                        Nat>(
-                CategoryOps::template ReSum_inl<
+        ITree::template trigger<TopE<crane::obj>, Nat>(Subevent::template subevent<
+            getE, Sum1<getE, outE, crane::obj>, Nat>(
+            CategoryOps::template ReSum_inl<crane::obj,
+                                            crane::fn<crane::obj(crane::obj)>>(
+                [](const auto &, const auto &) { return crane::obj(); },
+                [](crane::obj, crane::obj, crane::obj, const auto &x,
+                   crane::fn<crane::obj(crane::obj)> x0) {
+                  return [=, x0 = std::move(x0)](crane::obj _x0) -> crane::obj {
+                    return Function::Cat_IFun(
+                        x, crane::any_cast<IFun<crane::obj, crane::obj>>(
+                               std::move(x0)),
+                        _x0);
+                  };
+                },
+                [](crane::obj,
+                   crane::obj) {
+                  return crane_erase_global<Function::Inl_sum1, crane::obj>();
+                },
+                crane::obj(),
+                crane::obj(),
+                crane::obj(),
+                CategoryOps::template ReSum_id<
                     crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                    [](const auto &, const auto &) { return crane::obj(); },
-                    [](crane::obj, crane::obj, crane::obj, const auto &x,
-                       crane::fn<crane::obj(crane::obj)> x0) {
-                      return [=, x0 = std::move(x0)](crane::obj _x0) -> crane::obj {
-                        return Function::Cat_IFun(
-                            x, crane::any_cast<IFun<crane::obj, crane::obj>>(
-                                   std::move(x0)),
-                            _x0);
-                      };
-                    },
-                    [](crane::obj,
-                       crane::obj) {
-                      return crane_erase_global<Function::Inl_sum1,
+                    [](crane::obj) {
+                      return crane_erase_global<Function::Id_IFun,
                                                 crane::obj>();
                     },
-                    crane::obj(),
-                    crane::obj(),
-                    crane::obj(),
-                    CategoryOps::template ReSum_id<
-                        crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                        [](crane::obj) {
-                          return crane_erase_global<Function::Id_IFun,
-                                                    crane::obj>();
-                        },
-                        crane::obj())),
-                getE::get(Nat::o()))));
+                    crane::obj())),
+            getE::get(Nat::o()))));
   }();
   static std::optional<Nat>
   run(const Nat &fuel, const Itree<Sum1<outE, noE, crane::obj>, Nat> &t);

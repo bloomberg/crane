@@ -250,6 +250,7 @@ uint64_t LoopifyMutualPartialApp::sum_md(
 /// 313
 bool LoopifyMutualPartialApp::check() {
   return sum_e(ft_e<LoopifyMutualPartialApp::endo_double, uint64_t, uint64_t>(
-      [](uint64_t u) { return (u + UINT64_C(100)); }, sample)) ==
+      [](uint64_t u) { return (u + UINT64_C(100)); },
+      sample)) ==
          (UINT64_C(14) + UINT64_C(313));
 }

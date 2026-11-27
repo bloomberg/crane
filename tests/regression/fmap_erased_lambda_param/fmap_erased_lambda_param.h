@@ -228,7 +228,8 @@ template <Monad _tcI0>
 typename _tcI0::template m<Sum<Exc, Dv>>
 raise_right(typename _tcI0::template m<Dv> m) {
   return Functor_Monad<_tcI0>::template fmap<Dv, Sum<Exc, Dv>>(
-      [](const Dv &x) { return Sum<Exc, Dv>::inr(x); }, std::move(m));
+      [](const Dv &x) { return Sum<Exc, Dv>::inr(x); },
+      std::move(m));
 }
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>

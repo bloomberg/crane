@@ -217,7 +217,8 @@ struct CoindGuard {
   static inline const Stream<uint64_t> nats =
       iterate<uint64_t>([](uint64_t x) { return (x + 1); }, UINT64_C(0));
   static inline const Stream<uint64_t> evens = smap<uint64_t, uint64_t>(
-      [](uint64_t n) { return (n * UINT64_C(2)); }, nats);
+      [](uint64_t n) { return (n * UINT64_C(2)); },
+      nats);
   static inline const Stream<uint64_t> fibs =
       unfold<uint64_t, std::pair<uint64_t, uint64_t>>(
           [](std::pair<uint64_t, uint64_t> pat) {
@@ -228,7 +229,8 @@ struct CoindGuard {
   static inline const Stream<uint64_t> sum_stream =
       zipWith<uint64_t, uint64_t, uint64_t>(
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          nats, evens);
+          nats,
+          evens);
   static inline const List<uint64_t> test_nats_5 =
       take<uint64_t>(UINT64_C(5), nats);
   static inline const List<uint64_t> test_evens_5 =

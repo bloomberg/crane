@@ -366,7 +366,8 @@ struct TfunctorRecordListField {
                   List<operand<Nat>>::nil()))};
   static inline const bundle<Nat> b1 =
       TFunctor_bundle::template tfmap<Nat, Nat>(
-          [](const Nat &x) { return Nat::s(x); }, b0);
+          [](const Nat &x) { return Nat::s(x); },
+          b0);
   static inline const Nat total =
       b1.ops.template fold_left<Nat>(
           [](const Nat &acc, const operand<Nat> &o) {

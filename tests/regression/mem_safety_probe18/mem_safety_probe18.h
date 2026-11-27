@@ -114,9 +114,9 @@ struct MemSafetyProbe18 {
     /// TEST 7: Use a value type in a chain of let-bindings where
     /// each binding transforms the tree.
     uint64_t chain_transforms() const {
-      tree t1 =
-          tree::node(crane::shared_child(this), UINT64_C(0), tree::leaf());
-      tree t2 = tree::node(tree::leaf(), UINT64_C(0), std::move(t1));
+      tree t2 = tree::node(
+          tree::leaf(), UINT64_C(0),
+          tree::node(crane::shared_child(this), UINT64_C(0), tree::leaf()));
       tree t3 =
           tree::node(std::move(t2), UINT64_C(0), crane::shared_child(this));
       return t3.tree_sum();

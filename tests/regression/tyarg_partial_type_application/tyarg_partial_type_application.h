@@ -206,8 +206,9 @@ struct TyargPartialTypeApplication {
   }
 
   static inline const std::optional<uint64_t> lifted =
-      lift_opt<uint64_t, uint64_t>([](uint64_t x) { return (x + 1); },
-                                   std::make_optional<uint64_t>(UINT64_C(4)));
+      lift_opt<uint64_t, uint64_t>(
+          [](uint64_t x) { return (x + 1); },
+          std::make_optional<uint64_t>(UINT64_C(4)));
 
   template <typename T1> static std::pair<T1, T1> twice(const T1 &x) {
     return std::make_pair(x, x);

@@ -68,6 +68,5 @@ uint64_t FixMoveCapture::f2(FixMoveCapture::mylist l) {
   };
   auto go = [&](uint64_t n) -> uint64_t { return go_impl(go_impl, n); };
   uint64_t result_g = go(UINT64_C(3));
-  FixMoveCapture::mylist t = dup_head(l);
-  return (result_g + length(std::move(t)));
+  return (result_g + length(dup_head(l)));
 }

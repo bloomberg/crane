@@ -563,12 +563,14 @@ struct ItreeInterp {
   static inline const Itree<GetE, Nat> prog = []() {
     return ITree::template bind<GetE, Nat, Nat>(
         ITree::template trigger<GetE, Nat>(Subevent::template subevent<
-            GetE, GetE, Nat>(CategoryOps::template ReSum_id<
-            crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
-          return crane_erase_global<Function::Id_IFun, crane::obj>();
-        },
-                                                           crane::obj()),
-                             GetE::GET)),
+            GetE, GetE, Nat>(
+            CategoryOps::template ReSum_id<crane::obj,
+                                           crane::fn<crane::obj(crane::obj)>>(
+                [](crane::obj) {
+                  return crane_erase_global<Function::Id_IFun, crane::obj>();
+                },
+                crane::obj()),
+            GetE::GET)),
         [](const Nat &x) {
           // Built on the first call and immortal: every thread reads it without
           // touching its counts.

@@ -3,5 +3,6 @@
 holder<Nat, List<Nat>>
 HkDictFromConstraintParam::run(const holder<Nat, List<Nat>> &m) {
   return TFunctor_holder<TFunctor_list, TFunctor_box>::template tfmap<Nat, Nat>(
-      [](const Nat &x) { return Nat::s(x); }, m);
+      [](const Nat &x) { return Nat::s(x); },
+      m);
 }

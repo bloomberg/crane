@@ -30,9 +30,9 @@ List<int64_t> RecursiveMonadic::collect_lengths(const List<std::string> &xs) {
   } else {
     const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
     std::cout << a0 << '\n';
-    List<int64_t> rest_ = collect_lengths(*a1);
     return List<int64_t>::cons(
-        static_cast<int64_t>((std::string_view{a0}).size()), std::move(rest_));
+        static_cast<int64_t>((std::string_view{a0}).size()),
+        collect_lengths(*a1));
   }
 }
 
@@ -56,8 +56,7 @@ List<std::string> RecursiveMonadic::read_n_lines(uint64_t n) {
     uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    List<std::string> rest = read_n_lines(n_);
-    return List<std::string>::cons(std::move(line), std::move(rest));
+    return List<std::string>::cons(std::move(line), read_n_lines(n_));
   }
 }
 

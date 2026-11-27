@@ -425,13 +425,19 @@ uint64_t shiftr(uint64_t a, uint64_t n) {
 }
 
 uint64_t land(uint64_t a, uint64_t b) {
-  return bitwise([](bool _x0, bool _x1) -> bool { return (_x0 && _x1); }, a, a,
-                 b);
+  return bitwise(
+      [](bool _x0, bool _x1) -> bool { return (_x0 && _x1); },
+      a,
+      a,
+      b);
 }
 
 uint64_t lor(uint64_t a, uint64_t b) {
-  return bitwise([](bool _x0, bool _x1) -> bool { return (_x0 || _x1); },
-                 std::max(a, b), a, b);
+  return bitwise(
+      [](bool _x0, bool _x1) -> bool { return (_x0 || _x1); },
+      std::max(a, b),
+      a,
+      b);
 }
 
 uint64_t ldiff(uint64_t a, uint64_t b) {

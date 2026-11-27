@@ -93,9 +93,9 @@ AliasSlot::parts AliasSlot::comma_parts(const List<String> &xs,
     } else {
       const auto &[a0, a1] =
           crane::get<typename List<String>::Cons>(_loop_xs->v());
-      auto _cell1 = crane::shared_box<List<String>>::make(
-          typename List<String>::Cons(k_1, nullptr));
-      auto _cell = typename List<String>::Cons(a0, std::move(_cell1));
+      auto _cell = typename List<String>::Cons(
+          a0, crane::shared_box<List<String>>::make(
+                  typename List<String>::Cons(k_1, nullptr)));
       AliasSlot::parts &_node =
           (_write ? *(*_write = crane::shared_box<AliasSlot::parts>::make(
                           std::move(_cell)))

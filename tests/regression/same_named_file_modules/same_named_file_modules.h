@@ -1472,10 +1472,11 @@ struct Coq_Pos {
     auto _lc1_pa0 = f(Positive::xh(), a);
     crane::fn<T1(Positive)> f2 = [=](Positive _x0) -> T1 {
       return peano_rect<T1>(
-          _lc1_pa0, [=, f = f](const Positive &p0,
-                               const T1 &x) {
-                      return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
-                    },
+          _lc1_pa0,
+          [=, f = f](const Positive &p0,
+                     const T1 &x) {
+            return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
+          },
           _x0);
     };
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
@@ -1753,9 +1754,12 @@ struct Coq_Pos {
     template <typename T1, typename F2>
     static T1 max_case(Positive n, Positive m0, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return max_case_strong<T1>(std::move(n), std::move(m0), x,
-                                 [=, x0 = x0]() { return x0; }(),
-                                 [=, x1 = x1]() { return x1; }());
+      return max_case_strong<T1>(
+          std::move(n),
+          std::move(m0),
+          x,
+          [=, x0 = x0]() { return x0; }(),
+          [=, x1 = x1]() { return x1; }());
     }
 
     static bool max_dec(Positive n, Positive m0);
@@ -1779,9 +1783,12 @@ struct Coq_Pos {
     template <typename T1, typename F2>
     static T1 min_case(Positive n, Positive m0, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return min_case_strong<T1>(std::move(n), std::move(m0), x,
-                                 [=, x0 = x0]() { return x0; }(),
-                                 [=, x1 = x1]() { return x1; }());
+      return min_case_strong<T1>(
+          std::move(n),
+          std::move(m0),
+          x,
+          [=, x0 = x0]() { return x0; }(),
+          [=, x1 = x1]() { return x1; }());
     }
 
     static bool min_dec(Positive n, Positive m0);
@@ -1791,15 +1798,20 @@ struct Coq_Pos {
   static T1 max_case_strong(Positive n, Positive m0, const T1 &x,
                             const T1 &x0) {
     return Private_Dec::template max_case_strong<T1>(
-        std::move(n), std::move(m0),
-        [](Positive, Positive, T1 x1) { return x1; }, x, x0);
+        std::move(n),
+        std::move(m0),
+        [](Positive, Positive, T1 x1) { return x1; },
+        x,
+        x0);
   }
 
   template <typename T1>
   static T1 max_case(Positive n, Positive m0, const T1 &x, const T1 &x0) {
-    return max_case_strong<T1>(std::move(n), std::move(m0),
-                               [=, x = x]() { return x; }(),
-                               [=, x0 = x0]() { return x0; }());
+    return max_case_strong<T1>(
+        std::move(n),
+        std::move(m0),
+        [=, x = x]() { return x; }(),
+        [=, x0 = x0]() { return x0; }());
   }
 
   static bool max_dec(Positive x0_, Positive x1_);
@@ -1808,15 +1820,20 @@ struct Coq_Pos {
   static T1 min_case_strong(Positive n, Positive m0, const T1 &x,
                             const T1 &x0) {
     return Private_Dec::template min_case_strong<T1>(
-        std::move(n), std::move(m0),
-        [](Positive, Positive, T1 x1) { return x1; }, x, x0);
+        std::move(n),
+        std::move(m0),
+        [](Positive, Positive, T1 x1) { return x1; },
+        x,
+        x0);
   }
 
   template <typename T1>
   static T1 min_case(Positive n, Positive m0, const T1 &x, const T1 &x0) {
-    return min_case_strong<T1>(std::move(n), std::move(m0),
-                               [=, x = x]() { return x; }(),
-                               [=, x0 = x0]() { return x0; }());
+    return min_case_strong<T1>(
+        std::move(n),
+        std::move(m0),
+        [=, x = x]() { return x; }(),
+        [=, x0 = x0]() { return x0; }());
   }
 
   static bool min_dec(Positive x0_, Positive x1_);
@@ -2112,11 +2129,12 @@ template <OrderedType X> struct Raw {
   combine(List<std::pair<typename X::t, T1>> m0, const t<T2> &x0_) {
     if (std::holds_alternative<typename List<std::pair<typename X::t,
                                                        T1>>::Nil>(m0.v())) {
-      return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>([](
-          const T2 &e_) {
-        return std::make_pair(std::optional<T1>(), std::make_optional<T2>(e_));
-      },
-                                                                      x0_);
+      return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>(
+          [](const T2 &e_) {
+            return std::make_pair(std::optional<T1>(),
+                                  std::make_optional<T2>(e_));
+          },
+          x0_);
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(m0.v());

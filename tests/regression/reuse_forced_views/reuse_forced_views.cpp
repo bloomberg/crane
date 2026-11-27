@@ -362,10 +362,9 @@ ReuseForcedViews::carry(List<ReuseForcedViews::tree> q,
         } else {
           auto _read = smash(_loop_t, a0);
           auto _rs = crane::reuse_step(_own, _uniq, a1);
-          auto _cell = crane::make_rc_reusing_unchecked(
+          *_write = crane::make_rc_reusing_unchecked(
               std::move(_rs.token), typename List<ReuseForcedViews::tree>::Cons(
                                         tree::leaf(), nullptr));
-          *_write = std::move(_cell);
           _write =
               &std::get<typename List<ReuseForcedViews::tree>::Cons>(
                   (*_write)->v_mut())

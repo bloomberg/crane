@@ -11,5 +11,6 @@ List<Nat> BareSelfMethodValue::sizes(
 Nat BareSelfMethodValue::total(
     const List<BareSelfMethodValue::bareSelfMethodValue> &ts) {
   return sizes(ts).template fold_left<Nat>(
-      [](const Nat &_x0, const Nat &_x1) { return _x0.add(_x1); }, Nat::o());
+      [](const Nat &_x0, const Nat &_x1) { return _x0.add(_x1); },
+      Nat::o());
 }

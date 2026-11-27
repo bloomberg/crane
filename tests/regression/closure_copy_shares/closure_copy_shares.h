@@ -140,8 +140,10 @@ struct ClosureCopyShares {
                    return compose(
                        a,
                        [=, a = a](uint64_t _x0) -> uint64_t {
-                         return compose([](uint64_t x) { return (x + 1); }, a,
-                                        _x0);
+                         return compose(
+                             [](uint64_t x) { return (x + 1); },
+                             a,
+                             _x0);
                        },
                        _x0);
                  },

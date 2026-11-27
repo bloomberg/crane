@@ -261,33 +261,34 @@ using grammar_entry = SigT<production, production_semty>;
 const std::deque<grammar_entry> entries = [](auto _a0, auto _a1) {
   _a1.push_front(_a0);
   return _a1;
-}(SigT<Prod<Nonterminal, std::deque<Symbol>>,
-       Prod<crane::obj, crane::obj>>::existt(
-      Prod<Nonterminal, std::deque<Symbol>>::pair(Nonterminal::NARR,
-                                                  std::deque<Symbol>{}),
-      Prod<crane::obj, crane::obj>::pair(
-          crane_erase_fn([](const crane::obj &) { return Bool0::TRUE_; }),
-          crane_erase_fn(
-              [](const crane::obj &) { return std::deque<crane::obj>{}; }))),
-  [](auto _a0, auto _a1) {
-    _a1.push_front(_a0);
-    return _a1;
-  }(
-      SigT<Prod<Nonterminal, std::deque<Symbol>>,
-           Prod<crane::obj, crane::obj>>::existt(
-          Prod<Nonterminal, std::deque<Symbol>>::pair(
-              Nonterminal::NVAL, [](auto _a0, auto _a1) {
-                _a1.push_front(_a0);
-                return _a1;
-              }(Symbol::nt(Nonterminal::NARR), std::deque<Symbol>{})),
-          Prod<crane::obj, crane::obj>::pair(
-              crane_erase_fn([](const crane::obj &) { return Bool0::TRUE_; }),
-              crane_erase_fn([](const crane::obj &_any_ss) {
-                Prod<crane::obj, Unit> ss =
-                    crane::any_cast<Prod<crane::obj, Unit>>(_any_ss);
-                auto &[a0, _] = ss;
-                return R::rarr(crane_container_cast<std::deque<R>>(
-                    crane::any_cast<std::deque<crane::obj>>(std::move(a0))));
-              }))),
-      std::deque<SigT<Prod<Nonterminal, std::deque<Symbol>>,
-                      Prod<crane::obj, crane::obj>>>{}));
+}(
+    SigT<Prod<Nonterminal, std::deque<Symbol>>,
+         Prod<crane::obj, crane::obj>>::existt(
+        Prod<Nonterminal, std::deque<Symbol>>::pair(Nonterminal::NARR,
+                                                    std::deque<Symbol>{}),
+        Prod<crane::obj, crane::obj>::pair(
+            crane_erase_fn([](const crane::obj &) { return Bool0::TRUE_; }),
+            crane_erase_fn(
+                [](const crane::obj &) { return std::deque<crane::obj>{}; }))),
+    [](auto _a0, auto _a1) {
+      _a1.push_front(_a0);
+      return _a1;
+    }(
+        SigT<Prod<Nonterminal, std::deque<Symbol>>,
+             Prod<crane::obj, crane::obj>>::existt(
+            Prod<Nonterminal, std::deque<Symbol>>::pair(
+                Nonterminal::NVAL, [](auto _a0, auto _a1) {
+                  _a1.push_front(_a0);
+                  return _a1;
+                }(Symbol::nt(Nonterminal::NARR), std::deque<Symbol>{})),
+            Prod<crane::obj, crane::obj>::pair(
+                crane_erase_fn([](const crane::obj &) { return Bool0::TRUE_; }),
+                crane_erase_fn([](const crane::obj &_any_ss) {
+                  Prod<crane::obj, Unit> ss =
+                      crane::any_cast<Prod<crane::obj, Unit>>(_any_ss);
+                  auto &[a0, _] = ss;
+                  return R::rarr(crane_container_cast<std::deque<R>>(
+                      crane::any_cast<std::deque<crane::obj>>(std::move(a0))));
+                }))),
+        std::deque<SigT<Prod<Nonterminal, std::deque<Symbol>>,
+                        Prod<crane::obj, crane::obj>>>{}));

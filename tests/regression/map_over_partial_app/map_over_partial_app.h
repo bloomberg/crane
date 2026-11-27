@@ -194,12 +194,15 @@ struct MapOverPartialApp {
   static inline const List<crane::fn<Nat(Nat)>> ex = []() {
     return List<crane::fn<Nat(Nat)>>::cons(
         [](const Nat &x) { return Nat::s(x); },
-        List<crane::fn<Nat(Nat)>>::cons([](const Nat &x) { return Nat::s(x); },
-                                        List<crane::fn<Nat(Nat)>>::nil()))
+        List<crane::fn<Nat(Nat)>>::cons(
+            [](const Nat &x) { return Nat::s(x); },
+            List<crane::fn<Nat(Nat)>>::nil()))
                .template map<crane::fn<Nat(Nat)>>([](crane::fn<Nat(Nat)> _x0) {
       return [=](Nat _x1) -> Nat {
-        return comp<Nat, Nat, Nat>([](const Nat &x) { return Nat::s(x); }, _x0,
-                                   _x1);
+        return comp<Nat, Nat, Nat>(
+            [](const Nat &x) { return Nat::s(x); },
+            _x0,
+            _x1);
       };
     });
   }();

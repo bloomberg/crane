@@ -247,10 +247,11 @@ struct CofixUnusedParamAsValue {
           UINT64_C(1),
           List<uint64_t>::cons(UINT64_C(2),
                                List<uint64_t>::nil()))
-          .template fold_left<uint64_t>([](uint64_t a,
-                                           uint64_t x) {
-        return ((a + x) +
-                List<uint64_t>::nil().template map<stream>(c4).length());
-      },
-                                        UINT64_C(0));
+          .template fold_left<uint64_t>(
+          [](uint64_t a,
+             uint64_t x) {
+            return ((a + x) +
+                    List<uint64_t>::nil().template map<stream>(c4).length());
+          },
+          UINT64_C(0));
 };

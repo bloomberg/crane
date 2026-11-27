@@ -243,7 +243,8 @@ struct ReuseNonatomicConstVMut {
             _loop_acc = [&]() {
               if (std::holds_alternative<typename tree::Leaf>(a0.v())) {
                 if (List<uint64_t>::nil().template fold_left<bool>(
-                        [](bool, uint64_t) { return true; }, true)) {
+                        [](bool, uint64_t) { return true; },
+                        true)) {
                   return _loop_acc;
                 } else {
                   return List<bool>::nil();

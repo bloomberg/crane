@@ -299,14 +299,16 @@ std::pair<unsigned int, Pos::mask> Pos::sqrtrem(unsigned int p) {
       return std::make_pair(1u, mask::ispos(2u));
     } else if (p0 % 2u != 0u) {
       unsigned int p1 = (p0 - 1u) / 2u;
-      return sqrtrem_step([](unsigned int x) { return (2u * x + 1u); },
-                          [](unsigned int x) { return (2u * x + 1u); },
-                          sqrtrem(p1));
+      return sqrtrem_step(
+          [](unsigned int x) { return (2u * x + 1u); },
+          [](unsigned int x) { return (2u * x + 1u); },
+          sqrtrem(p1));
     } else {
       unsigned int p1 = p0 / 2u;
-      return sqrtrem_step([](unsigned int x) { return (2u * x); },
-                          [](unsigned int x) { return (2u * x + 1u); },
-                          sqrtrem(p1));
+      return sqrtrem_step(
+          [](unsigned int x) { return (2u * x); },
+          [](unsigned int x) { return (2u * x + 1u); },
+          sqrtrem(p1));
     }
   } else {
     unsigned int p0 = p / 2u;
@@ -314,12 +316,16 @@ std::pair<unsigned int, Pos::mask> Pos::sqrtrem(unsigned int p) {
       return std::make_pair(1u, mask::ispos(1u));
     } else if (p0 % 2u != 0u) {
       unsigned int p1 = (p0 - 1u) / 2u;
-      return sqrtrem_step([](unsigned int x) { return (2u * x + 1u); },
-                          [](unsigned int x) { return (2u * x); }, sqrtrem(p1));
+      return sqrtrem_step(
+          [](unsigned int x) { return (2u * x + 1u); },
+          [](unsigned int x) { return (2u * x); },
+          sqrtrem(p1));
     } else {
       unsigned int p1 = p0 / 2u;
-      return sqrtrem_step([](unsigned int x) { return (2u * x); },
-                          [](unsigned int x) { return (2u * x); }, sqrtrem(p1));
+      return sqrtrem_step(
+          [](unsigned int x) { return (2u * x); },
+          [](unsigned int x) { return (2u * x); },
+          sqrtrem(p1));
     }
   }
 }
@@ -550,7 +556,9 @@ unsigned int Coq_Pos::pred_N(unsigned int x) {
 
 unsigned int Coq_Pos::pow(unsigned int x, unsigned int x0_) {
   return iter<unsigned int>(
-      [=](unsigned int _x0) -> unsigned int { return (x * _x0); }, 1u, x0_);
+      [=](unsigned int _x0) -> unsigned int { return (x * _x0); },
+      1u,
+      x0_);
 }
 
 unsigned int Coq_Pos::square(unsigned int p) {

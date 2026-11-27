@@ -35,5 +35,6 @@ struct ClassPolyMethodErasedFn {
 
   static_assert(Mapper<Twice>);
   static inline const uint64_t go = Twice::template mapf<uint64_t>(
-      [](uint64_t n) { return (n + UINT64_C(3)); }, UINT64_C(1));
+      [](uint64_t n) { return (n + UINT64_C(3)); },
+      UINT64_C(1));
 };

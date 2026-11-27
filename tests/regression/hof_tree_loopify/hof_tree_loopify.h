@@ -441,7 +441,8 @@ struct HofTreeLoopify {
           UINT64_C(6), tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(7),
                                             tree<uint64_t>::leaf())));
   static inline const tree<uint64_t> mapped = tree_map<uint64_t, uint64_t>(
-      [](uint64_t x) { return (x * UINT64_C(2)); }, small_tree);
+      [](uint64_t x) { return (x * UINT64_C(2)); },
+      small_tree);
   static inline const uint64_t folded = tree_fold<uint64_t, uint64_t>(
       UINT64_C(0),
       [](uint64_t l, uint64_t x, uint64_t r) { return ((l + x) + r); },
@@ -449,10 +450,12 @@ struct HofTreeLoopify {
   static inline const tree<uint64_t> zipped =
       tree_zip_with<uint64_t, uint64_t, uint64_t>(
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          small_tree, small_tree);
+          small_tree,
+          small_tree);
   static inline const std::pair<uint64_t, tree<uint64_t>> accum =
       tree_map_accum<uint64_t, uint64_t, uint64_t>(
           [](uint64_t s, uint64_t x) { return std::make_pair((s + x), s); },
-          UINT64_C(0), small_tree);
+          UINT64_C(0),
+          small_tree);
   static inline const tree<uint64_t> deep = depth_tree(UINT64_C(50000));
 };

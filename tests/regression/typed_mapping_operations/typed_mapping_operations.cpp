@@ -34,8 +34,7 @@ ops_support::buffer TypedMappingOperations::push_one(ops_support::buffer b) {
 
 std::pair<ops_support::buffer, uint64_t>
 TypedMappingOperations::push_keep(ops_support::buffer b) {
-  ops_support::buffer c = ops_support::push(b, UINT64_C(1));
-  return std::make_pair(std::move(c),
+  return std::make_pair(ops_support::push(b, UINT64_C(1)),
                         static_cast<std::uint64_t>(b.items.size()));
 }
 

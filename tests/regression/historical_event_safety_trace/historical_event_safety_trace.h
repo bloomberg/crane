@@ -331,10 +331,18 @@ struct HistoricalEventSafetyTraceCase {
                                                                List<
                                                                    InflowRecord>::nil()))))))))));
   [[gnu::used]] static inline const PlantConfig hist_witness_plant =
-      PlantConfig{UINT64_C(500), UINT64_C(500), UINT64_C(500), UINT64_C(1),
-                  UINT64_C(5), UINT64_C(10), UINT64_C(100), UINT64_C(100),
-                  [](uint64_t) { return UINT64_C(100); }, UINT64_C(100),
-                  UINT64_C(1)};
+      PlantConfig{
+          UINT64_C(500),
+          UINT64_C(500),
+          UINT64_C(500),
+          UINT64_C(1),
+          UINT64_C(5),
+          UINT64_C(10),
+          UINT64_C(100),
+          UINT64_C(100),
+          [](uint64_t) { return UINT64_C(100); },
+          UINT64_C(100),
+          UINT64_C(1)};
   static uint64_t hist_witness_stage(uint64_t out);
   static uint64_t hist_witness_ctrl(const State &s, uint64_t _x);
   [[gnu::used]] static inline const State hist_witness_initial =
@@ -346,9 +354,17 @@ struct HistoricalEventSafetyTraceCase {
       hist_witness_plant, flood_2011_inflows, UINT64_C(0), hist_witness_ctrl,
       hist_witness_stage, hist_witness_initial, UINT64_C(10), UINT64_C(2011));
   static inline const PlantConfig hoover_dam_config = PlantConfig{
-      UINT64_C(2200), UINT64_C(100), UINT64_C(500), UINT64_C(15), UINT64_C(5),
-      UINT64_C(10), UINT64_C(1000), UINT64_C(1000),
-      [](uint64_t) { return UINT64_C(1000); }, UINT64_C(200), UINT64_C(60)};
+      UINT64_C(2200),
+      UINT64_C(100),
+      UINT64_C(500),
+      UINT64_C(15),
+      UINT64_C(5),
+      UINT64_C(10),
+      UINT64_C(1000),
+      UINT64_C(1000),
+      [](uint64_t) { return UINT64_C(1000); },
+      UINT64_C(200),
+      UINT64_C(60)};
   static inline const State hoover_initial_state =
       State{UINT64_C(1500), UINT64_C(20), UINT64_C(0)};
   static uint64_t hoover_controller(const State &s, uint64_t _x);

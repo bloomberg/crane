@@ -201,17 +201,20 @@ struct HigherOrder {
           test_list));
   static inline const uint64_t test_foldr = foldr<uint64_t, uint64_t>(
       [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-      UINT64_C(0), test_list);
+      UINT64_C(0),
+      test_list);
   static inline const uint64_t test_foldl = foldl<uint64_t, uint64_t>(
       [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-      UINT64_C(0), test_list);
+      UINT64_C(0),
+      test_list);
   static inline const uint64_t test_compose =
       compose<uint64_t, uint64_t, uint64_t>(
           [](uint64_t _x0) -> uint64_t { return (UINT64_C(2) * _x0); },
           [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
           UINT64_C(3));
   static inline const uint64_t test_iterate = iterate<uint64_t>(
-      UINT64_C(3), [](uint64_t _x0) -> uint64_t { return (UINT64_C(2) + _x0); },
+      UINT64_C(3),
+      [](uint64_t _x0) -> uint64_t { return (UINT64_C(2) + _x0); },
       UINT64_C(0));
   static inline const uint64_t test_adder = adder(UINT64_C(5), UINT64_C(3));
   static inline const uint64_t test_twice = twice<uint64_t>(

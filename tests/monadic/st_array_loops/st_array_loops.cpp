@@ -63,7 +63,6 @@ std::pair<uint64_t, List<uint64_t>> StArrayLoops::loops_list(uint64_t n) {
                                                        UINT64_C(2));
   zero_from(std::span{*arr}, UINT64_C(1), UINT64_C(2));
   uint64_t s = sum_from(std::span{std::as_const(*arr)}, UINT64_C(0), n);
-  List<uint64_t> elems =
-      crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
-  return std::make_pair(s, std::move(elems));
+  return std::make_pair(
+      s, crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)}));
 }

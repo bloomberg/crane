@@ -1133,10 +1133,9 @@ LoopifyLists::interleave(const LoopifyLists::list<uint64_t> &l1,
       } else {
         const auto &[a00, a10] = std::get<
             typename LoopifyLists::list<uint64_t>::Cons>(_loop_l2->v());
-        auto _cell1 = std::make_shared<LoopifyLists::list<uint64_t>>(
-            typename LoopifyLists::list<uint64_t>::Cons(a00, nullptr));
-        auto _cell =
-            typename LoopifyLists::list<uint64_t>::Cons(a0, std::move(_cell1));
+        auto _cell = typename LoopifyLists::list<uint64_t>::Cons(
+            a0, std::make_shared<LoopifyLists::list<uint64_t>>(
+                    typename LoopifyLists::list<uint64_t>::Cons(a00, nullptr)));
         LoopifyLists::list<uint64_t> &_node = (
             _write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
                            std::move(_cell)))

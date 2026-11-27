@@ -160,8 +160,7 @@ struct Coq_Pos {
       } else {
         auto _f = std::move(crane::get<_after_iter_op_in_XI>(_popped));
         _stack.pop_back();
-        auto a0 = std::move(_f.a0);
-        _result = op(std::move(a0), std::move(_result));
+        _result = op(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -213,8 +212,7 @@ struct Pos {
       } else {
         auto _f = std::move(crane::get<_after_iter_op_in_XI>(_popped));
         _stack.pop_back();
-        auto a0 = std::move(_f.a0);
-        _result = op(std::move(a0), std::move(_result));
+        _result = op(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;

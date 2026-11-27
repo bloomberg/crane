@@ -412,11 +412,12 @@ struct ItreeTriggerSubevent {
                 crane::obj(),
                 crane::obj(),
                 CategoryOps::template ReSum_id<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>([](
-                    crane::obj) {
-                  return crane_erase_global<Function::Id_IFun, crane::obj>();
-                },
-                                                                   crane::obj())),
+                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                    [](crane::obj) {
+                      return crane_erase_global<Function::Id_IFun,
+                                                crane::obj>();
+                    },
+                    crane::obj())),
             fooE::foo(Nat::s(Nat::s(Nat::o())))));
   }();
   static inline const bool is_foo_two = []() {

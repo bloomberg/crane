@@ -547,8 +547,10 @@ struct MemSafetyProbe16 {
                 mylist<tree>::mycons(
                     tree::node(tree::leaf(), UINT64_C(15), tree::leaf()),
                     mylist<tree>::mynil())));
-    return compose_summers(std::move(trees), [](uint64_t n) { return n; },
-                           UINT64_C(0));
+    return compose_summers(
+        std::move(trees),
+        [](uint64_t n) { return n; },
+        UINT64_C(0));
   }();
   /// TEST 3: Build a list of closures where each closure captures
   /// the SAME tree at different levels.

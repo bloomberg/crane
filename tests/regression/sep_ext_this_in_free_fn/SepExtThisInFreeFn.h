@@ -16,7 +16,8 @@ template <S X> struct FreeFn {
       typename Datatypes::template List<T1>> &xss) {
     return ListDef::template map<typename Datatypes::template List<T1>,
                                  typename Datatypes::Nat>(
-        [](const auto &_x) { return _x.length(); }, xss);
+        [](const auto &_x) { return _x.length(); },
+        xss);
   }
 };
 } // namespace SepExtThisInFreeFn

@@ -2,5 +2,6 @@
 
 Ann<Dt> run(const Ann<Nat> &a) {
   return TFunctor_ann::template tfmap<Nat, Dt>(
-      [](const Nat &n) { return Dt::di(n); }, a);
+      [](const Nat &n) { return Dt::di(n); },
+      a);
 }

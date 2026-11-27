@@ -541,11 +541,12 @@ CoalitionBidHonorTraceCase::apply_coalition_member_bid(
 bool CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const CoalitionBidHonorTraceCase::CoalitionMemberBid &cbid) {
-  return (cbid.cmb_member_index < c.length() &&
-          metrics_total_lt(
-              force_metrics(cbid.cmb_new_force),
-              force_metrics(ListDef::template nth<
-                  CoalitionBidHonorTraceCase::Force>(
+  return (
+      cbid.cmb_member_index < c.length() &&
+      metrics_total_lt(
+          force_metrics(cbid.cmb_new_force),
+          force_metrics(
+              ListDef::template nth<CoalitionBidHonorTraceCase::Force>(
                   cbid.cmb_member_index,
                   c.template map<CoalitionBidHonorTraceCase::Force>([](
                       const CoalitionBidHonorTraceCase::CoalitionMember &c0) {
@@ -754,10 +755,9 @@ CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::update_honor(
     const List<std::pair<uint64_t, Z>> &ledger,
     const CoalitionBidHonorTraceCase::Commander &actor, const Z &delta) {
-  CoalitionBidHonorTraceCase::Honor current =
-      ledger_lookup(ledger, actor.cmd_id);
-  return ledger_update_by_id(ledger, actor.cmd_id,
-                             BinInt::add(std::move(current), delta));
+  return ledger_update_by_id(
+      ledger, actor.cmd_id,
+      BinInt::add(ledger_lookup(ledger, actor.cmd_id), delta));
 }
 
 CoalitionBidHonorTraceCase::Honor

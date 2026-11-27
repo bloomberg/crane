@@ -173,7 +173,8 @@ bool Pos::eqb(const Positive &p, const Positive &q) {
 
 uint64_t Pos::to_nat(const Positive &x) {
   return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      x,
       UINT64_C(1));
 }
 
@@ -692,14 +693,13 @@ EpochCellGlyphTraceCase::state_at_cell(const Z &cell) {
 EpochCellGlyphTraceCase::LunarPhase
 EpochCellGlyphTraceCase::predict_moon_phase_from_state(
     const EpochCellGlyphTraceCase::MechanismState &s) {
-  Z phase_angle = BinInt::div(
+  return phase_from_angle(BinInt::div(
       BinInt::mul(s.metonic_dial,
                   Z::zpos(Positive::xo(Positive::xo(
                       Positive::xo(Positive::xi(Positive::xo(Positive::xi(
                           Positive::xi(Positive::xo(Positive::xh())))))))))),
       Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
-          Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))))));
-  return phase_from_angle(std::move(phase_angle));
+          Positive::xo(Positive::xi(Positive::xi(Positive::xh()))))))))));
 }
 
 Z EpochCellGlyphTraceCase::predict_olympiad_year(
@@ -992,9 +992,8 @@ Z EpochCellGlyphTraceCase::months_from_epoch(
 Z EpochCellGlyphTraceCase::saros_cell(
     const Z &epoch_year, const Z &epoch_month,
     const EpochCellGlyphTraceCase::HistoricalEclipse &e) {
-  Z months = months_from_epoch(epoch_year, e.he_year, epoch_month, e.he_month);
   return BinInt::modulo(
-      std::move(months),
+      months_from_epoch(epoch_year, e.he_year, epoch_month, e.he_month),
       Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }

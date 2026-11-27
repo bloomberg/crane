@@ -97,8 +97,8 @@ MemSafetyProbe22::sum_and_rebuild(const MemSafetyProbe22::tree &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       const MemSafetyProbe22::tree &a2 = *_f.a2;
-      std::pair<MemSafetyProbe22::tree, uint64_t> pl = std::move(_result);
-      _stack.emplace_back(_after_sum_and_rebuild_in_Node_2{a1, std::move(pl)});
+      _stack.emplace_back(
+          _after_sum_and_rebuild_in_Node_2{a1, std::move(_result)});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_sum_and_rebuild_in_Node_2>(_popped));

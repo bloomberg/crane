@@ -64,9 +64,9 @@ uint64_t stmtest::io_queue_roundtrip(uint64_t x) {
 }
 
 uint64_t stmtest::stm_orElse_retry_example() {
-  stm::TVar<List<uint64_t>> q =
-      stm::newTVar<List<uint64_t>>(List<uint64_t>::nil());
-  return stm::orElse<uint64_t>(stm_dequeue(std::move(q)), UINT64_C(42));
+  return stm::orElse<uint64_t>(
+      stm_dequeue(stm::newTVar<List<uint64_t>>(List<uint64_t>::nil())),
+      UINT64_C(42));
 }
 
 uint64_t stmtest::io_orElse_retry_example() {

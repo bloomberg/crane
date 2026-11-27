@@ -390,12 +390,12 @@ Denote::freeze(const Tree<typename _tcI4::base> &t) {
     return option_monad::template bind<List<Tree<typename _tcI4::base>>,
                                        Tree<typename _tcI4::base>>(
         Denote::template map_monad<option_monad, Tree<typename _tcI4::base>,
-                                   Tree<typename _tcI4::base>>([](
-            const Tree<typename _tcI4::base> &x) {
-          return Denote::template freeze<_tcI0, _tcI1, _tcI2, _tcI3, _tcI4, T1>(
-              x);
-        },
-                                                               kids0_value),
+                                   Tree<typename _tcI4::base>>(
+            [](const Tree<typename _tcI4::base> &x) {
+              return Denote::template freeze<_tcI0, _tcI1, _tcI2, _tcI3, _tcI4,
+                                             T1>(x);
+            },
+            kids0_value),
         [](const List<Tree<typename _tcI4::base>> &ks) {
           return option_monad::template ret<Tree<typename _tcI4::base>>(
               Tree<typename _tcI4::base>::node(ks));

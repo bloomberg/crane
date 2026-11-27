@@ -110,15 +110,19 @@ struct MemSafetyProbe26 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         if (n <= a1) {
-          return std::make_pair(crane::fn<uint64_t(uint64_t)>([=, a0_value =
-                                                                   a0_value](
-              uint64_t x) { return (x + a0_value.tree_sum()); }),
-                                a1);
+          return std::make_pair(
+              crane::fn<uint64_t(uint64_t)>(
+                  [=, a0_value = a0_value](uint64_t x) {
+                    return (x + a0_value.tree_sum());
+                  }),
+              a1);
         } else {
-          return std::make_pair(crane::fn<uint64_t(uint64_t)>([=, a2_value =
-                                                                   a2_value](
-              uint64_t x) { return (x + a2_value.tree_sum()); }),
-                                a1);
+          return std::make_pair(
+              crane::fn<uint64_t(uint64_t)>(
+                  [=, a2_value = a2_value](uint64_t x) {
+                    return (x + a2_value.tree_sum());
+                  }),
+              a1);
         }
       }
     }
@@ -154,9 +158,10 @@ struct MemSafetyProbe26 {
         const auto &[a0, a1, _] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         if (std::holds_alternative<typename tree::Leaf>(a0_value.v())) {
-          return std::make_pair(crane::fn<uint64_t(uint64_t)>(
-              [=](uint64_t x) { return (x + a1); }),
-                                UINT64_C(0));
+          return std::make_pair(
+              crane::fn<uint64_t(uint64_t)>(
+                  [=](uint64_t x) { return (x + a1); }),
+              UINT64_C(0));
         } else {
           const auto &[a00, a10, a20] =
               std::get<typename tree::Node>(a0_value.v());
@@ -243,11 +248,12 @@ struct MemSafetyProbe26 {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        return std::make_pair(crane::fn<uint64_t(uint64_t)>(
-            [=, a0_value = a0_value, a2_value = a2_value](uint64_t x) {
-              return ((x + a0_value.tree_sum()) + a2_value.tree_sum());
-            }),
-                              a1);
+        return std::make_pair(
+            crane::fn<uint64_t(uint64_t)>(
+                [=, a0_value = a0_value, a2_value = a2_value](uint64_t x) {
+                  return ((x + a0_value.tree_sum()) + a2_value.tree_sum());
+                }),
+            a1);
       }
     }
 

@@ -158,9 +158,9 @@ struct LoopifyLists {
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
-        auto _cell1 =
-            std::make_shared<list<T1>>(typename list<T1>::Cons(a0, nullptr));
-        auto _cell = typename list<T1>::Cons(a0, std::move(_cell1));
+        auto _cell = typename list<T1>::Cons(
+            a0,
+            std::make_shared<list<T1>>(typename list<T1>::Cons(a0, nullptr)));
         list<T1> &_node =
             (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
@@ -225,9 +225,10 @@ struct LoopifyLists {
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto _cell1 =
-              std::make_shared<list<T1>>(typename list<T1>::Cons(sep, nullptr));
-          auto _cell = typename list<T1>::Cons(a0, std::move(_cell1));
+          auto _cell =
+              typename list<T1>::Cons(
+                  a0, std::make_shared<list<T1>>(
+                          typename list<T1>::Cons(sep, nullptr)));
           list<T1> &_node = (
               _write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
                      : _root.emplace(std::move(_cell)));
@@ -322,8 +323,7 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<_after_app_in_Cons>(_popped));
               _stack.pop_back();
-              auto a0 = std::move(_f.a0);
-              _result = list<T1>::cons(std::move(a0), std::move(_result));
+              _result = list<T1>::cons(std::move(_f.a0), std::move(_result));
             }
           }
           return _result;
@@ -370,8 +370,7 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<_after_app_in_Cons>(_popped));
               _stack.pop_back();
-              auto a0 = std::move(_f.a0);
-              _result = list<T1>::cons(std::move(a0), std::move(_result));
+              _result = list<T1>::cons(std::move(_f.a0), std::move(_result));
             }
           }
           return _result;
@@ -682,8 +681,7 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<_after_take_in_Cons>(_popped));
               _stack.pop_back();
-              auto a0 = std::move(_f.a0);
-              _result = list<T1>::cons(std::move(a0), std::move(_result));
+              _result = list<T1>::cons(std::move(_f.a0), std::move(_result));
             }
           }
           return _result;
@@ -1156,8 +1154,7 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<_after_map_head_in_Cons>(_popped));
               _stack.pop_back();
-              auto a00 = std::move(_f.a00);
-              _result = list<T1>::cons(std::move(a00), std::move(_result));
+              _result = list<T1>::cons(std::move(_f.a00), std::move(_result));
             }
           }
           return _result;
@@ -1475,8 +1472,7 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<_after_app_in_Cons>(_popped));
               _stack.pop_back();
-              auto a00 = std::move(_f.a00);
-              _result = list<T1>::cons(std::move(a00), std::move(_result));
+              _result = list<T1>::cons(std::move(_f.a00), std::move(_result));
             }
           }
           return _result;

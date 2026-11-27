@@ -162,7 +162,9 @@ struct BakeMappedValues {
       [](auto _f, const auto &_l, auto _a) {
         for (const auto &_x : _l) _a = _f(_a, _x);
         return _a;
-      }([](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-        digits, UINT64_C(0));
+      }(
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          digits,
+          UINT64_C(0));
   static inline const uint64_t deep_weight = weight(deep);
 };

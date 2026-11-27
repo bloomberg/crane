@@ -190,8 +190,7 @@ T3 STMonad::for_each_with(const List<T2> &xs, const T3 &v, F2 &&f) {
       return _loop_v;
     } else {
       const auto &[a0, a1] = std::get<typename List<T2>::Cons>(_loop_xs->v());
-      T3 v_ = f(_loop_v, a0);
-      _loop_v = std::move(v_);
+      _loop_v = f(_loop_v, a0);
       _loop_xs = crane_raw(a1);
     }
   }

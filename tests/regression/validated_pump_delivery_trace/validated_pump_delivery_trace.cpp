@@ -448,11 +448,10 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
   } else {
     eff_bg = input.pi_current_bg;
   }
-  ValidatedPumpDeliveryTraceCase::Insulin_twentieth carb =
-      carb_bolus_twentieths(input.pi_carbs_g.grams_val, activity_icr);
   ValidatedPumpDeliveryTraceCase::Insulin_twentieth carb_adj =
-      apply_reverse_correction_twentieths(std::move(carb), eff_bg,
-                                          params.prec_target_bg, activity_isf);
+      apply_reverse_correction_twentieths(
+          carb_bolus_twentieths(input.pi_carbs_g.grams_val, activity_icr),
+          eff_bg, params.prec_target_bg, activity_isf);
   ValidatedPumpDeliveryTraceCase::Insulin_twentieth corr =
       correction_twentieths_full(input.pi_now, std::move(eff_bg),
                                  params.prec_target_bg, activity_isf);
@@ -601,10 +600,9 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
             suspend_check_tenths_with_cob(
                 default_config, std::move(eff_bg), std::move(iob),
                 input.pi_carbs_g.grams_val, activity_isf, tdd_capped);
-        ValidatedPumpDeliveryTraceCase::Insulin_twentieth suspended =
-            apply_suspend(std::move(tdd_capped), std::move(suspend_decision));
         ValidatedPumpDeliveryTraceCase::Insulin_twentieth adult_capped =
-            cap_twentieths(std::move(suspended));
+            cap_twentieths(apply_suspend(std::move(tdd_capped),
+                                         std::move(suspend_decision)));
         ValidatedPumpDeliveryTraceCase::Insulin_twentieth capped;
         if (input.pi_weight_kg.has_value()) {
           const uint64_t &w = *input.pi_weight_kg;

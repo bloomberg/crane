@@ -53,9 +53,9 @@ List<uint64_t> LoopifyStrings::join_with(uint64_t sep,
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto _cell1 = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(sep, nullptr));
-        auto _cell = typename List<uint64_t>::Cons(a0, std::move(_cell1));
+        auto _cell = typename List<uint64_t>::Cons(
+            a0, std::make_shared<List<uint64_t>>(
+                    typename List<uint64_t>::Cons(sep, nullptr)));
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))

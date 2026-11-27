@@ -130,8 +130,7 @@ struct EffectPoly {
       return init;
     } else {
       const auto &[a0, a1] = std::get<typename List<T2>::Cons>(xs.v());
-      T1 acc = f(init, a0);
-      return fold_m<T1, T2>(f, std::move(acc), *a1);
+      return fold_m<T1, T2>(f, f(init, a0), *a1);
     }
   }
 

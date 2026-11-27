@@ -353,12 +353,14 @@ struct TypedFitKnownClass {
   static inline const Itree<AskE, uint64_t> program = []() {
     return ITree::template bind<AskE, uint64_t, uint64_t>(
         ITree::template trigger<AskE, uint64_t>(Subevent::template subevent<
-            AskE, AskE, uint64_t>(CategoryOps::template ReSum_id<
-            crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
-          return crane_erase_global<Function::Id_IFun, crane::obj>();
-        },
-                                                           crane::obj()),
-                                  AskE::ASK)),
+            AskE, AskE, uint64_t>(
+            CategoryOps::template ReSum_id<crane::obj,
+                                           crane::fn<crane::obj(crane::obj)>>(
+                [](crane::obj) {
+                  return crane_erase_global<Function::Id_IFun, crane::obj>();
+                },
+                crane::obj()),
+            AskE::ASK)),
         [](uint64_t x) {
           // Built on the first call and immortal: every thread reads it without
           // touching its counts.

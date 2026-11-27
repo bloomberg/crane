@@ -1123,10 +1123,10 @@ LoopifyPatterns::merge_alternating(const LoopifyPatterns::list<uint64_t> &l1,
         const auto &[a00, a10] =
             std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
                 _loop_l2->v());
-        auto _cell1 = std::make_shared<LoopifyPatterns::list<uint64_t>>(
-            typename LoopifyPatterns::list<uint64_t>::Cons(a00, nullptr));
         auto _cell = typename LoopifyPatterns::list<uint64_t>::Cons(
-            a0, std::move(_cell1));
+            a0,
+            std::make_shared<LoopifyPatterns::list<uint64_t>>(
+                typename LoopifyPatterns::list<uint64_t>::Cons(a00, nullptr)));
         LoopifyPatterns::list<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<LoopifyPatterns::list<uint64_t>>(

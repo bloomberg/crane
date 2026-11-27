@@ -1,8 +1,9 @@
 #include "effect_poly.h"
 
 uint64_t EffectPoly::test_map_result() {
-  return map_result<uint64_t, uint64_t>([](uint64_t x) { return (x + 1); },
-                                        UINT64_C(41));
+  return map_result<uint64_t, uint64_t>(
+      [](uint64_t x) { return (x + 1); },
+      UINT64_C(41));
 }
 
 uint64_t EffectPoly::test_lift_nat() {

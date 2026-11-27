@@ -275,11 +275,11 @@ struct Uint63Axioms {
 struct BakeTextTrigraph {
   static inline const List<std::string> words =
       crane::bake::read<List<std::string>>(crane_baked_words_73eb7cade1a4);
-  static inline const uint64_t total =
-      words.template fold_left<uint64_t>([](uint64_t a,
-                                            const std::string &s) {
+  static inline const uint64_t total = words.template fold_left<uint64_t>(
+      [](uint64_t a,
+         const std::string &s) {
         return (a + BinInt::to_nat(
                         Uint63Axioms::to_Z(static_cast<int64_t>(s.size()))));
       },
-                                         UINT64_C(0));
+      UINT64_C(0));
 };

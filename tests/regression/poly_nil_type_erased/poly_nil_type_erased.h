@@ -167,7 +167,8 @@ public:
 struct PolyNilTypeErased {
   template <typename T1> static T1 f(T1 a) {
     return List<T1>::nil().template fold_left<T1>(
-        [](T1 acc, T1) { return acc; }, std::move(a));
+        [](T1 acc, T1) { return acc; },
+        std::move(a));
   }
 
   static inline const uint64_t t = f<uint64_t>(UINT64_C(4));

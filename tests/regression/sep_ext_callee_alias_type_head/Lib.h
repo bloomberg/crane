@@ -24,13 +24,14 @@ template <L X> struct LexFn {
                    typename Datatypes::template List<uint64_t>>
   lex(const typename Datatypes::template List<typename X::Label> &rus,
       const typename Datatypes::template List<uint64_t> &code) {
-    return std::make_pair(ListDef::template map<
-        typename X::Label, std::pair<typename X::Label, uint64_t>>(
-        [=, code = code](typename X::Label r) {
-          return std::make_pair(std::move(r), code.length());
-        },
-        rus),
-                          code);
+    return std::make_pair(
+        ListDef::template map<typename X::Label,
+                              std::pair<typename X::Label, uint64_t>>(
+            [=, code = code](typename X::Label r) {
+              return std::make_pair(std::move(r), code.length());
+            },
+            rus),
+        code);
   }
 };
 

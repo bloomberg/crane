@@ -113,10 +113,11 @@ struct M {
   template <typename T1, typename T2>
   static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2>
   fused(AE e) {
-    return run<T1, T2>([](const AE &a0) -> decltype(auto) {
-      return base<T1>(std::forward<decltype(a0)>(a0));
-    },
-                       e);
+    return run<T1, T2>(
+        [](const AE &a0) -> decltype(auto) {
+          return base<T1>(std::forward<decltype(a0)>(a0));
+        },
+        e);
   }
 
   static std::shared_ptr<ITree<std::pair<Nat, Nat>>> use(const Nat &n);

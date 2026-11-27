@@ -54,10 +54,10 @@ LocalFixReturnsFunction::g(uint64_t, std::optional<uint64_t> x0_) {
           }
         };
     return [=](std::optional<uint64_t> _pa0) {
-      return go(List<bool>::nil(), [](std::optional<uint64_t>) {
-        return std::optional<uint64_t>();
-      },
-                _pa0);
+      return go(
+          List<bool>::nil(),
+          [](std::optional<uint64_t>) { return std::optional<uint64_t>(); },
+          _pa0);
     };
   }()(x0_);
 }

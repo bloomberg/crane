@@ -221,9 +221,8 @@ struct MemSafetyProbe24 {
           const tree *_self = _f._self;
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          std::pair<tree, uint64_t> pl = std::move(_result);
           _stack.emplace_back(
-              _after_tag_tree_in_Node_2{_self, a1, std::move(pl)});
+              _after_tag_tree_in_Node_2{_self, a1, std::move(_result)});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tag_tree_in_Node_2>(_popped));

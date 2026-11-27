@@ -118,26 +118,23 @@ template <typename K, typename V> struct CHT {
 
   std::optional<V> stm_get(const K &k) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
-    List<std::pair<K, V>> xs = stm::readTVar(std::move(b));
-    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k,
-                                                      std::move(xs));
+    return CHT<int, int>::template assoc_lookup<K, V>(
+        this->cht_eqb, k, stm::readTVar(std::move(b)));
   }
 
   void stm_put(const K &k, const V &v) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
-    List<std::pair<K, V>> xs = stm::readTVar(b);
     List<std::pair<K, V>> xs_ =
-        CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
-                                                              v, std::move(xs));
+        CHT<int, int>::template assoc_insert_or_replace<K, V>(
+            this->cht_eqb, k, v, stm::readTVar(b));
     stm::writeTVar(std::move(b), std::move(xs_));
   }
 
   std::optional<V> stm_delete(const K &k) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
-    List<std::pair<K, V>> xs = stm::readTVar(b);
     std::pair<std::optional<V>, List<std::pair<K, V>>> p =
         CHT<int, int>::template assoc_remove<K, V>(this->cht_eqb, k,
-                                                   std::move(xs));
+                                                   stm::readTVar(b));
     auto _cs = p.first;
     if (_cs.has_value()) {
       const V &_x = *_cs;
@@ -153,13 +150,10 @@ template <typename K, typename V> struct CHT {
   V stm_update(const K &k, F1 &&f) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
-    std::optional<V> ov =
-        CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
-    V v = f(std::move(ov));
-    List<std::pair<K, V>> xs_ =
-        CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
-                                                              v, std::move(xs));
-    stm::writeTVar(std::move(b), std::move(xs_));
+    V v = f(CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs));
+    stm::writeTVar(std::move(b),
+                   CHT<int, int>::template assoc_insert_or_replace<K, V>(
+                       this->cht_eqb, k, v, std::move(xs)));
     return v;
   }
 
@@ -267,11 +261,10 @@ template <typename K, typename V> struct CHT {
         return buckets;
       } else {
         uint64_t n_ = _lc1_loop_n - 1;
-        stm::TVar<List<std::pair<T1, T2>>> b = stm::atomically([&] {
+        buckets.push_back(stm::atomically([&] {
           return stm::newTVar<List<std::pair<T1, T2>>>(
               List<std::pair<T1, T2>>::nil());
-        });
-        buckets.push_back(std::move(b));
+        }));
         _lc1_loop_n = n_;
       }
     }

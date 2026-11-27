@@ -13,8 +13,12 @@ uint64_t LocalMutualPartnerTypeArg::run(uint64_t, uint64_t n) {
       return UINT64_C(1);
     } else {
       uint64_t m = n0 - 1;
-      return _self_g(_self_f, _self_g,
-                     [](uint64_t x) { return (x + UINT64_C(1)); }, m, m);
+      return _self_g(
+          _self_f,
+          _self_g,
+          [](uint64_t x) { return (x + UINT64_C(1)); },
+          m,
+          m);
     }
   };
   auto g_impl =

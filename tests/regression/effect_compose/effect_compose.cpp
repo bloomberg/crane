@@ -3,9 +3,7 @@
 /// Spawn a future that doubles a number, retrieve the result.
 uint64_t EffectCompose::par_double(uint64_t n) {
   crane::fn<uint64_t(uint64_t)> double0 = [](uint64_t x) { return (x + x); };
-  std::shared_future<uint64_t> t =
-      std::async(std::launch::async, std::move(double0), n).share();
-  return std::move(t).get();
+  return (std::async(std::launch::async, std::move(double0), n).share()).get();
 }
 
 /// Use parE to compute two values in parallel and add them.
@@ -25,9 +23,8 @@ uint64_t EffectCompose::par_compute_and_greet(uint64_t n) {
   crane::fn<uint64_t(uint64_t)> succ =
       [](uint64_t x) { return (x + UINT64_C(1)); };
   std::cout << std::string("computing...") << '\n';
-  std::shared_future<uint64_t> t =
-      std::async(std::launch::async, std::move(succ), n).share();
-  uint64_t result = std::move(t).get();
+  uint64_t result =
+      (std::async(std::launch::async, std::move(succ), n).share()).get();
   std::cout << std::string("done") << '\n';
   return result;
 }

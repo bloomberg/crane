@@ -189,8 +189,8 @@ struct LoopifyPolymorphic {
       } else {
         auto _f = std::move(std::get<_after_poly_reverse_in_Cons>(_popped));
         _stack.pop_back();
-        auto a0 = std::move(_f.a0);
-        _result = _result.app(List<T1>::cons(std::move(a0), List<T1>::nil()));
+        _result =
+            _result.app(List<T1>::cons(std::move(_f.a0), List<T1>::nil()));
       }
     }
     return _result;

@@ -138,9 +138,8 @@ struct R {
       } else {
         const auto &[a0, a1] = std::get<typename lst::Cons>(_loop_l->v());
         auto _rs = crane::reuse_step(_own, _uniq, a1);
-        auto _cell = crane::make_rc_reusing_unchecked(
+        *_write = crane::make_rc_reusing_unchecked(
             std::move(_rs.token), typename lst::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
         _write = &std::get<typename lst::Cons>((*_write)->v_mut()).a1;
         _own = std::move(_rs.next);
         _loop_l = _own.get();

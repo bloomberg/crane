@@ -2,9 +2,10 @@
 
 LoopifyContBoxPointer::tree LoopifyContBoxPointer::build(uint64_t n) {
   return ListDef::seq(UINT64_C(0), n).template fold_left<
-      LoopifyContBoxPointer::tree>([](const LoopifyContBoxPointer::tree &t,
-                                      uint64_t k) { return t.insert(k); },
-                                   tree::leaf());
+      LoopifyContBoxPointer::tree>(
+      [](const LoopifyContBoxPointer::tree &t,
+         uint64_t k) { return t.insert(k); },
+      tree::leaf());
 }
 
 LoopifyContBoxPointer::reader

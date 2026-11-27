@@ -787,11 +787,12 @@ template <OrderedType X> struct Coq_Raw {
   combine(List<std::pair<typename X::t, T1>> m, const t<T2> &x0_) {
     if (std::holds_alternative<typename List<std::pair<typename X::t,
                                                        T1>>::Nil>(m.v())) {
-      return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>([](
-          const T2 &e_) {
-        return std::make_pair(std::optional<T1>(), std::make_optional<T2>(e_));
-      },
-                                                                      x0_);
+      return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>(
+          [](const T2 &e_) {
+            return std::make_pair(std::optional<T1>(),
+                                  std::make_optional<T2>(e_));
+          },
+          x0_);
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(m.v());
@@ -1646,11 +1647,14 @@ template <Int I, OrderedType X> struct Raw {
               enumeration<T1> _x0)
                -> bool {
             return equal_more<T1>(
-                cmp, a1, a2, [=, a3_value = a3_value, cmp = cmp, cont = cont](
-                                 enumeration<T1> _x0)
-                                  -> bool {
-                               return equal_cont<T1>(cmp, a3_value, cont, _x0);
-                             },
+                cmp,
+                a1,
+                a2,
+                [=, a3_value = a3_value, cmp = cmp, cont = cont](
+                    enumeration<T1> _x0)
+                     -> bool {
+                  return equal_cont<T1>(cmp, a3_value, cont, _x0);
+                },
                 _x0);
           },
           e2);
@@ -1757,18 +1761,20 @@ template <Int I, OrderedType X> struct Raw {
           return f(std::make_optional<T1>(d), o);
         },
         [=](tree<T1> _x0) -> tree<T3> {
-          return map_option<T1, T3>([=, f = f](key,
-                                               const T1 &d) {
-            return f(std::make_optional<T1>(d), std::optional<T2>());
-          },
-                                    _x0);
+          return map_option<T1, T3>(
+              [=, f = f](key,
+                         const T1 &d) {
+                return f(std::make_optional<T1>(d), std::optional<T2>());
+              },
+              _x0);
         },
         [=](tree<T2> _x0) -> tree<T3> {
-          return map_option<T2, T3>([=, f = f](key,
-                                               const T2 &d_) {
-            return f(std::optional<T1>(), std::make_optional<T2>(d_));
-          },
-                                    _x0);
+          return map_option<T2, T3>(
+              [=, f = f](key,
+                         const T2 &d_) {
+                return f(std::optional<T1>(), std::make_optional<T2>(d_));
+              },
+              _x0);
         },
         x0_,
         x1_);

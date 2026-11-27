@@ -172,7 +172,8 @@ struct HigherKinded {
   template <typename T1> static uint64_t tree_size(const Tree<T1> &t) {
     return tree_fold<T1, uint64_t>(
         [](T1) { return UINT64_C(1); },
-        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, t);
+        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+        t);
   }
 
   template <typename T1, typename T2, typename F0>
@@ -192,8 +193,9 @@ struct HigherKinded {
   static inline const uint64_t test_tree_sum = tree_sum(test_tree);
   static inline const uint64_t test_tree_size = tree_size<uint64_t>(test_tree);
   static inline const Tree<uint64_t> test_tree_map =
-      tree_map<uint64_t, uint64_t>([](uint64_t n) { return (n * UINT64_C(2)); },
-                                   test_tree);
+      tree_map<uint64_t, uint64_t>(
+          [](uint64_t n) { return (n * UINT64_C(2)); },
+          test_tree);
   static inline const std::optional<uint64_t> test_hk_option =
       hk_map<std::optional, uint64_t>(
           []<typename CraneT1>(auto &&a0,
@@ -214,5 +216,6 @@ struct HigherKinded {
                         std::invoke_result_t<decltype(a0)&, CraneT1 &>>(
             std::forward<decltype(a0)>(a0), a1);
       },
-      [](uint64_t n) { return (n + UINT64_C(10)); }, test_tree);
+      [](uint64_t n) { return (n + UINT64_C(10)); },
+      test_tree);
 };

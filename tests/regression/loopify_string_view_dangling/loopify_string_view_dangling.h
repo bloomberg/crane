@@ -258,8 +258,7 @@ struct Pos {
       } else {
         auto _f = std::move(std::get<_after_iter_op_in_XI>(_popped));
         _stack.pop_back();
-        auto a = std::move(_f.a);
-        _result = op(std::move(a), std::move(_result));
+        _result = op(std::move(_f.a), std::move(_result));
       }
     }
     return _result;

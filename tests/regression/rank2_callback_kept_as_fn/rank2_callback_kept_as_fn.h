@@ -117,8 +117,10 @@ struct Rank2CallbackKeptAsFn {
     // touching its counts.
     static const auto erased_fn = crane::immortal(crane_erase_fn<uint64_t>(
         [](crane::obj, List<crane::obj>, uint64_t k) { return (k + 1); }));
-    return both<uint64_t, T1>([]() { return UINT64_C(0); }(), erased_fn,
-                              l)
+    return both<uint64_t, T1>(
+        []() { return UINT64_C(0); }(),
+        erased_fn,
+        l)
                .first;
   }
 

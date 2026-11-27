@@ -310,7 +310,8 @@ struct TfunctorRecordOptionField {
       std::make_optional<exp<Nat>>(exp<Nat>::lit(Nat::s(Nat::s(Nat::o()))))};
   static inline const global<Nat> g1 =
       TFunctor_global::template tfmap<Nat, Nat>(
-          [](const Nat &x) { return Nat::s(x); }, g0);
+          [](const Nat &x) { return Nat::s(x); },
+          g0);
   static inline const bool is_five = []() -> bool {
     if (g1.g_exp.has_value()) {
       const exp<Nat> &e = *g1.g_exp;

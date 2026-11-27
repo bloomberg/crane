@@ -207,8 +207,9 @@ Dvalue_base<typename _tcI0::ptr, typename _tcI0::iptr> apply_to_base(
 struct ClassValueCtorDropsPromoted {
   static inline const Dvalue_base<typename natParams::ptr,
                                   typename natParams::iptr> run =
-      apply_to_base<natParams, Nat>(mk_to_base<natParams, Nat>(
-          [](const Nat &n) { return Dvalue_base<Nat, Nat>::dvalue_iptr(n); }),
-                                    Nat::s(Nat::s(Nat::s(Nat::s(
-                                        Nat::s(Nat::s(Nat::s(Nat::o()))))))));
+      apply_to_base<natParams, Nat>(
+          mk_to_base<natParams, Nat>([](const Nat &n) {
+            return Dvalue_base<Nat, Nat>::dvalue_iptr(n);
+          }),
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };

@@ -17,10 +17,11 @@ Itree<InterpStateDict::Cnt, std::monostate> InterpStateDict::ticks(uint64_t n) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
-      crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
-    return crane_erase_global<Function::Id_IFun, crane::obj>();
-  },
-                                                     crane::obj()));
+      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+      [](crane::obj) {
+        return crane_erase_global<Function::Id_IFun, crane::obj>();
+      },
+      crane::obj()));
   if (n <= 0) {
     return Itree<InterpStateDict::Cnt, std::monostate>::go(
         ItreeF<InterpStateDict::Cnt, std::monostate,
@@ -42,10 +43,11 @@ Itree<InterpStateDict::Cnt, uint64_t> InterpStateDict::prog(uint64_t n) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
-      crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
-    return crane_erase_global<Function::Id_IFun, crane::obj>();
-  },
-                                                     crane::obj()));
+      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+      [](crane::obj) {
+        return crane_erase_global<Function::Id_IFun, crane::obj>();
+      },
+      crane::obj()));
   return ITree::template bind<InterpStateDict::Cnt, std::monostate, uint64_t>(
       ticks(n), [=](std::monostate) {
         return ITree::template trigger<InterpStateDict::Cnt, uint64_t>(

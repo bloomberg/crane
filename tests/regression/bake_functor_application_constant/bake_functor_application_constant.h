@@ -175,11 +175,10 @@ struct BakeFunctorApplicationConstant {
     }
 
     static const uint64_t &total() {
-      static const uint64_t v =
-          vals().template fold_left<uint64_t>(
-              [](uint64_t a,
-                 typename X::t v) { return (a + X::obs(std::move(v))); },
-              UINT64_C(0));
+      static const uint64_t v = vals().template fold_left<uint64_t>(
+          [](uint64_t a,
+             typename X::t v) { return (a + X::obs(std::move(v))); },
+          UINT64_C(0));
       return v;
     }
   };

@@ -420,9 +420,9 @@ List<uint64_t> LoopifyListRelations::interleave(const List<uint64_t> &l1,
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
-        auto _cell1 = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a00, nullptr));
-        auto _cell = typename List<uint64_t>::Cons(a0, std::move(_cell1));
+        auto _cell = typename List<uint64_t>::Cons(
+            a0, std::make_shared<List<uint64_t>>(
+                    typename List<uint64_t>::Cons(a00, nullptr)));
         List<uint64_t> &_node =
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))

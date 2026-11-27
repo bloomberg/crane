@@ -1236,21 +1236,19 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp5.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BAnd>(_tmp5.v_mut());
-            bool_expr a_ = bool_expr::band(crane::shared_child(a00),
-                                           crane::shared_child(a10));
-            _stack.emplace_back(_after_simplify_bool_in_BAnd_2{std::move(a_)});
+            _stack.emplace_back(_after_simplify_bool_in_BAnd_2{bool_expr::band(
+                crane::shared_child(a00), crane::shared_child(a10))});
             _stack.emplace_back(_call{_f.a1});
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp5.v_mut())) {
             auto &[a00, a10] = std::get<typename bool_expr::BOr>(_tmp5.v_mut());
-            bool_expr a_ = bool_expr::bor(crane::shared_child(a00),
-                                          crane::shared_child(a10));
-            _stack.emplace_back(_after_simplify_bool_in_BOr{std::move(a_)});
+            _stack.emplace_back(_after_simplify_bool_in_BOr{bool_expr::bor(
+                crane::shared_child(a00), crane::shared_child(a10))});
             _stack.emplace_back(_call{_f.a1});
           } else {
             auto &[a00] = std::get<typename bool_expr::BNot>(_tmp5.v_mut());
-            bool_expr a_ = bool_expr::bnot(crane::shared_child(a00));
-            _stack.emplace_back(_after_simplify_bool_in_BNot{std::move(a_)});
+            _stack.emplace_back(_after_simplify_bool_in_BNot{
+                bool_expr::bnot(crane::shared_child(a00))});
             _stack.emplace_back(_call{_f.a1});
           }
         } else if (
@@ -1474,22 +1472,20 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp10.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BAnd>(_tmp10.v_mut());
-            bool_expr a_ = bool_expr::band(crane::shared_child(a00),
-                                           crane::shared_child(a10));
-            _stack.emplace_back(_after_simplify_bool_in_BAnd_3{std::move(a_)});
+            _stack.emplace_back(_after_simplify_bool_in_BAnd_3{bool_expr::band(
+                crane::shared_child(a00), crane::shared_child(a10))});
             _stack.emplace_back(_call{_f.a1});
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp10.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BOr>(_tmp10.v_mut());
-            bool_expr a_ = bool_expr::bor(crane::shared_child(a00),
-                                          crane::shared_child(a10));
-            _stack.emplace_back(_after_simplify_bool_in_BOr_3{std::move(a_)});
+            _stack.emplace_back(_after_simplify_bool_in_BOr_3{bool_expr::bor(
+                crane::shared_child(a00), crane::shared_child(a10))});
             _stack.emplace_back(_call{_f.a1});
           } else {
             auto &[a00] = std::get<typename bool_expr::BNot>(_tmp10.v_mut());
-            bool_expr a_ = bool_expr::bnot(crane::shared_child(a00));
-            _stack.emplace_back(_after_simplify_bool_in_BNot_2{std::move(a_)});
+            _stack.emplace_back(_after_simplify_bool_in_BNot_2{
+                bool_expr::bnot(crane::shared_child(a00))});
             _stack.emplace_back(_call{_f.a1});
           }
         } else if (

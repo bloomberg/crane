@@ -41,8 +41,7 @@ EffectHigherOrder::lookup_all(const List<std::string> &names) {
     const auto &[a0, a1] =
         std::get<typename List<std::string>::Cons>(names.v());
     std::string v = lookup_or_ask(a0);
-    List<std::string> vs = lookup_all(*a1);
-    return List<std::string>::cons(std::move(v), std::move(vs));
+    return List<std::string>::cons(std::move(v), lookup_all(*a1));
   }
 }
 

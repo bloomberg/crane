@@ -38,7 +38,8 @@ List<uint64_t> SigIsItsWitness::positives(uint64_t k) {
 
 uint64_t SigIsItsWitness::sum_positives(uint64_t k) {
   return positives(k).template fold_left<uint64_t>(
-      [](uint64_t acc, uint64_t p) { return (acc + p); }, UINT64_C(0));
+      [](uint64_t acc, uint64_t p) { return (acc + p); },
+      UINT64_C(0));
 }
 
 uint64_t SigIsItsWitness::rt_sum(const SigIsItsWitness::rt &t) {

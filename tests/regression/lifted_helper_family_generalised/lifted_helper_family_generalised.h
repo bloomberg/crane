@@ -810,7 +810,8 @@ struct LiftedHelperFamilyGeneralised {
           return Functor_itree<AllE<typename _tcI0::ptr,
                                     crane::obj>>::template fmap<Nat,
                                                                 Sum<Nat, Nat>>(
-              [](const Nat &x0) { return Sum<Nat, Nat>::inr(x0); }, body(a0));
+              [](const Nat &x0) { return Sum<Nat, Nat>::inr(x0); },
+              body(a0));
         } else {
           return Monad_itree<AllE<typename _tcI0::ptr,
                                   crane::obj>>::template ret<Sum<Nat, Nat>>(

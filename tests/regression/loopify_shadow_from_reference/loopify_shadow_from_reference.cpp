@@ -60,15 +60,15 @@ LoopifyShadowFromReference::g(LoopifyShadowFromReference::lst l) {
       const auto &[a0, a1] = std::get<
           typename LoopifyShadowFromReference::lst::Cons>(_loop_l->v());
       const LoopifyShadowFromReference::lst &a1_value = *a1;
-      auto _read = twice([=, a1_value = a1_value](uint64_t y) {
-        return suml(lst::cons(y, a1_value));
-      },
-                         a0);
+      auto _read = twice(
+          [=, a1_value = a1_value](uint64_t y) {
+            return suml(lst::cons(y, a1_value));
+          },
+          a0);
       auto _rs = crane::reuse_step(_own, _uniq, a1);
-      auto _cell = crane::make_rc_reusing_unchecked(
+      *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token),
           typename LoopifyShadowFromReference::lst::Cons(_read, nullptr));
-      *_write = std::move(_cell);
       _write =
           &std::get<typename LoopifyShadowFromReference::lst::Cons>(
               (*_write)->v_mut())

@@ -17,7 +17,7 @@ std::string iotest::test4() {
 }
 
 void iotest::test5() {
-  std::string s = [&]() -> std::string {
+  std::cout << [&]() -> std::string {
     std::ifstream file(std::string("file.txt"));
     if (!file) {
       std::cerr << "Failed to open file " << std::string("file.txt") << '\n';
@@ -25,6 +25,5 @@ void iotest::test5() {
     }
     return std::string(std::istreambuf_iterator<char>(file),
                        std::istreambuf_iterator<char>());
-  }();
-  std::cout << std::move(s) << '\n';
+  }() << '\n';
 }

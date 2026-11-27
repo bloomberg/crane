@@ -390,8 +390,9 @@ struct TfunctorAliasOfApplied {
     static mcfg<Nat> convert_typ(Nat k, mcfg<Nat> a0) {
       return TFunctor_mcfg<TFunctor_cfg,
                            TFunctor_definition<TFunctor_cfg>>::template tfmap<
-          Nat, Nat>([=, k = std::move(k)](const Nat &n) { return n.add(k); },
-                    std::move(a0));
+          Nat, Nat>(
+          [=, k = std::move(k)](const Nat &n) { return n.add(k); },
+          std::move(a0));
     }
   };
 

@@ -767,11 +767,12 @@ struct SharedEventSubevent {
                 crane::obj(),
                 crane::obj(),
                 CategoryOps::template ReSum_id<
-                    crane::obj, crane::fn<crane::obj(crane::obj)>>([](
-                    crane::obj) {
-                  return crane_erase_global<Function::Id_IFun, crane::obj>();
-                },
-                                                                   crane::obj())),
+                    crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                    [](crane::obj) {
+                      return crane_erase_global<Function::Id_IFun,
+                                                crane::obj>();
+                    },
+                    crane::obj())),
             AE::GETA)),
         [](const Nat &a) {
           // Built on the first call and immortal: every thread reads it without

@@ -487,15 +487,17 @@ std::pair<Positive, Coq_Pos::mask> Coq_Pos::sqrtrem(const Positive &p) {
     if (std::holds_alternative<typename Positive::XI>(a0_value.v())) {
       const auto &[a00] = std::get<typename Positive::XI>(a0_value.v());
       const Positive &a00_value = *a00;
-      return sqrtrem_step([](const Positive &x) { return Positive::xi(x); },
-                          [](const Positive &x) { return Positive::xi(x); },
-                          sqrtrem(a00_value));
+      return sqrtrem_step(
+          [](const Positive &x) { return Positive::xi(x); },
+          [](const Positive &x) { return Positive::xi(x); },
+          sqrtrem(a00_value));
     } else if (std::holds_alternative<typename Positive::XO>(a0_value.v())) {
       const auto &[a00] = std::get<typename Positive::XO>(a0_value.v());
       const Positive &a00_value = *a00;
-      return sqrtrem_step([](const Positive &x) { return Positive::xo(x); },
-                          [](const Positive &x) { return Positive::xi(x); },
-                          sqrtrem(a00_value));
+      return sqrtrem_step(
+          [](const Positive &x) { return Positive::xo(x); },
+          [](const Positive &x) { return Positive::xi(x); },
+          sqrtrem(a00_value));
     } else {
       return std::make_pair(Positive::xh(),
                             mask::ispos(Positive::xo(Positive::xh())));
@@ -506,15 +508,17 @@ std::pair<Positive, Coq_Pos::mask> Coq_Pos::sqrtrem(const Positive &p) {
     if (std::holds_alternative<typename Positive::XI>(a0_value.v())) {
       const auto &[a00] = std::get<typename Positive::XI>(a0_value.v());
       const Positive &a00_value = *a00;
-      return sqrtrem_step([](const Positive &x) { return Positive::xi(x); },
-                          [](const Positive &x) { return Positive::xo(x); },
-                          sqrtrem(a00_value));
+      return sqrtrem_step(
+          [](const Positive &x) { return Positive::xi(x); },
+          [](const Positive &x) { return Positive::xo(x); },
+          sqrtrem(a00_value));
     } else if (std::holds_alternative<typename Positive::XO>(a0_value.v())) {
       const auto &[a00] = std::get<typename Positive::XO>(a0_value.v());
       const Positive &a00_value = *a00;
-      return sqrtrem_step([](const Positive &x) { return Positive::xo(x); },
-                          [](const Positive &x) { return Positive::xo(x); },
-                          sqrtrem(a00_value));
+      return sqrtrem_step(
+          [](const Positive &x) { return Positive::xo(x); },
+          [](const Positive &x) { return Positive::xo(x); },
+          sqrtrem(a00_value));
     } else {
       return std::make_pair(Positive::xh(), mask::ispos(Positive::xh()));
     }
@@ -678,7 +682,8 @@ N Coq_Pos::lxor(const Positive &p, const Positive &q) {
 
 uint64_t Coq_Pos::to_nat(const Positive &x) {
   return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      x,
       UINT64_C(1));
 }
 
@@ -706,7 +711,8 @@ Positive Coq_Pos::pred(const Positive &x) {
 Positive Coq_Pos::pow(const Positive &x, const Positive &x0_) {
   return iter<Positive>(
       [=, x = x](Positive _x0) -> Positive { return mul(x, _x0); },
-      Positive::xh(), x0_);
+      Positive::xh(),
+      x0_);
 }
 
 Positive Coq_Pos::square(const Positive &p) {
@@ -921,8 +927,10 @@ Positive Coq_Pos::shiftl(Positive p, const N &n) {
     return p;
   } else {
     const auto &[a0] = std::get<typename N::Npos>(n.v());
-    return iter<Positive>([](const Positive &x) { return Positive::xo(x); },
-                          std::move(p), a0);
+    return iter<Positive>(
+        [](const Positive &x) { return Positive::xo(x); },
+        std::move(p),
+        a0);
   }
 }
 

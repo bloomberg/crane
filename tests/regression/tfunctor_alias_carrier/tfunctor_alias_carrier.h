@@ -301,7 +301,8 @@ struct TfunctorAliasCarrier {
                      exp<Nat>::neg(exp<Nat>::lit(Nat::s(Nat::s(Nat::o())))))};
   static inline const cmpxchg<Nat> c1 =
       TFunctor_cmpxchg::template tfmap<Nat, Nat>(
-          [](const Nat &x) { return Nat::s(x); }, c0);
+          [](const Nat &x) { return Nat::s(x); },
+          c0);
   static inline const bool is_five =
       c1.c_ptr.first.add(c1.c_new.first).eqb(
           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));

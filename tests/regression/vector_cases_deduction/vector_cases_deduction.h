@@ -157,6 +157,8 @@ T2 Vector::caseS(F0 &&h, const Nat &, const T<T1> &v) {
 }
 
 template <typename T1> T1 Vector::hd(const Nat &n, const T<T1> &x0_) {
-  return Vector::template caseS<T1, T1>([](T1 h, Nat, T<T1>) { return h; }, n,
-                                        x0_);
+  return Vector::template caseS<T1, T1>(
+      [](T1 h, Nat, T<T1>) { return h; },
+      n,
+      x0_);
 }

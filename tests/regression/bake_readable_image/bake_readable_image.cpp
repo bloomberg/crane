@@ -13,7 +13,8 @@ std::string BakeReadableImage::labels(const BakeReadableImage::rose &r) {
          const BakeReadableImage::rose &k) {
         return crane::string_capped(acc + labels(k));
       },
-      kids, label);
+      kids,
+      label);
 }
 
 // Baked by crane::bake: the value of crane_baked_forest_ac321626c191.

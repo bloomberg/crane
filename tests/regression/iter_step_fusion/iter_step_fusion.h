@@ -364,8 +364,11 @@ struct IterStepFusion {
   template <typename T1>
   static itree<T1> interp_by_name(const crane::fn<itree<uint64_t>(uint64_t)> &h,
                                   const itree<T1> &x0_) {
-    return iter<itree<T1>, T1>([=, h = h](itree<T1> _x0) -> itree<
-        Sum<itree<T1>, T1>> { return step<T1>(h, _x0); },
-                               x0_);
+    return iter<itree<T1>, T1>(
+        [=, h = h](itree<T1> _x0) -> itree<Sum<itree<T1>,
+                                               T1>> {
+          return step<T1>(h, _x0);
+        },
+        x0_);
   }
 };

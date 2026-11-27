@@ -842,7 +842,8 @@ struct RocqBug14174 {
     static sigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>
     Choice2(std::type_identity_t<crane::fn<sigT<T2, T3>(T1)>> h) {
       return sigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>::existt(
-          [=](const T1 &z) { return h(z).projT1(); }, [=](const T1 &z) {
+          [=](const T1 &z) { return h(z).projT1(); },
+          [=](const T1 &z) {
             sigT<T2, T3> s = h(z);
             auto &[_, a1] = s;
             return std::move(a1);

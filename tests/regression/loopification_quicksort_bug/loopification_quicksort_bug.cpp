@@ -107,6 +107,5 @@ std::string QuicksortFun::list_to_string(const List<uint64_t> &l) {
 }
 
 std::string QuicksortFun::test_quicksort_fun() {
-  List<uint64_t> out = quicksort_fun(input_lst1);
-  return list_to_string(std::move(out));
+  return list_to_string(quicksort_fun(input_lst1));
 }

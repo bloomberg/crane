@@ -176,7 +176,8 @@ MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t, uint64_t n) {
       uint64_t n_ = n - 1;
       auto _cell = typename MemSafetyProbe16::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t x) { return ((t.tree_sum() + x) + n); }, nullptr);
+          [=](uint64_t x) { return ((t.tree_sum() + x) + n); },
+          nullptr);
       MemSafetyProbe16::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe16::mylist<
                           crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))

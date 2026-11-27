@@ -80,9 +80,8 @@ std::pair<uint64_t, List<uint64_t>> run(STRefs r, uint64_t n, const Stmt &s) {
       std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(n),
                                                        UINT64_C(0));
   uint64_t steps = exec(r, vars, s);
-  List<uint64_t> vs =
-      crane::st::elems<List<uint64_t>>(std::span{std::as_const(*vars)});
-  return std::make_pair(steps, std::move(vs));
+  return std::make_pair(
+      steps, crane::st::elems<List<uint64_t>>(std::span{std::as_const(*vars)}));
 }
 
 /// x1 := k!, counting x0 down from k.

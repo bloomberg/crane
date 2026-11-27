@@ -8,7 +8,8 @@ std::shared_ptr<ITree<uint64_t>> TranslateAppliesHandler::t0() {
 
 std::shared_ptr<ITree<uint64_t>> TranslateAppliesHandler::relabelled() {
   return itree_translate(
-      [](const AE &a0) -> BE { return relabel(crane_convert<AE>(a0)); }, t0());
+      [](const AE &a0) -> BE { return relabel(crane_convert<AE>(a0)); },
+      t0());
 }
 
 std::shared_ptr<ITree<uint64_t>> TranslateAppliesHandler::injected() {

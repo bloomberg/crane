@@ -77,11 +77,13 @@ bool NativeNumberCompare::z_dec(int64_t a, int64_t b) {
 }
 
 uint64_t NativeNumberCompare::nat_cmp_value(uint64_t a, uint64_t b) {
-  return apply_cmp([](uint64_t _x0,
-                      uint64_t _x1)
-                        -> Comparison {
-    return (_x0 < _x1 ? Comparison::LT
-                      : (_x1 < _x0 ? Comparison::GT : Comparison::EQ));
-  },
-                   a, b);
+  return apply_cmp(
+      [](uint64_t _x0,
+         uint64_t _x1)
+           -> Comparison {
+        return (_x0 < _x1 ? Comparison::LT
+                          : (_x1 < _x0 ? Comparison::GT : Comparison::EQ));
+      },
+      a,
+      b);
 }

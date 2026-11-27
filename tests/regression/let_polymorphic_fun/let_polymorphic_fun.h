@@ -150,7 +150,8 @@ struct LetPolymorphicFun {
                                           UINT64_C(3),
                                           List<uint64_t>::nil()))) +
          run_crane_f(true, List<bool>::nil())) +
-        run_crane_f(crane::fn([](uint64_t x) { return (x + 1); }),
-                    List<crane::fn<uint64_t(uint64_t)>>::nil()));
+        run_crane_f(
+            crane::fn([](uint64_t x) { return (x + 1); }),
+            List<crane::fn<uint64_t(uint64_t)>>::nil()));
   }();
 };

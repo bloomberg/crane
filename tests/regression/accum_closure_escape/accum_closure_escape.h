@@ -505,7 +505,8 @@ struct AccumClosureEscape {
               mylist<uint64_t>::mycons(
                   UINT64_C(20), mylist<uint64_t>::mycons(
                                     UINT64_C(30), mylist<uint64_t>::mynil()))),
-          [](uint64_t x) { return x; }, UINT64_C(7));
+          [](uint64_t x) { return x; },
+          UINT64_C(7));
   /// test4: Tree (Node (Node Leaf 10 Leaf) 20 (Node Leaf 30 Leaf))
   /// Closures: 20+_, 10+_, 30+_
   /// apply_all_sum with 5: (20+5) + (10+5) + (30+5) = 25+15+35 = 75

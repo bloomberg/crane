@@ -128,13 +128,14 @@ struct NumeralConvUnmappedNat {
                                                        List<int64_t>::nil()))));
   static inline const int64_t run =
       static_cast<int64_t>(static_cast<uint64_t>(static_cast<int64_t>(
-          static_cast<uint64_t>(xs.template fold_left<int64_t>([](int64_t _x0,
-                                                                  int64_t _x1)
-                                                                    -> int64_t {
-            return static_cast<int64_t>(static_cast<uint64_t>(_x0) +
-                                        static_cast<uint64_t>(_x1));
-          },
-                                                               INT64_C(0))) +
+          static_cast<uint64_t>(xs.template fold_left<int64_t>(
+              [](int64_t _x0,
+                 int64_t _x1)
+                   -> int64_t {
+                return static_cast<int64_t>(static_cast<uint64_t>(_x0) +
+                                            static_cast<uint64_t>(_x1));
+              },
+              INT64_C(0))) +
           static_cast<uint64_t>(
               (INT64_C(-9) < 0 ? static_cast<int64_t>(
                                      -static_cast<uint64_t>(INT64_C(-9)))

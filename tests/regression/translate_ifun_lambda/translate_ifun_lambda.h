@@ -355,7 +355,8 @@ struct TranslateIfunLambda {
   template <typename T1>
   static Itree<Sum1<AE, bE, crane::obj>, T1> lift(const Itree<bE, T1> &x) {
     return Interp::template translate<bE, Sum1<AE, bE, crane::obj>, T1>(
-        [](const bE &x0) { return Sum1<AE, bE, crane::obj>::inr1(x0); }, x);
+        [](const bE &x0) { return Sum1<AE, bE, crane::obj>::inr1(x0); },
+        x);
   }
 
   static inline const Itree<Sum1<AE, bE, crane::obj>, Nat> t =
@@ -425,10 +426,11 @@ Interp::translate(const std::type_identity_t<crane::fn<T2(T1)>> &h,
                   const Itree<T1, T3> &t0) {
   return Itree<T2, T3>::lazy_([=, h = h]() mutable -> Itree<T2, T3> {
     return Interp::template translateF<T1, T2, T3>(
-        h, [=](Itree<T1, T3> _x0) -> Itree<T2,
-                                           T3> {
-             return Interp::template translate<T1, T2, T3>(h, _x0);
-           },
+        h,
+        [=](Itree<T1, T3> _x0) -> Itree<T2,
+                                        T3> {
+          return Interp::template translate<T1, T2, T3>(h, _x0);
+        },
         t0.observe());
   });
 }

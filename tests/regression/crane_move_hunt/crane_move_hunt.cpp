@@ -47,9 +47,7 @@ CraneMoveHunt::box CraneMoveHunt::record_function(CraneMoveHunt::box b0) {
 
 CraneMoveHunt::state
 CraneMoveHunt::state_function(const CraneMoveHunt::state &s0) {
-  CraneMoveHunt::state s1 = render_state(s0);
-  CraneMoveHunt::state s2 = resolve_state(std::move(s1));
-  return render_state(std::move(s2));
+  return render_state(resolve_state(render_state(s0)));
 }
 
 CraneMoveHunt::state

@@ -152,9 +152,8 @@ MemSafetyProbe23::sum_with_original(const MemSafetyProbe23::tree &t) {
       const MemSafetyProbe23::tree &t = _f.t;
       uint64_t a1 = _f.a1;
       const MemSafetyProbe23::tree &a2 = *_f.a2;
-      std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_result);
       _stack.emplace_back(
-          _after_sum_with_original_in_Node_2{t, a1, std::move(pl)});
+          _after_sum_with_original_in_Node_2{t, a1, std::move(_result)});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f =
@@ -218,10 +217,8 @@ MemSafetyProbe23::dup_and_double(const MemSafetyProbe23::tree &t) {
       const MemSafetyProbe23::tree &t = _f.t;
       uint64_t a1 = _f.a1;
       const MemSafetyProbe23::tree &a2 = *_f.a2;
-      std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pl =
-          std::move(_result);
-      _stack.emplace_back(_after_dup_and_double_in_Node_2{t, a1,
-                                                          std::move(pl)});
+      _stack.emplace_back(
+          _after_dup_and_double_in_Node_2{t, a1, std::move(_result)});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_dup_and_double_in_Node_2>(_popped));
@@ -294,11 +291,8 @@ MemSafetyProbe23::collect_children(const MemSafetyProbe23::tree &t) {
       std::shared_ptr<MemSafetyProbe23::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe23::tree &a2 = *_f.a2;
-      std::pair<std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>,
-                uint64_t> pl = std::move(_result);
-      _stack.emplace_back(_after_collect_children_in_Node_2{std::move(a0), a1,
-                                                            &a2,
-                                                            std::move(pl)});
+      _stack.emplace_back(_after_collect_children_in_Node_2{
+          std::move(a0), a1, &a2, std::move(_result)});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_collect_children_in_Node_2>(_popped));
@@ -640,9 +634,8 @@ MemSafetyProbe23::annotate_sizes(const MemSafetyProbe23::tree &t) {
       const MemSafetyProbe23::tree &a2 = *_f.a2;
       uint64_t sl = _f.sl;
       uint64_t sr = _f.sr;
-      std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_result);
       _stack.emplace_back(
-          _after_annotate_sizes_in_Node_2{a1, sl, sr, std::move(pl)});
+          _after_annotate_sizes_in_Node_2{a1, sl, sr, std::move(_result)});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_annotate_sizes_in_Node_2>(_popped));

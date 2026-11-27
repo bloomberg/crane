@@ -267,8 +267,7 @@ struct FunctionVernac {
         uint64_t n1 = n0 - 1;
         crane::fn<T1(T1)> f5 =
             [=, f2 = std::move(f2)](T1 _pa0) { return f2(n1, _pa0); };
-        T1 hrec = div2_rect<T1>(f, f0, f1, n1);
-        return f5(std::move(hrec));
+        return f5(div2_rect<T1>(f, f0, f1, n1));
       }
     }
   }
@@ -448,8 +447,7 @@ struct FunctionVernac {
           [=, a1_value = a1_value, f1 = std::move(f1)](T1 _pa0) {
             return f1(a0, a1_value, _pa0);
           };
-      T1 hrec = list_sum_rect<T1>(f, f0, a1_value);
-      return f3(std::move(hrec));
+      return f3(list_sum_rect<T1>(f, f0, a1_value));
     }
   }
 

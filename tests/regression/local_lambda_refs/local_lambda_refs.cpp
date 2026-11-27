@@ -70,9 +70,8 @@ std::pair<List<uint64_t>, List<uint64_t>> fill_each(STRefs) {
   fill(UINT64_C(0), UINT64_C(2), std::span{*b});
   List<uint64_t> xs =
       crane::st::elems<List<uint64_t>>(std::span{std::as_const(*a)});
-  List<uint64_t> ys =
-      crane::st::elems<List<uint64_t>>(std::span{std::as_const(*b)});
-  return std::make_pair(std::move(xs), std::move(ys));
+  return std::make_pair(std::move(xs), crane::st::elems<List<uint64_t>>(
+                                           std::span{std::as_const(*b)}));
 }
 
 uint64_t LocalLambdaRefs::nth(uint64_t n, const List<uint64_t> &l,

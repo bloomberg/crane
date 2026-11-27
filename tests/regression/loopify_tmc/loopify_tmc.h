@@ -347,9 +347,9 @@ struct LoopifyTmc {
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
-        auto _cell1 =
-            std::make_shared<list<T1>>(typename list<T1>::Cons(a0, nullptr));
-        auto _cell = typename list<T1>::Cons(a0, std::move(_cell1));
+        auto _cell = typename list<T1>::Cons(
+            a0,
+            std::make_shared<list<T1>>(typename list<T1>::Cons(a0, nullptr)));
         list<T1> &_node =
             (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));

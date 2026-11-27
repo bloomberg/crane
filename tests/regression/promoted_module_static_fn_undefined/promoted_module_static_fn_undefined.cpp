@@ -11,7 +11,8 @@ List<Nat> PromotedModuleStaticFnUndefined::sizes(
 Nat PromotedModuleStaticFnUndefined::total(
     const List<PromotedModuleStaticFnUndefined> &ts) {
   return sizes(ts).template fold_left<Nat>(
-      [](const Nat &_x0, const Nat &_x1) { return _x0.add(_x1); }, Nat::o());
+      [](const Nat &_x0, const Nat &_x1) { return _x0.add(_x1); },
+      Nat::o());
 }
 
 Nat PromotedModuleStaticFnUndefined::example(const Nat &n) {

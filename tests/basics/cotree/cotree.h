@@ -427,10 +427,11 @@ struct Cotree {
                 const T1 &init) {
     return cotree<T1>::lazy_(
         [=, init = init, next = next]() mutable -> typename cotree<T1>::Conode {
-          return {init, comap<T1, cotree<T1>>([=](T1 _x0) -> cotree<T1> {
-            return unfold_cotree<T1>(next, _x0);
-          },
-                                              next(init))};
+          return {init, comap<T1, cotree<T1>>(
+                            [=](T1 _x0) -> cotree<T1> {
+                              return unfold_cotree<T1>(next, _x0);
+                            },
+                            next(init))};
         });
   }
 

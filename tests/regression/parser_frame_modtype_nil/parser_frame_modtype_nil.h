@@ -88,16 +88,14 @@ template <T D> struct ParserFn {
   }
 
   static uint64_t parse(typename D::SymTy::symbol x) {
-    std::pair<typename D::Defs::frame,
-              std::deque<typename D::Defs::frame>> sk0 = std::make_pair(
+    return step_stack(std::make_pair(
         D::Defs::frame::fr(
             std::deque<typename D::SymTy::symbol>{}, std::monostate{},
             [](auto _a0, auto _a1) {
               _a1.push_front(_a0);
               return _a1;
             }(std::move(x), std::deque<typename D::SymTy::symbol>{})),
-        std::deque<typename D::Defs::frame>{});
-    return step_stack(std::move(sk0));
+        std::deque<typename D::Defs::frame>{}));
   }
 };
 

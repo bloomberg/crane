@@ -74,13 +74,13 @@ List<RamWrite::ram_bank> RamWrite::ram_write_main_sys(const RamWrite::state &s,
   RamWrite::ram_reg rg = current_reg(s);
   RamWrite::ram_chip ch = current_chip(s);
   RamWrite::ram_bank bk = current_bank(s);
-  RamWrite::ram_reg rg_ =
-      upd_main_in_reg(std::move(rg), s.state_sel.sel_char, v);
-  RamWrite::ram_chip ch_ =
-      upd_reg_in_chip(std::move(ch), s.state_sel.sel_reg, std::move(rg_));
-  RamWrite::ram_bank bk_ =
-      upd_chip_in_bank(std::move(bk), s.state_sel.sel_chip, std::move(ch_));
-  return upd_bank_in_sys(s, s.state_sel.sel_bank, std::move(bk_));
+  return upd_bank_in_sys(s, s.state_sel.sel_bank,
+                         upd_chip_in_bank(
+                             std::move(bk), s.state_sel.sel_chip,
+                             upd_reg_in_chip(
+                                 std::move(ch), s.state_sel.sel_reg,
+                                 upd_main_in_reg(std::move(rg),
+                                                 s.state_sel.sel_char, v))));
 }
 
 List<RamWrite::ram_bank>
@@ -89,10 +89,10 @@ RamWrite::ram_write_status_sys(const RamWrite::state &s, uint64_t idx,
   RamWrite::ram_reg rg = current_reg(s);
   RamWrite::ram_chip ch = current_chip(s);
   RamWrite::ram_bank bk = current_bank(s);
-  RamWrite::ram_reg rg_ = upd_stat_in_reg(std::move(rg), idx, v);
-  RamWrite::ram_chip ch_ =
-      upd_reg_in_chip(std::move(ch), s.state_sel.sel_reg, std::move(rg_));
-  RamWrite::ram_bank bk_ =
-      upd_chip_in_bank(std::move(bk), s.state_sel.sel_chip, std::move(ch_));
-  return upd_bank_in_sys(s, s.state_sel.sel_bank, std::move(bk_));
+  return upd_bank_in_sys(s, s.state_sel.sel_bank,
+                         upd_chip_in_bank(
+                             std::move(bk), s.state_sel.sel_chip,
+                             upd_reg_in_chip(
+                                 std::move(ch), s.state_sel.sel_reg,
+                                 upd_stat_in_reg(std::move(rg), idx, v))));
 }

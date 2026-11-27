@@ -406,8 +406,10 @@ struct MemSafetyProbe10 {
         mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
-    return chain_adders(std::move(l), [](uint64_t x) { return x; },
-                        UINT64_C(7));
+    return chain_adders(
+        std::move(l),
+        [](uint64_t x) { return x; },
+        UINT64_C(7));
   }();
   /// TEST 3: Recursive function returning a list of closures.
   /// Each closure captures the tree node's value and subtrees.

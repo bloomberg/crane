@@ -150,8 +150,11 @@ struct LocalLiftedMutualClosureBack {
       return h(y);
     } else {
       uint64_t m = n0 - 1;
-      return run_crane_g<T1>([=](const T1 &b) { return (h(b) + UINT64_C(1)); },
-                             y, m, k);
+      return run_crane_g<T1>(
+          [=](const T1 &b) { return (h(b) + UINT64_C(1)); },
+          y,
+          m,
+          k);
     }
   }
 

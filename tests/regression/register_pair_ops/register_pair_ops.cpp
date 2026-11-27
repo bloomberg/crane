@@ -24,8 +24,7 @@ RegisterPairOps::set_reg_pair(const RegisterPairOps::state &s, uint64_t r,
   uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
   uint64_t hi = (UINT64_C(16) ? v / UINT64_C(16) : 0);
   uint64_t lo = (UINT64_C(16) ? v % UINT64_C(16) : v);
-  RegisterPairOps::state s1 = set_reg(s, base, hi);
-  return set_reg(std::move(s1), (base + UINT64_C(1)), lo);
+  return set_reg(set_reg(s, base, hi), (base + UINT64_C(1)), lo);
 }
 
 uint64_t RegisterPairOps::pair_base(uint64_t r) {

@@ -1244,12 +1244,13 @@ struct Coq_Pos {
                        unsigned int p) {
     auto _lc1_pa0 = f0(1u, a);
     crane::fn<T1(unsigned int)> f2 = [=](unsigned int _x0) -> T1 {
-      return peano_rect<T1>(_lc1_pa0,
-                            [=, f0 = f0](unsigned int p0,
-                                         const T1 &x) {
-                              return f0(((2u * p0) + 1u), f0((2u * p0), x));
-                            },
-                            _x0);
+      return peano_rect<T1>(
+          _lc1_pa0,
+          [=, f0 = f0](unsigned int p0,
+                       const T1 &x) {
+            return f0(((2u * p0) + 1u), f0((2u * p0), x));
+          },
+          _x0);
     };
     if (p == 1u) {
       return a;
@@ -1454,8 +1455,12 @@ struct N {
     template <typename T1, typename F2>
     static T1 max_case(unsigned int n, unsigned int m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return max_case_strong<T1>(n, m, x, [=, x0 = x0]() { return x0; }(),
-                                 [=, x1 = x1]() { return x1; }());
+      return max_case_strong<T1>(
+          n,
+          m,
+          x,
+          [=, x0 = x0]() { return x0; }(),
+          [=, x1 = x1]() { return x1; }());
     }
 
     static bool max_dec(unsigned int n, unsigned int m);
@@ -1481,8 +1486,12 @@ struct N {
     template <typename T1, typename F2>
     static T1 min_case(unsigned int n, unsigned int m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return min_case_strong<T1>(n, m, x, [=, x0 = x0]() { return x0; }(),
-                                 [=, x1 = x1]() { return x1; }());
+      return min_case_strong<T1>(
+          n,
+          m,
+          x,
+          [=, x0 = x0]() { return x0; }(),
+          [=, x1 = x1]() { return x1; }());
     }
 
     static bool min_dec(unsigned int n, unsigned int m);
@@ -1492,14 +1501,21 @@ struct N {
   static T1 max_case_strong(unsigned int n, unsigned int m, const T1 &x,
                             const T1 &x0) {
     return Private_Dec::template max_case_strong<T1>(
-        n, m, [](unsigned int, unsigned int, T1 x1) { return x1; }, x, x0);
+        n,
+        m,
+        [](unsigned int, unsigned int, T1 x1) { return x1; },
+        x,
+        x0);
   }
 
   template <typename T1>
   static T1 max_case(unsigned int n, unsigned int m, const T1 &x,
                      const T1 &x0) {
-    return max_case_strong<T1>(n, m, [=, x = x]() { return x; }(),
-                               [=, x0 = x0]() { return x0; }());
+    return max_case_strong<T1>(
+        n,
+        m,
+        [=, x = x]() { return x; }(),
+        [=, x0 = x0]() { return x0; }());
   }
 
   static bool max_dec(unsigned int x0_, unsigned int x1_);
@@ -1508,14 +1524,21 @@ struct N {
   static T1 min_case_strong(unsigned int n, unsigned int m, const T1 &x,
                             const T1 &x0) {
     return Private_Dec::template min_case_strong<T1>(
-        n, m, [](unsigned int, unsigned int, T1 x1) { return x1; }, x, x0);
+        n,
+        m,
+        [](unsigned int, unsigned int, T1 x1) { return x1; },
+        x,
+        x0);
   }
 
   template <typename T1>
   static T1 min_case(unsigned int n, unsigned int m, const T1 &x,
                      const T1 &x0) {
-    return min_case_strong<T1>(n, m, [=, x = x]() { return x; }(),
-                               [=, x0 = x0]() { return x0; }());
+    return min_case_strong<T1>(
+        n,
+        m,
+        [=, x = x]() { return x; }(),
+        [=, x0 = x0]() { return x0; }());
   }
 
   static bool min_dec(unsigned int x0_, unsigned int x1_);

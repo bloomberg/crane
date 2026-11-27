@@ -502,13 +502,19 @@ uint64_t Nat::shiftr(uint64_t a, uint64_t n) {
 }
 
 uint64_t Nat::land(uint64_t a, uint64_t b) {
-  return bitwise([](bool _x0, bool _x1) -> bool { return (_x0 && _x1); }, a, a,
-                 b);
+  return bitwise(
+      [](bool _x0, bool _x1) -> bool { return (_x0 && _x1); },
+      a,
+      a,
+      b);
 }
 
 uint64_t Nat::lor(uint64_t a, uint64_t b) {
-  return bitwise([](bool _x0, bool _x1) -> bool { return (_x0 || _x1); },
-                 std::max(a, b), a, b);
+  return bitwise(
+      [](bool _x0, bool _x1) -> bool { return (_x0 || _x1); },
+      std::max(a, b),
+      a,
+      b);
 }
 
 uint64_t Nat::ldiff(uint64_t a, uint64_t b) {
@@ -687,8 +693,7 @@ Nat::EvenT Nat::even_EvenT(uint64_t n) {
       throw std::logic_error("absurd case");
     } else {
       uint64_t n1 = n0 - 1;
-      Nat::EvenT he = even_EvenT(n1);
-      return EvenT_2(n1, std::move(he));
+      return EvenT_2(n1, even_EvenT(n1));
     }
   }
 }
@@ -702,8 +707,7 @@ Nat::OddT Nat::odd_OddT(uint64_t n) {
       return OddT_1;
     } else {
       uint64_t n1 = n0 - 1;
-      Nat::OddT he = odd_OddT(n1);
-      return OddT_2(n1, std::move(he));
+      return OddT_2(n1, odd_OddT(n1));
     }
   }
 }

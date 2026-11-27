@@ -160,17 +160,17 @@ struct SigtPairFnPayload {
         std::make_pair(crane::obj(a), crane::obj(crane_erase_fn(f))));
   }
 
-  static inline const List<item> items =
-      List<item>::cons(mk<uint64_t>(UINT64_C(3), [](uint64_t n) { return n; }),
-                       List<item>::cons(
-                           mk<bool>(true, [](bool b) -> uint64_t {
-                             if (b) {
-                               return UINT64_C(1);
-                             } else {
-                               return UINT64_C(0);
-                             }
-                           }),
-                           List<item>::nil()));
+  static inline const List<item> items = List<item>::cons(
+      mk<uint64_t>(UINT64_C(3), [](uint64_t n) { return n; }),
+      List<item>::cons(
+          mk<bool>(true, [](bool b) -> uint64_t {
+            if (b) {
+              return UINT64_C(1);
+            } else {
+              return UINT64_C(0);
+            }
+          }),
+          List<item>::nil()));
   static uint64_t
   score(const SigT<crane::obj, std::pair<crane::obj, crane::obj>> &it);
   static inline const uint64_t go = items.template fold_left<uint64_t>(

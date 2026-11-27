@@ -111,7 +111,8 @@ MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
           .a1 = std::move(_cell2);
       auto _cell = typename MemSafetyProbe10::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t n) { return (a1 + n); }, std::move(_cell1));
+          [=](uint64_t n) { return (a1 + n); },
+          std::move(_cell1));
       MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe10::mylist<
                           crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))
@@ -202,7 +203,8 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
                 nullptr));
         auto _cell = typename MemSafetyProbe10::mylist<
             crane::fn<uint64_t(uint64_t)>>::Mycons(
-            [=](uint64_t n) { return (a1 + n); }, std::move(_cell1));
+            [=](uint64_t n) { return (a1 + n); },
+            std::move(_cell1));
         MemSafetyProbe10::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
             (_write ? *(*_write = std::make_shared<MemSafetyProbe10::mylist<
                             crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))

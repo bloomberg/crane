@@ -177,18 +177,22 @@ struct ErasedTypeFieldLambda {
                   })),
               List<std::pair<crane::obj,
                              crane::fn<uint64_t(crane::obj)>>>::nil()))},
-      List<slot>::cons(slot{List<
-          std::pair<crane::obj, crane::fn<uint64_t(crane::obj)>>>::cons(
-          std::make_pair(List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
-                         crane_erase_fn<uint64_t>([](const List<uint64_t> &_x) {
-                           return _x.length();
-                         })),
-          List<std::pair<crane::obj, crane::fn<uint64_t(crane::obj)>>>::nil())},
-                       List<slot>::nil()));
+      List<slot>::cons(
+          slot{List<std::pair<crane::obj,
+                              crane::fn<uint64_t(crane::obj)>>>::cons(
+              std::make_pair(
+                  List<uint64_t>::cons(
+                      UINT64_C(1),
+                      List<uint64_t>::cons(
+                          UINT64_C(2), List<uint64_t>::cons(
+                                           UINT64_C(3),
+                                           List<uint64_t>::nil()))),
+                  crane_erase_fn<uint64_t>(
+                      [](const List<uint64_t> &_x) { return _x.length(); })),
+              List<std::pair<crane::obj,
+                             crane::fn<uint64_t(crane::obj)>>>::nil())},
+          List<slot>::nil()));
   static inline const uint64_t run = slots.template fold_left<uint64_t>(
-      [](uint64_t a, const slot &s) { return (a + weigh(s)); }, UINT64_C(0));
+      [](uint64_t a, const slot &s) { return (a + weigh(s)); },
+      UINT64_C(0));
 };

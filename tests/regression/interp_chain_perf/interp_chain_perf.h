@@ -802,10 +802,11 @@ struct InterpChainPerf {
     // Built on the first call and immortal: every thread reads it without
     // touching its counts.
     static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
-        crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
-      return crane_erase_global<Function::Id_IFun, crane::obj>();
-    },
-                                                       crane::obj()));
+        crane::obj, crane::fn<crane::obj(crane::obj)>>(
+        [](crane::obj) {
+          return crane_erase_global<Function::Id_IFun, crane::obj>();
+        },
+        crane::obj()));
     return ITree::template trigger<TopE<crane::obj>, T1>(
         Subevent::template subevent<Sum1<GetE, outE, crane::obj>,
                                     Sum1<GetE, outE, crane::obj>, T1>(

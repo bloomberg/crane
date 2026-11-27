@@ -603,10 +603,11 @@ struct TopologicalSort {
         return cycl;
       } else {
         return graph_lookup<T1>(eqb_node, elem, graph0).template fold_right<
-            List<T1>>([=, graph0 = graph0](T1 _x0, List<T1> _x1) -> List<T1> {
-          return cycle_extract_aux<T1>(eqb_node, graph0, c, _x0, _x1);
-        },
-                      List<T1>::cons(elem, std::move(cycl)));
+            List<T1>>(
+            [=, graph0 = graph0](T1 _x0, List<T1> _x1) -> List<T1> {
+              return cycle_extract_aux<T1>(eqb_node, graph0, c, _x0, _x1);
+            },
+            List<T1>::cons(elem, std::move(cycl)));
       }
     }
   }

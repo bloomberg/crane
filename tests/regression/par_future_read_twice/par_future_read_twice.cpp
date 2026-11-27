@@ -18,9 +18,8 @@ ParFutureReadTwice::spawn_all(const List<uint64_t> &l) {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     std::shared_future<uint64_t> f =
         std::async(std::launch::async, sq, a0).share();
-    List<std::shared_future<uint64_t>> fs = spawn_all(*a1);
     return List<std::shared_future<uint64_t>>::cons(std::move(f),
-                                                    std::move(fs));
+                                                    spawn_all(*a1));
   }
 }
 

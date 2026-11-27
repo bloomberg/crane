@@ -256,9 +256,10 @@ MemSafetyProbe13::tree_to_ftree(const MemSafetyProbe13::tree &t) {
       auto _f = std::move(std::get<_after_tree_to_ftree_in_Node_2>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
-      _result = ftree::fnode(std::move(_f._tmp2),
-                             [=](uint64_t n) { return (a1 + n); },
-                             std::move(_result));
+      _result = ftree::fnode(
+          std::move(_f._tmp2),
+          [=](uint64_t n) { return (a1 + n); },
+          std::move(_result));
     }
   }
   return _result;
@@ -319,7 +320,8 @@ MemSafetyProbe13::flatten_tree_fns(const MemSafetyProbe13::tree &t) {
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       _result = _f._tmp2.app(mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-          [=](uint64_t n) { return (a1 + n); }, std::move(_result)));
+          [=](uint64_t n) { return (a1 + n); },
+          std::move(_result)));
     }
   }
   return _result;

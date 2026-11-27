@@ -60,10 +60,9 @@ LoopifyReuseCursorTurns::keep_even(LoopifyReuseCursorTurns::lst l) {
           std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_loop_l->v());
       if (Nat::even(a0)) {
         auto _rs = crane::reuse_step(_own, _uniq, a1);
-        auto _cell = crane::make_rc_reusing_unchecked(
+        *_write = crane::make_rc_reusing_unchecked(
             std::move(_rs.token),
             typename LoopifyReuseCursorTurns::lst::Cons(a0, nullptr));
-        *_write = std::move(_cell);
         _write =
             &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
                 (*_write)->v_mut())
@@ -103,10 +102,9 @@ LoopifyReuseCursorTurns::skip_sums(uint64_t seen,
           std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_loop_l->v());
       if (Nat::even(a0)) {
         auto _rs = crane::reuse_step(_own, _uniq, a1);
-        auto _cell = crane::make_rc_reusing_unchecked(
+        *_write = crane::make_rc_reusing_unchecked(
             std::move(_rs.token),
             typename LoopifyReuseCursorTurns::lst::Cons((a0 + seen), nullptr));
-        *_write = std::move(_cell);
         _write =
             &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
                 (*_write)->v_mut())
@@ -156,10 +154,9 @@ LoopifyReuseCursorTurns::swap(LoopifyReuseCursorTurns::lst l) {
       } else {
         const auto &[a00, a10] =
             std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_sv0.v());
-        auto _cell1 = crane::make_rc<LoopifyReuseCursorTurns::lst>(
-            typename LoopifyReuseCursorTurns::lst::Cons(a0, nullptr));
-        auto _cell =
-            typename LoopifyReuseCursorTurns::lst::Cons(a00, std::move(_cell1));
+        auto _cell = typename LoopifyReuseCursorTurns::lst::Cons(
+            a00, crane::make_rc<LoopifyReuseCursorTurns::lst>(
+                     typename LoopifyReuseCursorTurns::lst::Cons(a0, nullptr)));
         LoopifyReuseCursorTurns::lst &_node =
             (_write ? *(*_write = crane::make_rc<LoopifyReuseCursorTurns::lst>(
                             std::move(_cell)))
@@ -241,10 +238,9 @@ LoopifyReuseCursorTurns::scale(uint64_t acc, LoopifyReuseCursorTurns::lst l) {
           std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_loop_l->v());
       auto _read = (acc + a0);
       auto _rs = crane::reuse_step(_own, _uniq, a1);
-      auto _cell = crane::make_rc_reusing_unchecked(
+      *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token),
           typename LoopifyReuseCursorTurns::lst::Cons((a0 * acc), nullptr));
-      *_write = std::move(_cell);
       _write =
           &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
               (*_write)->v_mut())
@@ -278,10 +274,9 @@ LoopifyReuseCursorTurns::suffix_sums(LoopifyReuseCursorTurns::lst l) {
           std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_loop_l->v());
       auto _read = sum(*_loop_l);
       auto _rs = crane::reuse_step(_own, _uniq, a1);
-      auto _cell = crane::make_rc_reusing_unchecked(
+      *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token),
           typename LoopifyReuseCursorTurns::lst::Cons(_read, nullptr));
-      *_write = std::move(_cell);
       _write =
           &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
               (*_write)->v_mut())

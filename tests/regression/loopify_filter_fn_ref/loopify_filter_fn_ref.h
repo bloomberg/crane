@@ -225,9 +225,8 @@ struct LoopifyFilterFnRef {
         _stack.pop_back();
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        tree<T1> l_ = std::move(_result);
         _stack.emplace_back(
-            _after_filter_in_Node_2{std::move(a1), std::move(l_)});
+            _after_filter_in_Node_2{std::move(a1), std::move(_result)});
         _stack.emplace_back(_call{&a2});
       } else {
         auto _f = std::move(std::get<_after_filter_in_Node_2>(_popped));

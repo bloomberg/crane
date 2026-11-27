@@ -144,34 +144,32 @@ struct CaseHandlerConcreteResult {
 
   static uint64_t result(uint64_t fuel,
                          const std::shared_ptr<ITree<uint64_t>> &t);
-  static inline const uint64_t handled_left =
-      result(
-          UINT64_C(10),
-          Interp::template interp<
-              MonadIter_itree<crane::obj>, Monad_itree<crane::obj>,
-              Functor_itree<crane::obj>, Sum1<AE, AE, crane::obj>, uint64_t>(
-              itree_case(
-                  [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
-                    return hl<crane::obj>(crane_convert<AE>(a0));
-                  },
-                  [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
-                    return hr<crane::obj>(crane_convert<AE>(a0));
-                  }),
-              tl()));
-  static inline const uint64_t handled_right =
-      result(
-          UINT64_C(10),
-          Interp::template interp<
-              MonadIter_itree<crane::obj>, Monad_itree<crane::obj>,
-              Functor_itree<crane::obj>, Sum1<AE, AE, crane::obj>, uint64_t>(
-              itree_case(
-                  [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
-                    return hl<crane::obj>(crane_convert<AE>(a0));
-                  },
-                  [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
-                    return hr<crane::obj>(crane_convert<AE>(a0));
-                  }),
-              tr()));
+  static inline const uint64_t handled_left = result(
+      UINT64_C(10),
+      Interp::template interp<
+          MonadIter_itree<crane::obj>, Monad_itree<crane::obj>,
+          Functor_itree<crane::obj>, Sum1<AE, AE, crane::obj>, uint64_t>(
+          itree_case(
+              [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
+                return hl<crane::obj>(crane_convert<AE>(a0));
+              },
+              [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
+                return hr<crane::obj>(crane_convert<AE>(a0));
+              }),
+          tl()));
+  static inline const uint64_t handled_right = result(
+      UINT64_C(10),
+      Interp::template interp<
+          MonadIter_itree<crane::obj>, Monad_itree<crane::obj>,
+          Functor_itree<crane::obj>, Sum1<AE, AE, crane::obj>, uint64_t>(
+          itree_case(
+              [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
+                return hl<crane::obj>(crane_convert<AE>(a0));
+              },
+              [](const AE &a0) -> std::shared_ptr<ITree<crane::obj>> {
+                return hr<crane::obj>(crane_convert<AE>(a0));
+              }),
+          tr()));
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>

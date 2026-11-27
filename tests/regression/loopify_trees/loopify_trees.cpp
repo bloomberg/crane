@@ -725,10 +725,11 @@ List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
       } else {
         const auto &[a00, _, a20] =
             std::get<typename LoopifyTrees::tree<uint64_t>::Node>(a0.v());
-        auto _cell1 = std::make_shared<List<LoopifyTrees::tree<uint64_t>>>(
-            typename List<LoopifyTrees::tree<uint64_t>>::Cons(*a20, nullptr));
         auto _cell = typename List<LoopifyTrees::tree<uint64_t>>::Cons(
-            *a00, std::move(_cell1));
+            *a00,
+            std::make_shared<List<LoopifyTrees::tree<uint64_t>>>(
+                typename List<LoopifyTrees::tree<uint64_t>>::Cons(*a20,
+                                                                  nullptr)));
         List<LoopifyTrees::tree<uint64_t>> &_node =
             (_write ? *(*_write = std::make_shared<
                             List<LoopifyTrees::tree<uint64_t>>>(

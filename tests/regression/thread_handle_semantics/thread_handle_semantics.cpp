@@ -20,8 +20,7 @@ List<crane::thread> ThreadHandleSemantics::spawn_all(const List<uint64_t> &l) {
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     crane::thread h = crane::thread(work, a0);
-    List<crane::thread> hs = spawn_all(*a1);
-    return List<crane::thread>::cons(std::move(h), std::move(hs));
+    return List<crane::thread>::cons(std::move(h), spawn_all(*a1));
   }
 }
 

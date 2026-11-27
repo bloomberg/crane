@@ -49,12 +49,11 @@ EffectDirPath::check_and_list(const std::string &path) {
 
 /// 4. Path effect result chained to print
 void EffectDirPath::show_absolute(const std::string &path) {
-  std::string abs = [&]() -> std::string {
+  std::cout << [&]() -> std::string {
     std::error_code _ec;
     auto _r = std::filesystem::absolute(std::filesystem::path(path), _ec);
     return _ec ? std::string{} : _r.string();
-  }();
-  std::cout << std::move(abs) << '\n';
+  }() << '\n';
 }
 
 /// 5. Multiple bool effects composed

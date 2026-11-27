@@ -270,8 +270,10 @@ struct TypedFitCaseArgument {
                                : crane::fn<uint64_t(uint64_t)>(acc))(x);
           };
       cf = [=, go = std::move(go)](uint64_t _pa0) {
-        return go(List<std::string>::cons("a", List<std::string>::nil()),
-                  [](uint64_t x) { return x; }, _pa0);
+        return go(
+            List<std::string>::cons("a", List<std::string>::nil()),
+            [](uint64_t x) { return x; },
+            _pa0);
       };
       return (cf(UINT64_C(1)) + cf(UINT64_C(2)));
     }();

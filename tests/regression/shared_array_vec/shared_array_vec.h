@@ -99,7 +99,8 @@ struct SharedArrayVec {
                      vec_sum(vec_nth<crane::shared_array<uint64_t>>(
                          t, UINT64_C(0), crane::shared_array<uint64_t>{})));
            },
-           copies, UINT64_C(0)));
+           copies,
+           UINT64_C(0)));
 };
 
 template <typename T1, typename T2, typename F0>

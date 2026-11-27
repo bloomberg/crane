@@ -250,9 +250,8 @@ struct LoopifySequences {
           } else {
             auto _f = std::move(std::get<_after_go_in_Cons>(_popped));
             _stack.pop_back();
-            auto a00 = std::move(_f.a00);
             _result = List<T1>::cons(
-                sep, List<T1>::cons(std::move(a00), std::move(_result)));
+                sep, List<T1>::cons(std::move(_f.a00), std::move(_result)));
           }
         }
         return _result;
@@ -343,8 +342,7 @@ struct LoopifySequences {
               } else {
                 auto _f = std::move(std::get<_after_heads_in_Cons>(_popped));
                 _stack.pop_back();
-                auto a01 = std::move(_f.a01);
-                _result = List<T1>::cons(std::move(a01), std::move(_result));
+                _result = List<T1>::cons(std::move(_f.a01), std::move(_result));
               }
             }
             return _result;

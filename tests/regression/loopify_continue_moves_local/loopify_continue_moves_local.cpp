@@ -16,8 +16,7 @@ List<uint64_t> LoopifyContinueMovesLocal::count_down(uint64_t n,
       return _loop_acc;
     } else {
       uint64_t m = n - 1;
-      List<uint64_t> next = List<uint64_t>::cons(m, std::move(_loop_acc));
-      _loop_acc = std::move(next);
+      _loop_acc = List<uint64_t>::cons(m, std::move(_loop_acc));
       n = m;
     }
   }

@@ -206,10 +206,10 @@ struct Inst {
 };
 
 using M = Make<Inst>;
-[[gnu::used]] inline const M::entry my_entry =
-    M::mk(std::monostate{},
-          crane_erase_fn<bool>([](uint64_t n) { return n == UINT64_C(0); }),
-          crane_erase_fn<uint64_t>([](uint64_t n) { return (n + 1); }));
+[[gnu::used]] inline const M::entry my_entry = M::mk(
+    std::monostate{},
+    crane_erase_fn<bool>([](uint64_t n) { return n == UINT64_C(0); }),
+    crane_erase_fn<uint64_t>([](uint64_t n) { return (n + 1); }));
 Inst::sem my_arg(std::monostate _x);
 /// In Rocq this is true (predicate 0 =? 0 holds), and the extracted C++ now
 /// returns true as well (before the fix it threw std::bad_any_cast).

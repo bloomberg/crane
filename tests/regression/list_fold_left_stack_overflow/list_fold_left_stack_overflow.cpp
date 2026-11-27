@@ -20,8 +20,9 @@ List<uint64_t> ListFoldLeftStackOverflow::bld(uint64_t n, List<uint64_t> acc) {
 
 uint64_t ListFoldLeftStackOverflow::run(uint64_t k) {
   return bld((k + UINT64_C(200000)), List<uint64_t>::nil()).template fold_left<
-                      uint64_t>([](uint64_t _x0,
-                                   uint64_t _x1)
-                                     -> uint64_t { return (_x0 + _x1); },
-                                UINT64_C(0));
+                      uint64_t>(
+                      [](uint64_t _x0,
+                         uint64_t _x1)
+                           -> uint64_t { return (_x0 + _x1); },
+                      UINT64_C(0));
 }

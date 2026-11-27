@@ -96,10 +96,9 @@ LoopifyReuseBoolQualified::incr(LoopifyReuseBoolQualified::lst l) {
       const auto &[a0, a1] =
           std::get<typename LoopifyReuseBoolQualified::lst::Cons>(_loop_l->v());
       auto _rs = crane::reuse_step(_own, _uniq, a1);
-      auto _cell = crane::make_rc_reusing_unchecked(
+      *_write = crane::make_rc_reusing_unchecked(
           std::move(_rs.token), typename LoopifyReuseBoolQualified::lst::Cons(
                                     (a0 + UINT64_C(1)), nullptr));
-      *_write = std::move(_cell);
       _write =
           &std::get<typename LoopifyReuseBoolQualified::lst::Cons>(
               (*_write)->v_mut())

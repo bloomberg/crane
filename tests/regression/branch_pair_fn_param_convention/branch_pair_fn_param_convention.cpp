@@ -25,8 +25,9 @@ uint64_t BranchPairFnParamConvention::t(bool b) {
                       }
                     }),
                 UINT64_C(0))
-          : std::make_pair(crane::fn<BranchPairFnParamConvention::pt(String)>(
-                [](String) { return pt{UINT64_C(2), true}; }),
-                           UINT64_C(0)))
+          : std::make_pair(
+                crane::fn<BranchPairFnParamConvention::pt(String)>(
+                    [](String) { return pt{UINT64_C(2), true}; }),
+                UINT64_C(0)))
              .first(String::emptystring()).px;
 }

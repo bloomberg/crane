@@ -812,7 +812,8 @@ struct PolySumPayloadObj {
           return UINT64_C(0);
         })
             .template pfold<uint64_t>(
-            [](uint64_t, uint64_t) { return UINT64_C(0); }, UINT64_C(0));
+            [](uint64_t, uint64_t) { return UINT64_C(0); },
+            UINT64_C(0));
     return String::emptystring().substring(
         UINT64_C(0), (UINT64_C(4) ? _once1 % UINT64_C(4) : _once1));
   }
@@ -820,7 +821,8 @@ struct PolySumPayloadObj {
   static inline const uint64_t t_5 = []() {
     return []() {
       String w111 = f2<sz_nat, uint64_t>(
-          UINT64_C(0), [](uint64_t) { return sret<pt>(pt{UINT64_C(0), true}); },
+          UINT64_C(0),
+          [](uint64_t) { return sret<pt>(pt{UINT64_C(0), true}); },
           ptree<bool>::pleaf());
       return ((w111.length() * UINT64_C(13)) + [&]() -> uint64_t {
         auto _cs = w111.get(UINT64_C(0));

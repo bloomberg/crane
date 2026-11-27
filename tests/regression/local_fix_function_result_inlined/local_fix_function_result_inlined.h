@@ -129,8 +129,10 @@ struct LocalFixFunctionResultInlined {
             }
           };
       w = [=](List<uint64_t> _pa0) {
-        return go(List<uint64_t>::nil(),
-                  [](const List<uint64_t> &) { return false; }, _pa0);
+        return go(
+            List<uint64_t>::nil(),
+            [](const List<uint64_t> &) { return false; },
+            _pa0);
       };
       if (w(List<uint64_t>::nil())) {
         return UINT64_C(1);

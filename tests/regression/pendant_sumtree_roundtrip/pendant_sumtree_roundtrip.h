@@ -830,8 +830,7 @@ template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
                                                         n1, *a2, std::move(b)));
         }
       };
-  List<T1> _lc1_b = List<T1>::nil();
-  return fold_right_fix_impl(fold_right_fix_impl, n, v, std::move(_lc1_b));
+  return fold_right_fix_impl(fold_right_fix_impl, n, v, List<T1>::nil());
 }
 
 inline uint64_t T::to_nat(uint64_t _x) const {

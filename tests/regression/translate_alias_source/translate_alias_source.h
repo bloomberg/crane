@@ -266,10 +266,11 @@ struct TranslateAliasSource {
   template <typename T1>
   static DstTop<T1> lift(const Itree<Sum1<AE, BE, crane::obj>, T1> &x) {
     return Interp::template translate<Sum1<AE, BE, crane::obj>,
-                                      DstE<crane::obj>, T1>([](crane::obj x0) {
-      return Sum1<crane::obj, crane::obj, crane::obj>::inr1(std::move(x0));
-    },
-                                                            x);
+                                      DstE<crane::obj>, T1>(
+        [](crane::obj x0) {
+          return Sum1<crane::obj, crane::obj, crane::obj>::inr1(std::move(x0));
+        },
+        x);
   }
 
   static inline const SrcTop<uint64_t> prog = []() {
@@ -341,10 +342,11 @@ Interp::translate(const std::type_identity_t<crane::fn<T2(T1)>> &h,
                   const Itree<T1, T3> &t) {
   return Itree<T2, T3>::lazy_([=, h = h]() mutable -> Itree<T2, T3> {
     return Interp::template translateF<T1, T2, T3>(
-        h, [=](Itree<T1, T3> _x0) -> Itree<T2,
-                                           T3> {
-             return Interp::template translate<T1, T2, T3>(h, _x0);
-           },
+        h,
+        [=](Itree<T1, T3> _x0) -> Itree<T2,
+                                        T3> {
+          return Interp::template translate<T1, T2, T3>(h, _x0);
+        },
         t.observe());
   });
 }

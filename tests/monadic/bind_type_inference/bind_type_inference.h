@@ -113,8 +113,7 @@ struct BindTypeInference {
              std::is_invocable_r_v<T3, F2 &, T2 &&>
   static T3 nested(const T1 &a, F1 &&f, F2 &&g) {
     T1 x = a;
-    T2 y = f(std::move(x));
-    return g(std::move(y));
+    return g(f(std::move(x)));
   }
 
   static int64_t test3();

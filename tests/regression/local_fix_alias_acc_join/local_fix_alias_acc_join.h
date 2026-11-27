@@ -131,8 +131,10 @@ struct LocalFixAliasAccJoin {
             }
           };
       f = [=](uint64_t _pa0) {
-        return go(List<uint64_t>::nil(),
-                  [](uint64_t) { return sret<uint64_t>(UINT64_C(2)); }, _pa0);
+        return go(
+            List<uint64_t>::nil(),
+            [](uint64_t) { return sret<uint64_t>(UINT64_C(2)); },
+            _pa0);
       };
       return crane::apply2(f, UINT64_C(0), UINT64_C(3)).first;
     }();

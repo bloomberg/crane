@@ -250,11 +250,12 @@ using grammar_entry = SigT<production, production_semty>;
                       _a1.push_front(_a0);
                       return _a1;
                     }(Symbol::t(Terminal::RBRACE), std::deque<Symbol>{}))),
-                    std::make_pair(crane::obj(
-                        crane_erase_fn([](const auto &) { return true; })),
-                                   crane::obj(crane_erase_fn([](const auto &) {
-                                     return std::deque<crane::obj>{};
-                                   })))),
+                    std::make_pair(
+                        crane::obj(
+                            crane_erase_fn([](const auto &) { return true; })),
+                        crane::obj(crane_erase_fn([](const auto &) {
+                          return std::deque<crane::obj>{};
+                        })))),
                 [](auto _a0, auto _a1) {
                   _a1.push_front(_a0);
                   return _a1;

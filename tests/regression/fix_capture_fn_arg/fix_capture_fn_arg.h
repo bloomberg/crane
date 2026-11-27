@@ -19,8 +19,9 @@ struct FixCaptureFnArg {
   /// test1: make_transform(x=>x*2, 5) = (10, go).
   /// go(3) = (5*2) + 3 = 13. Total = 10 + 13 = 23.
   static inline const uint64_t test1 = []() -> uint64_t {
-    auto [n, g] = make_transform([](uint64_t x) { return (x * UINT64_C(2)); },
-                                 UINT64_C(5));
+    auto [n, g] = make_transform(
+        [](uint64_t x) { return (x * UINT64_C(2)); },
+        UINT64_C(5));
     return (n + g(UINT64_C(3)));
   }();
   /// test2: make_transform(S, 10) = (11, go).

@@ -12,5 +12,6 @@ uint64_t LiftedLocalFixLoopify::weighted(const List<List<uint64_t>> &l) {
               },
               l) +
           weighted_crane_sum_all(
-              [](const List<uint64_t> &) { return UINT64_C(1); }, l));
+              [](const List<uint64_t> &) { return UINT64_C(1); },
+              l));
 }

@@ -29,8 +29,7 @@ uint64_t VisitMatchBug::nested_match_consume(VisitMatchBug::Tree t) {
 }
 
 uint64_t VisitMatchBug::chain_then_match(VisitMatchBug::Tree t1) {
-  VisitMatchBug::Tree t2 = consume(std::move(t1));
-  VisitMatchBug::Tree t3 = consume(std::move(t2));
+  VisitMatchBug::Tree t3 = consume(consume(std::move(t1)));
   if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t3.v_mut())) {
     auto &[a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t3.v_mut());
     return std::move(a0);

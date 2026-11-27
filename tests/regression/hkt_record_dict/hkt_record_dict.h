@@ -102,7 +102,8 @@ struct HktRecordDict {
           return std::optional<CraneX>();
         }
       }};
-  static inline const std::optional<Nat> ex =
-      fmd<std::optional>(optd, [](const Nat &x) { return Nat::s(x); },
-                         std::make_optional<Nat>(Nat::s(Nat::o())));
+  static inline const std::optional<Nat> ex = fmd<std::optional>(
+      optd,
+      [](const Nat &x) { return Nat::s(x); },
+      std::make_optional<Nat>(Nat::s(Nat::o())));
 };

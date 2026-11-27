@@ -45,16 +45,19 @@ std::optional<std::uint8_t> TypedMappingAlgebraic::suit_of_code(uint64_t n) {
 }
 
 uint64_t TypedMappingAlgebraic::code_after(uint64_t n) {
-  return maybe_default<uint64_t>(maybe_map<std::uint8_t, uint64_t>(
-      [](std::uint8_t s) { return suit_code(next_suit(s)); }, suit_of_code(n)),
-                                 UINT64_C(0));
+  return maybe_default<uint64_t>(
+      maybe_map<std::uint8_t, uint64_t>(
+          [](std::uint8_t s) { return suit_code(next_suit(s)); },
+          suit_of_code(n)),
+      UINT64_C(0));
 }
 
 uint64_t
 TypedMappingAlgebraic::lengths(const List<std::optional<uint64_t>> &l) {
-  return l.template fold_left<uint64_t>([](uint64_t acc,
-                                           std::optional<uint64_t> m) {
-    return (acc + maybe_default<uint64_t>(m, UINT64_C(0)));
-  },
-                                        UINT64_C(0));
+  return l.template fold_left<uint64_t>(
+      [](uint64_t acc,
+         std::optional<uint64_t> m) {
+        return (acc + maybe_default<uint64_t>(m, UINT64_C(0)));
+      },
+      UINT64_C(0));
 }

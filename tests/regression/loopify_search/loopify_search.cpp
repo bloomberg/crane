@@ -738,10 +738,9 @@ List<uint64_t> LoopifySearch::quicksort_fuel(uint64_t fuel,
           const List<uint64_t> &a1_value = *a1;
           List<uint64_t> smaller =
               filter_impl([=](uint64_t y) { return y < a0; }, a1_value);
-          List<uint64_t> greater =
-              filter_impl([=](uint64_t y) { return a0 <= y; }, a1_value);
-          _stack.emplace_back(
-              _after_quicksort_fuel_in_Cons{f, a0, std::move(greater)});
+          _stack.emplace_back(_after_quicksort_fuel_in_Cons{
+              f, a0,
+              filter_impl([=](uint64_t y) { return a0 <= y; }, a1_value)});
           _stack.emplace_back(_call{std::move(smaller), f});
         }
       }

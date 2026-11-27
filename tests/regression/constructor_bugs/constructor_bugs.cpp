@@ -38,8 +38,7 @@ ConstructorBugs::bad_complex_step(const ConstructorBugs::source_state &s1) {
 
 std::pair<bool, ConstructorBugs::packed_state>
 ConstructorBugs::bad_nested(ConstructorBugs::source_state s1) {
-  ConstructorBugs::source_state s2 = step(std::move(s1));
-  ConstructorBugs::source_state s3 = step(std::move(s2));
+  ConstructorBugs::source_state s3 = step(step(std::move(s1)));
   return std::make_pair(false, packed_state{s3, s3.source_a, s3.source_b});
 }
 
@@ -415,7 +414,8 @@ ConstructorBugs::inline_both_branches(bool b,
 std::pair<std::pair<ConstructorBugs::State0, uint64_t>, uint64_t>
 ConstructorBugs::test_apply(const ConstructorBugs::State0 &s) {
   return apply_twice(
-      [](const ConstructorBugs::State0 &s0) { return s0.value_inline; }, s);
+      [](const ConstructorBugs::State0 &s0) { return s0.value_inline; },
+      s);
 }
 
 uint64_t ConstructorBugs::get_value_inline(const ConstructorBugs::State0 &s) {

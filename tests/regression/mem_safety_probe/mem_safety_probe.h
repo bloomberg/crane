@@ -482,10 +482,12 @@ struct MemSafetyProbe {
   static inline const uint64_t test_fold_compose = []() {
     tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-    return fold_compose(mylist<tree>::mycons(
-        std::move(t1),
-        mylist<tree>::mycons(std::move(t2), mylist<tree>::mynil())),
-                        [](uint64_t n) { return n; }, UINT64_C(5));
+    return fold_compose(
+        mylist<tree>::mycons(
+            std::move(t1),
+            mylist<tree>::mycons(std::move(t2), mylist<tree>::mynil())),
+        [](uint64_t n) { return n; },
+        UINT64_C(5));
   }();
   /// ---- TEST 5: Partial application + match scrutinee reuse ----
   /// f captures t by partial application, then t is used as a match

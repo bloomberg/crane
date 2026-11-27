@@ -75,9 +75,9 @@ TmcValueRoot::lst TmcValueRoot::stutter(const TmcValueRoot::lst &xs) {
     } else {
       const auto &[x0, l] =
           std::get<typename TmcValueRoot::lst::Cons>(_loop_xs->v());
-      auto _cell1 = std::make_shared<TmcValueRoot::lst>(
-          typename TmcValueRoot::lst::Cons(x0, nullptr));
-      auto _cell = typename TmcValueRoot::lst::Cons(x0, std::move(_cell1));
+      auto _cell = typename TmcValueRoot::lst::Cons(
+          x0, std::make_shared<TmcValueRoot::lst>(
+                  typename TmcValueRoot::lst::Cons(x0, nullptr)));
       TmcValueRoot::lst &_node =
           (_write ? *(*_write =
                           std::make_shared<TmcValueRoot::lst>(std::move(_cell)))

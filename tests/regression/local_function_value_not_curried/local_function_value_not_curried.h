@@ -163,16 +163,18 @@ struct LocalFunctionValueNotCurried {
            UINT64_C(1),
            List<uint64_t>::cons(UINT64_C(2),
                                 List<uint64_t>::nil())))
-           .template fold_left<uint64_t>([](
-           uint64_t a, const crane::fn<uint64_t(uint64_t)> &h) { return h(a); },
-                                         UINT64_C(0)) +
+           .template fold_left<uint64_t>(
+           [](uint64_t a,
+              const crane::fn<uint64_t(uint64_t)> &h) { return h(a); },
+           UINT64_C(0)) +
        from_param(
            [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
            List<uint64_t>::cons(
                UINT64_C(1),
                List<uint64_t>::cons(UINT64_C(2),
                                     List<uint64_t>::nil())))
-           .template fold_left<uint64_t>([](
-           uint64_t a, const crane::fn<uint64_t(uint64_t)> &h) { return h(a); },
-                                         UINT64_C(0)));
+           .template fold_left<uint64_t>(
+           [](uint64_t a,
+              const crane::fn<uint64_t(uint64_t)> &h) { return h(a); },
+           UINT64_C(0)));
 };

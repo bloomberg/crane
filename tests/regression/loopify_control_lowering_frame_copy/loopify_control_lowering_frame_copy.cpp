@@ -87,16 +87,17 @@ LoopifyControlLoweringFrameCopy::g3(const List<List<bool>> &l38, uint64_t _x,
                       }
                     }
                   };
-              return go84(List<uint64_t>::cons(UINT64_C(0),
-                                               List<uint64_t>::nil())
-                              .template fold_right<
-                  List<LoopifyControlLoweringFrameCopy::pt>>(
-                  [](uint64_t,
-                     List<LoopifyControlLoweringFrameCopy::pt>) {
-                    return List<LoopifyControlLoweringFrameCopy::pt>::nil();
-                  },
-                  List<LoopifyControlLoweringFrameCopy::pt>::nil()),
-                          UINT64_C(0));
+              return go84(
+                  List<uint64_t>::cons(UINT64_C(0),
+                                       List<uint64_t>::nil())
+                      .template fold_right<
+                      List<LoopifyControlLoweringFrameCopy::pt>>(
+                      [](uint64_t,
+                         List<LoopifyControlLoweringFrameCopy::pt>) {
+                        return List<LoopifyControlLoweringFrameCopy::pt>::nil();
+                      },
+                      List<LoopifyControlLoweringFrameCopy::pt>::nil()),
+                  UINT64_C(0));
             }(),
             crane_raw(a1)});
       }

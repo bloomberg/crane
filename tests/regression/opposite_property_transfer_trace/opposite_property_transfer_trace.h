@@ -93,7 +93,9 @@ struct OppositePropertyTransferTraceCase {
   }
 
   static inline const PreStableCategory sample_category = PreStableCategory{
-      UINT64_C(7), UINT64_C(4), [](uint64_t x) { return (x + UINT64_C(10)); },
+      UINT64_C(7),
+      UINT64_C(4),
+      [](uint64_t x) { return (x + UINT64_C(10)); },
       [](uint64_t x) { return (x + UINT64_C(3)); },
       [](uint64_t x) { return (x + UINT64_C(20)); },
       [](uint64_t x) { return (x + UINT64_C(5)); }};

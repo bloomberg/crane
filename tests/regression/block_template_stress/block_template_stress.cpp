@@ -8,8 +8,7 @@ List<std::string> BlockTemplateStress::read_n_lines(uint64_t n) {
     uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    List<std::string> rest = read_n_lines(n_);
-    return List<std::string>::cons(std::move(line), std::move(rest));
+    return List<std::string>::cons(std::move(line), read_n_lines(n_));
   }
 }
 
@@ -84,8 +83,7 @@ BlockTemplateStress::read_files(const List<std::string> &paths) {
       if (_f.good()) std::getline(_f, content);
       else content = a0;
     };
-    List<std::string> rest = read_files(*a1);
-    return List<std::string>::cons(std::move(content), std::move(rest));
+    return List<std::string>::cons(std::move(content), read_files(*a1));
   }
 }
 
