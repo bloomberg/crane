@@ -1,7 +1,7 @@
 #!/bin/bash
 # Compile every generated public header as the first and only include of a
 # translation unit, with no precompiled header and no test driver in front of
-# it.  The test build includes crane_pch.h ahead of everything, which hides a
+# it.  The test build includes scripts/crane_pch.h ahead of everything, which hides a
 # header that forgot an include; this does not.  It also rejects reserved
 # identifiers in generated code ([_Upper], [a__b]): the runtime headers are
 # included as system headers, so only what Crane generated is judged.

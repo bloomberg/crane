@@ -205,7 +205,7 @@ let declared_holdings params modes body =
   Id.Set.fold (fun x m -> Id.Map.add x Unknown m) !conflict !held
 
 (* The type arguments of [p]'s canonical type, read back from the value
-   [e] with [crane::template_argument_t] (theories/cpp/template_argument.h):
+   [e] with [crane::template_argument_t] (theories/cpp/obj.h):
    each is reached from [decltype(e)] through the class template arguments,
    pointees and [const]s the canonical type names it under. *)
 let read_back (p : Plan.t) (e : expr) : ty list =

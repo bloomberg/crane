@@ -52,7 +52,7 @@ esac
 CXX_STD=c++2c
 
 # Precompiled header support
-PCH_SRC="$THEORIES_CPP/crane_pch.h"
+PCH_SRC="$PROJECT_ROOT/scripts/crane_pch.h"
 DEFAULT_PCH_DIR="$PROJECT_ROOT/_build/pch"
 if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
     DEFAULT_PCH_DIR="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/crane-pch"

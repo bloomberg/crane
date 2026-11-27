@@ -68,10 +68,9 @@ uint64_t exec_body(STRefs r, std::span<uint64_t> vars, const Stmt &s) {
 uint64_t exec(STRefs r,
               const std::shared_ptr<crane::array_storage<uint64_t>> &vars,
               const Stmt &s) {
-  return crane::rec<Stmt, uint64_t>([=](Stmt _x0) -> uint64_t {
-    return exec_body(r, std::span<uint64_t>{*vars}, _x0);
-  },
-                                    s);
+  return crane::rec<Stmt, uint64_t>(
+      [=](Stmt _x0) -> uint64_t { return exec_body(r, std::span{*vars}, _x0); },
+      s);
 }
 
 /// Runs s on n variables, all 0: the steps it took and the final
@@ -82,7 +81,7 @@ std::pair<uint64_t, List<uint64_t>> run(STRefs r, uint64_t n, const Stmt &s) {
                                                        UINT64_C(0));
   uint64_t steps = exec(r, vars, s);
   List<uint64_t> vs =
-      crane::st::elems<List<uint64_t>>(std::span<const uint64_t>{*vars});
+      crane::st::elems<List<uint64_t>>(std::span{std::as_const(*vars)});
   return std::make_pair(steps, std::move(vs));
 }
 

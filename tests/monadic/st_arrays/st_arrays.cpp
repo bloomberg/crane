@@ -4,7 +4,7 @@ uint64_t array_simp_fixed_init(STRefs) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
           crane::st::extent(UINT64_C(6)), UINT64_C(5));
-  return std::span<const uint64_t>{*arr}[UINT64_C(1)];
+  return std::span{std::as_const(*arr)}[UINT64_C(1)];
 }
 
 std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
@@ -17,9 +17,9 @@ array_simp_list(STRefs) {
               List<uint64_t>::cons(
                   UINT64_C(3),
                   List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))));
-  uint64_t elem = std::span<const uint64_t>{*arr}[UINT64_C(0)];
+  uint64_t elem = std::span{std::as_const(*arr)}[UINT64_C(0)];
   List<uint64_t> lst =
-      crane::st::elems<List<uint64_t>>(std::span<const uint64_t>{*arr});
+      crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
   return std::make_pair(std::make_pair(elem, lst.length()), lst);
 }
 
@@ -28,10 +28,10 @@ List<uint64_t> swap_first_and_last_list(STRefs, const List<uint64_t> &xs) {
       crane::st::new_list_array<uint64_t>(xs);
   auto _once1 = xs.length();
   std::swap(
-      std::span<uint64_t>{*arr}[UINT64_C(0)],
-      std::span<uint64_t>{*arr}[
+      std::span{*arr}[UINT64_C(0)],
+      std::span{*arr}[
           (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1))))]);
-  return crane::st::elems<List<uint64_t>>(std::span<const uint64_t>{*arr});
+  return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
 }
 
 uint64_t StArrays::array_simp_fixed_init() {

@@ -339,8 +339,8 @@ Generated code includes these by name, so `theories/cpp` (or
 | Header | Contents |
 | --- | --- |
 | `small_vector.h` | `crane::small_vector<T, N>`, a stack with inline storage for the worklists of iterative destructors and the frame stacks of loopified functions |
-| `fn.h`, `crane_fn.h` | `crane::fn<R(A...)>`, a closure as a shared immutable value; storing a callable into an erased field |
-| `obj.h` | `crane::obj`, an erased value, shared rather than copied |
+| `fn.h`, `crane_fn.h` | `crane::fn<R(A...)>`, a closure as a shared immutable value; storing a callable into an erased field; ITree's `rec` and `call` in erased mode |
+| `obj.h` | `crane::obj`, an erased value, shared rather than copied; `crane::writable(v).ref()`, a temporary an in-place argument binds; `crane::unreachable()` for builds before C++23; `crane::template_argument_t<T, I>`, used by view conversions |
 | `shared_block.h` | the header of every shared runtime block: count and destroy function; immortal and sticky counts |
 | `shared_variant.h`, `word.h` | `crane::shared_variant` (`Set Crane SharedVariant`) |
 | `crane_variant.h` | `crane::variant` (`Set Crane FastVariant`) |
@@ -351,22 +351,14 @@ Generated code includes these by name, so `theories/cpp` (or
 | `arena.h` | scoped arenas (`Set Crane Arena`) |
 | `persistent_array.h` | the copy-on-write array `PrimArray` maps to |
 | `shared_array.h` | `crane::shared_array<T>`, an immutable shared array; static blocks for baked constants |
-| `array_storage.h` | `crane::array_storage<T>`, one addressable element each (ST arrays) |
-| `crane_st.h` | ST array helpers |
+| `crane_st.h` | `crane::array_storage<T>`, one addressable element each, and the ST array helpers |
 | `crane_string.h` | the `PrimString` operations |
 | `crane_int63.h`, `crane_float.h` | the `PrimInt63` and `PrimFloat` primitives without an operator |
-| `writable.h` | `crane::writable(v).ref()`, a temporary an in-place argument binds |
-| `template_argument.h` | `crane::template_argument_t<T, I>`, used by view conversions |
-| `crane_hash.h` | `crane::hash<T>`, including pairs |
 | `conslist.h` | `crane::list<T>`, a persistent cons list, available as a container mapping |
 | `aggregate.h` | a struct's fields as a pack (C++26) or counted bindings (C++20) |
 | `crane_bake.h` | the `Crane Bake` writer and reader |
-| `crane_unreachable.h` | `crane::unreachable()` for builds before C++23 |
 | `crane_thread.h` | `crane::thread`, a copyable thread handle |
 | `crane_itree.h` | reified interaction trees |
 | `crane_real.h` | the `Real` class |
 | `stm_adapter.h`, `crane-stm/` | the STM API and its implementation |
-| `mini_stm.h` | an earlier single-header STM, kept as the reference for `stm_adapter.h`'s API |
-| `skipnode.h` | support for the STM skip-list example |
-| `crane_pch.h` | a precompiled header of the standard headers generated code uses |
-| `alloc_profile.h`, `stats.h`, `count_rc.h` | measurement: allocation counters (`CRANE_ALLOC_PROFILE`), event counters (`CRANE_STATS`), reference-count traffic (`CRANE_COUNT_RC=1` at extraction) |
+| `stats.h`, `count_rc.h` | measurement: event counters (`CRANE_STATS`), reference-count traffic (`CRANE_COUNT_RC=1` at extraction) |

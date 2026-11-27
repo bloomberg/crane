@@ -1247,7 +1247,6 @@ Developer switches (`CRANE_TRACE_PIPELINE`, `CRANE_TRACE_PASSES`,
 [Compiler-Pipeline.md](Compiler-Pipeline.md#10-checking-tracing-and-layering).
 
 C++ macros the runtime headers read when the generated code is compiled:
-`CRANE_ALLOC_PROFILE` (global allocation counters, `alloc_profile.h`),
 `CRANE_STATS` (runtime event counters, `stats.h`), `CRANE_STRICT_ARITY`
 (removes `crane::fn`'s implicit conversion between curried and flat argument
 groupings, so a crossing the generated code missed does not compile; the

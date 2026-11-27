@@ -1,6 +1,6 @@
 #pragma once
 
-// STM adapter (BDE flavor): provides a mini_stm.h-compatible API on top of
+// STM adapter (BDE flavor): provides the mini STM API on top of
 // crane-stm.
 //
 // The Crane extraction system generates code where read/write calls have no
@@ -89,7 +89,7 @@ auto atomically(F&& f) -> decltype(f()) {
 // We wrap them in lambdas for Transaction::or_.
 //
 // Note: if the first argument calls retry(), the exception propagates before
-// orElse is reached.  This matches mini_stm.h's behavior.
+// orElse is reached.  This matches the mini STM API's behavior.
 
 template <typename A>
 A orElse(A left, A right) {

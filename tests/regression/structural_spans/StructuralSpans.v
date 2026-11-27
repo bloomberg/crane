@@ -56,16 +56,16 @@ Axiom buf_elems : forall {A : Type}, Buf A -> list A.
      type_access := MutableValue ReadByConstReference;
      type_views :=
        ReadWriteViews
-         {| view_headers := ["span"];
+         {| view_headers := ["ranges"; "span"];
             view_cpp :=
               Crane.Cpp.Apply "std::span"
                 [Crane.Cpp.TypeArg (Crane.Cpp.Const (Crane.Cpp.StoredComponent "element"))];
-            view_from_canonical := "std::span<const %stored(element)>{%value}";
+            view_from_canonical := "std::span<const std::ranges::range_value_t<decltype(%value)>>{%value}";
             view_escape := MaterialiseView (Expr "std::vector<%stored(element)>(%view.begin(), %view.end())") |}
          {| view_headers := ["span"];
             view_cpp :=
               Crane.Cpp.Apply "std::span" [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "element")];
-            view_from_canonical := "std::span<%stored(element)>{%value}";
+            view_from_canonical := "std::span{%value}";
             view_escape := BorrowOnly |}
          "std::span<const %stored(element)>{%view}";
      type_interface := AbstractInterface;
@@ -209,11 +209,11 @@ Module RingMapping.
        type_access := ReadOnlyValue ReadByConstReference;
        type_views :=
          ReadViews
-           {| view_headers := ["span"];
+           {| view_headers := ["ranges"; "span"];
               view_cpp :=
                 Crane.Cpp.Apply "std::span"
                   [Crane.Cpp.TypeArg (Crane.Cpp.Const (Crane.Cpp.StoredComponent "element"))];
-              view_from_canonical := "std::span<const %stored(element)>{%value}";
+              view_from_canonical := "std::span<const std::ranges::range_value_t<decltype(%value)>>{%value}";
               view_escape := BorrowOnly |};
        type_interface := AbstractInterface;
        type_model := Identity;

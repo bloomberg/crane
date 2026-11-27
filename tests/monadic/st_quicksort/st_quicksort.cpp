@@ -105,9 +105,9 @@ List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
         crane::st::new_list_array<uint64_t>(xs);
     auto _once1 = xs.length();
     quicksort_ST(
-        STRefs::BUILD_STREFS, std::span<uint64_t>{*arr}, UINT64_C(0),
+        STRefs::BUILD_STREFS, std::span{*arr}, UINT64_C(0),
         (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
-    return crane::st::elems<List<uint64_t>>(std::span<const uint64_t>{*arr});
+    return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
   }
 }
 

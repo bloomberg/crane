@@ -77,13 +77,13 @@ CRANE_OPT ?= -O3 -flto
 # Set MIMALLOC_LIBS= to measure with the system allocator.
 MIMALLOC_LIBS ?= $(shell pkg-config --libs mimalloc 2>/dev/null || echo "-L/opt/homebrew/lib -lmimalloc")
 CRANE_CXX_FLAGS := $(CRANE_OPT) -std=c++2c -DIMMER_NO_THREAD_SAFETY=1 $(CRANE_STDLIB) \
-                   -iquote $(CRANE_EXT_DIR) -I$(CRANE_CPP_DIR) -I$(IMMER) \
+                   -iquote $(CRANE_EXT_DIR) -I. -I$(CRANE_CPP_DIR) -I$(IMMER) \
                    $(CRANE_EXTRA_FLAGS)
 CRANE_SRCS      := $(wildcard $(CRANE_EXT_DIR)/*.cpp)
 # Headers are prerequisites too: editing a runtime header and rebuilding must
 # not silently leave yesterday's binary in place, which is exactly the kind of
 # stale result a measurement run cannot afford.
-CRANE_HDRS      := $(wildcard $(CRANE_EXT_DIR)/*.h) $(wildcard $(CRANE_CPP_DIR)/*.h)
+CRANE_HDRS      := $(wildcard $(CRANE_EXT_DIR)/*.h) $(wildcard $(CRANE_CPP_DIR)/*.h) crane_hash.h
 
 _build/default/run_%_crane.exe: run_%_crane.cpp $(CRANE_SRCS) $(CRANE_HDRS)
 	@mkdir -p _build/default

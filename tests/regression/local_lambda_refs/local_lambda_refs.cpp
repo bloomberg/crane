@@ -66,12 +66,12 @@ std::pair<List<uint64_t>, List<uint64_t>> fill_each(STRefs) {
     }
     return;
   };
-  fill(UINT64_C(0), UINT64_C(3), std::span<uint64_t>{*a});
-  fill(UINT64_C(0), UINT64_C(2), std::span<uint64_t>{*b});
+  fill(UINT64_C(0), UINT64_C(3), std::span{*a});
+  fill(UINT64_C(0), UINT64_C(2), std::span{*b});
   List<uint64_t> xs =
-      crane::st::elems<List<uint64_t>>(std::span<const uint64_t>{*a});
+      crane::st::elems<List<uint64_t>>(std::span{std::as_const(*a)});
   List<uint64_t> ys =
-      crane::st::elems<List<uint64_t>>(std::span<const uint64_t>{*b});
+      crane::st::elems<List<uint64_t>>(std::span{std::as_const(*b)});
   return std::make_pair(std::move(xs), std::move(ys));
 }
 

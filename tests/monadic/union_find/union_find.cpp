@@ -978,7 +978,7 @@ std::shared_ptr<crane::array_storage<node>> make_ST(STRefs r, uint64_t n) {
   std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
       std::make_shared<crane::array_storage<std::pair<uint64_t, uint64_t>>>(
           crane::st::extent(n), std::make_pair(UINT64_C(0), UINT64_C(0)));
-  init_ST(r, std::span<std::pair<uint64_t, uint64_t>>{*a}, n, UINT64_C(0));
+  init_ST(r, std::span{*a}, n, UINT64_C(0));
   return a;
 }
 
@@ -1109,7 +1109,7 @@ List<bool> run_ST(STRefs r, uint64_t n,
 List<bool> union_find_ST(STRefs r, uint64_t n, const List<Op> &ops) {
   std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
       make_ST(r, n);
-  return run_ST(r, n, std::span<std::pair<uint64_t, uint64_t>>{*a}, ops);
+  return run_ST(r, n, std::span{*a}, ops);
 }
 
 node get(const NatMap::template bst<std::pair<uint64_t, uint64_t>> &s,

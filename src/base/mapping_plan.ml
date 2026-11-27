@@ -422,7 +422,7 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
         at 0
       in
       if List.exists (fun v -> names_component v.from_canonical) (List.filter_map Fun.id [views.read; views.write])
-      then ["template_argument.h"]
+      then ["obj.h"]
       else [] }
 
 let plans : t GlobRef.Map.t ref = State.cell State.Extraction GlobRef.Map.empty
