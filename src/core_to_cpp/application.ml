@@ -1089,9 +1089,20 @@ let eta_fun cx (slot : Slot.slot) env f args :
             excess
         in
         if ret_is_chainable then
-          let excess = List.map (fun e -> (gen_expr_typed cx (Slot.at ~ret ~slot ()) env e).expr) excess_args in
+          let excess_typed = List.map (fun e -> gen_expr_typed cx (Slot.at ~ret ~slot ()) env e) excess_args in
+          let excess = List.map (fun (x : Cpp_ir.Typed.t) -> x.expr) excess_typed in
           if cod_is_erased then
-            let applied = Coerce.apply_erased_callee base excess in
+            (* Each argument goes into the box the erased callee opens, as
+               {!Coerce.decide} boxes a value of its type: a callable whole,
+               the way a recovery reads it back. *)
+            let boxed =
+              List.map2
+                (fun e (x : Cpp_ir.Typed.t) ->
+                  let from = match x.ty with Typed t -> Some t | _ -> None in
+                  Coerce.coerce cx ~term:e ?from ~value:x ~into:Any x.expr )
+                excess_args excess_typed
+            in
+            let applied = Coerce.apply_erased_callee base boxed in
 
             (* Args applied to a box come back as a box; the codomain at this
                call's instantiation is what says what that box holds. *)

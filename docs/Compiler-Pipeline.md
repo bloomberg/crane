@@ -306,7 +306,9 @@ at that grouping: each argument's slot (`Calls.grouped_parameter`, in
 `Calls.argument_position`, shared by lowering and both plans), a
 constructor's fields and type arguments, a global's eta adapter
 (`Coerce.declared_cpp`). A box holds a callable at its Core spelling and
-is regrouped to the slot after recovery.
+is regrouped to the slot after recovery. The arguments of a callee
+recovered from a box are boxed by `Coerce.decide`, a callable whole
+(`crane_erase_fn`), the way a recovery reads it back.
 
 **Typed fit.** Under `CRANE_CHECK_IR`, `Core_to_cpp.Typed_checks.fit`
 checks every value lowering puts in a destination (`Destination.finish`) or

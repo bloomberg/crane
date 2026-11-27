@@ -423,10 +423,9 @@ let name_fn_arg_plan param_core_ty (value : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowe
     opaque function type ([nfun 2], a type-level [Fixpoint]) is a chain of unary
     [std::function<std::any(std::any)>]s.  Handing it every argument at once
     would cast it to a signature it was never stored at. *)
-let apply_erased_curried ?(box = false) (callee : Cpp_ir.Lowered.Expr.t) arg_exprs : Cpp_ir.Lowered.Expr.t =
+let apply_erased_curried (callee : Cpp_ir.Lowered.Expr.t) arg_exprs : Cpp_ir.Lowered.Expr.t =
   List.fold_left
     (fun (f : Cpp_ir.Lowered.Expr.t) a ->
-      let a = if box then Cpp_passes.Erasure.converting_ctor Any [a] else a in
       match f with
       (* A callable boxed right here never lost its type: recovering it would
          be a cast straight back to what it already was. *)
@@ -434,12 +433,12 @@ let apply_erased_curried ?(box = false) (callee : Cpp_ir.Lowered.Expr.t) arg_exp
       | _ -> Erased_call (f, a) )
     callee arg_exprs
 
-(** Apply a callee whose static C++ type is the erased [std::any].  [std::any]
-    is not callable, so the canonical [std::function<std::any(std::any...)>]
-    adapter the producer stored via {!any_slot_plan} is recovered with
-    an [any_cast] and each argument is boxed.  The result is a [std::any]. *)
-let apply_erased_callee callee arg_exprs =
-  apply_erased_curried ~box:true callee arg_exprs
+(** Apply a callee whose static C++ type is the erased [std::any] to
+    arguments already boxed ({!coerce} at [Any]).  [std::any] is not
+    callable, so the canonical [std::function<std::any(std::any...)>]
+    adapter the producer stored via {!any_slot_plan} is recovered with an
+    [any_cast].  The result is a [std::any]. *)
+let apply_erased_callee callee boxed_args = apply_erased_curried callee boxed_args
 
 (** Adapt a callable produced with fewer parameters than its use site expects.
     A body like [fun f acc => f acc] is eta-reduced before it reaches here, so
