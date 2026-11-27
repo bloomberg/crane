@@ -359,25 +359,34 @@ Section Simulation.
 
 End Simulation.
 
+(** [init_ST] makes the cells from [i] up to [n - 1] roots of rank 0,
+    keeping those below [i]. *)
+Lemma init_sim n base k : forall i m (acc : Acc lt (n - i)), n - i = k ->
+  (forall j, j < i -> j < n -> cell m (base + j) = Some (j, 0)) ->
+  st_spec (E := exceptE Err) (init_ST (R := model_refs) (MkArrLoc base n) n i acc) m
+    (fun m' _ => forall j, j < n -> cell m' (base + j) = Some (j, 0)).
+Proof.
+  induction k as [|k IH]; intros i m [acc] Hk Hcells; cbn [init_ST];
+    destruct (Sumbool.sumbool_of_bool (Nat.ltb i n)) as [Hlt | Hge].
+  - pose proof (proj1 (Nat.ltb_lt i n) Hlt). lia.
+  - apply st_spec_ret. intros j Hj. apply Nat.ltb_ge in Hge. apply Hcells; lia.
+  - pose proof (proj1 (Nat.ltb_lt i n) Hlt) as Hin.
+    apply st_spec_bind, st_spec_writeArray; [ exact Hin |].
+    apply IH; [ lia |]. intros j Hj Hjn. destruct (Nat.eq_dec i j) as [<- | Hne].
+    + apply st_get_put_eq.
+    + rewrite st_get_put_ne by lia. apply Hcells; lia.
+  - apply Nat.ltb_ge in Hge. lia.
+Qed.
+
 Lemma make_sim n m :
   st_spec (E := exceptE Err) (make_ST (R := model_refs) n) m
     (fun m' a => exists base, a = MkArrLoc base n /\ rep n base m' empty_uf).
 Proof.
   unfold make_ST. apply st_spec_bind, st_spec_newArray. intros base m1 _.
   apply st_spec_bind.
-  eapply st_spec_weaken; [| apply (st_spec_for_each_with
-    (fun rest _ m => (forall j, In j rest -> j < n)
-                     /\ forall i, i < n -> ~ In i rest -> cell m (base + i) = Some (i, 0)))].
-  - intros m2 _ [_ Hcells]. apply st_spec_ret. exists base. split; [ reflexivity |].
-    intros i Hi. apply Hcells; auto.
-  - intros x xs _ m2 [Hin Hcells]. apply st_spec_writeArray; [ apply Hin; left; reflexivity |].
-    split; [ intros j Hj; apply Hin; right; exact Hj |].
-    intros i Hi Hni. destruct (Nat.eq_dec x i) as [<- | Hne].
-    + apply st_get_put_eq.
-    + rewrite st_get_put_ne by lia.
-      apply Hcells; [ exact Hi |]. intros [|]; contradiction.
-  - split; [ intros j Hj; apply in_seq in Hj; lia |].
-    intros i Hi Hni. exfalso. apply Hni, in_seq. lia.
+  eapply st_spec_weaken; [| apply (init_sim n base (n - 0)); [ reflexivity | intros j Hj; lia ] ].
+  intros m2 u Hcells. apply st_spec_ret. exists base. split; [ reflexivity |].
+  intros i Hi. apply Hcells. exact Hi.
 Qed.
 
 (** The imperative union-find computes the pure one. *)

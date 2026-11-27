@@ -31,6 +31,8 @@
 
 From Stdlib Require Import
   Arith.PeanoNat
+  Arith.Wf_nat
+  Lia
   List
   FSets.FMapAVL
   Structures.OrderedTypeEx
@@ -68,9 +70,24 @@ Section Imperative.
   Notation V := (fun _ : nat => node).
   Notation E0 := (STEvent R V +' exceptE Err).
 
+  (** Makes each element from [i] up to [n - 1] a root of rank 0.  It
+      recurses on the accessibility of [n - i], which is erased, and is a
+      tail call: it extracts to a loop writing the cells in place. *)
+  #[refine] Fixpoint init_ST (a : STArray node) (n i : nat) (acc : Acc lt (n - i))
+    {struct acc} : itree E0 unit :=
+    match Sumbool.sumbool_of_bool (Nat.ltb i n) with
+    | left Hlt =>
+      writeArray a i (i, 0);;
+      init_ST a n (S i) (@Acc_inv _ _ _ acc (n - S i) _)
+    | right _ => Ret tt
+    end.
+  Proof. apply Nat.ltb_lt in Hlt. lia. Defined.
+
+  (** [Acc_intro_generator] puts [2^10] layers of [Acc_intro] in front of
+      [lt_wf], so that [make_ST] also computes in Rocq. *)
   Definition make_ST (n : nat) : itree E0 (STArray node) :=
     a <- newArray n (0, 0);;
-    for_each_with (seq 0 n) tt (fun _ i => writeArray a i (i, 0));;
+    init_ST a n 0 (Acc_intro_generator 10 lt_wf _);;
     Ret a.
 
   (** The operations take the array as a section variable rather than as an
