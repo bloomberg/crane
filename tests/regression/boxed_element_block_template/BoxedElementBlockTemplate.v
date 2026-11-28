@@ -6,7 +6,7 @@ From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 
-(** A [Boxed Element] container whose constructors are [%result] blocks.
+(** A container boxing its element ([BoxedComponent]) whose constructors are [%result] blocks.
 
     A block's text is spliced as statements, and its [%elem] hole is decided
     like a constructor template's: boxed where the element recurses through

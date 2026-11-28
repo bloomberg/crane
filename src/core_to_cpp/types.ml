@@ -535,8 +535,8 @@ let build_template_params cx ~site env tvars tys =
 
 (** Generate code for a custom-extracted constructor application.
 
-    Custom-extracted constructors have user-defined C++ syntax (registered via
-    [Crane Extract Constant]) that may include type argument placeholders like
+    Custom-extracted constructors have user-defined C++ syntax (a typed
+    mapping's [ctor_build]) that may include type argument placeholders like
     [%t0], [%t1], etc. This function builds the C++ expression by:
     1. Filtering the Core type argument list to keep only type parameters
        (dropping index arguments that don't correspond to C++ template params)

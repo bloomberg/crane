@@ -624,7 +624,7 @@ let supply_template_args (d : settled) : settled =
 
 (** {2 Instantiating mappings} *)
 
-(** Whether [ty] recurses through a container with a [Boxed Element]
+(** Whether [ty] recurses through a container with a [BoxedComponent]
     wrapper. *)
 let rec recurses_boxed : ty -> bool = function
   | Entity_application (r, args, _) | Foreign {custom = r; types = args; _} ->
@@ -633,7 +633,7 @@ let rec recurses_boxed : ty -> bool = function
   | _ -> false
 
 (* The inductive whose mapping a constructor's text belongs to, where a
-   [Boxed Element] wrapper is declared. *)
+   [BoxedComponent] box is declared. *)
 let container_of = function GlobRef.ConstructRef (ind, _) -> GlobRef.IndRef ind | r -> r
 
 let wrapper_pieces wrapper : Cpp_ir.Foreign.wrapper_piece list =

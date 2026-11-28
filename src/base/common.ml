@@ -1542,7 +1542,7 @@ let resolve_module_in vis mp =
 let module_label_name l = modular_rename (Label.to_id l)
 
 (** Special hack for constants of type Ascii.ascii : if an
-    [Extract Inductive ascii => char] has been declared, then the constants are
+    [ascii] is mapped to [char], then the constants are
     directly turned into chars *)
 
 let ascii_type_name = "core.ascii.type"
@@ -1604,7 +1604,7 @@ let get_native_char c =
 let pp_native_char c = str ("'" ^ Char.escaped (get_native_char c) ^ "'")
 
 (** Special hack for constants of type String.string : if an
-    [Extract Inductive string => string] has been declared, then the constants
+    [string] is mapped to a C++ string, then the constants
     are directly turned into string literals *)
 
 let string_type_name = "core.string.type"

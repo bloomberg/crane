@@ -1,8 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The placeholder syntax of custom mappings ([Crane Extract Inductive],
-    [Crane Extract Constant] and the like), parsed into tokens, once per text
+(** The placeholder syntax of mapping templates (a typed mapping's
+    constructor, match and operation text), parsed into tokens, once per text
     and category.  Literal C++ between placeholders stays opaque.  The only
     module that knows the syntax: translation and the printer
     ({!Cpp_passes.Erasure}) fold over the tokens. *)

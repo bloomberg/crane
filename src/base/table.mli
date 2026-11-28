@@ -14,7 +14,8 @@
     parameters.
 
     This module is the plugin's central mutable registry: it holds the custom
-    [Extract Inductive]/[Extract Constant] mappings, cached inductive metadata,
+    mappings ([Crane Extract Skip], [Monad], [Void] and the typed mappings'
+    answers), cached inductive metadata,
     the global extraction flags, and the per-run reset hooks that clear all of
     the above between extractions.  Most other modules read and write this state
     rather than threading it explicitly.  It sits below extraction, translation
@@ -26,11 +27,9 @@
 
     - {b Configuration}, set by vernacular commands and options and only read
       while extracting: the [Summary]-backed mappings ([customs],
-      [custom_matchs], [boxed_wrappers], [custom_drains], [ref_imports],
-      [inline_table], [foreign_set], [callback_map], [implicits_table],
+      [ref_imports], [inline_table], [callback_map], [implicits_table],
       [blacklist_table], [loopify_table], [loopify_suffix_table],
-      [reuse_table], [no_arena_table], [lang_ref], [trivially_copyable_heads],
-      [trivially_copyable_refs], [monads], [binds], [rets], [void_ty],
+      [reuse_table], [no_arena_table], [lang_ref], [monads], [binds], [rets], [void_ty],
       [ghost_tm], [skip_module_set], [numeral_table], [converter_table]); the
       plain refs a functor body's directives must survive [End] in
       ([no_arena_suffix_table], [guard_compare_table]); the [Goptions] flags;
@@ -102,7 +101,6 @@ val warning_opaques : bool -> unit
 val warning_ambiguous_name :
   ?loc:Loc.t -> qualid * ModPath.t * GlobRef.t -> unit
 
-
 (** Report error for axiom scheme.
     @param loc optional source location
     @param r   the axiom global reference
@@ -117,7 +115,6 @@ val error_inductive : ?loc:Loc.t -> GlobRef.t -> 'a
 
 (** Report error for number of constructors. *)
 val error_nb_cons : unit -> 'a
-
 
 (** Report error for missing module expression. *)
 val error_no_module_expr : ModPath.t -> 'a
@@ -182,7 +179,6 @@ val string_of_modfile : ModPath.t -> string
     emitted under a fresh one.  Must be called before the file is first
     spelled. *)
 val reserve_modfile_name : string -> unit
-
 
 (** Get file name from module file. Escapes C standard header collisions. *)
 val file_of_modfile : ModPath.t -> string
@@ -710,7 +706,6 @@ val add_cofixpoint : GlobRef.t -> unit
 (** Check if a definition is a cofixpoint. *)
 val is_cofixpoint : GlobRef.t -> bool
 
-
 (** Add symbol. *)
 val add_symbol : GlobRef.t -> unit
 
@@ -985,7 +980,6 @@ val check_non_atomic_rc_request : unit_config -> unit
     swaps the factory, never the pointer representation. *)
 val arena_enabled : unit -> bool
 
-
 val stamp_build : unit -> bool
 (** Whether [CRANE_STAMP=1] is set: print a digest of the plugin binary as a
     comment at the top of every generated file, so the artifact witnesses which
@@ -1060,7 +1054,6 @@ val implicits_of_global : GlobRef.t -> Int.Set.t
 
 (** {2 Custom extractions table} *)
 
-
 (** [same_mutual_block r1 r2] holds when both are inductive types from the
     same mutual block, which the backend generates into one enclosing scope. *)
 val same_mutual_block : GlobRef.t -> GlobRef.t -> bool
@@ -1091,9 +1084,6 @@ val inline_custom_arity : GlobRef.t -> int option
 (** Whether an [OperationMapping] instance maps [r]. *)
 val is_mapped_operation : GlobRef.t -> bool
 
-(** Check if reference has foreign custom extraction. *)
-val is_foreign_custom : GlobRef.t -> bool
-
 (** Find callback name for reference if any. *)
 val find_callback : GlobRef.t -> string option
 
@@ -1118,19 +1108,8 @@ val check_written_custom : GlobRef.t -> unit
 val written_custom_text : GlobRef.t -> string option
 
 (** True when [s] names a C++ scalar type that is trivially copyable
-    (integers, floats, char variants, fixed-width aliases, [std::nullptr_t]),
-    or names a type declared with {!extraction_trivially_copyable}. *)
+    (integers, floats, char variants, fixed-width aliases, [std::nullptr_t]). *)
 val is_trivially_copyable_cpp_name : string -> bool
-
-(** True when the type was declared trivially copyable with
-    [Crane TriviallyCopyable].  Conditional on the type arguments, which the
-    caller must check. *)
-val is_trivially_copyable_ref : GlobRef.t -> bool
-
-(** [Crane TriviallyCopyable r] declares that the C++ type [r] is mapped to is
-    trivially copyable whenever its type arguments are (as [std::pair] is).
-    Errors when [r] has no custom mapping to take a C++ name from. *)
-val extraction_trivially_copyable : qualid list -> unit
 
 (** True when [r] is a custom-extracted inductive whose C++ representation is
     a trivially-copyable scalar (e.g. [nat] → [unsigned int]). *)
@@ -1156,7 +1135,7 @@ val indref_of_match : 'p Core.Match.Branch.at array -> GlobRef.t
 (** Find custom match extraction code. *)
 val find_custom_match : 'p Core.Match.Branch.at array -> string
 
-(** Look up the [Boxed Element] wrapper template (e.g. ["immer::box<%t0>"])
+(** Look up the element box ([BoxedComponent], e.g. ["immer::box<%t0>"])
     for a custom container.  The wrapper is applied to the container's element
     only where the element type is incomplete at the point the container is
     named, i.e. where the element recurses through the container
@@ -1266,17 +1245,11 @@ val extraction_inline : bool -> qualid list -> unit
 (** Print current inline extraction table. *)
 val print_extraction_inline : unit -> Pp.t
 
-(** Print foreign extraction table. *)
-val print_extraction_foreign : unit -> Pp.t
-
 (** Print callback extraction table. *)
 val print_extraction_callback : unit -> Pp.t
 
 (** Reset inline extraction table. *)
 val reset_extraction_inline : unit -> unit
-
-(** Reset foreign extraction table. *)
-val reset_extraction_foreign : unit -> unit
 
 (** Reset callback extraction table. *)
 val reset_extraction_callback : unit -> unit
@@ -1311,40 +1284,6 @@ val check_written_mapping_headers : unit -> unit
     unless the program was decided to start one, in the unit configuration
     given. *)
 val check_concurrency_decided : unit_config -> unit
-
-(** Extract constant with import custom code.
-    @param inline  [true] to mark as Inline, [false] for NoInline
-    @param r       the qualified identifier of the constant to extract
-    @param ids     type parameter names for type-scheme axioms (usually [[]])
-    @param s       the C++ replacement expression or type string
-    @param imports list of C++ headers to [#include] when this constant is used
-
-    A constant standing for a type with no [imports] is warned about where
-    its text writes a name C++ does not declare: see {!extract_inductive}. *)
-val extract_constant_import :
-  bool -> qualid -> string list -> string -> string list -> unit
-
-(** Extract constant with foreign code.
-    @param r the qualified identifier of the constant (must be a function)
-    @param s the C++ foreign function name to call at extraction sites *)
-val extract_constant_foreign : qualid -> string -> unit
-
-(** Extract inductive with custom representation.
-    @param r       the qualified identifier of the inductive type
-    @param s       the C++ type name replacing the inductive
-    @param l       list of C++ constructor representation strings, one per
-                   constructor (length must match the number of constructors)
-    @param optstr  optional C++ match template string for custom pattern matching
-    @param imports list of C++ headers to [#include] when this type is used
-
-    Warns ([crane-mapping-without-header]) when [imports] is empty and [s]
-    writes a name C++ does not declare
-    ({!Cpp_ir.Foreign_template.declared_type_names}): the header a unit includes for
-    a mapped type is the mapping's own, never another's. *)
-val extract_inductive :
-  ?boxed:string ->
-  ?drain:string ->
-  qualid -> string -> string list -> string option -> string list -> unit
 
 (** Extract monad with bind and return operations.
     @param m       the qualified identifier of the monad type constructor
@@ -1449,7 +1388,6 @@ val reset_extraction_blacklist : unit -> unit
 
 (** Print current blacklist. *)
 val print_extraction_blacklist : unit -> Pp.t
-
 
 (** {2 Local fixpoint groups recursing at a ground instance} *)
 

@@ -1047,7 +1047,7 @@ and Foreign : sig
     custom_yields : 'p Type.t option;
   }
 
-  (** A piece of a [Boxed Element] wrapper. *)
+  (** A piece of a container's element box ([BoxedComponent]). *)
   type wrapper_piece =
     | Wrapper_text of string
     | Wrapper_element
@@ -1058,7 +1058,7 @@ and Foreign : sig
     | Type_argument of int  (** [%t{i}] *)
     | Element of int * wrapper_piece list option
         (** [%elem{i}]: type argument [i], inside the container's
-            [Boxed Element] wrapper where it recurses *)
+            element box where it recurses *)
     | Value of int  (** [%a{i}] *)
     | Yields  (** [%ret], the type the use yields *)
     | Result  (** [%result], the variable a block assigns *)

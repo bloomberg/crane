@@ -1,4 +1,7 @@
 (* SPDX-License-Identifier: BSD-3-Clause *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
 From Crane Require Import Mapping.NatInt.
@@ -24,37 +27,93 @@ From Crane.Libraries.ParseALot.Examples.XML.Parser Require Import XML.
 (* ----------------------------------------------------------------- *)
 (* Custom mapping: Ascii.ascii -> char                                *)
 (* ----------------------------------------------------------------- *)
-Crane Extract Inductive Ascii.ascii => "char"
-  [ "(static_cast<char>((%a0 ? 1 : 0) | (%a1 ? 2 : 0) | (%a2 ? 4 : 0) | (%a3 ? 8 : 0) | (%a4 ? 16 : 0) | (%a5 ? 32 : 0) | (%a6 ? 64 : 0) | (%a7 ? 128 : 0)))" ]
-  "bool %b0a0 = %scrut & 1; bool %b0a1 = (%scrut >> 1) & 1; bool %b0a2 = (%scrut >> 2) & 1; bool %b0a3 = (%scrut >> 3) & 1; bool %b0a4 = (%scrut >> 4) & 1; bool %b0a5 = (%scrut >> 5) & 1; bool %b0a6 = (%scrut >> 6) & 1; bool %b0a7 = (%scrut >> 7) & 1; %br0"
-  From "".
+Module CharStringMappings.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-(* ----------------------------------------------------------------- *)
-(* Custom mapping: String.string -> std::string                       *)
-(* ----------------------------------------------------------------- *)
-Crane Extract Inductive String.string => "std::string"
-  [ "std::string()"
-    "std::string(1, %a0) + %a1" ]
-  "if (%scrut.empty()) { %br0 } else { char %b1a0 = %scrut[0]; std::string %b1a1 = %scrut.substr(1); %br1 }"
-  From "string".
+(** [ascii] is a [char]: its eight bits are its fields. *)
+#[global] Instance ascii_char_mapping : TypeMapping Ascii.ascii :=
+  {| type_headers := [];
+     type_cpp := Crane.Cpp.Int Crane.Cpp.Char;
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews Ascii.ascii;
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref Ascii.Ascii;
+             ctor_build := Expr "(static_cast<char>((%a0 ? 1 : 0) | (%a1 ? 2 : 0) | (%a2 ? 4 : 0) | (%a3 ? 8 : 0) | (%a4 ? 16 : 0) | (%a5 ? 32 : 0) | (%a6 ? 64 : 0) | (%a7 ? 128 : 0)))";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation; case_test := "true";
+                       case_fields := [(0, OwnedProjection "static_cast<bool>((%scrut >> 0) & 1)"); (1, OwnedProjection "static_cast<bool>((%scrut >> 1) & 1)"); (2, OwnedProjection "static_cast<bool>((%scrut >> 2) & 1)"); (3, OwnedProjection "static_cast<bool>((%scrut >> 3) & 1)"); (4, OwnedProjection "static_cast<bool>((%scrut >> 4) & 1)"); (5, OwnedProjection "static_cast<bool>((%scrut >> 5) & 1)"); (6, OwnedProjection "static_cast<bool>((%scrut >> 6) & 1)"); (7, OwnedProjection "static_cast<bool>((%scrut >> 7) & 1)")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
 
-Crane Extract Inlined Constant String.append => "%a0 + %a1".
-Crane Extract Inlined Constant String.eqb => "(%a0 == %a1)".
+(** [string] is a [std::string] of those characters. *)
+#[global] Instance string_std_mapping : TypeMapping String.string :=
+  {| type_headers := ["string"];
+     type_cpp := Crane.Cpp.Name "std::string";
+     type_components := [];
+     type_copy := UnknownCopy;
+     type_access := ReadOnlyValue ReadByConstReference;
+     type_views := NoViews String.string;
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref String.EmptyString;
+             ctor_build := Expr "std::string()";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation; case_test := "%scrut.empty()";
+                       case_fields := [] |} |};
+          {| ctor_source := Ref String.String;
+             ctor_build := Expr "std::string(1, %a0) + %a1";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation; case_test := "!%scrut.empty()";
+                       case_fields :=
+                         [(0, OwnedProjection "%scrut[0]"); (1, OwnedProjection "%scrut.substr(1)")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+End CharStringMappings.
+
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
+
+#[global] Instance append_mapping : OperationMapping (Ref (@String.append)) :=
+  pure_cpp [] ["s1"; "s2"]
+    (Structured (Binop (Add Unchecked) (Arg "s1") (Arg "s2"))).
+#[global] Instance eqb_mapping : OperationMapping (Ref (@String.eqb)) :=
+  pure_cpp [] ["s1"; "s2"]
+    (Structured (Binop Equal (Arg "s1") (Arg "s2"))).
 
 (* ----------------------------------------------------------------- *)
 (* Custom mapping: Ascii comparison via native char comparison        *)
 (* ----------------------------------------------------------------- *)
-Crane Extract Inlined Constant Ascii.N_of_ascii => "(static_cast<unsigned int>(static_cast<unsigned char>(%a0)))".
-Crane Extract Inlined Constant Ascii.compare =>
-  "((%a0) < (%a1) ? Datatypes::Comparison::LT : (%a0) == (%a1) ? Datatypes::Comparison::EQ : Datatypes::Comparison::GT)".
+#[global] Instance N_of_ascii_mapping : OperationMapping (Ref (@Ascii.N_of_ascii)) :=
+  pure_cpp [] ["a"]
+    (Expr "(static_cast<unsigned int>(static_cast<unsigned char>(%arg(a))))").
+#[global] Instance compare_mapping : OperationMapping (Ref (@Ascii.compare)) :=
+  pure_cpp [] ["a"; "b"]
+    (Expr "((%arg(a)) < (%arg(b)) ? Datatypes::Comparison::LT : (%arg(a)) == (%arg(b)) ? Datatypes::Comparison::EQ : Datatypes::Comparison::GT)").
 
 (* ----------------------------------------------------------------- *)
 (* Custom mapping: NativeMap -> immer::map (replaces HashTrie)         *)
 (* The lexer memo is keyed by a (pointer, position) pair; [crane::hash] *)
 (* hashes a pair from its components' [std::hash]es.                  *)
 (* ----------------------------------------------------------------- *)
-Crane Extract Inlined Constant NativeMap.t     => "immer::map<%t0, %t1, crane::hash<%t0>>" From "immer/map.hpp" "crane_hash.h".
-Crane Extract Inlined Constant NativeMap.empty => "immer::map<%t0, %t1, crane::hash<%t0>>{}" From "immer/map.hpp" "crane_hash.h".
+#[global] Instance t_mapping (K V : Type) : TypeMapping (NativeMap.t K V) :=
+  value_type ["immer/map.hpp"; "crane_hash.h"]
+    (Apply "immer::map" [TypeArg (SourceType K); TypeArg (SourceType V);
+                         TypeArg (Apply "crane::hash" [TypeArg (SourceType K)])]) UnknownCopy.
+#[global] Instance empty_mapping : OperationMapping (Ref (@NativeMap.empty)) :=
+  pure_cpp ["immer/map.hpp"; "crane_hash.h"] []
+    (Expr "immer::map<%t0, %t1, crane::hash<%t0>>{}").
 
 (** [get] only reads its map. *)
 #[export] Instance native_map_get_mapping (K V : Type) :
@@ -108,26 +167,57 @@ Crane Extract Inlined Constant NativeMap.empty => "immer::map<%t0, %t1, crane::h
    the state -- is a count bump, and [operator[]] and [size()] are O(1).  It is
    built once per lexical rule, from a list ([vec_of_list] is
    [Array.of_list] on both sides), and read-only afterwards. *)
-Crane Extract Inductive vec =>
-  "crane::shared_array<%t0>"
-  [ "crane::shared_array<%t0>{}"
-    "%a1.push_front(%a0)" ]
-  "if (%scrut.empty()) { %br0 } else { const %t0& %b1a0 = %scrut.front(); auto %b1a1 = %scrut.drop(1); %br1 }"
-  From "shared_array.h".
+Module VecMapping.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 
-Crane Extract Inlined Constant IntDFA.vec_of_list =>
-  "crane::shared_array<%t0>::of_range(%a0)" From "shared_array.h".
+#[global] Instance vec_mapping (A : Type) : TypeMapping (vec A) :=
+  {| type_headers := ["shared_array.h"];
+     type_cpp := Crane.Cpp.Apply "crane::shared_array" [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "element")];
+     type_components :=
+       [{| component_name := "element"; component_type := FieldType (Ref (@vcons A)) 0 |}];
+     type_copy := UnknownCopy;
+     type_access := ReadOnlyValue ReadByConstReference;
+     type_views := NoViews (vec A);
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref (@vnil A);
+             ctor_build := Expr "crane::shared_array<%stored(element)>{}";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "%scrut.empty()"; case_fields := [] |} |};
+          {| ctor_source := Ref (@vcons A);
+             ctor_build := Expr "%a1.push_front(%a0)";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "!%scrut.empty()";
+                       case_fields :=
+                         [(0, CanonicalBorrowProjection "%scrut.front()");
+                          (1, OwnedProjection "%scrut.drop(1)")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+End VecMapping.
 
-Crane Extract Inlined Constant IntDFA.vec_nth =>
-  "(static_cast<std::size_t>(%a1) < (%a0).size() ? (%a0)[static_cast<std::size_t>(%a1)] : %a2)".
+#[global] Instance vec_of_list_mapping : OperationMapping (Ref (@IntDFA.vec_of_list)) :=
+  pure_cpp ["shared_array.h"] ["l"]
+    (Expr "crane::shared_array<%t0>::of_range(%arg(l))").
+
+#[global] Instance vec_nth_mapping : OperationMapping (Ref (@IntDFA.vec_nth)) :=
+  pure_cpp [] ["v"; "n"; "d"]
+    (Expr "(static_cast<std::size_t>(%arg(n)) < (%arg(v)).size() ? (%arg(v))[static_cast<std::size_t>(%arg(n))] : %arg(d))").
 (* NOTE the [255u -]: [AsciiSigma.Alphabet.SigmaEnum] is [AsciiFinite.asciiEnum
    = asciiEnumFn 256], and [asciiEnumFn (S m) = ascii_of_nat m :: asciiEnumFn m]
    builds the list in *descending* code-point order, [chr 255 ... chr 0]. So a
    character's position in the enumeration is [255 - codepoint], not [codepoint].
    Getting this backwards silently mis-indexes every column of the transition
    matrix. *)
-Crane Extract Inlined Constant IntDFA.idx_of_eqb =>
-  "(255u - static_cast<unsigned int>(static_cast<unsigned char>(%a1)))".
+#[global] Instance idx_of_eqb_mapping : OperationMapping (Ref (@IntDFA.idx_of_eqb)) :=
+  pure_cpp [] ["eqb"; "a"]
+    (Expr "(255u - static_cast<unsigned int>(static_cast<unsigned char>(%arg(a))))").
 
 (* ----------------------------------------------------------------- *)
 (* Separate extraction of all three parsers                           *)

@@ -529,9 +529,8 @@ module Ctor_fields : sig
   val behind_pointer : t -> int -> bool
 end
 
-(** Whether a C++ type is trivially copyable: an enum, a custom-extracted
-    scalar, or a type declared with [Crane TriviallyCopyable] whose arguments
-    are themselves trivially copyable. *)
+(** Whether a C++ type is trivially copyable: an enum, or a mapped type
+    whose copy model says so at its arguments. *)
 val is_trivially_copyable_type : Cpp_ir.Lowered.Type.t -> bool
 
 (** {!is_trivially_copyable_type} read off a Core type. *)

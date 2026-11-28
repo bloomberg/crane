@@ -201,11 +201,6 @@ VERNAC COMMAND EXTEND ResetExtractionLoopify CLASSIFIED AS SIDEFF
   -> { reset_extraction_loopify () }
 END
 
-VERNAC COMMAND EXTEND ExtractionTriviallyCopyable CLASSIFIED AS SIDEFF
-| [ "Crane" "TriviallyCopyable" ne_global_list(l) ]
-  -> { Base.Table.extraction_trivially_copyable l }
-END
-
 VERNAC COMMAND EXTEND ExtractionReuse CLASSIFIED AS SIDEFF
 | [ "Crane" "Reuse" ne_global_list(l) ]
   -> { extraction_reuse true l }
@@ -266,66 +261,7 @@ VERNAC COMMAND EXTEND ResetExtractionCallback CLASSIFIED AS SIDEFF
   -> { reset_extraction_callback () }
 END
 
-(* Commands for printing and resetting foreigns extraction. *)
-VERNAC COMMAND EXTEND PrintExtractionForeign CLASSIFIED AS QUERY
-| [ "Crane" "Print" "Extraction" "Foreign" ]
-  -> {Feedback.msg_notice (print_extraction_foreign ()) }
-END
 
-(* Overriding of a Rocq object by a C++ one; the [Inlined] variant below
-   also marks the constant to be inlined *)
-VERNAC COMMAND EXTEND ExtractionConstant CLASSIFIED AS SIDEFF
-| [ "Crane" "Extract" "Constant" global(x) string_list(idl) "=>" cppname(y) "From" string_list(import) ]
-  -> { extract_constant_import false x idl y import }
-| [ "Crane" "Extract" "Constant" global(x) string_list(idl) "=>" cppname(y) ]
-  -> { extract_constant_import false x idl y [] }
-END
-
-(* Overriding of a Rocq object by a C++ one that will be an FFI call to C *)
-VERNAC COMMAND EXTEND ExtractionForeignConstant CLASSIFIED AS SIDEFF
-| [ "Crane" "Extract" "Foreign" "Constant" global(x) "=>" string(y) ]
-  -> { extract_constant_foreign x y }
-END
-
-VERNAC COMMAND EXTEND ExtractionInlinedConstant CLASSIFIED AS SIDEFF
-| [ "Crane" "Extract" "Inlined" "Constant" global(x) "=>" cppname(y) "From" string_list(import)]
-  -> { extract_constant_import true x [] y import }
-| [ "Crane" "Extract" "Inlined" "Constant" global(x) "=>" cppname(y) ]
-  -> { extract_constant_import true x [] y [] }
-END
-
-VERNAC COMMAND EXTEND ExtractionInductive CLASSIFIED AS SIDEFF
-| [ "Crane" "Extract" "Inductive" global(x) "=>"
-    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
-    "Boxed" "Element" cppname(w) "Drain" string(d) "From" string_list(import) ]
-  -> { extract_inductive ~boxed:w ~drain:d x id idl o import }
-| [ "Crane" "Extract" "Inductive" global(x) "=>"
-    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
-    "Boxed" "Element" cppname(w) "Drain" string(d) ]
-  -> { extract_inductive ~boxed:w ~drain:d x id idl o [] }
-| [ "Crane" "Extract" "Inductive" global(x) "=>"
-    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
-    "Boxed" "Element" cppname(w) "From" string_list(import) ]
-  -> { extract_inductive ~boxed:w x id idl o import }
-| [ "Crane" "Extract" "Inductive" global(x) "=>"
-    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
-    "Boxed" "Element" cppname(w) ]
-  -> { extract_inductive ~boxed:w x id idl o [] }
-| [ "Crane" "Extract" "Inductive" global(x) "=>"
-    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
-    "Drain" string(d) "From" string_list(import) ]
-  -> { extract_inductive ~drain:d x id idl o import }
-| [ "Crane" "Extract" "Inductive" global(x) "=>"
-    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
-    "Drain" string(d) ]
-  -> { extract_inductive ~drain:d x id idl o [] }
-| [ "Crane" "Extract" "Inductive" global(x) "=>"
-    cppname(id) "[" cppname_list(idl) "]" string_opt(o) "From" string_list(import) ]
-  -> { extract_inductive x id idl o import }
-| [ "Crane" "Extract" "Inductive" global(x) "=>"
-    cppname(id) "[" cppname_list(idl) "]" string_opt(o) ]
-  -> { extract_inductive x id idl o [] }
-END
 
 VERNAC COMMAND EXTEND ExtractionMonad CLASSIFIED AS SIDEFF
 | [ "Crane" "Extract" "Monad" global(m) "[" "bind" ":=" global(bind) "," "ret" ":=" global(ret) "]" "=>"

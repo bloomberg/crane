@@ -964,21 +964,15 @@ let count_real_core_args args =
   List.length (List.filter (fun a ->
     match a with Core.Expr.Erased_value _ -> false | _ -> true) args)
 
-(** Whether copying a value of this C++ type is free.
-
-    A type declared with [Crane TriviallyCopyable] qualifies only when its
-    type arguments do -- copying a [std::pair] costs what copying its
-    components costs. *)
+(** Whether copying a value of this C++ type is free: a typed mapping's
+    copy model says, at its type arguments. *)
 let rec is_trivially_copyable_type (t : Cpp_ir.Lowered.Type.t) =
   match t with
   (* A typed-mapped type: its copy model ({!Mapping_plan.copies_cheaply}). *)
   | Entity_application (g, ts, _) when Mapping_plan.is_type_head g ->
     Mapping_plan.copies_cheaply (Mapping_plan.find g) ~argument:(fun i ->
         match List.nth_opt ts i with Some t -> is_trivially_copyable_type t | None -> false)
-  | Entity_application (g, ts, _) ->
-    is_enum_inductive g || Table.is_custom_scalar_ref g
-    || Table.is_trivially_copyable_ref g
-       && List.for_all is_trivially_copyable_type ts
+  | Entity_application (g, _, _) -> is_enum_inductive g || Table.is_custom_scalar_ref g
   | In_namespace (g, _) -> is_enum_inductive g || Table.is_custom_scalar_ref g
   | _ -> false
 
@@ -989,9 +983,7 @@ let rec core_is_trivially_copyable ty =
   | Core.Type.Global_app {head = g; type_arguments = args; _} when Mapping_plan.is_type_head g ->
     Mapping_plan.copies_cheaply (Mapping_plan.find g) ~argument:(fun i ->
         match List.nth_opt args i with Some t -> core_is_trivially_copyable t | None -> false)
-  | Core.Type.Global_app {head = g; type_arguments = args; _} ->
-    is_enum_inductive g || Table.is_custom_scalar_ref g
-    || Table.is_trivially_copyable_ref g && List.for_all core_is_trivially_copyable args
+  | Core.Type.Global_app {head = g; _} -> is_enum_inductive g || Table.is_custom_scalar_ref g
   | _ -> false
 
 let boxes_field ty =
@@ -1056,7 +1048,7 @@ module Ctor_fields = struct
 
   (* A field recurses THROUGH a boxed-element container (e.g. [list <self>] ->
      [immer::flex_vector<immer::box<self>>]) when the container carries a
-     [Boxed Element] wrapper and a self/mutual ref appears in its type args.
+     [BoxedComponent] box and a self/mutual ref appears in its type args.
      The element box breaks the completeness cycle, so such a field is stored
      by VALUE (matching the declaration, {!Core_to_cpp.Lower_decl}) -- it is not
     shared_ptr-wrapped and must not

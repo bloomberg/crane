@@ -777,7 +777,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
   (* Collect type aliases (Core.Decl.Type_alias) defined in this module. Methods on nested
      inductives can't reference these because the type alias may not be
      visible from inside the inductive's struct definition.  Inline-custom
-     types (Crane Extract Inlined Constant) are excluded: they generate Core.Decl.Type_alias
+     types (typed mappings) are excluded: they generate Core.Decl.Type_alias
      entries but expand to inline C++ code, so they don't create real type
      aliases that would cause visibility problems. *)
   let module_type_aliases =
@@ -1231,7 +1231,7 @@ let planned_candidate (reg : t) (epon_ref : GlobRef.t) (func_ref : GlobRef.t)
       None )
 
 (** Collect [Core.Decl.Type_alias] refs from a declaration list that share [modpath],
-    excluding inline-custom types (e.g., [Crane Extract Inlined Constant]).
+    excluding inline-custom types (typed mappings).
     These produce [Core.Decl.Type_alias] entries but are not real C++ type aliases; including
     them would incorrectly block method candidates whose signatures reference
     the inlined name.

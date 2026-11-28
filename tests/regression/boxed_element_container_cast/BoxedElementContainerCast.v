@@ -8,7 +8,7 @@ From Stdlib Require Import List Ascii String.
 Import ListNotations.
 
 (** A container cast into a callee generic over the element, over a list
-    mapped with a [Boxed Element] wrapper.
+    mapped with a [BoxedComponent] box.
 
     [val] recurses through [list], so [list (string * val)] is
     [crane::list<crane::box<std::pair<std::string, Val>>>] wherever it is

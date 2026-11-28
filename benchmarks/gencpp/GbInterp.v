@@ -1,9 +1,16 @@
 (** Workloads for measuring the C++ Crane generates: persistent trees, list
     pipelines, an interpreter, closures and a balanced map from the standard
     library.  Each entry point folds its result into one number. *)
+From Crane Require Mapping.Descriptor Mapping.Cpp.
+From Corelib Require PrimString.
+From Stdlib Require List.
 From Stdlib Require Import List PeanoNat FMapAVL OrderedTypeEx.
 Require Import Crane.Mapping.NatInt.
 Require Crane.Extraction.
+Import Crane.Mapping.Descriptor Crane.Mapping.Cpp.
+Import PrimString.PStringNotations.
+Import List.ListNotations Crane.Cpp.
+Local Open Scope pstring_scope.
 Import ListNotations.
 
 Module GbInterp.
@@ -129,12 +136,26 @@ Definition interp (depth rounds : nat) : nat :=
 
 End GbInterp.
 
-Crane Extract Inlined Constant GbInterp.m_lcg => "UINT64_C(65537)".
-Crane Extract Inlined Constant GbInterp.m_sum => "UINT64_C(65535)".
-Crane Extract Inlined Constant GbInterp.m_clo => "UINT64_C(4093)".
-Crane Extract Inlined Constant GbInterp.m_val => "UINT64_C(4096)".
-Crane Extract Inlined Constant GbInterp.m_key => "UINT64_C(4000)".
-Crane Extract Inlined Constant GbInterp.m_map => "UINT64_C(1000)".
-Crane Extract Inlined Constant GbInterp.fuel_big => "UINT64_C(100000000)".
+#[global] Instance m_lcg_mapping : OperationMapping (Ref (@GbInterp.m_lcg)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "UINT64_C(65537)")).
+#[global] Instance m_sum_mapping : OperationMapping (Ref (@GbInterp.m_sum)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "UINT64_C(65535)")).
+#[global] Instance m_clo_mapping : OperationMapping (Ref (@GbInterp.m_clo)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "UINT64_C(4093)")).
+#[global] Instance m_val_mapping : OperationMapping (Ref (@GbInterp.m_val)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "UINT64_C(4096)")).
+#[global] Instance m_key_mapping : OperationMapping (Ref (@GbInterp.m_key)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "UINT64_C(4000)")).
+#[global] Instance m_map_mapping : OperationMapping (Ref (@GbInterp.m_map)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "UINT64_C(1000)")).
+#[global] Instance fuel_big_mapping : OperationMapping (Ref (@GbInterp.fuel_big)) :=
+  pure_cpp [] []
+    (Structured (Verbatim "UINT64_C(100000000)")).
 Set Crane Loopify.
 Crane Extraction "gb_interp" GbInterp.

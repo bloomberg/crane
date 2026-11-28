@@ -163,7 +163,7 @@ let worth_moving_ref worth r args =
   && (not (Base.Table.is_coinductive r))
   && ( (not (Base.Table.is_custom r))
      || List.exists worth args
-     || not (Base.Table.is_custom_scalar_ref r || Base.Table.is_trivially_copyable_ref r) )
+     || not (Base.Table.is_custom_scalar_ref r) )
 
 (* The type a primitive string literal's type stands for, where a mapping
    maps Rocq's primitive strings: a literal's type is spelled as that

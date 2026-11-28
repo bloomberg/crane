@@ -95,8 +95,8 @@ let gen_expr_custom_cons cx (slot : Slot.slot) env
   let ret = slot.Slot.ret and expected_ty = Slot.expected slot in
   let slot = into_erased_return cx ~ret slot in
   let ty = custom_refined_annotation cx env ~ret ~expected_ty ~slot ty r ts in
-  (* Some custom-extracted inductives (e.g. [sum1], registered as
-     [Crane Extract Inductive sum1 => "" ["%a0" "%a0"]]) are pure type-level
+  (* Some mapped inductives (an event family whose constructors are
+     ["%a0"]) are pure type-level
      erasure markers: their constructor template forwards the argument
      completely unboxed, with no runtime wrapper type at all. For these, the
      generic "erase Core.Type.Variable-typed fields into std::any" logic below must NOT

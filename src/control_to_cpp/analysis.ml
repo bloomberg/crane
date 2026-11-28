@@ -300,18 +300,14 @@ let rec is_trivially_copyable_type = function
   | Entity_application (r, ts, _) when Base.Mapping_plan.is_type_head r ->
     Base.Mapping_plan.copies_cheaply (Base.Mapping_plan.find r) ~argument:(fun i ->
         match List.nth_opt ts i with Some t -> is_trivially_copyable_type t | None -> false)
-  | Entity_application (r, ts, _) ->
-    Base.Table.is_enum_inductive r || Base.Table.is_custom_scalar_ref r
-    || Base.Table.is_trivially_copyable_ref r
-       && List.for_all is_trivially_copyable_type ts
+  | Entity_application (r, _, _) -> Base.Table.is_enum_inductive r || Base.Table.is_custom_scalar_ref r
   | _ -> false
 
 (** Whether the named type [s] applied to [ts] is trivially copyable: its head
     is, and so is every argument.
 
     A scalar takes no arguments, so the second half is vacuous for the builtin
-    names.  It is the whole question for a mapped type like [std::pair], which
-    the user declares with [Crane TriviallyCopyable]. *)
+    names. *)
 and is_trivially_copyable_named s ts =
   Base.Table.is_trivially_copyable_cpp_name s
   && List.for_all is_trivially_copyable_type ts

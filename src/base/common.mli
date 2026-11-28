@@ -402,7 +402,7 @@ val set_global_scope_keywords : Id.Set.t -> unit
 val is_reserved_at_global_scope : string -> bool
 
 (** Special hack for constants of type Ascii.ascii : if an
-    [Extract Inductive ascii => char] has been declared, then the constants are
+    [ascii] is mapped to [char], then the constants are
     directly turned into chars *)
 
 (** Check whether a Core term is an [ascii] constructor application that can be
@@ -416,7 +416,7 @@ val get_native_char : Core.Expr.t -> char
 val pp_native_char : Core.Expr.t -> Pp.t
 
 (** Special hack for constants of type String.string : if an
-    [Extract Inductive string => string] has been declared, then the constants
+    [string] is mapped to a C++ string, then the constants
     are directly turned into string literals *)
 
 (** Check whether a Core term is a fully statically-known [string] built from

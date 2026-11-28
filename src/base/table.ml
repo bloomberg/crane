@@ -2659,19 +2659,9 @@ let empty_inline_table = (Core.Ref.Can.Set.empty, Core.Ref.Can.Set.empty)
 
 let inline_table = Summary.ref empty_inline_table ~name:"CraneExtrInline"
 
-(* A typed-mapped type and its constructors are inline as a legacy
-   [Crane Extract Inductive] makes them ({!Mapping_plan}). *)
+(* A typed-mapped type and its constructors are inline ({!Mapping_plan}). *)
 let to_inline r =
   Core.Ref.Can.Set.mem r (fst !inline_table) || Mapping_plan.is_mapped r || Mapping_operation.is_operation_head r
-
-(* Foreign function call extraction: constants called through a C++ function
-   of the given name ([Crane Extract Foreign Constant]). *)
-
-let empty_foreign_set = Core.Ref.Can.Set.empty
-
-let foreign_set = Summary.ref empty_foreign_set ~name:"CraneExtrForeign"
-
-let to_foreign r = Core.Ref.Can.Set.mem r !foreign_set
 
 (* Callback registration: each registered constant, mapped to the alias it is
    exported under, if one was given. *)
@@ -2685,9 +2675,6 @@ let add_inline_entries b l =
   let f b = if b then Core.Ref.Can.Set.add else Core.Ref.Can.Set.remove in
   let i, k = !inline_table in
   inline_table := (List.fold_right (f b) l i, List.fold_right (f (not b)) l k)
-
-let add_foreign_entries l =
-  foreign_set := List.fold_right Core.Ref.Can.Set.add l !foreign_set
 
 (* Adds the qualid_ref and alias opt to the callback_map. *)
 let add_callback_entry alias_opt qualid_ref =
@@ -2704,14 +2691,6 @@ let inline_extraction : bool * GlobRef.t list -> obj =
          (Some
             (fun (s, (b, l)) ->
               (b, List.map (fun x -> fst (subst_global s x)) l) ) )
-       ~discharge:(fun x -> Some x)
-
-let foreign_extraction : GlobRef.t list -> obj =
-  declare_object
-  @@ superglobal_object
-       "Crane Extraction Foreign"
-       ~cache:(fun l -> add_foreign_entries l)
-       ~subst:(Some (fun (s, l) -> List.map (fun x -> fst (subst_global s x)) l))
        ~discharge:(fun x -> Some x)
 
 let callback_extraction : string option * GlobRef.t -> obj =
@@ -2767,13 +2746,6 @@ let reset_inline : unit -> obj =
        ~cache:(fun () -> inline_table := empty_inline_table)
        ~subst:None
 
-let reset_foreign : unit -> obj =
-  declare_object
-  @@ superglobal_object_nodischarge
-       "Crane Reset Extraction Foreign"
-       ~cache:(fun () -> foreign_set := empty_foreign_set)
-       ~subst:None
-
 let reset_callback : unit -> obj =
   declare_object
   @@ superglobal_object_nodischarge
@@ -2782,8 +2754,6 @@ let reset_callback : unit -> obj =
        ~subst:None
 
 let reset_extraction_inline () = Lib.add_leaf (reset_inline ())
-
-let reset_extraction_foreign () = Lib.add_leaf (reset_foreign ())
 
 let reset_extraction_callback () = Lib.add_leaf (reset_callback ())
 
@@ -2960,7 +2930,7 @@ let reset_blacklist : unit -> obj =
 
 let reset_extraction_blacklist () = Lib.add_leaf (reset_blacklist ())
 
-(** {2 Crane Extract Constant/Inductive} *)
+(** {2 Customs a unit writes} *)
 
 (* The customs the unit's files write, planned from what was generated ahead
    of them: the unit includes their imports.  [None] until planned. *)
@@ -3158,8 +3128,6 @@ let inline_custom_arity r =
 
 let is_mapped_operation r = Mapping_operation.is_operation_head r
 
-let is_foreign_custom r = is_custom r && to_foreign r
-
 let find_callback r = Core.Ref.User.Map.find r !callback_map
 
 let find_custom_opt r =
@@ -3184,30 +3152,7 @@ let written_custom_text r =
     Some s
   | None -> None
 
-(** The C++ type names the user has declared trivially copyable with
-    [Crane TriviallyCopyable], each without its arguments: the declaration on
-    [prod] records ["std::pair"], not ["std::pair<%t0, %t1>"].
-
-    A custom mapping is a template string, and nothing in it says how the
-    named type behaves when it is copied.  Crane cannot read
-    [std::pair<%t0, %t1>] and find out that copying it is free when copying
-    its arguments is, so the user says so.  A list of names built into Crane
-    would be wrong twice over: it would make a property of the user's C++
-    library a property of Crane, and it would name only the spellings it knew,
-    quietly excluding the same types under another flavour ([bsl::pair],
-    [bsl::optional]). *)
-let trivially_copyable_heads =
-  Summary.ref CString.Set.empty ~name:"CraneExtrTriviallyCopyable"
-
-(** The same declaration, keyed by the Rocq type it was written against.
-
-    Both keys are needed because the question is asked from both sides: a
-    [Core.Type.Global_app] still knows its {!GlobRef.t}, while a type Crane has already
-    rendered to a name has nothing left but the name. *)
-let trivially_copyable_refs = Summary.ref Core.Ref.Can.Set.empty ~name:"CraneExtrTCRefs"
-
-(** True when [s] names a C++ scalar type that is trivially copyable, or names
-    a type the user declared with [Crane TriviallyCopyable].
+(** True when [s] names a C++ scalar type that is trivially copyable.
     This covers all built-in integer, floating-point, and character types,
     their common modifiers (signed/unsigned/long/short), fixed-width aliases
     from [<cstdint>] and [<cstddef>], and [std::nullptr_t].
@@ -3243,60 +3188,7 @@ let is_trivially_copyable_cpp_name (s : string) : bool =
   | ["unsigned"; "long"; "long"] -> true
   (* Four-word types *)
   | ["signed"; "long"; "long"; "int"] | ["unsigned"; "long"; "long"; "int"] -> true
-  | [w] -> CString.Set.mem w !trivially_copyable_heads
   | _ -> false
-
-(** The type a mapping template names, without its arguments:
-    ["std::pair<%t0, %t1>"] gives ["std::pair"], and a template with no
-    arguments is its own head. *)
-let template_head (s : string) : string =
-  match String.index_opt s '<' with
-  | Some i -> String.trim (String.sub s 0 i)
-  | None -> String.trim s
-
-let trivially_copyable_object : GlobRef.t * string -> obj =
-  declare_object
-  @@ superglobal_object
-       "Crane TriviallyCopyable"
-       ~cache:(fun (r, s) ->
-         trivially_copyable_heads :=
-           CString.Set.add s !trivially_copyable_heads;
-         trivially_copyable_refs := Core.Ref.Can.Set.add r !trivially_copyable_refs )
-       ~subst:(Some (fun (sub, (r, s)) -> (fst (subst_global sub r), s)))
-       ~discharge:(fun x -> Some x)
-
-(** True when [r] was declared trivially copyable with
-    [Crane TriviallyCopyable].  The declaration is conditional: the caller
-    must still check the type arguments. *)
-let is_trivially_copyable_ref (r : GlobRef.t) : bool =
-  Core.Ref.Can.Set.mem r !trivially_copyable_refs
-
-(** Declare that the C++ type each of [l] is mapped to is trivially copyable
-    whenever its type arguments are.
-
-    The declaration is written against the Rocq name, so it is checked and
-    cannot be misspelled, but what is recorded is the C++ head name its
-    mapping produces -- that is the only thing left of the type by the time
-    the question is asked.  Which means the mapping has to exist first, and
-    saying so is more use than silently recording nothing. *)
-let extraction_trivially_copyable (l : qualid list) =
-  List.iter
-    (fun q ->
-      let r = Smartlocate.global_with_alias q in
-      match Core.Ref.Can.Map.find_opt r !customs with
-      | Some (_, s) ->
-        Lib.add_leaf (trivially_copyable_object (r, template_head s))
-      | None ->
-        CErrors.user_err
-          Pp.(
-            str "Crane: "
-            ++ Printer.pr_global r
-            ++ str
-                 " has no custom extraction, so there is no C++ type to \
-                  declare trivially copyable.  Give it a mapping with Crane \
-                  Extract Inductive first; a type mapped by a TypeMapping \
-                  instance declares its copy cost in type_copy." ) )
-    l
 
 (** True when [r] is a custom-extracted inductive whose C++ representation
     is a trivially-copyable scalar (e.g. [nat] extracted to [unsigned int]).
@@ -3322,48 +3214,13 @@ let find_type_custom r =
   | Some s -> ([], s)
   | None -> Core.Ref.Can.Map.find r !customs
 
-(* The rest of a mapping -- its match template, its element wrapping and
-   drain, its includes, its numeral and void forms, whether it is trivially
-   copyable -- is keyed as [customs] is, by the definition: a mapped
-   inductive reached through a module alias gets all of its mapping or none
-   of it. *)
-let custom_matchs = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrCustomMatchs"
-
-let add_custom_match r s = custom_matchs := Core.Ref.Can.Map.add r s !custom_matchs
-
-(* Completeness-aware element wrapping: an element type that recurses through
-   its container is incomplete where the container is named, so it is wrapped.
-
-   [boxed_wrappers] maps a custom container inductive (e.g. [list] mapped to
-   [immer::flex_vector]) to the wrapper template applied to its element at
-   *recursive* occurrences only (e.g. ["immer::box<%t0>"]). Declared with the
-   [Boxed Element "..."] clause of [Crane Extract Inductive]. The container's
-   type/nil templates spell the (possibly wrapped) element with [%elem]; the
-   match/cons templates keep [%t0]/[%aN] (bare — relying on the wrapper's
-   implicit conversions), so nothing is boxed unless the element is recursive. *)
-let boxed_wrappers = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrBoxedWrap"
-
-let add_boxed_wrapper r s = boxed_wrappers := Core.Ref.Can.Map.add r s !boxed_wrappers
-
+(* A typed container's element box ([BoxedComponent]) and destructor drain
+   ([DrainWith]). *)
 let find_boxed_wrapper_opt r =
-  if Mapping_plan.is_type_head r then Mapping_plan.wrapper_text (Mapping_plan.find r)
-  else Core.Ref.Can.Map.find_opt r !boxed_wrappers
-
-(* Custom drain templates (iterative-destructor support). Maps a custom container
-   inductive (e.g. [list] mapped to [std::deque] / [immer::flex_vector]) to the
-   C++ statement template that iteratively yields the container's recursive
-   children onto the destructor worklist, declared with the [Drain "..."] clause
-   of [Crane Extract Inductive]. Placeholders: [%scrut] is the container field
-   expression; [%yield(e)] pushes child [e] onto the worklist. Without this the
-   iterative destructor assumes a smart-pointer-wrapped container
-   ([use_count]/[reset]), which is invalid for bare value-type containers. *)
-let custom_drains = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrCustomDrains"
-
-let add_custom_drain r s = custom_drains := Core.Ref.Can.Map.add r s !custom_drains
+  if Mapping_plan.is_type_head r then Mapping_plan.wrapper_text (Mapping_plan.find r) else None
 
 let find_custom_drain_opt r =
-  if Mapping_plan.is_type_head r then Mapping_plan.drain_text (Mapping_plan.find r)
-  else Core.Ref.Can.Map.find_opt r !custom_drains
+  if Mapping_plan.is_type_head r then Mapping_plan.drain_text (Mapping_plan.find r) else None
 
 (* Set of inductives that recurse *through* a boxed-element container (e.g.
    [json_value] with a [list json_value] field). Populated during inductive
@@ -3399,24 +3256,15 @@ let is_custom_match pv =
   | GlobRef.IndRef ip as r when Mapping_plan.is_type_head r ->
     ignore (Mapping_plan.match_template ip);
     true
-  | r -> Core.Ref.Can.Map.mem r !custom_matchs
+  | _ -> false
   | exception Not_found -> false
 
 let find_custom_match pv =
   match indref_of_match pv with
   | GlobRef.IndRef ip as r when Mapping_plan.is_type_head r -> Mapping_plan.match_template ip
-  | r -> Core.Ref.Can.Map.find r !custom_matchs
+  | _ -> raise Not_found
 
-let find_custom_ctor_templates (ip : Names.inductive) =
-  if Mapping_plan.is_type_head (GlobRef.IndRef ip) then Mapping_plan.constructor_templates ip
-  else
-  let mib = Global.lookup_mind (fst ip) in
-  let n = Array.length mib.mind_packets.(snd ip).mind_consnames in
-  List.init n (fun j ->
-    let g = GlobRef.ConstructRef (ip, succ j) in
-    match Core.Ref.Can.Map.find_opt g !customs with
-    | Some (_, s) -> s
-    | None -> "")
+let find_custom_ctor_templates (ip : Names.inductive) = Mapping_plan.constructor_templates ip
 
 (* Printing entries *)
 
@@ -3444,12 +3292,6 @@ let print_constref_extractions ref_set val_lookup_f section_str =
        i'
        (mt ())
 
-let print_extraction_foreign () =
-  print_constref_extractions
-    (Core.Ref.Can.Set.fold Core.Ref.User.Set.add !foreign_set Core.Ref.User.Set.empty)
-    find_custom
-    "Extraction Foreign Constant:"
-
 let print_extraction_callback () =
   let keys = Core.Ref.User.Map.domain !callback_map in
   print_constref_extractions
@@ -3469,27 +3311,6 @@ let in_customs : GlobRef.t * string list * string -> obj =
        ~cache:(fun (r, ids, s) -> add_custom r ids s)
        ~subst:
          (Some (fun (s, (r, ids, str)) -> (fst (subst_global s r), ids, str)))
-
-let in_custom_matchs : GlobRef.t * string -> obj =
-  declare_object
-  @@ superglobal_object_nodischarge
-       "Crane ML extractions custom matches"
-       ~cache:(fun (r, s) -> add_custom_match r s)
-       ~subst:(Some (fun (subs, (r, s)) -> (fst (subst_global subs r), s)))
-
-let in_boxed_wrappers : GlobRef.t * string -> obj =
-  declare_object
-  @@ superglobal_object_nodischarge
-       "Crane ML extractions boxed element wrappers"
-       ~cache:(fun (r, s) -> add_boxed_wrapper r s)
-       ~subst:(Some (fun (subs, (r, s)) -> (fst (subst_global subs r), s)))
-
-let in_custom_drains : GlobRef.t * string -> obj =
-  declare_object
-  @@ superglobal_object_nodischarge
-       "Crane ML extractions custom drains"
-       ~cache:(fun (r, s) -> add_custom_drain r s)
-       ~subst:(Some (fun (subs, (r, s)) -> (fst (subst_global subs r), s)))
 
 (* Grammar entries. *)
 
@@ -3667,51 +3488,6 @@ let extract_callback optstr x =
     Lib.add_leaf (callback_extraction (optstr, qualid_ref))
   | _ -> error_constant ?loc:x.CAst.loc qualid_ref
 
-(** Generic constant extraction with validation, arity handling, and
-    registration to prevent redefinition. *)
-let extract_constant_generic
-    r
-    ids
-    s
-    arity_handler
-    (is_redef, redef_msg)
-    extr_type =
-  check_inside_section ();
-  let g = Smartlocate.global_with_alias r in
-  match g with
-  | GlobRef.ConstRef kn ->
-    let env = Global.env () in
-    let typ, _ = Typeops.type_of_global_in_context env (GlobRef.ConstRef kn) in
-    let typ = Reduction.whd_all env typ in
-    if Reduction.is_arity env typ then arity_handler env typ g;
-    if is_redef g then
-      CErrors.user_err
-        ( str "The term "
-        ++ safe_pr_long_global g
-        ++ str " is already defined as "
-        ++ str redef_msg
-        ++ str " custom constant." );
-    Lib.add_leaf (extr_type g);
-    Lib.add_leaf (in_customs (g, ids, s))
-  | _ -> error_constant ?loc:r.CAst.loc g
-
-(* const_name : qualid -> replacement : string*)
-let extract_constant_foreign r s =
-  if lang () != Cpp then
-    CErrors.user_err
-      (Pp.str "Extract Foreign Constant is supported only for C++ extraction.");
-  let arity_handler env typ g =
-    CErrors.user_err
-      (Pp.str "Extract Foreign Constant is supported only for functions.")
-  in
-  extract_constant_generic
-    r
-    []
-    s
-    arity_handler
-    (is_inline_custom, "inline")
-    (fun g -> foreign_extraction [g] )
-
 (* A mapping is all Crane knows of the C++ it writes, so the headers a unit
    includes are the [From] headers of the mappings its code uses -- and of
    the mapped types its code computes with, spelled or not.  A type mapping
@@ -3790,7 +3566,7 @@ let check_written_mapping_headers () =
   let constructor_types ((kn, i) : inductive) = Array.to_list (Global.lookup_mind kn).mind_packets.(i).mind_user_lc in
   let check r =
     match r with
-    | GlobRef.ConstRef _ when not (to_foreign r) -> (
+    | GlobRef.ConstRef _ -> (
       let typ, _ = Typeops.type_of_global_in_context env r in
       match find_custom_opt r with
       | Some s when not (Reduction.is_arity env typ) ->
@@ -3802,13 +3578,7 @@ let check_written_mapping_headers () =
           check_operation_mapping_headers r (Cpp_ir.Foreign_template.term_template s) ~signature:(constructor_types ip)
             (get_ref_import_list (GlobRef.IndRef ip)) )
         (find_custom_opt r)
-    | GlobRef.IndRef ip ->
-      Option.iter
-        (fun s ->
-          check_operation_mapping_headers r (Cpp_ir.Foreign_template.match_template s) ~signature:(constructor_types ip)
-            (get_ref_import_list r) )
-        (Core.Ref.Can.Map.find_opt r !custom_matchs)
-    | GlobRef.ConstRef _ | GlobRef.VarRef _ -> ()
+    | GlobRef.IndRef _ | GlobRef.VarRef _ -> ()
   in
   Core.Ref.User.Set.iter
     (fun r ->
@@ -3816,56 +3586,6 @@ let check_written_mapping_headers () =
         operations_checked := GlobRef.Set.add r !operations_checked;
         check r ) )
     (written_customs ())
-
-(** Registers a custom constant extraction with inline/noinline behavior and
-    the headers it imports. *)
-let extract_constant_import inline r ids s imports =
-  let g = Smartlocate.global_with_alias r in
-  List.iter
-    (fun i ->
-      add_ref_import g i;
-      Lib.add_leaf (ref_imports_object (g, i)) )
-    imports;
-  extract_constant_generic
-    r
-    ids
-    s
-    (fun _ _ g -> check_type_mapping_header g s imports)
-    (is_foreign_custom, "foreign")
-    (fun g -> inline_extraction (inline, [g]))
-
-(** Registers a custom inductive type extraction with constructor mappings and
-    optional match template. *)
-let extract_inductive ?boxed ?drain r s l optstr imports =
-  check_inside_section ();
-  let g = Smartlocate.global_with_alias r in
-  Dumpglob.add_glob ?loc:r.CAst.loc g;
-  match g with
-  | GlobRef.IndRef ((kn, i) as ip) ->
-    List.iter
-      (fun i ->
-        add_ref_import g i;
-        Lib.add_leaf (ref_imports_object (g, i)) )
-      imports;
-    check_type_mapping_header g s imports;
-    (* The wrapper is written wherever an element is boxed, on the
-       container's headers. *)
-    Option.iter (fun w -> check_type_mapping_header g w imports) boxed;
-    let mib = Global.lookup_mind kn in
-    let n = Array.length mib.mind_packets.(i).mind_consnames in
-    if not (Int.equal n (List.length l)) then error_nb_cons ();
-    Lib.add_leaf (inline_extraction (true, [g]));
-    Lib.add_leaf (in_customs (g, [], s));
-    Option.iter (fun s -> Lib.add_leaf (in_custom_matchs (g, s))) optstr;
-    Option.iter (fun w -> Lib.add_leaf (in_boxed_wrappers (g, w))) boxed;
-    Option.iter (fun d -> Lib.add_leaf (in_custom_drains (g, d))) drain;
-    List.iteri
-      (fun j s ->
-        let g = GlobRef.ConstructRef (ip, succ j) in
-        Lib.add_leaf (inline_extraction (true, [g]));
-        Lib.add_leaf (in_customs (g, [], s)) )
-      l
-  | _ -> error_inductive ?loc:r.CAst.loc g
 
 let glob_def_registration : GlobRef.t * Core.Type.extracted -> obj =
   declare_object
@@ -4180,13 +3900,11 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
          (r', { info with converters = convs' })))
        ~discharge:(fun x -> Some x)
 
-(** The typed mappings whose head also has a legacy mapping: an error,
-    raised once mappings are discovered.  Legacy declarations live in
-    two tables: a type or operation template ([customs], which also holds
-    [Crane Extract Monad], [Skip], the ghost of [Void], and every head a
-    [Crane TriviallyCopyable] names, which needs a legacy mapping), and a
-    numeral format ([Crane Extract Numeral]: a typed type's numerals are its
-    descriptor's). *)
+(** The typed mappings whose head is also [Crane Extract Skip]ped (or is the
+    ghost of a [Crane Extract Void]), or given a [Crane Extract Numeral]
+    format: an error, raised once mappings are discovered.  A typed type's
+    numerals are its descriptor's, and a monad's own [Crane Extract Monad]
+    spelling gives way to its type's typed mapping. *)
 let check_typed_mapping_conflicts () =
   let refuse ~kind ~fix head instances command =
     CErrors.user_err
@@ -4204,7 +3922,7 @@ let check_typed_mapping_conflicts () =
          mapping of the monad's type answers before it. *)
       if Core.Ref.Can.Map.mem head !customs && not (is_monad head) then
         refuse "Crane Extract"
-          ~fix:"Remove one of them: a type is mapped either by a TypeMapping instance or by Crane Extract Inductive/Constant, never both."
+          ~fix:"Remove one of them: a type mapped by a TypeMapping instance is not skipped."
       else if Core.Ref.Can.Map.mem head !numeral_table then
         refuse "Crane Extract Numeral"
           ~fix:"Remove it: a typed type's literals are given by its TypeMapping's type_numerals.")
@@ -4213,7 +3931,7 @@ let check_typed_mapping_conflicts () =
     (fun (head, instances) ->
       if Core.Ref.Can.Map.mem head !customs then
         refuse ~kind:"operation" head instances "Crane Extract"
-          ~fix:"Remove one of them: an operation is mapped either by an OperationMapping instance or by Crane Extract Inlined Constant/Constant, never both.")
+          ~fix:"Remove one of them: an operation mapped by an OperationMapping instance is not skipped.")
     (Mapping_discovery.operation_mapping_heads ())
 
 (* A numeral format is documented as a numeric-literal formatting directive, but

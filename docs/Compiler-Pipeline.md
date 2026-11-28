@@ -75,7 +75,7 @@ The vernacular commands are parsed in
 [`driver/extract_env.ml`](../src/driver/extract_env.ml), resolves the
 requested references or modules, collects their dependencies from Rocq's
 global environment and extracts them (`simple_extraction`, `full_extraction`,
-`separate_extraction`, `extraction_library`). Legacy custom mappings and
+`separate_extraction`, `extraction_library`). Monads, skipped globals and
 options are already registered in [`base/table.ml`](../src/base/table.ml).
 
 Before anything is collected, `init` runs
@@ -85,8 +85,8 @@ typed mapping classes `TypeMapping` and `OperationMapping`
 of `T` in `TypeMapping T`, the referenced declaration in
 `OperationMapping (Ref d)`). An instance is active once the module exporting
 it is imported. Then `Base.Table.check_typed_mapping_conflicts` refuses a
-head mapped both by an instance and by a legacy `Crane Extract ...` or
-`Crane Extract Numeral` command. A head with a typed mapping counts as mapped
+head mapped by an instance and also skipped (`Crane Extract Skip`) or given
+a `Crane Extract Numeral` format. A head with a typed mapping counts as mapped
 for dependency collection, so its body is not extracted. Section 7 covers
 what happens to a typed mapping after discovery.
 
@@ -474,8 +474,7 @@ A typed mapping is data, read once and compiled once:
 3. **Analysis.** Access summaries (section 4) read operation contracts;
    ownership reads `Take` and `RetainsArgument`; copy cost and by-value
    reads come from the copy model and read style
-   (`Mapping_plan.copies_cheaply`, `read_by_value`), replacing the legacy
-   `Crane TriviallyCopyable` table for typed heads.
+   (`Mapping_plan.copies_cheaply`, `read_by_value`).
 4. **Lowering and finishing.** A typed head stays an
    `Entity_application` until the `foreign` pass, which writes its compiled
    C++ type. An operation call is lowered by the inline-call path; then
@@ -492,10 +491,8 @@ A typed mapping is data, read once and compiled once:
    digest of the physical ABI of every typed head it compiled; a later
    extraction including that unit's header checks them (section 1).
 
-Legacy mappings (`Crane Extract Inductive`, `Crane Extract Constant`,
-`Crane Extract Inlined Constant`, `Crane Extract Monad`, ...) take the same
-inline path but carry no contract: an inlined constant is opaque to the
-access and ownership analyses.
+A mapping instance declared in a module being extracted writes nothing
+(`Mapping_discovery.is_mapping_instance_type`).
 
 ## 8. Finishing: Lowered to Resolved
 

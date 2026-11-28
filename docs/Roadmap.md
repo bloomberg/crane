@@ -26,13 +26,8 @@ See the [Reference Manual](Reference-Manual.md#typed-mappings) and
 
 **Next.**
 
-* Typed forms for effects: event families, monads, `Crane Extract Skip` and
-  `Crane Extract Void` have no typed counterpart, so `theories/Monads/` and
-  `theories/External/` still use the legacy commands.
-* Deprecation of the legacy mapping commands (`Crane Extract Inductive`,
-  `Crane Extract Inlined Constant`, `Crane Extract Constant`,
-  `Crane Extract Numeral`, `Crane TriviallyCopyable`) once every standard use
-  has a typed equivalent.
+* Typed forms for monads, `Crane Extract Skip`, `Crane Extract Void` and
+  `Crane Extract Numeral`, which are still commands.
 * Acting on the parts of a descriptor that are validated but not yet used by
   code generation: `RegionOwned` and `ManualShared` lifetimes, `DrainWith`
   release plans, value models.
@@ -145,8 +140,7 @@ A goal is to deploy verified libraries in production across Bloomberg's C++
 systems. This requires:
 
 * scaling extraction to large Rocq developments,
-* stabilizing Crane's API and generated-code conventions, including the
-  deprecation path of the legacy mapping commands,
+* stabilizing Crane's API and generated-code conventions,
 * guarantees about interface compatibility across separately extracted
   units (compiled interfaces check typed mappings today),
 * migration guidance as Crane evolves.

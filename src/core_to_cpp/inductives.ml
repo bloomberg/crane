@@ -1076,7 +1076,7 @@ let core_type_has_nested_self_ref ~ind_ref core_ty =
   | _ -> false
 
 (** Does [core_ty] recurse into [ind_ref] specifically THROUGH a boxed-element
-    container (a container carrying a [Boxed Element] wrapper, e.g. [list <self>]
+    container (a container boxing its element, [BoxedComponent], e.g. [list <self>]
     mapped to [immer::flex_vector<immer::box<self>>])?  When it does, the element
     box already breaks the completeness cycle, so the outer field-level
     [shared_ptr]/arena-pointer indirection is redundant and the field can be
@@ -1096,7 +1096,7 @@ let core_type_recurses_through_boxed_container ~ind_ref core_ty =
 
 (** Completeness-aware element wrapping: if a constructor field of [ind_ref]
     recurses THROUGH a boxed-element container (a container carrying a
-    [Boxed Element] wrapper, e.g. [list <self>] where
+    [BoxedComponent] box, e.g. [list <self>] where
     [list -> immer::flex_vector]), record [ind_ref] as an inductive that must
     be boxed as a container element everywhere it occurs, so its C++
     representation is type-consistent: a type is complete only after its

@@ -14,7 +14,7 @@
 
     Interface for the [.mlg]-generated parser that wires Crane's vernacular
     commands (e.g. [Crane Extraction], [Crane Benchmark], [Crane Loopify] and
-    [Crane Extract Inductive]) into Rocq's command grammar. The values below are the
+    [Crane Extract Monad]) into Rocq's command grammar. The values below are the
     {!Genarg} witnesses for the custom argument entries used by those command
     rules; they let the generic-argument machinery serialize, print, and
     interpret the corresponding parameters. Each witness pairs with a

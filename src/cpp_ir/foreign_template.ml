@@ -166,7 +166,7 @@ let expand_custom_binders esc1 esc2 f = expand_custom_chunks (parse_custom_numbe
 let expand_custom_fixed esc cc = expand_custom_chunks (parse_custom_fixed esc cc)
 
 (** Expand [%elem] / [%elem{i}] placeholders: like [%t{i}], but the element
-    type is written inside the container's [Boxed Element] wrapper where it
+    type is written inside the container's element box ([BoxedComponent]) where it
     recurses through the container.  Bare [%elem] means index 0. *)
 let expand_elem_args cmds =
   let cmds = expand_numbered_args "elem" (fun i -> Elem i) cmds in

@@ -6,7 +6,7 @@ From Crane Require Import Mapping.NatInt.
 From Stdlib Require Import List.
 Import ListNotations.
 
-(** A rose tree over a container with a [Boxed Element] wrapper and a
+(** A rose tree over a container with a [BoxedComponent] box and a
     [Drain] clause, as ParseALot's ConsList.v maps lists: the destructor
     takes a deep tree apart through the drain rather than by recursion. *)
 Module BoxedElementDrain.

@@ -8,10 +8,10 @@ as the Rocq library `Crane`.
 - `Mapping/` maps Rocq types and operations to C++. Every file there is a
   [typed mapping](Reference-Manual.md#typed-mappings) and activates on
   `Import`.
-- `Monads/` defines effects on interaction trees, mapped with the legacy
-  commands, and the `ST` monad, whose arrays and references are typed.
+- `Monads/` defines effects on interaction trees and the `ST` monad; their
+  types, event families and operations are typed mappings.
 - `External/` declares C++ types used through axioms (vectors, string views),
-  mapped with the legacy commands.
+  as typed mappings.
 - `cpp/` and `cpp_bde/` hold the header-only C++ runtime that generated code
   includes.
 
@@ -187,9 +187,11 @@ tail, so a head-tail recursion over a deque is quadratic. Maps `length`,
 
 ## Effects
 
-All effects are built on interaction trees (ITrees) and mapped with the
-legacy commands (`Crane Extract Monad`, `Crane Extract Inlined Constant`,
-`Crane Extract Skip`). Most effect modules share their definitions: a
+All effects are built on interaction trees (ITrees).  The tree is configured
+with `Crane Extract Monad` and `Crane Extract Skip`; its type, the event
+families and the smart constructors are typed mappings (`TypeMapping`,
+`OperationMapping`, `event_family`), active where the effect module is
+imported. Most effect modules share their definitions: a
 `*Defs.v` file holds the flavour-independent effect inductive and smart
 constructors, and the flavour files (`IO.v` for the standard library,
 `IOBDE.v` for BDE) re-export them with C++ mappings.

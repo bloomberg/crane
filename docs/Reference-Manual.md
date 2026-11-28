@@ -15,11 +15,9 @@ Contents:
 - [Mappings](#mappings): how Rocq types and operations become C++
 - [Typed mappings](#typed-mappings): `TypeMapping`, `OperationMapping`,
   `Crane Show Mapping`, `Crane Check Mapping`
-- [Legacy mapping commands](#legacy-mapping-commands): `Crane Extract
-  Inductive`, `Crane Extract Inlined Constant`, `Crane Extract Constant`,
-  `Crane Extract Foreign Constant`, `Crane Extract Numeral`,
-  `Crane TriviallyCopyable`, `Crane Extract Monad`, `Crane Extract Skip`,
-  `Crane Extract Skip Module`, `Crane Extract Void`, `Crane Extract Callback`
+- [Other mapping commands](#other-mapping-commands): `Crane Extract Numeral`,
+  `Crane Extract Monad`, `Crane Extract Skip`, `Crane Extract Skip Module`,
+  `Crane Extract Void`, `Crane Extract Callback`
 - [Which headers a unit includes](#which-headers-a-unit-includes)
 - [`Crane Bake`](#crane-bake)
 - [Code generation options](#code-generation-options): `StdLib`, `Loopify`,
@@ -99,35 +97,31 @@ A mapping tells Crane how to represent a Rocq type, or how to implement a
 Rocq operation, in C++. Without one, Crane generates its own C++ for every
 inductive type and function it extracts.
 
-There are two mechanisms:
+A mapping is a type-class instance of `TypeMapping` or `OperationMapping`
+from `theories/Mapping/Descriptor.v`. It states the C++ type as structured
+data, and contracts that the access, ownership and view analyses read: how a
+value is copied, read, written and passed, and what an operation does with
+each argument. An instance is active when the module that declares it is
+imported (`#[export] Instance`), or once its file is loaded
+(`#[global] Instance`), so the imports of a file are its mapping
+configuration. Every mapping of `theories/` is typed: `theories/Mapping/`, the
+effect libraries of `theories/Monads/` and `theories/External/`.
 
-* **Typed mappings** are type-class instances of `TypeMapping` and
-  `OperationMapping` from `theories/Mapping/Descriptor.v`. They state the C++
-  type as structured data, and contracts that the access, ownership and view
-  analyses read: how a value is copied, read, written and passed, and what
-  an operation does with each argument. An instance is active when the
-  module that declares it is imported (`#[export] Instance`), so the imports
-  of a file are its mapping configuration. Every mapping in
-  `theories/Mapping/` and the ST arrays and references of
-  `Monads/ST.v` are typed.
-* **Legacy mapping commands** (`Crane Extract Inductive`, `Crane Extract
-  Inlined Constant`, ...) give C++ as template strings with no contract.
-  They remain necessary for monads and effects (`Crane Extract Monad`,
-  `Skip`, `Void`), which have no typed form yet, and are used by the effect
-  libraries in `theories/Monads/` and `theories/External/`.
-
-A head may be mapped by one mechanism only. When an extraction starts, a
-head mapped both by an active instance and by a legacy `Crane Extract ...`
-(or `Crane Extract Numeral`) command is an error:
+Monads, skipped globals and void types are configured by the commands of
+[Other mapping commands](#other-mapping-commands). A head given a typed
+mapping may not also be skipped, or given a `Crane Extract Numeral` format;
+extraction refuses it:
 
 ```text
-Crane: option is mapped twice: by the typed mapping std_option_mapping and by
-a legacy Crane Extract command. ...
+Crane: Bead is mapped twice: by the typed mapping bead_mapping and by a
+legacy Crane Extract Numeral command. ...
 ```
 
 Because typed instances activate on `Import`, a bare
-`Require Crane.Mapping.Std.` no longer selects the standard mappings; write
-`From Crane Require Import Mapping.Std.`
+`Require Crane.Mapping.Std.` does not select the standard mappings; write
+`From Crane Require Import Mapping.Std.` The same holds for the effect
+libraries (`From Crane Require Import Monads.ITree Monads.IO.`), except
+`Monads.ST`, whose mappings are global.
 
 ---
 
@@ -240,20 +234,40 @@ the parameter it instantiates.
 | Field | Meaning |
 | --- | --- |
 | `type_headers` | Headers the C++ type needs, included wherever a unit uses the type. |
-| `type_cpp` | The canonical C++ type, structured: `Crane.Cpp.Name "std::string"`, `Crane.Cpp.Apply "std::optional" [Crane.Cpp.TypeArg t]`, `Crane.Cpp.Pointer t`, `Crane.Cpp.Const t`, `Crane.Cpp.StoredComponent "c"` (the C++ type Crane chose for component `c`), `Crane.Cpp.SourceType T` (the C++ type of a Rocq type), `Crane.Cpp.UnsafeVerbatim "..."` (raw text; warns). `Crane.Cpp.ValueArg "..."` is a non-type template argument. Must not be a reference. |
+| `type_cpp` | The canonical C++ type, structured: `Crane.Cpp.Name "std::string"`, `Crane.Cpp.Apply "std::optional" [Crane.Cpp.TypeArg t]`, `Crane.Cpp.Pointer t`, `Crane.Cpp.Const t`, `Crane.Cpp.StoredComponent "c"` (the C++ type Crane chose for component `c`), `Crane.Cpp.SourceType T` (the C++ type of a parameter `T` of the mapped type, a type or a type family), `Crane.Cpp.BoxedComponent "c" box` (component `c`, or `box` around it where its element is an inductive recursive through the mapped type), `Crane.Cpp.UnsafeVerbatim "..."` (raw text; warns). `Crane.Cpp.ValueArg "..."` is a non-type template argument. Must not be a reference. |
 | `type_components` | Named parts of the value, each `{\| component_name := "c"; component_type := ... \|}`: `KnownType A` (a type parameter) or `FieldType (Ref ctor) i` (field `i`, from 0 after the parameters, of a constructor). Templates refer to them with `%stored(c)`. |
-| `type_copy` | What a copy costs: `BitCopy` (scalar or raw handle), `RetainIdentity` (shares one identity, as `shared_ptr`), `DuplicateValue` (independent copy, possibly expensive), `CopyComponents ["c"; ...]` (a bounded aggregate that costs what the named components cost, as `std::optional` or `std::pair`; not a container such as `std::vector` or `std::deque`, which copies every element and is `DuplicateValue`), `UnknownCopy`. Replaces `Crane TriviallyCopyable`. |
+| `type_copy` | What a copy costs: `BitCopy` (scalar or raw handle), `RetainIdentity` (shares one identity, as `shared_ptr`), `DuplicateValue` (independent copy, possibly expensive), `CopyComponents ["c"; ...]` (a bounded aggregate that costs what the named components cost, as `std::optional` or `std::pair`; not a container such as `std::vector` or `std::deque`, which copies every element and is `DuplicateValue`), `UnknownCopy`. |
 | `type_access` | How the canonical value may be read, written and passed (below). |
 | `type_views` | `NoViews T`, `ReadViews r`, or `ReadWriteViews r w read_from_write` (below). |
 | `type_interface` | `AbstractInterface` (no constructors visible: building or matching the type in source is an error, so it is used only through mapped operations), or `AlgebraicInterface [ctor mappings]`: how each constructor is built and matched (below). `AlgebraicInterface []` is an empty type. |
 | `type_model` | `Structural` (copies are the same value), `Identity` (copies alias one mutable identity), `Unspecified`. Independent of `type_copy`: a small integer handle is `BitCopy` and `Identity`. |
 | `type_lifetime` | `NativeRAII` (the C++ value owns its resource), `RegionOwned (Ref r)`, `ExternallyOwned`, `ManualShared (Ref retain) (Ref release)`. A raw pointer with `NativeRAII` is rejected. |
-| `type_release` | `OrdinaryRelease` or `DrainWith "..."`. |
+| `type_release` | `OrdinaryRelease` or `DrainWith "..."`: how a generated inductive's destructor hands a field held in this container to its worklist, `%scrut` the container and `%yield(e)` pushing child `e` (without it, a field is assumed a smart pointer). |
 | `type_numerals` | How a literal of the type is written (below), or `None`. |
 
-`type_model`, `RegionOwned`, `ManualShared` and `DrainWith` are validated and
-recorded in a unit's compiled interface; code generation does not yet act on
-them.
+`type_model`, `RegionOwned` and `ManualShared` are validated and recorded in
+a unit's compiled interface; code generation does not yet act on them.
+
+A container C++ needs its element complete to name ([immer] containers, a
+`crane::list` of a generated inductive recursive through it) boxes the
+element where it recurses, and only there:
+
+```coq
+type_cpp := Apply "crane::list"
+  [TypeArg (BoxedComponent "element" (Apply "crane::box" [TypeArg (StoredComponent "element")]))];
+```
+
+`list rose` for an inductive `rose` with a `list rose` field is
+`crane::list<crane::box<rose>>`; `list nat` stays `crane::list<uint64_t>`. A
+constructor's `%stored(element)` is boxed the same way; a view's and a
+projection's are not (the box converts to and from its element). The box must
+be pointer-sized and copyable. A field held in such a container is stored by
+value, not behind another `std::shared_ptr`.
+
+An event family (an inductive `E : Type -> Type` an `itree` triggers) has no
+C++ type: `type_cpp := Name ""` and each constructor's `ctor_build` is the C++
+that performs the event, with no view. `Mapping/Cpp.v` writes this as
+`event_family headers [event (Ref (@Ctor)) "text"; ...]`.
 
 #### Access models
 
@@ -409,7 +423,8 @@ Class OperationMapping (source : Declaration) : Type := {
 `Ref (@fst)` and `Ref (@PrimArray.get)` name polymorphic operations.
 `operation_cpp` is `Structured term`, `Expr "..."`, or
 `WithBody "init" "body"`, where the body completes the `%result` slot the
-initialiser declares. Write the body as a `Structured` term wherever the
+initialiser declares (`WithBody "" "std::cin >> %result"` declares the slot
+and runs the body alone). Write the body as a `Structured` term wherever the
 term grammar can say it; text is the escape hatch for statements, loops and
 lambdas.
 
@@ -433,8 +448,10 @@ lambdas.
 | `LetIn x v b`, `Var x` | `b` with `v` for `Var x` (substituted) |
 | `Verbatim s` | the C++ text `s`, which names no argument |
 
-Types (`TypeExpr`) add `Int t`, `Bool`, `Float64` and `ResultType` (the
-type a use yields, the text templates' `%ret`). The integer types are
+Types (`TypeExpr`) add `Int t`, `Bool`, `Float64`, `ResultType` (the
+type a use yields, the text templates' `%ret`) and `TypeParameter "A"` (the
+type the operation's type parameter `A` is instantiated at, as in
+`Call "crane::rec" [TypeParameter "A"; TypeParameter "B"] [Arg "body"; Arg "a"]`). The integer types are
 `I8`..`I64`, `U8`..`U64`, `Size` (`std::size_t`, distinct from `U64`),
 `Char` and `UChar`. An overflow mode `o` is `Unchecked` (C++'s own),
 `Wrapping` (modulo two to the width; the operands must be of one known
@@ -598,176 +615,31 @@ Crane Check Mapping <term> Fails With "<text>".
 `CRANE_TRACE_MAPPINGS=1` reports, during extraction, every discovered head
 and every resolved descriptor.
 
-### What has no typed form yet
+### Helpers
 
-Monads (`Crane Extract Monad`), effect events, `Crane Extract Skip` and
-`Crane Extract Void` have no typed counterpart; the effect libraries and
-`External/` use the legacy commands. The legacy commands are not deprecated
-until they do.
+`Crane.Mapping.Cpp` (`theories/Mapping/Cpp.v`) builds the common shapes:
 
-To migrate a legacy mapping, remove the legacy command (a head mapped both
-ways is an error) and write:
-
-| Legacy | Typed |
+| Helper | Mapping |
 | --- | --- |
-| `Crane Extract Inductive T => "..." [ctors] "match"` | `TypeMapping T` with `type_cpp`, and `AlgebraicInterface` with one `ConstructorMapping` per constructor (its build template and, for matching, a `ConstructorView`) |
-| `Crane Extract Inlined Constant` of a type constant | `TypeMapping` with `AbstractInterface` |
-| `Crane Extract Inlined Constant f => "..."` | `OperationMapping (Ref f)` with named arguments and a contract |
-| `Crane TriviallyCopyable T` | `type_copy := BitCopy` or `CopyComponents [...]` |
-| `Crane Extract Numeral T => "..."` | `type_numerals` |
-| `From "header"` | `type_headers`, `operation_headers` |
+| `pure headers args term` | a pure operation reading `args`, a structured body |
+| `pure_cpp headers args construction` | a pure operation reading `args` canonically, any body |
+| `effect headers args term`, `effect_cpp headers args construction` | the same with an effect |
+| `effect_args headers specs construction` | an effect, each argument's use given |
+| `builds headers args construction` | a pure operation taking each argument (a constructor-like helper) |
+| `pass_through before x after` | the identity on argument `x`, the others ignored |
+| `dictionary headers args text` | a type-class dictionary written as a C++ type |
+| `value_type headers cpp copy` | an abstract type read by value (`BitCopy`) or by `const` reference |
+| `event_family headers [event (Ref c) text; ...]` | an event family |
 
-Import the module that declares the instances where the legacy file was
-only `Require`d.
+A mapping instance declared inside an extracted module writes nothing.
 
 ---
 
-## Legacy mapping commands
+## Other mapping commands
 
-These commands map with C++ template strings. A string argument written as
-`"..."` may also be a bare identifier where the grammar says `cppname`.
-
-### `Crane Extract Inductive`
-
-```coq
-Crane Extract Inductive <inductive> => "<C++ type>"
-  [ "<constructor 0>" ... "<constructor n>" ]
-  ["<match template>"]
-  [Boxed Element "<wrapper>"]
-  [Drain "<drain template>"]
-  [From "<header>" ...].
-```
-
-The clauses must appear in this order; each in brackets is optional. The
-constructor list must have one entry per constructor.
-
-| Placeholder | Meaning |
-| --- | --- |
-| `%t0`, `%t1`, ... | type parameters of the inductive |
-| `%a0`, `%a1`, ... | constructor arguments |
-| `%scrut` | the matched value |
-| `%b0a0` | name bound to argument 0 of branch 0 |
-| `%br0`, `%br1`, ... | the branch for constructor 0, 1, ... |
-| `%elem` | the element slot of a container with a `Boxed Element` clause |
-| `%yield(e)` | in a `Drain` template: push child `e` onto the destructor's worklist |
-
-```coq
-Crane Extract Inductive prod =>
-  "std::pair<%t0, %t1>"
-  [ "std::make_pair(%a0, %a1)" ]
-  "const auto& [%b0a0, %b0a1] = %scrut; %br0"
-  From "utility".
-```
-
-(`option` and `prod` are typed in `Mapping/StdCore.v`; the example is how a
-legacy mapping is written.)
-
-#### `Boxed Element`
-
-Some containers need a complete element type where the container type is
-named (the immer containers do). An inductive recursive through such a
-container, for example a `json` with a field of type `list json`, would name
-it with an incomplete element type. `Boxed Element "<wrapper>"` wraps the
-element in a pointer-sized indirection only at those recursive occurrences.
-Write `%elem` instead of `%t0` in the container's type and constructor
-templates; Crane resolves it to the wrapper applied to the element where the
-element is a generated inductive recursive through this container, and to
-the bare element otherwise. The wrapper must be pointer-sized, copyable, and
-convert implicitly to and from `%t0`.
-
-```coq
-Crane Extract Inductive list =>
-  "immer::flex_vector<%elem>"
-  [ "immer::flex_vector<%elem>{}"
-    "%a1.push_front(%a0)" ]
-  "if (%scrut.empty()) { %br0 }
-   else { const %t0& %b1a0 = %scrut.front();
-          auto %b1a1 = %scrut.drop(1); %br1 }"
-  Boxed Element "immer::box<%t0>"
-  From "immer/flex_vector.hpp" "immer/box.hpp".
-```
-
-The recursive `list json` becomes `immer::flex_vector<immer::box<json>>`;
-`list ascii` stays `immer::flex_vector<char>`. A field already boxed this way
-is stored by value, not behind another `std::shared_ptr`.
-
-#### `Drain`
-
-A generated inductive's destructor frees deep values with a loop instead of
-recursion. For a field held in a mapped container, `Drain` says how to hand
-the container's children to that loop: `%scrut` is the container, and
-`%yield(e)` pushes child `e`. Without it the destructor assumes a
-smart-pointer field.
-
-```coq
-Crane Extract Inductive list =>
-  "crane::list<%t0>"
-  [ "crane::list<%t0>{}" "crane::cons(%a0, %a1)" ]
-  "if (%scrut.empty()) { %br0 } else { const %t0& %b1a0 = %scrut.front(); auto %b1a1 = %scrut.tail(); %br1 }"
-  Boxed Element "crane::box<%t0>"
-  Drain "%scrut.drain_each([&](auto&& _e) { %yield(std::move(_e)); });"
-  From "conslist.h".
-```
-
-### `Crane Extract Inlined Constant`
-
-```coq
-Crane Extract Inlined Constant <qualid> => "<C++ expression>" [From "<header>" ...].
-```
-
-Replaces every use of the constant by the expression, with `%a0`, `%a1`, ...
-for its arguments. A constant whose type is a type (`Axiom point : Type.`)
-is mapped to a C++ type this way.
-
-```coq
-Axiom larger : nat -> nat -> nat.
-Crane Extract Inlined Constant larger => "std::max(%a0, %a1)" From "algorithm".
-```
-
-An inlined constant has no contract: the access and ownership analyses treat
-each argument as a canonical read, and the argument is evaluated once if the
-template mentions it more than once.
-
-### `Crane Extract Constant`
-
-```coq
-Crane Extract Constant <qualid> [ "<id>" ... ] => "<C++ callable>" [From "<header>" ...].
-```
-
-Implements a `Parameter` or `Axiom` (a constant without a body). Crane
-generates a function with the constant's signature whose body calls the C++
-callable with the constant's arguments in order:
-
-```coq
-Parameter foreign_inc : nat -> nat.
-Crane Extract Constant foreign_inc => "foreign_inc_impl" From "foreign_inc_impl.h".
-```
-
-```cpp
-uint64_t foreign_inc(uint64_t x0_) { return foreign_inc_impl(x0_); }
-```
-
-The callable is a name, not a `%a0` template. The optional list of strings
-is accepted for parity with Rocq's extraction and ignored. On a constant
-with a body the command has no effect.
-
-### `Crane Extract Foreign Constant`
-
-```coq
-Crane Extract Foreign Constant <qualid> => "<C++ callable>".
-```
-
-As `Crane Extract Constant`, for function-typed constants only and without a
-`From` clause. Name a C++ function other than the generated one: the
-forwarding function has the Rocq constant's name.
-
-```coq
-Parameter native_checksum : nat -> nat.
-Crane Extract Foreign Constant native_checksum => "native_checksum_impl".
-Crane Print Extraction Foreign.
-```
-
-`Crane Print Extraction Foreign` lists the constants mapped so.
+These commands configure what is not a type or an operation's C++. A string
+argument written as `"..."` may also be a bare identifier where the grammar
+says `cppname`.
 
 ### `Crane Extract Numeral`
 
@@ -786,21 +658,8 @@ Crane Extract Numeral Z => "INT64_C(%n)".
 ```
 
 Every standard number mapping is typed and declares its numerals in its
-descriptor: with one of them imported, a `Crane Extract Numeral` on the same
-type makes the next extraction fail.
-
-### `Crane TriviallyCopyable`
-
-```coq
-Crane TriviallyCopyable <inductive> ... .
-```
-
-Declares that the C++ type a legacy `Crane Extract Inductive` mapping
-produces is trivially copyable whenever its type arguments are, so Crane
-copies it where it would otherwise move or take a reference (most visibly in
-loop frames). Built-in scalar names (`int`, `uint64_t`, `double`, ...) need
-no declaration. The type must have a legacy mapping; a typed mapping states
-its copy cost in `type_copy`, and the command is an error on it.
+descriptor (`type_numerals`): a `Crane Extract Numeral` on a typed type makes
+the next extraction fail.
 
 ### `Crane Extract Monad`
 
@@ -871,32 +730,32 @@ Axiom origin_at : bool -> point.
 Axiom on_axis : point -> bool.
 Definition is_real (b : bool) : bool := on_axis (origin_at b).
 
-Crane Extract Inlined Constant point => "std::complex<double>" From "complex".
-Crane Extract Inlined Constant origin_at => "std::complex<double>(%a0 ? 1.0 : 0.0, 0.0)".
-Crane Extract Inlined Constant on_axis => "(%a0.imag() == 0.0)".
+#[export] Instance point_mapping : TypeMapping point :=
+  value_type ["complex"] (Apply "std::complex" [TypeArg Float64]) UnknownCopy.
+#[export] Instance origin_at_mapping : OperationMapping (Ref origin_at) :=
+  pure_cpp [] ["b"] (Expr "std::complex<double>(%arg(b) ? 1.0 : 0.0, 0.0)").
+#[export] Instance on_axis_mapping : OperationMapping (Ref on_axis) :=
+  pure [] ["p"] (Binop Equal (Method (Arg "p") "imag" []) (Verbatim "0.0")).
 ```
 
-`origin_at` and `on_axis` need no `From` clause: code using either computes
-with a `point`, so `<complex>` is included.
+`origin_at` and `on_axis` list no header: code using either computes with a
+`point`, so `<complex>` is included.
 
-A type mapping (an inductive, a constant whose type is a type, a monad, a
-`Boxed Element` wrapper) must name the header that declares its C++ type.
-Where a legacy one has no `From` clause and its type names anything but
-builtin types and placeholders, Crane warns
-(`crane-mapping-without-header`). A legacy operation mapping that writes a
-standard-library name whose header is neither in its `From` clause nor in
-that of a mapped type its signature names gets
-`crane-mapping-standard-header`, once, when code using it is first
-extracted:
+A typed mapping lists its headers in `type_headers`, `operation_headers` and
+`view_headers`. An operation mapping that writes a standard-library name
+whose header is neither in its `operation_headers` nor in those of a mapped
+type its signature names gets `crane-mapping-standard-header`, once, when
+code using it is first extracted:
 
 ```coq
 Axiom larger : nat -> nat -> nat.
 (* Warns: std::max is declared in <algorithm>. *)
-Crane Extract Inlined Constant larger => "std::max(%a0, %a1)".
+#[export] Instance larger_mapping : OperationMapping (Ref larger) :=
+  pure [] ["a"; "b"] (Call "std::max" [] [Arg "a"; Arg "b"]).
 ```
 
-A typed mapping lists its headers in `type_headers`, `operation_headers` and
-`view_headers`.
+A `Crane Extract Monad` spelling with no `From` clause naming anything but
+builtin types and placeholders warns (`crane-mapping-without-header`).
 
 ---
 
@@ -954,7 +813,7 @@ it.
 
 A refused constant is reported as `Crane Bake: <c> is a function, which is
 not data.` (or `<c> holds, in a constructor field, ...` for a field). The
-type checks pass for every type with a typed or legacy mapping, but the
+type checks pass for every type with a typed mapping, but the
 image must also be able to write the mapped C++ type. It can write
 generated inductives and records, `crane::list`, integers, characters,
 booleans, enumerations, `float` and `double`, strings (`std::string`,
