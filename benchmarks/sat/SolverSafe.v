@@ -18,28 +18,36 @@ Require Import SatVec VecSem VecSafe Solver SolverSat SolverRepr SolverInv Solve
 Import ListNotations.
 Import Solver.
 
+(** The heap's cell family: a cell of type [T] holds a [list T]. *)
 Local Notation cellof := (fun T : Type => list T).
 
+(** A successful read was in bounds. *)
 Lemma nth_error_lt' {A} (xs : list A) i x : nth_error xs i = Some x -> i < length xs.
 Proof. intros H. apply nth_error_Some. congruence. Qed.
 
+(** A [Forall] fact applies to any element read by index. *)
 Lemma Forall_nth_error {A} (P : A -> Prop) xs i x : Forall P xs -> nth_error xs i = Some x -> P x.
 Proof. intros H Hi. rewrite Forall_forall in H. apply H. eapply nth_error_In; eauto. Qed.
 
+(** Writing an element that satisfies [P] keeps [Forall P]. *)
 Lemma Forall_lset {A} (P : A -> Prop) xs i x : Forall P xs -> P x -> Forall P (lset xs i x).
 Proof.
   intros H Hx. revert i. induction H as [|y ys Hy H IH]; intros [|i]; cbn; constructor; auto.
 Qed.
 
+(** Prefixes keep [Forall]. *)
 Lemma Forall_firstn' {A} (P : A -> Prop) n xs : Forall P xs -> Forall P (firstn n xs).
 Proof. intros H. rewrite <- (firstn_skipn n xs) in H. now apply Forall_app in H as [H _]. Qed.
 
+(** Suffixes keep [Forall]. *)
 Lemma Forall_skipn' {A} (P : A -> Prop) n xs : Forall P xs -> Forall P (skipn n xs).
 Proof. intros H. rewrite <- (firstn_skipn n xs) in H. now apply Forall_app in H as [_ H]. Qed.
 
+(** A literal below [2 * nv] has its variable below [nv]. *)
 Lemma lvar_lt l nv : l < 2 * nv -> lvar l < nv.
 Proof. intros H. unfold lvar. apply Nat.Div0.div_lt_upper_bound. lia. Qed.
 
+(** Negation keeps a literal below [2 * nv]. *)
 Lemma lneg_lt l nv : l < 2 * nv -> lneg l < 2 * nv.
 Proof.
   intros H. destruct (lit_cases l) as [[E M] | [E M]]; unfold lneg.
@@ -47,30 +55,40 @@ Proof.
   - rewrite M. cbn. lia.
 Qed.
 
+(** A literal built from a variable below [nv] is below [2 * nv]. *)
 Lemma lit_of_lt v a nv : v < nv -> lit_of v a < 2 * nv.
 Proof. intros H. unfold lit_of. destruct (Nat.eqb a 1); lia. Qed.
 
 (** * Events, with their obligations *)
 
 Section Ev.
+(** A heap [h] representing [st]. Each rule reduces one event's safety to
+    the bound or the handle it needs, and describes its result like the [wp]
+    rules of [SolverRepr]. *)
 Variables (s : state) (inp : vec nat) (xs0 : list nat) (h : heap) (st : astate).
 Hypothesis R : repr s inp xs0 h st.
 
+(** Reading a represented vector within its length. *)
 Lemma sget_pts v xs i (Q : nat -> heap -> Prop) :
   pts h v xs -> i < length xs -> (forall x, nth_error xs i = Some x -> Q x h) -> safe (vget (E := vecE) v i) Q h.
 Proof. intros Hp Hi HQ. eapply safe_vget; eauto. Qed.
 
+(** The length of a represented vector. *)
 Lemma slen_pts v xs (Q : nat -> heap -> Prop) :
   pts h v xs -> Q (length xs) h -> safe (vlen (E := vecE) v) Q h.
 Proof. intros Hp HQ. eapply safe_vlen; eauto. Qed.
 
+(** Reading field [f] within its length. *)
 Lemma sget_f f i Q :
   i < length (fv st f) -> (forall x, nth_error (fv st f) i = Some x -> Q x h) -> safe (vget (floc s f) i) Q h.
 Proof. apply sget_pts, (r_fv _ _ _ _ _ R). Qed.
 
+(** The length of field [f]. *)
 Lemma slen_f f Q : Q (length (fv st f)) h -> safe (vlen (floc s f)) Q h.
 Proof. apply slen_pts, (r_fv _ _ _ _ _ R). Qed.
 
+(** Writing field [f] within its length updates it and keeps the scratch
+    cells. *)
 Lemma sset_f f i x Q :
   i < length (fv st f) ->
   (forall h', repr s inp xs0 h' (fset st f (lset (fv st f) i x)) -> keeps s inp st h h' -> Q tt h') ->
@@ -81,6 +99,7 @@ Proof.
   - apply keeps_upd, locs_in_f.
 Qed.
 
+(** Pushing onto field [f] has no obligation. *)
 Lemma spush_f f x Q :
   (forall h', repr s inp xs0 h' (fset st f (fv st f ++ [x])) -> keeps s inp st h h' -> Q tt h') ->
   safe (vpush (floc s f) x) Q h.
@@ -90,6 +109,7 @@ Proof.
   - apply keeps_upd, locs_in_f.
 Qed.
 
+(** Shrinking field [f] needs only that it does not grow. *)
 Lemma sshrink_f f n Q :
   n <= length (fv st f) ->
   (forall h', repr s inp xs0 h' (fset st f (firstn n (fv st f))) -> keeps s inp st h h' -> Q tt h') ->
@@ -100,6 +120,7 @@ Proof.
   - apply keeps_upd, locs_in_f.
 Qed.
 
+(** Reading a clause handle needs an index below the number of clauses. *)
 Lemma sget_hc i (Q : vec nat -> heap -> Prop) :
   i < length (db st) -> (forall c, nth_error (hcls st) i = Some c -> Q c h) -> safe (vget (clauses s) i) Q h.
 Proof.
@@ -107,11 +128,14 @@ Proof.
   now rewrite (repr_len_db _ _ _ _ _ R).
 Qed.
 
+(** The number of clauses. *)
 Lemma slen_hc Q : Q (length (db st)) h -> safe (vlen (clauses s)) Q h.
 Proof.
   intros HQ. eapply safe_vlen; [apply (r_cls _ _ _ _ _ R) |]. now rewrite (repr_len_db _ _ _ _ _ R).
 Qed.
 
+(** Reading a watch-list handle needs an index below the number of watch
+    lists. *)
 Lemma sget_hw i (Q : vec nat -> heap -> Prop) :
   i < length (wl st) -> (forall c, nth_error (hwl st) i = Some c -> Q c h) -> safe (vget (watches s) i) Q h.
 Proof.
@@ -119,6 +143,7 @@ Proof.
   now rewrite (repr_len_wl _ _ _ _ _ R).
 Qed.
 
+(** Reading clause [k] within its length. *)
 Lemma sget_cl k c cl i Q :
   nth_error (hcls st) k = Some c -> nth_error (db st) k = Some cl -> i < length cl ->
   (forall x, nth_error cl i = Some x -> Q x h) -> safe (vget c i) Q h.
@@ -127,6 +152,7 @@ Proof.
   rewrite Hd in Hd'. injection Hd' as <-. now apply sget_pts.
 Qed.
 
+(** The length of clause [k]. *)
 Lemma slen_cl k c cl Q :
   nth_error (hcls st) k = Some c -> nth_error (db st) k = Some cl -> Q (length cl) h -> safe (vlen c) Q h.
 Proof.
@@ -134,6 +160,7 @@ Proof.
   rewrite Hd in Hd'. injection Hd' as <-. now apply slen_pts.
 Qed.
 
+(** Writing clause [k] within its length rewrites it in the database. *)
 Lemma sset_cl k c cl i x Q :
   nth_error (hcls st) k = Some c -> nth_error (db st) k = Some cl -> i < length cl ->
   (forall h', repr s inp xs0 h' (dset st (lset (db st) k (lset cl i x))) -> keeps s inp st h h' -> Q tt h') ->
@@ -146,6 +173,7 @@ Proof.
   - eapply keeps_upd, locs_in_c; eauto.
 Qed.
 
+(** Reading watch list [k] within its length. *)
 Lemma sget_w k c ws i Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws -> i < length ws ->
   (forall x, nth_error ws i = Some x -> Q x h) -> safe (vget c i) Q h.
@@ -154,6 +182,7 @@ Proof.
   rewrite Hd in Hd'. injection Hd' as <-. now apply sget_pts.
 Qed.
 
+(** The length of watch list [k]. *)
 Lemma slen_w k c ws Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws -> Q (length ws) h -> safe (vlen c) Q h.
 Proof.
@@ -161,6 +190,7 @@ Proof.
   rewrite Hd in Hd'. injection Hd' as <-. now apply slen_pts.
 Qed.
 
+(** Writing watch list [k] within its length. *)
 Lemma sset_w k c ws i x Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws -> i < length ws ->
   (forall h', repr s inp xs0 h' (wset st (lset (wl st) k (lset ws i x))) -> keeps s inp st h h' -> Q tt h') ->
@@ -173,6 +203,7 @@ Proof.
   - eapply keeps_upd, locs_in_w; eauto.
 Qed.
 
+(** Pushing onto watch list [k] has no obligation. *)
 Lemma spush_w k c ws x Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws ->
   (forall h', repr s inp xs0 h' (wset st (lset (wl st) k (ws ++ [x]))) -> keeps s inp st h h' -> Q tt h') ->
@@ -185,6 +216,7 @@ Proof.
   - eapply keeps_upd, locs_in_w; eauto.
 Qed.
 
+(** Shrinking watch list [k] needs only that it does not grow. *)
 Lemma sshrink_w k c ws n Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws -> n <= length ws ->
   (forall h', repr s inp xs0 h' (wset st (lset (wl st) k (firstn n ws))) -> keeps s inp st h h' -> Q tt h') ->
@@ -211,6 +243,8 @@ Proof.
   - intros v' xs _ Hp. apply pts_upd_neq; [|exact Hp]. unfold pts in Hp. congruence.
 Qed.
 
+(** Writing a scratch vector within its length leaves the state's
+    representation intact. *)
 Lemma sset_scr v xs i x Q :
   ~ In (vloc v) (locs s inp st) -> pts h v xs -> i < length xs ->
   (forall h', repr s inp xs0 h' st -> pts h' v (lset xs i x) -> Q tt h') ->
@@ -221,6 +255,7 @@ Proof.
   - apply pts_upd_eq.
 Qed.
 
+(** Pushing onto a scratch vector leaves the state's representation intact. *)
 Lemma spush_scr v xs x Q :
   ~ In (vloc v) (locs s inp st) -> pts h v xs ->
   (forall h', repr s inp xs0 h' st -> pts h' v (xs ++ [x]) -> Q tt h') ->
@@ -231,6 +266,8 @@ Proof.
   - apply pts_upd_eq.
 Qed.
 
+(** Pushing a scratch vector onto [clauses] makes it a clause of the state
+    ([cpush]). *)
 Lemma spush_cls c cl Q :
   ~ In (vloc c) (locs s inp st) -> pts h c cl ->
   (forall h', repr s inp xs0 h' (cpush st c cl) -> Q tt h') -> safe (vpush (clauses s) c) Q h.
@@ -239,6 +276,7 @@ Proof.
   apply HQ. now apply repr_cpush.
 Qed.
 
+(** Reading the input within its length. *)
 Lemma sget_inp i Q : i < length xs0 -> (forall x, nth_error xs0 i = Some x -> Q x h) -> safe (vget inp i) Q h.
 Proof. apply sget_pts, (r_inp _ _ _ _ _ R). Qed.
 
@@ -247,22 +285,28 @@ End Ev.
 (** * The safety invariant *)
 
 Section Safe.
+(** [nv] is the number of variables, so literals are below [2 * nv]. *)
 Variables (s : state) (inp : vec nat) (xs0 : list nat) (nv : nat).
 
+(** [R h st]: the heap [h] represents the abstract state [st]. *)
 Local Notation R := (repr s inp xs0).
+(** [keeps st h h']: the step from [h] to [h'] leaves every vector outside
+    [st]'s locations alone. *)
 Local Notation keeps := (keeps s inp).
 
 (** A watch entry names a clause of length at least 2. *)
 Definition wok (D : list (list nat)) (ci : nat) : Prop :=
   exists cl, nth_error D ci = Some cl /\ 2 <= length cl.
 
+(** [l] is strictly increasing. *)
 Definition incr (l : list nat) : Prop :=
   forall i j a b, i < j -> nth_error l i = Some a -> nth_error l j = Some b -> a < b.
 
+(** A literal over the [nv] variables. *)
 Definition lit_ok (l : nat) : Prop := l < 2 * nv.
 
-(** Everything but [trail_lim]'s bound by the trail, which a decision
-    breaks for one event. *)
+(** [SI] without [lim_lt]: a decision pushes the trail's length onto
+    [trail_lim] one event before it enqueues. *)
 Record SIc (st : astate) : Prop := {
   si_asg : length (asg st) = nv;
   si_lvl : length (lvl st) = nv;
@@ -271,20 +315,28 @@ Record SIc (st : astate) : Prop := {
   si_st : length (fv st FSt) = nv;
   si_sn : length (sn st) = nv;
   si_misc : length (fv st FMisc) = 4;
+  (** A watch list per literal. *)
   si_wl : length (wl st) = 2 * nv;
   si_db : Forall (Forall lit_ok) (db st);
   si_tr : Forall lit_ok (tr st);
+  (** Watch entries index clauses that have two literals to watch. *)
   si_w : Forall (Forall (wok (db st))) (wl st);
+  (** A reason is 0 (none) or a clause index plus one. *)
   si_r : Forall (fun r => r <= length (db st)) (rsn st);
   si_inc : incr (lim st)
 }.
 
+(** Every decision's trail position is on the trail. *)
 Definition lim_lt (st : astate) : Prop := Forall (fun x => x < length (tr st)) (lim st).
 
+(** The safety invariant. *)
 Definition SI (st : astate) : Prop := SIc st /\ lim_lt st.
 
+(** Compute the field reads and updates of the abstract state. *)
 Ltac fvs := cbn [fv fset dset wset cpush wpush fld_eqb hcls db hwl wl] in *.
 
+(** A field constrained only by its length may be replaced by any vector of
+    that length. *)
 Lemma sic_free st f xs :
   SIc st -> f = FAsg \/ f = FLvl \/ f = FPh \/ f = FSt \/ f = FSn \/ f = FMisc ->
   length xs = length (fv st f) -> SIc (fset st f xs).
@@ -293,11 +345,13 @@ Proof.
     constructor; fvs; auto; lia.
 Qed.
 
+(** In particular, one cell of such a field may be written. *)
 Lemma sic_lset st f i x :
   SIc st -> f = FAsg \/ f = FLvl \/ f = FPh \/ f = FSt \/ f = FSn \/ f = FMisc ->
   SIc (fset st f (lset (fv st f) i x)).
 Proof. intros H Hf. apply sic_free; auto. apply lset_length. Qed.
 
+(** A reason may be set to anything up to the number of clauses. *)
 Lemma sic_rsn st i r : SIc st -> r <= length (db st) -> SIc (fset st FRsn (lset (rsn st) i r)).
 Proof.
   intros [] Hr. constructor; fvs; auto.
@@ -305,12 +359,15 @@ Proof.
   - now apply Forall_lset.
 Qed.
 
+(** Any trail of valid literals. *)
 Lemma sic_tr st xs : SIc st -> Forall lit_ok xs -> SIc (fset st FTr xs).
 Proof. intros [] Hx. constructor; fvs; auto. Qed.
 
+(** Any strictly increasing [trail_lim]. *)
 Lemma sic_lim st xs : SIc st -> incr xs -> SIc (fset st FLim xs).
 Proof. intros [] Hx. constructor; fvs; auto. Qed.
 
+(** Replacing a clause by one of the same length keeps watch entries valid. *)
 Lemma wok_lset D k cl cl' ci :
   nth_error D k = Some cl -> length cl' = length cl -> wok D ci -> wok (lset D k cl') ci.
 Proof.
@@ -320,6 +377,7 @@ Proof.
   - exists c. split; [| exact H2]. rewrite nth_error_lset_neq; auto.
 Qed.
 
+(** Rewriting a clause in place, with its length kept and valid literals. *)
 Lemma sic_dset st k cl cl' :
   SIc st -> nth_error (db st) k = Some cl -> length cl' = length cl -> Forall lit_ok cl' ->
   SIc (dset st (lset (db st) k cl')).
@@ -330,12 +388,15 @@ Proof.
   - now rewrite lset_length.
 Qed.
 
+(** Replacing the watch lists by [2 * nv] lists of valid entries. *)
 Lemma sic_wset st W : SIc st -> length W = 2 * nv -> Forall (Forall (wok (db st))) W -> SIc (wset st W).
 Proof. intros [] Hl Hw. constructor; fvs; auto. Qed.
 
+(** Appending a clause keeps watch entries valid. *)
 Lemma wok_app D cl ci : wok D ci -> wok (D ++ [cl]) ci.
 Proof. intros (c & Hc & H2). exists c. split; [| exact H2]. rewrite nth_error_app1; [exact Hc | eapply nth_error_lt'; eauto]. Qed.
 
+(** Adding a clause of valid literals. *)
 Lemma sic_cpush st c cl : SIc st -> Forall lit_ok cl -> SIc (cpush st c cl).
 Proof.
   intros [] Hc. constructor; fvs; auto.
@@ -351,6 +412,7 @@ Proof.
   apply Forall_lset; [apply (si_w _ H) | exact HL].
 Qed.
 
+(** [lim_lt] survives growing the trail. *)
 Lemma lim_lt_grow st st' : lim st' = lim st -> length (tr st) <= length (tr st') -> lim_lt st -> lim_lt st'.
 Proof. intros E Hl H. unfold lim_lt in *. rewrite E. revert H. apply Forall_impl. intros x Hx. lia. Qed.
 
@@ -363,26 +425,32 @@ End Safe.
 Section Funs.
 Variables (s : state) (inp : vec nat) (xs0 : list nat) (nv : nat).
 
+(** [R] and [keeps] as in section [Safe]. *)
 Local Notation R := (repr s inp xs0).
 Local Notation keeps := (keeps s inp).
+(** The invariants at the section's [nv]. *)
 Local Notation SIc := (SIc nv).
 Local Notation SI := (SI nv).
 Local Notation lit_ok := (lit_ok nv).
 
 Ltac fvs := cbn [fv fset dset wset cpush wpush fld_eqb hcls db hwl wl enq] in *.
 
+(** Leaving the scratch cells alone composes along a sequence of events. *)
 Lemma keeps_tr st h1 h2 h3 : keeps st h1 h2 -> keeps st h2 h3 -> keeps st h1 h3.
 Proof. intros H1 H2 v xs Hv Hp. auto. Qed.
 
+(** Literals read from the database are valid. *)
 Lemma db_lit st k cl j l : SIc st -> nth_error (db st) k = Some cl -> nth_error cl j = Some l -> lit_ok l.
 Proof.
   intros Hs Hk Hj. eapply Forall_nth_error; [| exact Hj].
   eapply Forall_nth_error; [apply (si_db _ _ Hs) | exact Hk].
 Qed.
 
+(** Literals read from the trail are valid. *)
 Lemma tr_lit st j l : SIc st -> nth_error (tr st) j = Some l -> lit_ok l.
 Proof. intros Hs Hj. eapply Forall_nth_error; [apply (si_tr _ _ Hs) | exact Hj]. Qed.
 
+(** A valid literal's variable indexes every per-variable field. *)
 Lemma var_ok st f l : SIc st -> lit_ok l ->
   f = FAsg \/ f = FLvl \/ f = FRsn \/ f = FPh \/ f = FSt \/ f = FSn -> lvar l < length (fv st f).
 Proof.
@@ -390,6 +458,7 @@ Proof.
   destruct Hf as [-> | [-> | [-> | [-> | [-> | ->]]]]]; lia.
 Qed.
 
+(** [lit_value] of a valid literal is safe. *)
 Lemma lit_value_safe h st l Q :
   R h st -> SIc st -> lit_ok l -> (forall x, Q x h) -> safe (lit_value s l) Q h.
 Proof.
@@ -397,6 +466,7 @@ Proof.
   eapply (sget_f s inp xs0 h st Hr FAsg); [apply var_ok; auto |]. intros a _. apply safe_ret, HQ.
 Qed.
 
+(** [enq] of a valid literal with a valid reason keeps [SIc]. *)
 Lemma enq_sic st l r : SIc st -> lit_ok l -> r <= length (db st) -> SIc (enq st l r).
 Proof.
   intros [] Hl Hr. unfold enq. constructor; fvs; rewrite ?lset_length; auto.
@@ -404,12 +474,14 @@ Proof.
   - now apply Forall_lset.
 Qed.
 
+(** It keeps [SI] too, since the trail only grows. *)
 Lemma enq_si st l r : SI st -> lit_ok l -> r <= length (db st) -> SI (enq st l r).
 Proof.
   intros [Hs Hl'] Hl Hr. split; [now apply enq_sic|].
   eapply lim_lt_grow; [| | exact Hl']; fvs; [reflexivity | rewrite length_app; lia].
 Qed.
 
+(** [enqueue] of a valid literal is safe and implements [enq]. *)
 Lemma enqueue_safe h st l r Q :
   R h st -> SIc st -> lit_ok l ->
   (forall h', R h' (enq st l r) -> keeps st h h' -> Q tt h') ->
@@ -425,6 +497,7 @@ Proof.
   eapply keeps_tr; [exact Hk1|]. eapply keeps_tr; [exact Hk2|]. eapply keeps_tr; eassumption.
 Qed.
 
+(** [find_watch] is safe; a nonzero answer is one plus a position in [cl]. *)
 Lemma find_watch_safe fuel : forall h st ci c cl k Q,
   R h st -> SIc st -> nth_error (hcls st) ci = Some c -> nth_error (db st) ci = Some cl ->
   (forall r, (r <> 0 -> r - 1 < length cl) -> Q r h) ->
@@ -441,6 +514,7 @@ Proof.
       * apply safe_ret, HQ. lia.
 Qed.
 
+(** [copy_rest] is safe and leaves a watch list of valid entries. *)
 Lemma copy_rest_safe fuel : forall h st fl ws L i j n Q,
   R h st -> SIc st -> nth_error (hwl st) fl = Some ws -> nth_error (wl st) fl = Some L ->
   n <= length L -> j <= i -> i <= n ->
@@ -461,17 +535,22 @@ Proof.
       * intros h' L' Hr' HL'. fvs. apply (HQ h' L'); [| exact HL'].
         rewrite lset_lset in Hr'. exact Hr'.
 Qed.
+(** Every entry of a watch list is valid. *)
 Lemma wl_ok st fl L : SIc st -> nth_error (wl st) fl = Some L -> Forall (wok (db st)) L.
 Proof. intros Hs HL. eapply Forall_nth_error; [apply (si_w _ _ Hs) | exact HL]. Qed.
 
+(** [sic_wl_lset] for [SI]. *)
 Lemma si_wl_lset st k L : SI st -> Forall (wok (db st)) L -> SI (wset st (lset (wl st) k L)).
 Proof. intros [Hs Hl] HL. split; [now apply sic_wl_lset | exact Hl]. Qed.
 
+(** [sic_dset] for [SI]. *)
 Lemma si_dset st k cl cl' :
   SI st -> nth_error (db st) k = Some cl -> length cl' = length cl -> Forall lit_ok cl' ->
   SI (dset st (lset (db st) k cl')).
 Proof. intros [Hs Hl] Hk Hc HL. split; [eapply sic_dset; eauto | exact Hl]. Qed.
 
+(** [prop_watch] is safe, keeps [SI], and a nonzero answer is one plus a
+    clause index. *)
 Lemma prop_watch_safe fuel : forall h st fl ws L i j n Q,
   R h st -> SI st -> nth_error (hwl st) fl = Some ws -> nth_error (wl st) fl = Some L ->
   n <= length L -> j <= i -> i <= n -> lit_ok fl ->
@@ -578,6 +657,8 @@ Proof.
       | lia | lia | lia | exact Hfl | exact HQ].
 Qed.
 
+(** [propagate] is safe, keeps [SI], and a nonzero answer is one plus a
+    clause index. *)
 Lemma propagate_safe fuel : forall h st Q,
   R h st -> SI st ->
   (forall r h' st', R h' st' -> SI st' -> (r <> 0 -> r - 1 < length (db st')) -> Q r h') ->
@@ -610,17 +691,21 @@ Qed.
 
 (** ** Backtracking *)
 
-(** Only per-variable cells and counters changed. *)
+(** [st'] differs from [st] only in the per-variable vectors and the
+    counters. *)
 Definition same (st st' : astate) : Prop :=
   hcls st' = hcls st /\ hwl st' = hwl st /\ db st' = db st /\ wl st' = wl st /\
   tr st' = tr st /\ lim st' = lim st.
 
+(** [same] is reflexive. *)
 Lemma same_refl st : same st st.
 Proof. repeat split. Qed.
 
+(** [same] is transitive. *)
 Lemma same_trans a b c : same a b -> same b c -> same a c.
 Proof. intros (E1 & E2 & E3 & E4 & E5 & E6) (F1 & F2 & F3 & F4 & F5 & F6). repeat split; congruence. Qed.
 
+(** Writing any field but the trail and [trail_lim] is [same]. *)
 Lemma same_fset st f xs : f <> FTr -> f <> FLim -> same st (fset st f xs).
 Proof.
   intros H1 H2. unfold same. fvs. repeat split.
@@ -628,19 +713,23 @@ Proof.
   - destruct f; try reflexivity; congruence.
 Qed.
 
+(** [lim_lt] carries across [same], so [SIc] suffices to restore [SI]. *)
 Lemma si_same st st' : SI st -> SIc st' -> same st st' -> SI st'.
 Proof.
   intros [_ Hl] Hs (_ & _ & _ & _ & E5 & E6). split; [exact Hs|]. unfold lim_lt in *. now rewrite E5, E6.
 Qed.
 
+(** A state's locations depend only on its clause and watch-list handles. *)
 Lemma locs_same st st' : hcls st' = hcls st -> hwl st' = hwl st -> locs s inp st' = locs s inp st.
 Proof. intros E1 E2. unfold locs. now rewrite E1, E2. Qed.
 
+(** So [keeps] may be read against any [same] state. *)
 Lemma keeps_same st st' h1 h2 : same st st' -> keeps st' h1 h2 -> keeps st h1 h2.
 Proof.
   intros (E1 & E2 & _) H. unfold SolverRepr.keeps in *. rewrite <- (locs_same st st' E1 E2). exact H.
 Qed.
 
+(** [unassign] is safe and changes only per-variable cells and counters. *)
 Lemma unassign_safe fuel : forall h st i m Q,
   R h st -> SIc st -> i <= length (tr st) ->
   (forall h' st', R h' st' -> SIc st' -> same st st' -> keeps st h h' -> Q tt h') ->
@@ -669,12 +758,14 @@ Proof.
   intros v xs Hv Hp. apply Hk'; [exact Hv |]. apply Hk3; [exact Hv |]. apply Hk2; [exact Hv |]. auto.
 Qed.
 
+(** Prefixes of an increasing list are increasing. *)
 Lemma incr_firstn n l : incr l -> incr (firstn n l).
 Proof.
   intros H i j a b Hij Ha Hb. rewrite nth_error_firstn in Ha, Hb.
   destruct (Nat.ltb i n), (Nat.ltb j n); try discriminate. eauto.
 Qed.
 
+(** Appending a value above every element keeps a list increasing. *)
 Lemma incr_snoc l x : incr l -> Forall (fun y => y < x) l -> incr (l ++ [x]).
 Proof.
   intros H Hx i j a b Hij Ha Hb.
@@ -686,6 +777,7 @@ Proof.
   - rewrite nth_error_app1 in Hb by lia. eauto.
 Qed.
 
+(** [backtrack] is safe and keeps [SI] and the clause database. *)
 Lemma backtrack_safe fuel h st lv Q :
   R h st -> SI st ->
   (forall h' st', R h' st' -> SI st' -> hcls st' = hcls st -> hwl st' = hwl st -> db st' = db st ->
@@ -720,13 +812,17 @@ Qed.
 
 (** ** Conflict analysis *)
 
+(** Writes to a [same] state leave a scratch vector such as [learnt] alone. *)
 Lemma learnt_kept st st' h h' learnt Lr :
   same st st' -> keeps st' h h' -> ~ In (vloc learnt) (locs s inp st) -> pts h learnt Lr -> pts h' learnt Lr.
 Proof. intros S Hk Hn Hp. eapply keeps_same in Hk; [| exact S]. exact (Hk _ _ Hn Hp). Qed.
 
+(** [tl] commutes with appending to a nonempty list. *)
 Lemma tl_app {A} (xs : list A) x : 1 <= length xs -> tl (xs ++ [x]) = tl xs ++ [x].
 Proof. destruct xs; cbn; [lia | reflexivity]. Qed.
 
+(** [analyze_lits] is safe and keeps [SI]; the learnt clause's tail stays
+    valid literals. *)
 Lemma analyze_lits_safe fuel : forall h st ci c cl j dl pathC learnt Lr now Q,
   R h st -> SI st -> nth_error (hcls st) ci = Some c -> nth_error (db st) ci = Some cl ->
   ~ In (vloc learnt) (locs s inp st) -> pts h learnt Lr -> 1 <= length Lr -> Forall lit_ok (tl Lr) ->
@@ -767,6 +863,7 @@ Proof.
     + intros r h' st' Lr' Hr' Hsi' S' Hp' H1' Hlr'. eapply HQ; eauto; eapply same_trans; eauto.
 Qed.
 
+(** [next_seen] is safe and answers a trail position. *)
 Lemma next_seen_safe fuel : forall h st i Q,
   R h st -> SIc st -> i < length (tr st) -> (forall r, r < length (tr st) -> Q r h) ->
   safe (next_seen s fuel i) Q h.
@@ -780,6 +877,8 @@ Proof.
   - apply safe_ret, HQ, Hi.
 Qed.
 
+(** [analyze_loop] is safe, keeps [SI], and answers a valid literal, the
+    UIP. *)
 Lemma analyze_loop_safe fuel : forall h st confl start index pathC dl learnt Lr now Q,
   R h st -> SI st -> confl < length (db st) -> index < length (tr st) ->
   ~ In (vloc learnt) (locs s inp st) -> pts h learnt Lr -> 1 <= length Lr -> Forall lit_ok (tl Lr) ->
@@ -816,6 +915,8 @@ Proof.
     eapply same_trans; [exact S1 | eapply same_trans; [exact S2 | exact S']].
 Qed.
 
+(** [finish_learnt] is safe and keeps the learnt clause's length and the
+    validity of its literals. *)
 Lemma finish_learnt_safe fuel : forall h st learnt Lr i best bestlv Q,
   R h st -> SI st -> ~ In (vloc learnt) (locs s inp st) -> pts h learnt Lr -> Forall lit_ok Lr ->
   i <= length Lr -> best = 0 \/ best < i ->
@@ -857,6 +958,8 @@ Proof.
   - eapply IH; [exact Hr1 | exact Hsi1 | exact Hn | exact Hp1 | exact Hlr | lia | lia | exact HQ'].
 Qed.
 
+(** [attach] of a clause of length at least 2 is safe and keeps [SI]: that
+    length is what makes its new watch entries valid. *)
 Lemma attach_safe h st ci c cl Q :
   R h st -> SI st -> nth_error (hcls st) ci = Some c -> nth_error (db st) ci = Some cl -> 2 <= length cl ->
   (forall h' st', R h' st' -> SI st' -> hcls st' = hcls st -> db st' = db st -> Q tt h') ->
@@ -881,6 +984,7 @@ Proof.
   apply si_wl_lset; [exact Hsi1 |]. apply Forall_app. split; [eapply wl_ok; [exact (proj1 Hsi1) | exact HW1] | auto].
 Qed.
 
+(** [learn] is safe at a nonzero level and keeps [SI]. *)
 Lemma learn_safe fuel h st confl Q :
   R h st -> SI st -> confl < length (db st) -> 1 <= length (lim st) ->
   (forall h' st', R h' st' -> SI st' -> Q tt h') ->
@@ -933,6 +1037,8 @@ Qed.
 
 (** ** Search *)
 
+(** [pick] is safe and answers at most [n], so a nonzero answer minus one is
+    a variable. *)
 Lemma pick_safe fuel : forall h st v n best bs Q,
   R h st -> SIc st -> n <= nv -> best <= n -> (forall r, r <= n -> Q r h) ->
   safe (pick s fuel v n best bs) Q h.
@@ -948,6 +1054,7 @@ Proof.
   - eapply IH; eauto.
 Qed.
 
+(** [search] is safe, keeps [SI], and answers 0, 1 or 2. *)
 Lemma search_safe fuel budget : forall h st Q,
   R h st -> SI st -> (forall r h' st', R h' st' -> SI st' -> r <= 2 -> Q r h') -> safe (search s fuel budget nv) Q h.
 Proof.
@@ -1000,12 +1107,15 @@ Qed.
 Definition lits_at (pos len : nat) : Prop :=
   forall j, j < len -> exists l, nth_error xs0 (pos + j) = Some l /\ lit_ok l.
 
+(** Dropping the first position. *)
 Lemma lits_at_tail pos len : lits_at pos (S len) -> lits_at (pos + 1) len.
 Proof.
   intros H j Hj. destruct (H (S j)) as (l & Hl & Hok); [lia |].
   exists l. split; [| exact Hok]. rewrite <- Hl. f_equal. lia.
 Qed.
 
+(** In an encoding with literals below [2 * nv], the first clause's
+    positions hold valid literals. *)
 Lemma encodes_lits n pos c F :
   encodes xs0 n pos (c :: F) -> lits_below (2 * nv) (c :: F) -> lits_at (pos + 1) (length c).
 Proof.
@@ -1015,6 +1125,7 @@ Proof.
   exact (Forall_nth_error _ _ _ _ Hc0 E).
 Qed.
 
+(** [clause_sat] over valid literals is safe. *)
 Lemma clause_sat_safe fuel : forall h st pos len Q,
   R h st -> SIc st -> lits_at pos len -> (forall b, Q b h) -> safe (clause_sat s fuel inp pos len) Q h.
 Proof.
@@ -1028,6 +1139,7 @@ Proof.
   destruct (Nat.eqb v 1); [apply safe_ret, HQ |]. eapply IH; eauto. now apply lits_at_tail.
 Qed.
 
+(** [check_model] on a well-formed encoding is safe. *)
 Lemma check_model_safe fuel : forall h st n pos F Q,
   R h st -> SIc st -> encodes xs0 n pos F -> lits_below (2 * nv) F -> (forall b, Q b h) ->
   safe (check_model s fuel inp pos n) Q h.
@@ -1043,6 +1155,7 @@ Proof.
   inversion HB; assumption.
 Qed.
 
+(** [read_lits] is safe and appends [len] valid literals to [c]. *)
 Lemma read_lits_safe fuel : forall h st c Lc pos len Q,
   R h st -> ~ In (vloc c) (locs s inp st) -> pts h c Lc -> lits_at pos len ->
   (forall h' ys, R h' st -> pts h' c (Lc ++ ys) -> length ys = len -> Forall lit_ok ys -> Q tt h') ->
@@ -1061,6 +1174,7 @@ Proof.
   constructor; auto.
 Qed.
 
+(** [load] on a well-formed encoding is safe and keeps [SI]. *)
 Lemma load_safe fuel : forall n F pos h st Q,
   R h st -> SI st -> encodes xs0 n pos F -> lits_below (2 * nv) F ->
   (forall b h' st', R h' st' -> SI st' -> Q b h') ->
@@ -1104,6 +1218,8 @@ End Funs.
 
 (** * [run] is safe *)
 
+(** [fresh_vecs_sp] for [safe], also counting the new vectors, so [watches]
+    gets exactly [2 * nv]. *)
 Lemma fresh_vecs_safe fuel : forall (acc : vec (vec nat)) n h L W Q,
   Alloc h L -> h (vloc acc) = Some (existT cellof (vec nat) W) ->
   (forall h' W', Alloc h' (L ++ map vloc W') -> h' (vloc acc) = Some (existT cellof (vec nat) (W ++ W')) ->
@@ -1147,6 +1263,7 @@ Ltac sbump :=
     clear Hn
   end.
 
+(** The initial state satisfies [SI] given [2 * nv] watch lists. *)
 Lemma init_si W nv :
   length W = 2 * nv -> SI nv (fset (init_st W nv) FMisc (lset (repeat 0 4) RLIMIT 100)).
 Proof.
@@ -1159,6 +1276,7 @@ Proof.
   - constructor.
 Qed.
 
+(** A code up to 3 stays at most 3 modulo 8 after adding [8 * conflicts]. *)
 Lemma mod8_small c k : c <= 3 -> (c + 8 * k) mod 8 <= 3.
 Proof. intros H. rewrite Nat.mul_comm, Nat.Div0.mod_add, Nat.mod_small; lia. Qed.
 

@@ -11,22 +11,32 @@ Require Import SatVec VecSem Solver SolverSat SolverRepr SolverInv.
 Import ListNotations.
 Import Solver.
 
+(** Sequencing through an explicit intermediate postcondition [P]: [wp_bind]
+    and [wp_conseq] in one step. *)
 Lemma wp_seq {T U} (t : itree vecE T) (k : T -> itree vecE U) P Q h :
   wp t P h -> (forall r h1, P r h1 -> wp (k r) Q h1) -> wp (ITree.bind t k) Q h.
 Proof. intros Ht Hk. apply wp_bind. eapply wp_conseq; [exact Ht | exact Hk]. Qed.
 
 Section Spec.
+(** The solver's handles [s], the input vector [inp] holding [xs0], and a
+    model [val] of the formula, fixed throughout. *)
 Variables (s : state) (inp : vec nat) (xs0 : list nat) (val : nat -> bool).
 
+(** [R h st]: the heap [h] represents the abstract state [st]. *)
 Local Notation R := (repr s inp xs0).
+(** [keeps st h h']: the step from [h] to [h'] leaves every vector outside
+    [st]'s locations alone. *)
 Local Notation keeps := (keeps s inp).
 
+(** Leaving the scratch cells alone composes along a sequence of events. *)
 Lemma keeps_trans st h1 h2 h3 : keeps st h1 h2 -> keeps st h2 h3 -> keeps st h1 h3.
 Proof. intros H1 H2 v xs Hv Hp. auto. Qed.
 
+(** A state's locations depend only on its clause and watch-list handles. *)
 Lemma locs_eq st st' : hcls st' = hcls st -> hwl st' = hwl st -> locs s inp st' = locs s inp st.
 Proof. intros E1 E2. unfold locs. now rewrite E1, E2. Qed.
 
+(** So [keeps] may be read against any state with the same handles. *)
 Lemma keeps_eq st st' h h' : hcls st' = hcls st -> hwl st' = hwl st -> keeps st' h h' -> keeps st h h'.
 Proof. intros E1 E2 H. unfold SolverRepr.keeps. rewrite <- (locs_eq st st' E1 E2). exact H. Qed.
 
@@ -67,16 +77,21 @@ Ltac ev :=
   | |- wp (vlen (clauses s)) _ _ => refine (len_hc s inp xs0 _ _ _ _ _); [eassumption |]
   end.
 
+(** Compute the field reads and updates of the abstract state. *)
 Ltac fvs := cbn [fv fset dset wset cpush wpush fld_eqb hcls db hwl wl] in *.
 
+(** A successful [nth_error] read in the [nth ... 0] form the specs use. *)
 Lemma nth_error_nth_eq (xs : list nat) i x : nth_error xs i = Some x -> x = nth i xs 0.
 Proof. intros H. symmetry. now apply nth_error_nth. Qed.
 
+(** A successful read was in bounds. *)
 Lemma nth_error_lt {A} (xs : list A) i x : nth_error xs i = Some x -> i < length xs.
 Proof. intros H. apply nth_error_Some. congruence. Qed.
 
 (** ** Readers *)
 
+(** [lit_value l] returns [l]'s value [lval] (0 unassigned, 1 true, 2 false)
+    and changes nothing. *)
 Lemma lit_value_sp h st l Q :
   R h st -> (lvar l < length (asg st) -> Q (lval (asg st) l) h) -> wp (lit_value s l) Q h.
 Proof.
@@ -85,6 +100,8 @@ Proof.
   apply HQ, Hlt.
 Qed.
 
+(** [enqueue l r] implements [enq]; [l]'s variable was in range of the
+    per-variable vectors it writes. *)
 Lemma enqueue_sp h st l r Q :
   R h st ->
   (forall h', lvar l < length (asg st) -> lvar l < length (lvl st) -> lvar l < length (rsn st) ->
@@ -98,6 +115,8 @@ Proof.
   eapply keeps_trans; [exact Hk1|]. eapply keeps_trans; [exact Hk2|]. eapply keeps_trans; eassumption.
 Qed.
 
+(** [find_watch] answers 0 when every literal of [cl] from [k] on is false,
+    else one plus the position of the first one that is not. *)
 Lemma find_watch_sp fuel : forall h st ci c cl k Q,
   R h st -> nth_error (hcls st) ci = Some c -> nth_error (db st) ci = Some cl ->
   (forall r, (r = 0 -> forall j, k <= j < length cl -> lval (asg st) (nth j cl 0) = 2) ->
@@ -118,6 +137,8 @@ Proof.
       * apply wp_ret, HQ; [lia|]. intros _. replace (k + 1 - 1) with k by lia. split; [lia | exact E].
 Qed.
 
+(** [copy_rest] slides the entries from [i] down to [j] and truncates, so
+    the watch list becomes [firstn j L ++ skipn i L]. *)
 Lemma copy_rest_sp fuel : forall h st fl ws L i j n Q,
   R h st -> nth_error (hwl st) fl = Some ws -> nth_error (wl st) fl = Some L -> length L = n -> j <= i ->
   (forall h', R h' (wset st (lset (wl st) fl (firstn j L ++ skipn i L))) -> Q tt h') ->
@@ -136,6 +157,10 @@ Proof.
       exact Hr'.
 Qed.
 
+(** Visiting the watch list of the false literal [fl] keeps [Inv] and
+    answers 0 or a [conflict].  Throughout, the logical list
+    [firstn j L ++ skipn i L] (kept entries, then unvisited ones) satisfies
+    [Wch]. *)
 Lemma prop_watch_sp fuel : forall h st fl ws L i j n Q,
   R h st -> nth_error (hwl st) fl = Some ws -> nth_error (wl st) fl = Some L -> length L = n -> j <= i ->
   Core val st -> Wch (db st) (lset (wl st) fl (firstn j L ++ skipn i L)) -> Seen0 st ->
@@ -286,6 +311,8 @@ Proof.
   - exact HQ.
 Qed.
 
+(** [propagate] keeps [Inv] and either drains the queue (answer 0) or
+    returns a [conflict]. *)
 Lemma propagate_sp fuel : forall h st Q,
   R h st -> Inv val st ->
   (forall r h' st', R h' st' -> Inv val st' ->
@@ -326,6 +353,8 @@ Definition unas (st st' : astate) (seg : list nat) : Prop :=
   (forall w, ~ In w seg -> nth w (asg st') 0 = nth w (asg st) 0) /\
   (forall w, ~ In w seg -> nth w (rsn st') 0 = nth w (rsn st) 0).
 
+(** [unassign i m] unassigns the variables at trail positions [m] up to
+    [i], exclusive, in the sense of [unas]. *)
 Lemma unassign_sp fuel : forall h st i m Q,
   R h st -> i <= length (tr st) -> m <= i ->
   (forall h' st', R h' st' -> keeps st h h' -> unas st st' (map lvar (skipn m (firstn i (tr st)))) -> Q tt h') ->
@@ -366,6 +395,8 @@ Proof.
     exfalso. apply Hw, in_or_app. right. now left.
 Qed.
 
+(** [backtrack lv] keeps [Inv] and the clause database, and for [lv] below
+    the current level performs the jump [bt_rel]. *)
 Lemma backtrack_sp fuel h st lv Q :
   R h st -> Inv val st ->
   (forall h' st', R h' st' -> keeps st h h' -> Inv val st' ->
@@ -415,9 +446,11 @@ Definition only_sn (st0 st : astate) : Prop :=
   hcls st = hcls st0 /\ db st = db st0 /\ hwl st = hwl st0 /\ wl st = wl st0 /\
   (forall f, f <> FSn -> f <> FSt -> fv st f = fv st0 f).
 
+(** [only_sn] is reflexive. *)
 Lemma only_sn_refl st : only_sn st st.
 Proof. repeat split; auto. Qed.
 
+(** Writing the marks or the stamps keeps [only_sn]. *)
 Lemma only_sn_fset st0 st f xs : f = FSn \/ f = FSt -> only_sn st0 st -> only_sn st0 (fset st f xs).
 Proof.
   intros Hf (E1 & E2 & E3 & E4 & Ef). repeat split; auto. intros g H1 H2. cbn.
@@ -425,14 +458,21 @@ Proof.
 Qed.
 
 Section Analyze.
+(** The analysis of a conflict in [st0], at a nonzero level, into the fresh
+    scratch vector [learnt]; [now] is the stamp for newly marked variables. *)
 Variables (st0 : astate) (learnt : vec nat) (now : nat).
 Hypotheses (C0 : Core val st0) (Hne0 : lim st0 <> []) (Hfresh : ~ In (vloc learnt) (locs s inp st0)).
 
+(** Writes that touch only marks and stamps leave [learnt] alone, as it lies
+    outside the state's locations. *)
 Lemma learnt_kept st h h' Lr : only_sn st0 st -> keeps st h h' -> pts h learnt Lr -> pts h' learnt Lr.
 Proof.
   intros (E1 & _ & E3 & _) Hk Hp. apply Hk; [|exact Hp]. now rewrite (locs_eq st0 st E1 E3).
 Qed.
 
+(** One pass over [cl] from [j]: a false literal above level 0 is marked and
+    goes into [learnt] below the current level, or counts in [pathC] at it.
+    [AInv] holds throughout, and marks only grow. *)
 Lemma analyze_lits_sp fuel : forall h stc ci c cl j pathC Lr index Q,
   R h stc -> only_sn st0 stc -> nth_error (hcls st0) ci = Some c -> nth_error (db st0) ci = Some cl ->
   pts h learnt Lr -> AInv st0 (sn stc) Lr index pathC ->
@@ -511,6 +551,8 @@ Proof.
 Qed.
 
 
+(** [next_seen i] finds the highest marked trail position at or below [i],
+    given one at or above the current level's [base]. *)
 Lemma next_seen_sp fuel : forall h stc i Q,
   R h stc -> only_sn st0 stc -> i < length (tr st0) ->
   (exists k, base st0 <= k <= i /\ marked (sn stc) (lvar (nth k (tr st0) 0))) ->
@@ -532,6 +574,10 @@ Proof.
   - apply wp_ret. destruct Hex as (k & Hk & _). apply HQ; [lia | exact E | intros; lia].
 Qed.
 
+(** The first-UIP loop resolves backwards along the trail until one marked
+    literal [p] is left at the current level.  [learnt]'s tail then holds
+    false literals at lower nonzero levels, and [val] makes [lneg p] or one
+    of them true, so [val] satisfies the learnt clause. *)
 Lemma analyze_loop_sp fuel : forall h stc confl cl start index pathC Lr Q,
   R h stc -> only_sn st0 stc -> nth_error (db st0) confl = Some cl -> pts h learnt Lr ->
   AInv st0 (sn stc) Lr index pathC ->
@@ -628,6 +674,8 @@ Proof.
 Qed.
 
 
+(** [finish_learnt] clears the marks, permutes [learnt]'s tail so a deepest
+    literal is at position 1, and answers the deepest level (0 if none). *)
 Lemma finish_learnt_sp fuel : forall h stc Lr i best bestlv Q,
   R h stc -> only_sn st0 stc -> pts h learnt Lr -> 1 <= i <= length Lr ->
   (forall k, 1 <= k < i -> nth (lvar (nth k Lr 0)) (lvl st0) 0 <= bestlv) ->
@@ -701,6 +749,8 @@ End Analyze.
 
 (** ** Learning *)
 
+(** [attach] adds clause [ci], watched nowhere yet, to the watch lists of
+    its first two literals, keeping [Wch]. *)
 Lemma attach_sp h st ci c cl Q :
   R h st -> nth_error (hcls st) ci = Some c -> nth_error (db st) ci = Some cl -> 2 <= length cl ->
   Wch (db st) (wl st) -> (forall l, l < length (wl st) -> cnt (wl st) l ci = 0) ->
@@ -735,6 +785,9 @@ Proof.
 Qed.
 
 
+(** [learn] turns a conflict into a learnt clause, backjumps and asserts the
+    UIP, keeping [Inv]: [val] satisfies the learnt clause, so [Core]
+    survives. *)
 Lemma learn_sp fuel h st confl Q :
   R h st -> Inv val st -> conflict st (S confl) -> lim st <> [] ->
   (forall h' st', R h' st' -> Inv val st' -> Q tt h') ->
@@ -866,6 +919,7 @@ Qed.
 
 (** ** Search *)
 
+(** [pick] answers 0 or one plus an unassigned variable. *)
 Lemma pick_sp fuel : forall h st v n best bs Q,
   R h st -> (best = 0 \/ nth (best - 1) (asg st) 0 = 0) ->
   (forall r, (r = 0 \/ nth (r - 1) (asg st) 0 = 0) -> Q r h) ->
@@ -883,6 +937,8 @@ Proof.
   - eapply IH; [exact Hr | exact Hb | exact HQ].
 Qed.
 
+(** The heart of UNSAT soundness: under a model [val], [search] never
+    answers 0, since [Core] rules out a false clause at level 0. *)
 Lemma search_sp fuel budget : forall nvars h st Q,
   R h st -> Inv val st -> (forall r h', r <> 0 -> r <= 2 -> Q r h') ->
   wp (search s fuel budget nvars) Q h.
@@ -937,6 +993,8 @@ Qed.
 
 (** ** Loading *)
 
+(** [read_lits] appends the input words [ys] from [pos] to the scratch
+    vector [c]. *)
 Lemma read_lits_sp fuel : forall h st c xs pos ys Q,
   R h st -> ~ In (vloc c) (locs s inp st) -> pts h c xs ->
   (forall j, j < length ys -> nth_error xs0 (pos + j) = nth_error ys j) ->
@@ -955,6 +1013,8 @@ Proof.
   - intros h' Hr' Hp'. apply HQ; [exact Hr'|]. now rewrite <- app_assoc in Hp'.
 Qed.
 
+(** Loading a formula that [val] satisfies establishes [Inv] and answers
+    true: a unit clause false at level 0 would contradict the model. *)
 Lemma load_sp fuel n : forall F pos h st Q,
   R h st -> Inv val st -> lim st = [] -> encodes xs0 n pos F -> Forall (Exists (lit_true val)) F ->
   (forall h' st', R h' st' -> Inv val st' -> Q true h') ->
@@ -1020,11 +1080,13 @@ End Spec.
 
 (** * Initialization *)
 
+(** The heap's cell family: a cell of type [T] holds a [list T]. *)
 Local Notation cellof := (fun T : Type => list T).
 
 (** The locations [L] are allocated and pairwise distinct. *)
 Definition Alloc (h : heap) (L : list loc) : Prop := NoDup L /\ forall l, In l L -> h l <> None.
 
+(** Allocating a fresh location extends [Alloc]. *)
 Lemma alloc_fresh h L l c : Alloc h L -> h l = None -> Alloc (upd h l c) (L ++ [l]).
 Proof.
   intros [Hn Ha] Hl. split.
@@ -1035,18 +1097,23 @@ Proof.
     + rewrite upd_eq. discriminate.
 Qed.
 
+(** Overwriting an allocated cell keeps [Alloc]. *)
 Lemma alloc_upd h L l c : Alloc h L -> h l <> None -> Alloc (upd h l c) L.
 Proof.
   intros [Hn Ha] Hl. split; [exact Hn|]. intros x Hx.
   destruct (Nat.eq_dec x l) as [-> | Hne]; [rewrite upd_eq; discriminate | rewrite upd_neq by exact Hne; auto].
 Qed.
 
+(** Allocating a fresh cell leaves every existing cell unchanged. *)
 Lemma keep_fresh h l c x c' : h l = None -> h x = Some c' -> upd h l c x = Some c'.
 Proof. intros Hl Hx. rewrite upd_neq; [exact Hx | congruence]. Qed.
 
+(** So every [pts] fact about the old heap survives the allocation. *)
 Lemma keep_fresh_all h l c W xs : h l = None -> Forall (fun w => pts h w xs) W -> Forall (fun w => pts (upd h l c) w xs) W.
 Proof. intros Hl. apply Forall_impl. intros w Hw. unfold pts in *. now apply keep_fresh. Qed.
 
+(** [fresh_vecs acc n] pushes fresh, pairwise distinct empty vectors [W']
+    onto [acc] and changes no other existing cell. *)
 Lemma fresh_vecs_sp fuel : forall (acc : vec (vec nat)) n h L W Q,
   Alloc h L -> h (vloc acc) = Some (existT cellof (vec nat) W) ->
   (forall h' W', Alloc h' (L ++ map vloc W') -> h' (vloc acc) = Some (existT cellof (vec nat) (W ++ W')) ->
@@ -1073,18 +1140,25 @@ Proof.
 Qed.
 
 
+(** The abstract state [run] builds: no clauses, empty watch lists [W],
+    per-variable vectors of length [nv] (phases 2, the rest 0), an empty
+    trail and four zero counters. *)
 Definition init_st (W : list (vec nat)) (nv : nat) : astate :=
   AS [] [] W (map (fun _ => []) W)
      (fun f => match f with
                | FPh => repeat 2 nv | FTr | FLim => [] | FMisc => repeat 0 4 | _ => repeat 0 nv
                end).
 
+(** Every cell of a zero vector reads 0. *)
 Lemma nth_repeat0 v n : nth v (repeat 0 n) 0 = 0.
 Proof. apply nth_repeat. Qed.
 
+(** Every initial watch list is empty. *)
 Lemma nth_map_nil {A} (W : list A) l : nth l (map (fun _ => @nil nat) W) [] = [].
 Proof. revert l; induction W; intros [|l]; cbn; auto. Qed.
 
+(** The initial state with its restart limit satisfies [Inv] for any [val]:
+    nothing is assigned, watched or marked. *)
 Lemma init_inv val W nv : Inv val (fset (init_st W nv) FMisc (lset (repeat 0 4) RLIMIT 100)).
 Proof.
   split; [|split].
@@ -1105,15 +1179,18 @@ Proof.
   - intros v. cbn [fv fset fld_eqb init_st]. apply nth_repeat0.
 Qed.
 
+(** Empty vectors represent the empty watch lists. *)
 Lemma F2_init h W : Forall (fun w => pts h w []) W -> Forall2 (pts h) W (map (fun _ => []) W).
 Proof. induction 1; constructor; auto. Qed.
 
+(** Dropping the second element keeps [NoDup]. *)
 Lemma nodup_drop2 (a b : loc) l : NoDup (a :: b :: l) -> NoDup (a :: l).
 Proof.
   intros H. inversion H as [|? ? Ha Hn]; subst. inversion Hn; subst.
   constructor; [intros Hi; apply Ha; now right | assumption].
 Qed.
 
+(** Codes 1, 2 and 3 stay nonzero modulo 8 after adding [8 * conflicts]. *)
 Lemma mod8_ne c k : c = 1 \/ c = 2 \/ c = 3 -> (c + 8 * k) mod 8 <> 0.
 Proof. intros H. rewrite Nat.mul_comm, Nat.Div0.mod_add. destruct H as [-> | [-> | ->]]; cbn; lia. Qed.
 
@@ -1135,8 +1212,9 @@ Ltac bump :=
     clear Hn
   end.
 
-(** If [run] finishes and answers "unsatisfiable" ([code] 0), the formula
-    encoded in [input] when it started has no model. *)
+(** If [run] finishes with code 0 ("unsatisfiable"), the formula [F] that
+    [inp] encodes has no model: given one, [load] answers true and
+    [search] never answers 0. *)
 Theorem run_unsat_sound fuel budget nvars inp ninput xs0 F h0 r h1 :
   h0 (vloc inp) = Some (existT cellof nat xs0) ->
   encodes xs0 ninput 0 F ->
@@ -1193,8 +1271,8 @@ Proof.
   - intros code h12 Hcode. apply wp_bind, wp_vget. intros _ k _ _. apply wp_ret. now apply mod8_ne.
 Qed.
 
-(** If [solve] finishes and answers "unsatisfiable" ([code] 0), the formula
-    encoded in [input] when it started has no model. *)
+(** UNSAT soundness of [solve], from [run_unsat_sound]: its input check
+    either answers 4 or hands a well-formed encoding to [run]. *)
 Theorem solve_unsat_sound fuel budget nvars inp ninput xs0 F h0 r h1 :
   h0 (vloc inp) = Some (existT cellof nat xs0) ->
   encodes xs0 ninput 0 F ->

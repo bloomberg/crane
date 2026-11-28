@@ -7,7 +7,7 @@
       clause arena) or in [wlen] (watch lists);
     - the trail, the trail limits and the learnt-clause scratch hold at most
       [nvars] (+ 1) literals, so they are allocated at that size up front;
-    - the clause database is one [nat] arena of [[len; lits...]] records,
+    - the clause database is one [nat] arena of records [len; lits...],
       held in a reference and reallocated at twice the size when a clause
       does not fit; a clause is its offset in the arena;
     - each literal's watch list is an array with a capacity in [wcap],
@@ -51,7 +51,7 @@ Definition lit_of (v a : nat) : nat := if Nat.eqb a 1 then 2 * v else 2 * v + 1.
 
 (** The solver state: handles to every array, created once by [run]. *)
 Record state := mk_state {
-  arena : Global.ref (Va 0);       (** the clause arena: [[len; lits...]] per clause *)
+  arena : Global.ref (Va 0);       (** the clause arena: [len; lits...] per clause *)
   wdata : Global.array nat (Va 0); (** per literal: its watch list's storage *)
   wlen : narr;                     (** per literal: its watch list's length *)
   wcap : narr;                     (** per literal: its watch list's capacity *)
@@ -99,6 +99,7 @@ Fixpoint copy (fuel : nat) (src dst : narr) (i n : nat) : itree E unit :=
   end.
 
 Section Ops.
+(** Every operation below acts on this one state. *)
 Variable s : state.
 
 (** Read misc cell [k]. *)

@@ -21,12 +21,15 @@ Require Import SatVec VecSem Solver.
 Import ListNotations.
 Import Solver.
 
+(** The cell family: a heap cell holding [T]s is [existT cellof T xs]. *)
 Local Notation cellof := (fun T : Type => list T).
 
 (** * Fields *)
 
+(** Names for the nine [nat]-vector fields of [state], so [repr] treats them uniformly. *)
 Inductive fld := FAsg | FLvl | FRsn | FPh | FSt | FSn | FTr | FLim | FMisc.
 
+(** Boolean equality on field names; [fset] uses it to pick the updated field. *)
 Definition fld_eqb (f g : fld) : bool :=
   match f, g with
   | FAsg, FAsg | FLvl, FLvl | FRsn, FRsn | FPh, FPh | FSt, FSt
@@ -34,17 +37,22 @@ Definition fld_eqb (f g : fld) : bool :=
   | _, _ => false
   end.
 
+(** [fld_eqb] reflects equality. *)
 Lemma fld_eqb_eq f g : fld_eqb f g = true <-> f = g.
 Proof. destruct f, g; cbn; split; congruence. Qed.
 
+(** The rewrite form of [fld_eqb_eq] for the updated field itself. *)
 Lemma fld_eqb_refl f : fld_eqb f f = true.
 Proof. now apply fld_eqb_eq. Qed.
 
+(** Every field once; [locs] lists the field locations through it. *)
 Definition all_flds := [FAsg; FLvl; FRsn; FPh; FSt; FSn; FTr; FLim; FMisc].
 
+(** [all_flds] is complete. *)
 Lemma in_all_flds f : In f all_flds.
 Proof. destruct f; cbn; tauto. Qed.
 
+(** The handle of field [f] in the concrete state [s]. *)
 Definition floc (s : state) (f : fld) : vec nat :=
   match f with
   | FAsg => assigns s | FLvl => level s | FRsn => reason s | FPh => phase s
@@ -54,6 +62,8 @@ Definition floc (s : state) (f : fld) : vec nat :=
 
 (** * Abstract states *)
 
+(** The abstract state.  Clause and watch-list handles stay visible because
+    [clauses] and [watches] store them: reading either returns a handle. *)
 Record astate := AS {
   hcls : list (vec nat);      (** clause handles *)
   db : list (list nat);       (** clause contents *)
@@ -62,17 +72,23 @@ Record astate := AS {
   fv : fld -> list nat        (** the contents of each field *)
 }.
 
+(** The abstract effect of a write to field [f]: replace its contents. *)
 Definition fset (st : astate) (f : fld) (xs : list nat) : astate :=
   AS (hcls st) (db st) (hwl st) (wl st) (fun g => if fld_eqb g f then xs else fv st g).
+(** Replace the clause contents, keeping the handles: a write into a clause. *)
 Definition dset (st : astate) (d : list (list nat)) : astate :=
   AS (hcls st) d (hwl st) (wl st) (fv st).
+(** Replace the watch-list contents, keeping the handles: a write into a watch list. *)
 Definition wset (st : astate) (w : list (list nat)) : astate :=
   AS (hcls st) (db st) (hwl st) w (fv st).
+(** Append clause [c] with contents [cl]: a push onto [clauses]. *)
 Definition cpush (st : astate) (c : vec nat) (cl : list nat) : astate :=
   AS (hcls st ++ [c]) (db st ++ [cl]) (hwl st) (wl st) (fv st).
+(** Append watch list [w] with contents [ws]: a push onto [watches]. *)
 Definition wpush (st : astate) (w : vec nat) (ws : list nat) : astate :=
   AS (hcls st) (db st) (hwl st ++ [w]) (wl st ++ [ws]) (fv st).
 
+(** Reading back the field just set. *)
 Lemma fv_fset_eq st f xs : fv (fset st f xs) f = xs.
 Proof. cbn. now rewrite fld_eqb_refl. Qed.
 
@@ -80,19 +96,24 @@ Proof. cbn. now rewrite fld_eqb_refl. Qed.
 Definition pts (h : heap) (v : vec nat) (xs : list nat) : Prop :=
   h (vloc v) = Some (existT cellof nat xs).
 
+(** The frame rule for [pts]: a write elsewhere keeps [v]'s contents. *)
 Lemma pts_upd_neq h v xs l c : vloc v <> l -> pts h v xs -> pts (upd h l c) v xs.
 Proof. unfold pts. intros. now rewrite upd_neq. Qed.
 
+(** A write to [v]'s own cell makes [v] hold the new list. *)
 Lemma pts_upd_eq h v xs : pts (upd h (vloc v) (existT cellof nat xs)) v xs.
 Proof. apply upd_eq. Qed.
 
+(** A vector holds one list. *)
 Lemma pts_inj h v xs ys : pts h v xs -> pts h v ys -> xs = ys.
 Proof. apply cell_inj. Qed.
 
 (** * Lists *)
 
+(** Two location lists share no element. *)
 Definition disj (a b : list loc) : Prop := forall x, In x a -> In x b -> False.
 
+(** Separation of a concatenation is separation of each part plus disjointness. *)
 Lemma nodup_app_iff (l1 l2 : list loc) :
   NoDup (l1 ++ l2) <-> NoDup l1 /\ NoDup l2 /\ disj l1 l2.
 Proof.
@@ -107,6 +128,7 @@ Proof.
   - intros (H1 & H2 & H3). apply NoDup_app; auto; intros a Ha Hb; eapply H3; eauto.
 Qed.
 
+(** Distinct locations: two members at one location are the same member. *)
 Lemma nodup_map_inj {A} (f : A -> loc) l x y :
   NoDup (map f l) -> In x l -> In y l -> f x = f y -> x = y.
 Proof.
@@ -117,12 +139,15 @@ Proof.
   - exfalso. apply Ha. rewrite <- E. now apply in_map.
 Qed.
 
+(** An in-bounds [lset] is read back at its index. *)
 Lemma nth_error_lset_eq {A} (xs : list A) i x : i < length xs -> nth_error (lset xs i x) i = Some x.
 Proof. revert i; induction xs; destruct i; cbn; intros; try lia; auto. apply IHxs; lia. Qed.
 
+(** [lset] leaves the other indices alone. *)
 Lemma nth_error_lset_neq {A} (xs : list A) i j x : i <> j -> nth_error (lset xs i x) j = nth_error xs j.
 Proof. revert i j; induction xs; destruct i, j; cbn; intros; auto; congruence. Qed.
 
+(** A read after [lset], by cases; out of bounds [lset] is a no-op. *)
 Lemma nth_error_lset {A} (xs : list A) i j x :
   nth_error (lset xs i x) j = if Nat.eqb i j then (if Nat.ltb i (length xs) then Some x else None)
                               else nth_error xs j.
@@ -134,6 +159,7 @@ Proof.
   - now apply nth_error_lset_neq.
 Qed.
 
+(** [nth_error_lset] for [nth] with a default. *)
 Lemma nth_lset {A} (xs : list A) i j x d :
   nth j (lset xs i x) d = if Nat.eqb i j then (if Nat.ltb i (length xs) then x else d) else nth j xs d.
 Proof.
@@ -146,6 +172,7 @@ Proof.
     destruct (Nat.eqb_spec i j), (Nat.ltb_spec i (length xs)); auto; lia.
 Qed.
 
+(** A write past the prefix [xs] lands in the suffix. *)
 Lemma lset_app_r {A} (xs ys : list A) i x :
   length xs <= i -> lset (xs ++ ys) i x = xs ++ lset ys (i - length xs) x.
 Proof.
@@ -154,6 +181,7 @@ Proof.
   - destruct i; [cbn in Hi; lia|]. cbn. f_equal. apply IH. cbn in Hi. lia.
 Qed.
 
+(** An element of the left list has its partner at the same index. *)
 Lemma Forall2_nth {A B} (R : A -> B -> Prop) xs ys k x :
   Forall2 R xs ys -> nth_error xs k = Some x -> exists y, nth_error ys k = Some y /\ R x y.
 Proof.
@@ -164,14 +192,20 @@ Qed.
 
 (** * The representation relation *)
 
+(** Fix the concrete state [s] (its handles) and the input vector [inp],
+    which holds [xs0] throughout. *)
 Section Repr.
 Variables (s : state) (inp : vec nat) (xs0 : list nat).
 
+(** Every location the abstract state owns: the input, the two handle
+    vectors, the nine fields, each clause and each watch list. *)
 Definition locs (st : astate) : list loc :=
   [vloc inp; vloc (clauses s); vloc (watches s)]
   ++ map (fun f => vloc (floc s f)) all_flds
   ++ map vloc (hcls st) ++ map vloc (hwl st).
 
+(** [h] represents [st]: the handle vectors hold [st]'s handles, each handle
+    holds its contents, the input is intact, and owned locations are distinct. *)
 Record repr (h : heap) (st : astate) : Prop := {
   r_cls : h (vloc (clauses s)) = Some (existT cellof (vec nat) (hcls st));
   r_wls : h (vloc (watches s)) = Some (existT cellof (vec nat) (hwl st));
@@ -182,16 +216,20 @@ Record repr (h : heap) (st : astate) : Prop := {
   r_nd : NoDup (locs st)
 }.
 
-(** A write to the state leaves every scratch cell alone. *)
+(** [keeps st h h']: every scratch cell, outside [locs st], holds in [h'] what
+    it held in [h].  Writes to the state promise this. *)
 Definition keeps (st : astate) (h h' : heap) : Prop :=
   forall v xs, ~ In (vloc v) (locs st) -> pts h v xs -> pts h' v xs.
 
+(** An unchanged heap keeps every scratch cell. *)
 Lemma keeps_refl st h : keeps st h h.
 Proof. intros ? ? _ H. exact H. Qed.
 
+(** A write to an owned location is invisible to scratch cells. *)
 Lemma keeps_upd st h l c : In l (locs st) -> keeps st h (upd h l c).
 Proof. intros Hl v xs Hv H. apply pts_upd_neq; [congruence | exact H]. Qed.
 
+(** The frame rule for a list of handles: a write outside them keeps all their contents. *)
 Lemma F2_upd_out h hs ls l c :
   ~ In l (map vloc hs) -> Forall2 (pts h) hs ls -> Forall2 (pts (upd h l c)) hs ls.
 Proof.
@@ -200,6 +238,7 @@ Proof.
   - apply IHForall2. intros Hi. apply Hl. now right.
 Qed.
 
+(** A write to the [k]-th of separated handles changes only the [k]-th contents. *)
 Lemma F2_upd_at h hs ls k v xs :
   NoDup (map vloc hs) -> nth_error hs k = Some v -> Forall2 (pts h) hs ls ->
   Forall2 (pts (upd h (vloc v) (existT cellof nat xs))) hs (lset ls k xs).
@@ -214,6 +253,7 @@ Proof.
     apply in_map. eapply nth_error_In; eauto.
 Qed.
 
+(** Every handle in a represented list is allocated. *)
 Lemma F2_alloc h hs ls l : Forall2 (pts h) hs ls -> In l (map vloc hs) -> h l <> None.
 Proof.
   intros H Hl. induction H; [destruct Hl|]. destruct Hl as [<- | Hl]; auto.
@@ -243,30 +283,37 @@ Proof.
                             | solve [apply (D0 x); auto; rewrite ?in_app_iff; tauto] ].
 Qed.
 
+(** Each field's location is among the field locations. *)
 Lemma floc_in f : In (vloc (floc s f)) (map (fun f => vloc (floc s f)) all_flds).
 Proof. apply (in_map (fun f => vloc (floc s f))), in_all_flds. Qed.
 
+(** Field locations are owned. *)
 Lemma locs_in_f st f : In (vloc (floc s f)) (locs st).
 Proof. unfold locs. apply in_or_app. right. apply in_or_app. left. apply floc_in. Qed.
 
+(** Clause locations are owned. *)
 Lemma locs_in_c st k c : nth_error (hcls st) k = Some c -> In (vloc c) (locs st).
 Proof.
   intros Hk. unfold locs. do 2 (apply in_or_app; right). apply in_or_app. left.
   apply in_map. eapply nth_error_In; eauto.
 Qed.
 
+(** Watch-list locations are owned. *)
 Lemma locs_in_w st k c : nth_error (hwl st) k = Some c -> In (vloc c) (locs st).
 Proof.
   intros Hk. unfold locs. do 3 (apply in_or_app; right).
   apply in_map. eapply nth_error_In; eauto.
 Qed.
 
+(** The clause-handle vector is owned. *)
 Lemma locs_in_cls st : In (vloc (clauses s)) (locs st).
 Proof. unfold locs. cbn. tauto. Qed.
 
+(** The watch-handle vector is owned. *)
 Lemma locs_in_wls st : In (vloc (watches s)) (locs st).
 Proof. unfold locs. cbn. tauto. Qed.
 
+(** Every owned location is allocated, so a freshly made vector is not owned. *)
 Lemma repr_alloc h st l : repr h st -> In l (locs st) -> h l <> None.
 Proof.
   intros R Hl. unfold locs in Hl.
@@ -280,6 +327,7 @@ Proof.
   - eapply F2_alloc; [apply (r_wl _ _ R) | exact Hl].
 Qed.
 
+(** A write outside [locs], to a scratch cell, preserves [repr]. *)
 Lemma repr_out h st l c : repr h st -> ~ In l (locs st) -> repr (upd h l c) st.
 Proof.
   intros R Hl.
@@ -294,6 +342,7 @@ Proof.
   - apply pts_upd_neq; auto. apply Hne. unfold locs. cbn. tauto.
 Qed.
 
+(** A write to a field's cell represents [st] with that field replaced. *)
 Lemma repr_fset h st f xs :
   repr h st -> repr (upd h (vloc (floc s f)) (existT cellof nat xs)) (fset st f xs).
 Proof.
@@ -313,6 +362,7 @@ Proof.
   - exact Rn.
 Qed.
 
+(** A write to the [k]-th clause's cell represents [st] with clause [k] replaced. *)
 Lemma repr_dset h st k v xs :
   repr h st -> nth_error (hcls st) k = Some v ->
   repr (upd h (vloc v) (existT cellof nat xs)) (dset st (lset (db st) k xs)).
@@ -329,6 +379,7 @@ Proof.
   - exact Rn.
 Qed.
 
+(** A write to the [k]-th watch list's cell represents [st] with that list replaced. *)
 Lemma repr_wset h st k v xs :
   repr h st -> nth_error (hwl st) k = Some v ->
   repr (upd h (vloc v) (existT cellof nat xs)) (wset st (lset (wl st) k xs)).
@@ -345,12 +396,14 @@ Proof.
   - exact Rn.
 Qed.
 
+(** Appending a fresh location preserves separation. *)
 Lemma nodup_snoc (l : list loc) x : NoDup l -> ~ In x l -> NoDup (l ++ [x]).
 Proof.
   intros H Hx. apply NoDup_app; auto; [constructor; auto; constructor|].
   intros a Ha [<- | []]. auto.
 Qed.
 
+(** Pushing a clause adds exactly its location to [locs], up to order. *)
 Lemma locs_cpush st c cl : Permutation.Permutation (locs (cpush st c cl)) (locs st ++ [vloc c]).
 Proof.
   unfold locs. cbn [hcls hwl cpush]. rewrite map_app. rewrite <- !app_assoc.
@@ -358,9 +411,11 @@ Proof.
   apply Permutation.Permutation_app_comm.
 Qed.
 
+(** Pushing a watch list adds exactly its location to [locs]. *)
 Lemma locs_wpush st c ws : Permutation.Permutation (locs (wpush st c ws)) (locs st ++ [vloc c]).
 Proof. unfold locs. cbn [hcls hwl wpush]. rewrite map_app. now rewrite <- !app_assoc. Qed.
 
+(** Pushing a filled scratch vector onto [clauses] adopts it as a new clause. *)
 Lemma repr_cpush h st c cl :
   repr h st -> ~ In (vloc c) (locs st) -> pts h c cl ->
   repr (upd h (vloc (clauses s)) (existT cellof (vec nat) (hcls st ++ [c]))) (cpush st c cl).
@@ -389,6 +444,7 @@ Proof.
   - eapply Permutation.Permutation_NoDup; [apply Permutation.Permutation_sym, (locs_cpush st c cl) | now apply nodup_snoc].
 Qed.
 
+(** Pushing a filled scratch vector onto [watches] adopts it as a new watch list. *)
 Lemma repr_wpush h st c ws :
   repr h st -> ~ In (vloc c) (locs st) -> pts h c ws ->
   repr (upd h (vloc (watches s)) (existT cellof (vec nat) (hwl st ++ [c]))) (wpush st c ws).
@@ -416,40 +472,49 @@ Proof.
   - eapply Permutation.Permutation_NoDup; [apply Permutation.Permutation_sym, (locs_wpush st c ws) | now apply nodup_snoc].
 Qed.
 
+(** A clause handle holds that clause's contents. *)
 Lemma repr_cl h st k c :
   repr h st -> nth_error (hcls st) k = Some c -> exists cl, nth_error (db st) k = Some cl /\ pts h c cl.
 Proof. intros R Hk. eapply Forall2_nth; [apply (r_db _ _ R) | exact Hk]. Qed.
 
+(** A watch-list handle holds that list's contents. *)
 Lemma repr_w h st k c :
   repr h st -> nth_error (hwl st) k = Some c -> exists ws, nth_error (wl st) k = Some ws /\ pts h c ws.
 Proof. intros R Hk. eapply Forall2_nth; [apply (r_wl _ _ R) | exact Hk]. Qed.
 
+(** Handles and contents line up: as many clause handles as clauses. *)
 Lemma repr_len_db h st : repr h st -> length (hcls st) = length (db st).
 Proof. intros R. eapply Forall2_length, r_db, R. Qed.
 
+(** As many watch-list handles as watch lists. *)
 Lemma repr_len_wl h st : repr h st -> length (hwl st) = length (wl st).
 Proof. intros R. eapply Forall2_length, r_wl, R. Qed.
 
 (** * Events on cells *)
 
+(** [vget] on a vector holding [xs] returns [xs]'s element, heap unchanged. *)
 Lemma wp_get_pts h v xs i (Q : nat -> heap -> Prop) :
   pts h v xs -> (forall x, nth_error xs i = Some x -> Q x h) -> wp (vget (E := vecE) v i) Q h.
 Proof. intros Hp HQ. apply wp_vget. intros ys x Hy Hx. rewrite (cell_inj _ _ _ _ Hy Hp) in Hx. auto. Qed.
 
+(** [vlen] on a vector holding [xs] returns [length xs]. *)
 Lemma wp_len_pts h v xs (Q : nat -> heap -> Prop) :
   pts h v xs -> Q (length xs) h -> wp (vlen (E := vecE) v) Q h.
 Proof. intros Hp HQ. apply wp_vlen. intros ys Hy. now rewrite (cell_inj _ _ _ _ Hy Hp). Qed.
 
+(** [vset] on a vector holding [xs]; out of bounds the run is stuck, so [Q] is owed only in bounds. *)
 Lemma wp_set_pts h v xs i x (Q : unit -> heap -> Prop) :
   pts h v xs -> (i < length xs -> Q tt (upd h (vloc v) (existT cellof nat (lset xs i x)))) ->
   wp (vset (E := vecE) v i x) Q h.
 Proof. intros Hp HQ. apply wp_vset. intros ys Hy. rewrite (cell_inj _ _ _ _ Hy Hp). auto. Qed.
 
+(** [vpush] on a vector holding [xs] makes it hold [xs ++ [x]]. *)
 Lemma wp_push_pts h v xs x (Q : unit -> heap -> Prop) :
   pts h v xs -> Q tt (upd h (vloc v) (existT cellof nat (xs ++ [x]))) ->
   wp (vpush (E := vecE) v x) Q h.
 Proof. intros Hp HQ. apply wp_vpush. intros ys Hy. now rewrite (cell_inj _ _ _ _ Hy Hp). Qed.
 
+(** [vshrink] on a vector holding [xs]; [Q] is owed only when [n] is in range. *)
 Lemma wp_shrink_pts h v xs n (Q : unit -> heap -> Prop) :
   pts h v xs -> (n <= length xs -> Q tt (upd h (vloc v) (existT cellof nat (firstn n xs)))) ->
   wp (vshrink (E := vecE) v n) Q h.
@@ -457,17 +522,22 @@ Proof. intros Hp HQ. apply wp_vshrink. intros ys Hy. rewrite (cell_inj _ _ _ _ H
 
 (** * Events on the state *)
 
+(** Fix a heap [h] representing [st].  Each lemma gives the [wp] of one
+    event on the state as an update of [st]. *)
 Section Ev.
 Variables (h : heap) (st : astate).
 Hypothesis R : repr h st.
 
+(** Reading field [f] reads [fv st f]. *)
 Lemma get_f f i Q :
   (forall x, nth_error (fv st f) i = Some x -> Q x h) -> wp (vget (floc s f) i) Q h.
 Proof. apply wp_get_pts, (r_fv _ _ R). Qed.
 
+(** The length of field [f] is that of [fv st f]. *)
 Lemma len_f f Q : Q (length (fv st f)) h -> wp (vlen (floc s f)) Q h.
 Proof. apply wp_len_pts, (r_fv _ _ R). Qed.
 
+(** The frame rule for a field write: only that field changes, and scratch cells are kept. *)
 Lemma set_f f i x Q :
   (forall h', i < length (fv st f) -> repr h' (fset st f (lset (fv st f) i x)) -> keeps st h h' -> Q tt h') ->
   wp (vset (floc s f) i x) Q h.
@@ -477,6 +547,7 @@ Proof.
   - apply keeps_upd, locs_in_f.
 Qed.
 
+(** A push onto a field appends to it alone. *)
 Lemma push_f f x Q :
   (forall h', repr h' (fset st f (fv st f ++ [x])) -> keeps st h h' -> Q tt h') ->
   wp (vpush (floc s f) x) Q h.
@@ -486,6 +557,7 @@ Proof.
   - apply keeps_upd, locs_in_f.
 Qed.
 
+(** Shrinking a field truncates it alone. *)
 Lemma shrink_f f n Q :
   (forall h', n <= length (fv st f) -> repr h' (fset st f (firstn n (fv st f))) -> keeps st h h' -> Q tt h') ->
   wp (vshrink (floc s f) n) Q h.
@@ -495,20 +567,24 @@ Proof.
   - apply keeps_upd, locs_in_f.
 Qed.
 
+(** Reading [clauses] returns a clause handle. *)
 Lemma get_hc i (Q : vec nat -> heap -> Prop) :
   (forall c, nth_error (hcls st) i = Some c -> Q c h) -> wp (vget (clauses s) i) Q h.
 Proof. intros HQ. apply wp_vget. intros ys x Hy Hx. rewrite (cell_inj _ _ _ _ Hy (r_cls _ _ R)) in Hx. auto. Qed.
 
+(** The length of [clauses] is the number of clauses. *)
 Lemma len_hc Q : Q (length (db st)) h -> wp (vlen (clauses s)) Q h.
 Proof.
   intros HQ. apply wp_vlen. intros ys Hy. rewrite (cell_inj _ _ _ _ Hy (r_cls _ _ R)).
   now rewrite (repr_len_db _ _ R).
 Qed.
 
+(** Reading [watches] returns a watch-list handle. *)
 Lemma get_hw i (Q : vec nat -> heap -> Prop) :
   (forall c, nth_error (hwl st) i = Some c -> Q c h) -> wp (vget (watches s) i) Q h.
 Proof. intros HQ. apply wp_vget. intros ys x Hy Hx. rewrite (cell_inj _ _ _ _ Hy (r_wls _ _ R)) in Hx. auto. Qed.
 
+(** Reading through the [k]-th clause handle reads clause [k]. *)
 Lemma get_cl k c cl i Q :
   nth_error (hcls st) k = Some c -> nth_error (db st) k = Some cl ->
   (forall x, nth_error cl i = Some x -> Q x h) -> wp (vget c i) Q h.
@@ -517,6 +593,7 @@ Proof.
   rewrite Hd in Hd'. injection Hd' as <-. now apply wp_get_pts.
 Qed.
 
+(** The length through the [k]-th clause handle is that of clause [k]. *)
 Lemma len_cl k c cl Q :
   nth_error (hcls st) k = Some c -> nth_error (db st) k = Some cl -> Q (length cl) h -> wp (vlen c) Q h.
 Proof.
@@ -524,6 +601,7 @@ Proof.
   rewrite Hd in Hd'. injection Hd' as <-. now apply wp_len_pts.
 Qed.
 
+(** The frame rule for a write to a clause cell: only that clause's contents change. *)
 Lemma set_cl k c cl i x Q :
   nth_error (hcls st) k = Some c -> nth_error (db st) k = Some cl ->
   (forall h', i < length cl -> repr h' (dset st (lset (db st) k (lset cl i x))) -> keeps st h h' -> Q tt h') ->
@@ -536,6 +614,7 @@ Proof.
   - eapply keeps_upd, locs_in_c; eauto.
 Qed.
 
+(** Reading through the [k]-th watch handle reads watch list [k]. *)
 Lemma get_w k c ws i Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws ->
   (forall x, nth_error ws i = Some x -> Q x h) -> wp (vget c i) Q h.
@@ -544,6 +623,7 @@ Proof.
   rewrite Hd in Hd'. injection Hd' as <-. now apply wp_get_pts.
 Qed.
 
+(** The length through the [k]-th watch handle is that of watch list [k]. *)
 Lemma len_w k c ws Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws -> Q (length ws) h -> wp (vlen c) Q h.
 Proof.
@@ -551,6 +631,7 @@ Proof.
   rewrite Hd in Hd'. injection Hd' as <-. now apply wp_len_pts.
 Qed.
 
+(** The frame rule for a write to a watch-list cell: only that list changes. *)
 Lemma set_w k c ws i x Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws ->
   (forall h', i < length ws -> repr h' (wset st (lset (wl st) k (lset ws i x))) -> keeps st h h' -> Q tt h') ->
@@ -563,6 +644,7 @@ Proof.
   - eapply keeps_upd, locs_in_w; eauto.
 Qed.
 
+(** A push onto watch list [k] appends to it alone. *)
 Lemma push_w k c ws x Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws ->
   (forall h', repr h' (wset st (lset (wl st) k (ws ++ [x]))) -> keeps st h h' -> Q tt h') ->
@@ -575,6 +657,7 @@ Proof.
   - eapply keeps_upd, locs_in_w; eauto.
 Qed.
 
+(** Shrinking watch list [k] truncates it alone. *)
 Lemma shrink_w k c ws n Q :
   nth_error (hwl st) k = Some c -> nth_error (wl st) k = Some ws ->
   (forall h', n <= length ws -> repr h' (wset st (lset (wl st) k (firstn n ws))) -> keeps st h h' -> Q tt h') ->
@@ -587,7 +670,8 @@ Proof.
   - eapply keeps_upd, locs_in_w; eauto.
 Qed.
 
-(** A fresh vector is a scratch cell. *)
+(** [VMake] yields a fresh scratch cell, distinct from the input, and every
+    existing cell, owned or not, keeps its contents. *)
 Lemma make_scr n (x : nat) Q :
   (forall v h', ~ In (vloc v) (locs st) -> pts h' v (repeat x n) -> repr h' st -> keeps st h h' ->
      (forall v' xs, pts h v' xs -> pts h' v' xs) -> vloc v <> vloc inp -> Q v h') ->
@@ -603,6 +687,7 @@ Proof.
   - intros E. apply Hn. rewrite E. unfold locs. cbn. auto.
 Qed.
 
+(** A write to a scratch cell preserves [repr] and every other cell. *)
 Lemma set_scr v xs i x Q :
   ~ In (vloc v) (locs st) -> pts h v xs ->
   (forall h', i < length xs -> repr h' st -> pts h' v (lset xs i x) ->
@@ -615,6 +700,7 @@ Proof.
   - intros. now apply pts_upd_neq.
 Qed.
 
+(** A push onto a scratch cell preserves [repr] and every other cell. *)
 Lemma push_scr v xs x Q :
   ~ In (vloc v) (locs st) -> pts h v xs ->
   (forall h', repr h' st -> pts h' v (xs ++ [x]) ->
@@ -627,6 +713,8 @@ Proof.
   - intros. now apply pts_upd_neq.
 Qed.
 
+(** Pushing a filled scratch vector onto [clauses] adds it to the database;
+    this is how a learnt clause enters. *)
 Lemma push_cls c cl Q :
   ~ In (vloc c) (locs st) -> pts h c cl ->
   (forall h', repr h' (cpush st c cl) -> Q tt h') -> wp (vpush (clauses s) c) Q h.
@@ -635,6 +723,7 @@ Proof.
   apply HQ. now apply repr_cpush.
 Qed.
 
+(** Pushing a filled scratch vector onto [watches] adds a watch list. *)
 Lemma push_wls c ws Q :
   ~ In (vloc c) (locs st) -> pts h c ws ->
   (forall h', repr h' (wpush st c ws) -> Q tt h') -> wp (vpush (watches s) c) Q h.
@@ -643,6 +732,7 @@ Proof.
   apply HQ. now apply repr_wpush.
 Qed.
 
+(** Reading the input vector reads [xs0]. *)
 Lemma get_inp i Q : (forall x, nth_error xs0 i = Some x -> Q x h) -> wp (vget inp i) Q h.
 Proof. apply wp_get_pts, (r_inp _ _ R). Qed.
 

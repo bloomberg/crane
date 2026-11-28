@@ -51,6 +51,7 @@ Fixpoint split_on (sep : nat -> bool) (bs : list nat) : list (list nat) :=
 (** Cut at newlines (byte 10). *)
 Definition lines (bs : list nat) : list (list nat) := split_on (Nat.eqb 10) bs.
 
+(** Whether the first byte of [l] is [b]; never for an empty line. *)
 Definition starts_with (b : nat) (l : list nat) : bool :=
   match l with b' :: _ => Nat.eqb b' b | [] => false end.
 
@@ -65,17 +66,20 @@ Fixpoint content (ls : list (list nat)) : list (list nat) :=
     else l :: content ls'
   end.
 
+(** Whether [w] is empty: what runs of whitespace leave between words. *)
 Definition is_nil (w : list nat) : bool := match w with [] => true | _ :: _ => false end.
 
 (** The non-empty runs of non-whitespace ([Solver.is_space]) in a line. *)
 Definition words (l : list nat) : list (list nat) :=
   filter (fun w => negb (is_nil w)) (split_on is_space l).
 
+(** The tokens of a file: the words of its content lines, in order. *)
 Definition tokens (bs : list nat) : list (list nat) := concat (map words (content (lines bs))).
 
 (** The value of a string of decimal digits (['0'] is byte 48). *)
 Definition dval (w : list nat) : nat := fold_left (fun a d => 10 * a + (d - 48)) w 0.
 
+(** [w] is a number with value [n]: non-empty, all digits. *)
 Definition number (w : list nat) (n : nat) : Prop :=
   w <> [] /\ Forall (fun d => is_digit d = true) w /\ dval w = n.
 
@@ -88,7 +92,9 @@ Definition literal (nv : nat) (w : list nat) (l : nat) : Prop :=
 
 (** The tokens [ts] are the clauses [F], each its literals and then [0]. *)
 Inductive clauses (nv : nat) : list (list nat) -> list (list nat) -> Prop :=
+(** No tokens left, no clauses. *)
 | cl_nil : clauses nv [] []
+(** Literal tokens [ws] spelling [c], the terminator [z], then the rest. *)
 | cl_cons ws z ts c F :
     Forall2 (literal nv) ws c -> number z 0 -> clauses nv ts F ->
     clauses nv (ws ++ z :: ts) (c :: F).
@@ -103,12 +109,15 @@ Definition dimacs (bs : list nat) (F : list (list nat)) : Prop :=
 
 (** * Tokens *)
 
+(** [split_on] always yields at least one piece. *)
 Lemma split_on_cons sep bs : exists w ws, split_on sep bs = w :: ws.
 Proof.
   induction bs as [|b bs (w & ws & E)]; cbn [split_on]; [eauto|].
   destruct (sep b); [eauto|]. rewrite E. eauto.
 Qed.
 
+(** The accumulator invariant of [split_tr]: finished pieces in [acc], the
+    current one reversed in [cur], both glued onto [split_on]'s answer. *)
 Lemma split_tr_spec sep bs : forall cur acc w ws,
   split_on sep bs = w :: ws -> split_tr sep bs cur acc = rev acc ++ (rev cur ++ w) :: ws.
 Proof.
@@ -122,12 +131,14 @@ Proof.
       rewrite <- app_assoc. reflexivity.
 Qed.
 
+(** Started empty, [split_tr] is [split_on]. *)
 Lemma split_tr_nil sep bs : split_tr sep bs [] [] = split_on sep bs.
 Proof.
   destruct (split_on_cons sep bs) as (w & ws & E).
   rewrite (split_tr_spec _ _ _ _ _ _ E), E. reflexivity.
 Qed.
 
+(** [content_tr] is [content] after the reversed accumulator. *)
 Lemma content_tr_spec ls : forall acc, content_tr ls acc = rev acc ++ content ls.
 Proof.
   induction ls as [|l ls IH]; intros acc; cbn [content_tr content].
@@ -139,6 +150,7 @@ Proof.
       rewrite IH. cbn [rev]. rewrite <- app_assoc. reflexivity.
 Qed.
 
+(** [nonempty_tr] is the reversed filter, onto [acc]. *)
 Lemma nonempty_tr_spec ws : forall acc,
   nonempty_tr ws acc = rev (filter (fun w => negb (is_nil w)) ws) ++ acc.
 Proof.
@@ -147,6 +159,7 @@ Proof.
   cbn [rev]. rewrite <- app_assoc. reflexivity.
 Qed.
 
+(** [words_tr] is every line's [words], reversed, onto [acc]. *)
 Lemma words_tr_spec ls : forall acc, words_tr ls acc = rev (concat (map words ls)) ++ acc.
 Proof.
   induction ls as [|l ls IH]; intros acc; [reflexivity|].
@@ -154,6 +167,7 @@ Proof.
   unfold words. rewrite rev_app_distr, <- app_assoc. reflexivity.
 Qed.
 
+(** The extracted tokenizer computes the declarative [tokens]. *)
 Theorem tokens_tr_eq bs : tokens_tr bs = tokens bs.
 Proof.
   unfold tokens_tr, tokens, lines.
@@ -163,6 +177,8 @@ Qed.
 
 (** * Numbers and literals *)
 
+(** Reading more digits never lowers the value: the fact that makes
+    [sdigits]'s cut-off harmless. *)
 Lemma fold_ge w : forall acc, acc <= fold_left (fun a d => 10 * a + (d - 48)) w acc.
 Proof. induction w as [|d w IH]; intros acc; cbn [fold_left]; [lia|]. specialize (IH (10 * acc + (d - 48))). lia. Qed.
 
@@ -185,6 +201,7 @@ Proof.
   rewrite (proj2 (Nat.leb_gt _ cap)) by lia. reflexivity.
 Qed.
 
+(** [snum cap] accepts exactly the numbers up to [cap], with their value. *)
 Theorem snum_spec cap w v : snum cap w = Some v <-> number w v /\ v <= cap.
 Proof.
   unfold snum, number, dval. destruct w as [|d w'].
@@ -201,9 +218,11 @@ Proof.
       rewrite Forall_forall in Hf. auto.
 Qed.
 
+(** A word spells at most one number. *)
 Lemma number_det w x y : number w x -> number w y -> x = y.
 Proof. intros (_ & _ & H1) (_ & _ & H2). congruence. Qed.
 
+(** [is_zero] recognises exactly the clause terminators. *)
 Theorem is_zero_spec w : is_zero w = true <-> number w 0.
 Proof.
   unfold is_zero. destruct (snum 0 w) eqn:E.
@@ -213,9 +232,13 @@ Proof.
     assert (snum 0 w = Some 0) by (apply snum_spec; auto). congruence.
 Qed.
 
+(** A word starting with ['-'] is no number, so a literal's sign is never
+    ambiguous. *)
 Lemma not_number_45 w x : number (45 :: w) x -> False.
 Proof. intros (_ & Hf & _). apply Forall_inv in Hf. discriminate Hf. Qed.
 
+(** [slit nv] accepts exactly the literals over [nv] variables, with their
+    encoding. *)
 Theorem slit_spec nv w l : slit nv w = Some l <-> literal nv w l.
 Proof.
   unfold slit, literal. destruct w as [|b w'].
@@ -249,6 +272,7 @@ Proof.
         congruence.
 Qed.
 
+(** A word encodes at most one literal. *)
 Lemma literal_det nv w l l' : literal nv w l -> literal nv w l' -> l = l'.
 Proof.
   intros (x & _ & [(Hn & ->) | (w0 & -> & Hn & ->)]) (y & _ & [(Hm & ->) | (w1 & Hw & Hm & ->)]).
@@ -258,6 +282,7 @@ Proof.
   - injection Hw as <-. now rewrite (number_det _ _ _ Hn Hm).
 Qed.
 
+(** No literal is a terminator: variables start at 1. *)
 Lemma literal_nz nv w l : literal nv w l -> number w 0 -> False.
 Proof.
   intros (x & Hx & [(Hn & _) | (w0 & -> & _ & _)]) Hz.
@@ -267,12 +292,14 @@ Qed.
 
 (** * Determinism *)
 
+(** A run of literal tokens spells at most one clause. *)
 Lemma F2_det nv ws c : Forall2 (literal nv) ws c -> forall c', Forall2 (literal nv) ws c' -> c = c'.
 Proof.
   induction 1 as [|w l ws c Hl _ IH]; intros c' H'; inversion H'; subst; [reflexivity|].
   f_equal; [eapply literal_det; eauto | auto].
 Qed.
 
+(** A run of literal tokens contains no terminator. *)
 Lemma F2_nz nv ws c : Forall2 (literal nv) ws c -> Forall (fun w => ~ number w 0) ws.
 Proof. induction 1; constructor; auto. intros Hz. eapply literal_nz; eauto. Qed.
 
@@ -291,6 +318,7 @@ Proof.
     auto.
 Qed.
 
+(** Inversion for [clauses], in a form [destruct] can take apart. *)
 Lemma clauses_inv nv ts F :
   clauses nv ts F ->
   (ts = [] /\ F = []) \/
@@ -298,6 +326,7 @@ Lemma clauses_inv nv ts F :
     Forall2 (literal nv) ws c /\ number z 0 /\ clauses nv ts' F'.
 Proof. destruct 1; [left; auto | right; eauto 10]. Qed.
 
+(** The clause tokens spell at most one formula. *)
 Lemma clauses_det nv ts F : clauses nv ts F -> forall F', clauses nv ts F' -> F = F'.
 Proof.
   induction 1 as [|ws z ts c F Hws Hz _ IH]; intros F' H';
@@ -327,6 +356,8 @@ Definition after (nv : nat) (pre : list nat) (ts : list (list nat)) (F : list (l
   exists ws z ts' c F', ts = ws ++ z :: ts' /\ Forall2 (literal nv) ws c /\
     number z 0 /\ clauses nv ts' F' /\ F = (pre ++ c) :: F'.
 
+(** [clauses] is [after] with no clause begun: the parser's starting
+    state. *)
 Lemma clauses_after nv ts F : clauses nv ts F <-> after nv [] ts F.
 Proof.
   split.
@@ -336,6 +367,9 @@ Proof.
   - intros [(_ & -> & ->) | (ws & z & ts' & c & F' & -> & H1 & H2 & H3 & ->)]; constructor; auto.
 Qed.
 
+(** What [pclauses] returns is the accumulated clauses followed by a
+    formula the remaining tokens spell (finishing [cur] first), and [cnt]
+    plus that formula's length. *)
 Lemma pclauses_sound nv ts : forall cur acc cnt maxv G k m,
   pclauses nv ts cur acc cnt maxv = Some (G, k, m) ->
   exists F, after nv (rev cur) ts F /\ G = rev acc ++ F /\ k = cnt + length F.
@@ -360,6 +394,7 @@ Proof.
         cbn [rev]. rewrite <- app_assoc. reflexivity.
 Qed.
 
+(** If the remaining tokens spell some formula, [pclauses] does not fail. *)
 Lemma pclauses_complete nv ts : forall cur acc cnt maxv F,
   after nv (rev cur) ts F -> pclauses nv ts cur acc cnt maxv <> None.
 Proof.
@@ -381,6 +416,7 @@ Proof.
       split; [reflexivity|]. split; [exact Hc1|]. split; [exact H2|]. split; [exact H3|]. reflexivity.
 Qed.
 
+(** [Forall] survives reversal; the accumulators are reversed lists. *)
 Lemma Forall_rev' {A} (P : A -> Prop) l : Forall P l -> Forall P (rev l).
 Proof. rewrite !Forall_forall. intros H x Hx. apply H. now apply in_rev. Qed.
 
@@ -415,6 +451,8 @@ Qed.
 
 (** * The parser *)
 
+(** Whatever [parse] accepts is a DIMACS file for the formula it returns,
+    and the variable count bounds every literal, as [Solver.run] needs. *)
 Theorem parse_sound bs nvars F :
   parse bs = Some (nvars, F) -> dimacs bs F /\ lits_below (2 * nvars) F /\ nvars <= MAXVAR.
 Proof.
@@ -438,6 +476,7 @@ Proof.
   split; [exact Hnc | apply clauses_after; exact HA].
 Qed.
 
+(** [parse] accepts every DIMACS file, returning its formula. *)
 Theorem parse_complete bs F : dimacs bs F -> exists nvars, parse bs = Some (nvars, F).
 Proof.
   intros (nvw & ncw & ts & nv & Et & Hnv & Hle & Hnc & Hcl).
@@ -453,6 +492,7 @@ Proof.
   rewrite Env. cbv beta iota. rewrite Ep. cbv beta iota. rewrite Enc, Nat.eqb_refl. reflexivity.
 Qed.
 
+(** Answer 4 is right: a file [parse] rejects is no DIMACS file. *)
 Corollary parse_none bs : parse bs = None -> ~ exists F, dimacs bs F.
 Proof. intros H (F & HF). destruct (parse_complete _ _ HF) as (n & E). congruence. Qed.
 

@@ -22,6 +22,7 @@ Import Solver.
 (** Literal [2v] says variable [v] is true, [2v+1] that it is false. *)
 Definition lit_true (val : nat -> bool) (l : nat) : Prop := val (lvar l) = Nat.even l.
 
+(** [val] makes some literal of every clause of [F] true. *)
 Definition satisfies (val : nat -> bool) (F : list (list nat)) : Prop :=
   Forall (Exists (lit_true val)) F.
 
@@ -43,6 +44,7 @@ Local Notation cellof := (fun T : Type => list T).
 (** The location [l] holds a list of [nat]s. *)
 Definition natcell (h : heap) (l : loc) : Prop := exists xs, h l = Some (existT cellof nat xs).
 
+(** Writing a [nat] list anywhere keeps every [natcell]. *)
 Lemma natcell_write_nat h l a ys : natcell h a -> natcell (upd h l (existT cellof nat ys)) a.
 Proof.
   intros Ha. destruct (Nat.eq_dec a l) as [-> | Hne].
@@ -50,26 +52,36 @@ Proof.
   - destruct Ha as [xs Ha]. exists xs. now rewrite upd_neq.
 Qed.
 
+(** Writing anything elsewhere keeps a [natcell]. *)
 Lemma natcell_write_other h l a c : a <> l -> natcell h a -> natcell (upd h l c) a.
 Proof. intros Hne [xs Ha]. exists xs. now rewrite upd_neq. Qed.
 
+(** Allocating keeps a [natcell]: a free location is not one. *)
 Lemma natcell_fresh h l a c : h l = None -> natcell h a -> natcell (upd h l c) a.
 Proof. intros Hl [xs Ha]. apply natcell_write_other; [congruence | now exists xs]. Qed.
 
 Section Frame.
+(** The input, the clause database and the watch lists, and the input's
+    contents, which must survive the search. *)
 Variables (inp db wl : loc) (xs0 : list nat).
+(** The three protected vectors are distinct. *)
 Hypotheses (Hid : inp <> db) (Hiw : inp <> wl) (Hdw : db <> wl).
 
 (** A location the search may write to. *)
 Definition good (l : loc) : Prop := l <> inp /\ l <> db /\ l <> wl.
 
+(** [l] holds handles, all to writable locations: so whatever the search
+    reads out of [db] or [wl] it may write to. *)
 Definition handles (h : heap) (l : loc) : Prop :=
   exists ds : list (vec nat),
     h l = Some (existT cellof (vec nat) ds) /\ Forall (fun c => good (vloc c)) ds.
 
+(** The input still holds [xs0], and both handle vectors point only at
+    writable locations. *)
 Definition frame (h : heap) : Prop :=
   h inp = Some (existT cellof nat xs0) /\ handles h db /\ handles h wl.
 
+(** Any write to a writable location keeps the frame. *)
 Lemma frame_write h l c : frame h -> good l -> frame (upd h l c).
 Proof.
   intros (Hi & (ds & Hd & Fd) & (ws & Hw & Fw)) (N1 & N2 & N3).
@@ -79,12 +91,15 @@ Proof.
   - exists ws. rewrite upd_neq by congruence. auto.
 Qed.
 
+(** A freshly allocated location is writable: the three protected ones are
+    live. *)
 Lemma frame_fresh h l : frame h -> h l = None -> good l.
 Proof.
   intros (Hi & (ds & Hd & _) & (ws & Hw & _)) Hl.
   repeat split; intros ->; congruence.
 Qed.
 
+(** Pushing a writable handle onto [db] or [wl] keeps the frame. *)
 Lemma frame_push h l ds c :
   frame h -> (l = db \/ l = wl) -> h l = Some (existT cellof (vec nat) ds) ->
   good (vloc c) -> frame (upd h l (existT cellof (vec nat) (ds ++ [c]))).
@@ -101,6 +116,7 @@ Proof.
     rewrite (cell_inj _ _ _ _ Hw Hds) in Fw. apply Forall_app. auto.
 Qed.
 
+(** A handle read out of [db] or [wl] is writable. *)
 Lemma frame_get h l ds i c :
   frame h -> (l = db \/ l = wl) -> h l = Some (existT cellof (vec nat) ds) ->
   nth_error ds i = Some c -> good (vloc c).
@@ -112,6 +128,8 @@ Proof.
   - rewrite (cell_inj _ _ _ _ Hw Hds), Forall_forall in Fw. auto.
 Qed.
 
+(** [vmake] keeps the frame and returns a writable vector; used while
+    [run] allocates the state. *)
 Lemma frame_make {A} n (x : A) (Q : vec A -> heap -> Prop) h :
   frame h ->
   (forall v h', frame h' -> good (vloc v) ->
@@ -127,6 +145,7 @@ Proof.
   - intros a. now apply natcell_fresh.
 Qed.
 
+(** Filling the watch lists with fresh vectors keeps the frame. *)
 Lemma fresh_vecs_frame fuel : forall (acc : vec (vec nat)) n Q h,
   frame h -> vloc acc = wl ->
   (forall x h', frame h' -> Q x h') ->
@@ -146,22 +165,30 @@ End Frame.
 (** * The search keeps to the frame *)
 
 Section Search.
+(** The solver state, the input vector and its contents. *)
 Variables (s : state) (inp : vec nat) (xs0 : list nat).
 
+(** [l] is writable, for this state and input. *)
 Local Notation G l := (good (vloc inp) (vloc (clauses s)) (vloc (watches s)) l).
 
+(** The input and the two handle vectors are distinct. *)
 Hypotheses (Hid : vloc inp <> vloc (clauses s)) (Hiw : vloc inp <> vloc (watches s))
            (Hdw : vloc (clauses s) <> vloc (watches s)).
+(** Every per-variable vector, the trail and [misc] are writable. *)
 Hypotheses (Gasg : G (vloc (assigns s))) (Glvl : G (vloc (level s)))
            (Grsn : G (vloc (reason s))) (Gph : G (vloc (phase s)))
            (Gst : G (vloc (stamp s))) (Gsn : G (vloc (seen s)))
            (Gtr : G (vloc (trail s))) (Gtl : G (vloc (trail_lim s)))
            (Gm : G (vloc (misc s))).
 
+(** The search's invariant: the frame, and [assigns] still a [nat] cell,
+    so that [check_model] can read the assignment at the end. *)
 Definition Fr (h : heap) : Prop :=
   frame (vloc inp) (vloc (clauses s)) (vloc (watches s)) xs0 h /\
   natcell h (vloc (assigns s)).
 
+(** Writing to a writable vector keeps [Fr].  This and the rules below are
+    the per-event steps [fr_step] applies. *)
 Lemma fr_set (v : vec nat) i x Q h :
   Fr h -> G (vloc v) -> (forall h', Fr h' -> Q tt h') -> wp (vset (E := vecE) v i x) Q h.
 Proof.
@@ -170,6 +197,7 @@ Proof.
   - now apply natcell_write_nat.
 Qed.
 
+(** Pushing a [nat] onto a writable vector keeps [Fr]. *)
 Lemma fr_push (v : vec nat) x Q h :
   Fr h -> G (vloc v) -> (forall h', Fr h' -> Q tt h') -> wp (vpush (E := vecE) v x) Q h.
 Proof.
@@ -178,6 +206,7 @@ Proof.
   - now apply natcell_write_nat.
 Qed.
 
+(** Shrinking a writable vector keeps [Fr]. *)
 Lemma fr_shrink (v : vec nat) n Q h :
   Fr h -> G (vloc v) -> (forall h', Fr h' -> Q tt h') -> wp (vshrink (E := vecE) v n) Q h.
 Proof.
@@ -186,6 +215,7 @@ Proof.
   - now apply natcell_write_nat.
 Qed.
 
+(** Reads change nothing; the value read is not needed here. *)
 Lemma fr_get (v : vec nat) i (Q : nat -> heap -> Prop) h :
   (forall x, Q x h) -> wp (vget (E := vecE) v i) Q h.
 Proof. intros HQ. apply wp_vget. auto. Qed.
@@ -200,10 +230,12 @@ Proof.
   eapply frame_get; eauto.
 Qed.
 
+(** Lengths change nothing either. *)
 Lemma fr_len {A} (v : vec A) (Q : nat -> heap -> Prop) h :
   (forall n, Q n h) -> wp (vlen (E := vecE) v) Q h.
 Proof. intros HQ. apply wp_vlen. auto. Qed.
 
+(** A fresh [nat] vector (a loaded or learnt clause) is writable. *)
 Lemma fr_make n (x : nat) Q h :
   Fr h -> (forall v h', Fr h' -> G (vloc v) -> Q v h') -> wp (vmake (E := vecE) n x) Q h.
 Proof.
@@ -214,6 +246,7 @@ Proof.
   - eapply frame_fresh; eauto.
 Qed.
 
+(** Adding a writable clause to the database keeps [Fr]. *)
 Lemma fr_push_handle (v : vec (vec nat)) c Q h :
   Fr h -> vloc v = vloc (clauses s) -> G (vloc c) ->
   (forall h', Fr h' -> Q tt h') -> wp (vpush (E := vecE) v c) Q h.
@@ -226,6 +259,8 @@ Qed.
 (** Calls to the loops proved below; extended as each one is. *)
 Ltac fr_call := fail.
 
+(** One step of an [Fr] proof: peel a [bind], apply the event's rule,
+    unfold a helper, or call a loop already proved. *)
 Ltac fr_step :=
   match goal with
   | |- wp (ITree.bind _ _) _ _ => apply wp_bind
@@ -253,12 +288,17 @@ Ltac fr_step :=
   | |- wp _ _ _ => fr_call
   end.
 
+(** Run [fr_step] until stuck; each loop's proof is this plus the
+    induction hypothesis. *)
 Ltac fr_go := repeat (cbv beta; fr_step).
 
+(** [find_watch] only reads.  Each loop below keeps [Fr] likewise, given
+    writable arguments. *)
 Lemma find_watch_fr fuel : forall c k len Q h,
   Fr h -> (forall x h', Fr h' -> Q x h') -> wp (find_watch s fuel c k len) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [find_watch]; fr_go; try solve [eapply IH; eauto]. Qed.
 
+(** [copy_rest] writes only to the watch list [ws]. *)
 Lemma copy_rest_fr fuel : forall ws i j n Q h,
   Fr h -> G (vloc ws) -> (forall x h', Fr h' -> Q x h') -> wp (copy_rest fuel ws i j n) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [copy_rest]; fr_go; try solve [eapply IH; eauto]. Qed.
@@ -267,6 +307,8 @@ Ltac fr_call ::=
   first [ eapply find_watch_fr; [assumption | intros ? ? ?]
         | eapply copy_rest_fr; [assumption | assumption | intros ? ? ?] ].
 
+(** [prop_watch] writes to [ws], to clauses and watch lists read out of the
+    handle vectors, and to the state. *)
 Lemma prop_watch_fr fuel : forall fl ws i j n Q h,
   Fr h -> G (vloc ws) -> (forall x h', Fr h' -> Q x h') -> wp (prop_watch s fuel fl ws i j n) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [prop_watch]; fr_go; try solve [eapply IH; eauto]. Qed.
@@ -276,19 +318,23 @@ Ltac fr_call ::=
         | eapply copy_rest_fr; [assumption | assumption | intros ? ? ?]
         | eapply prop_watch_fr; [assumption | assumption | intros ? ? ?] ].
 
+(** [propagate] keeps [Fr]. *)
 Lemma propagate_fr fuel : forall Q h,
   Fr h -> (forall x h', Fr h' -> Q x h') -> wp (propagate s fuel) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [propagate]; fr_go; try solve [eapply IH; eauto]. Qed.
 
+(** [unassign] keeps [Fr]. *)
 Lemma unassign_fr fuel : forall i lim Q h,
   Fr h -> (forall x h', Fr h' -> Q x h') -> wp (unassign s fuel i lim) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [unassign]; fr_go; try solve [eapply IH; eauto]. Qed.
 
+(** [analyze_lits] keeps [Fr], given a writable [learnt]. *)
 Lemma analyze_lits_fr fuel : forall c j len dl pathC learnt now Q h,
   Fr h -> G (vloc learnt) -> (forall x h', Fr h' -> Q x h') ->
   wp (analyze_lits s fuel c j len dl pathC learnt now) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [analyze_lits]; fr_go; try solve [eapply IH; eauto]. Qed.
 
+(** [next_seen] only reads. *)
 Lemma next_seen_fr fuel : forall i Q h,
   Fr h -> (forall x h', Fr h' -> Q x h') -> wp (next_seen s fuel i) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [next_seen]; fr_go; try solve [eapply IH; eauto]. Qed.
@@ -297,16 +343,19 @@ Ltac fr_call ::=
   first [ eapply analyze_lits_fr; [assumption | assumption | intros ? ? ?]
         | eapply next_seen_fr; [assumption | intros ? ? ?] ].
 
+(** [analyze_loop] keeps [Fr], given a writable [learnt]. *)
 Lemma analyze_loop_fr fuel : forall confl start index pathC dl learnt now Q h,
   Fr h -> G (vloc learnt) -> (forall x h', Fr h' -> Q x h') ->
   wp (analyze_loop s fuel confl start index pathC dl learnt now) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [analyze_loop]; fr_go; try solve [eapply IH; eauto]. Qed.
 
+(** [finish_learnt] keeps [Fr], given a writable [learnt]. *)
 Lemma finish_learnt_fr fuel : forall learnt i len best bestlv Q h,
   Fr h -> G (vloc learnt) -> (forall x h', Fr h' -> Q x h') ->
   wp (finish_learnt s fuel learnt i len best bestlv) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [finish_learnt]; fr_go; try solve [eapply IH; eauto]. Qed.
 
+(** [pick] only reads. *)
 Lemma pick_fr fuel : forall v n best beststamp Q h,
   Fr h -> (forall x h', Fr h' -> Q x h') -> wp (pick s fuel v n best beststamp) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [pick]; fr_go; try solve [eapply IH; eauto]. Qed.
@@ -318,7 +367,8 @@ Ltac fr_call ::=
         | eapply finish_learnt_fr; [assumption | assumption | intros ? ? ?]
         | eapply pick_fr; [assumption | intros ? ? ?] ].
 
-(** [search] also answers only 0, 1 or 2. *)
+(** [search] keeps [Fr] and answers only 0, 1 or 2, so a [code] of 1 from
+    [run] can only come from a passed model check. *)
 Lemma search_fr fuel budget : forall nvars Q h,
   Fr h -> (forall x h', Fr h' -> x <= 2 -> Q x h') -> wp (search s fuel budget nvars) Q h.
 Proof.
@@ -327,12 +377,14 @@ Proof.
   - fr_go; try solve [ apply HQ; [assumption | lia] | eapply IH; eauto ].
 Qed.
 
+(** [read_lits] writes only to the fresh clause [c]. *)
 Lemma read_lits_fr fuel : forall input c pos len Q h,
   Fr h -> G (vloc c) -> (forall x h', Fr h' -> Q x h') -> wp (read_lits fuel input c pos len) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [read_lits]; fr_go; try solve [eapply IH; eauto]. Qed.
 
 Ltac fr_call ::= eapply read_lits_fr; [assumption | assumption | intros ? ? ?].
 
+(** [load] reads [input] but never writes it. *)
 Lemma load_fr fuel : forall input pos n Q h,
   Fr h -> (forall x h', Fr h' -> Q x h') -> wp (load s fuel input pos n) Q h.
 Proof. induction fuel as [|f IH]; intros; cbn [load]; fr_go; try solve [eapply IH; eauto]. Qed.
@@ -342,6 +394,7 @@ Proof. induction fuel as [|f IH]; intros; cbn [load]; fr_go; try solve [eapply I
 (** The assignment as a valuation: unassigned variables are false. *)
 Definition val_of (asl : list nat) (v : nat) : bool := Nat.eqb (nth v asl 0) 1.
 
+(** [lit_value] answers 1 only for a literal [val_of] makes true. *)
 Lemma lit_value_spec l asl (Q : nat -> heap -> Prop) h :
   h (vloc (assigns s)) = Some (existT cellof nat asl) ->
   (forall n, (n = 1 -> lit_true (val_of asl) l) -> Q n h) ->
@@ -361,6 +414,8 @@ Proof.
     rewrite Nat.even_add, Nat.even_mul. reflexivity.
 Qed.
 
+(** [clause_sat] answers [true] only if the clause [c] stored in [input]
+    has a literal [val_of] makes true. *)
 Lemma clause_sat_spec fuel : forall pos c asl Q h,
   h (vloc (assigns s)) = Some (existT cellof nat asl) ->
   h (vloc inp) = Some (existT cellof nat xs0) ->
@@ -385,6 +440,8 @@ Proof.
         -- intros b Hb. apply HQ. intros Hb'. apply Exists_cons_tl. auto.
 Qed.
 
+(** [check_model] answers [true] only if the assignment satisfies the
+    formula [input] encodes; [Fr] guarantees [input] still holds it. *)
 Lemma check_model_spec fuel : forall n pos F asl Q h,
   Fr h -> h (vloc (assigns s)) = Some (existT cellof nat asl) ->
   encodes xs0 n pos F ->
@@ -410,12 +467,15 @@ End Search.
 
 (** * The theorem *)
 
+(** A free location differs from a live one. *)
 Lemma alloc_neq (h : heap) l l' : h l = None -> h l' <> None -> l <> l'.
 Proof. congruence. Qed.
 
+(** The conflicts in [code + 8 * conflicts] do not disturb [code mod 8]. *)
 Lemma mod8 c k : (c + 8 * k) mod 8 = c mod 8.
 Proof. rewrite Nat.mul_comm. apply Nat.Div0.mod_add. Qed.
 
+(** A write never frees a location. *)
 Lemma upd_some (h : heap) l c l' : h l' <> None -> upd h l c l' <> None.
 Proof. unfold upd. destruct (Nat.eqb l' l); congruence. Qed.
 
@@ -486,6 +546,8 @@ Qed.
 Definition lits_below (lim : nat) (F : list (list nat)) : Prop :=
   Forall (Forall (fun l => l < lim)) F.
 
+(** If [valid_lits] accepts, the [len] entries from [pos] exist and are all
+    below [lim]. *)
 Lemma valid_lits_spec inp xs0 lim fuel : forall len pos Q h,
   h (vloc inp) = Some (existT cellof nat xs0) ->
   (forall b, (b = true -> forall j, j < len ->

@@ -14,6 +14,7 @@ Require Import SatVec VecSem VecSafe Solver SolverSat SolverUnsat SolverSafe Dim
 Import ListNotations.
 Import Solver.
 
+(** The type family of a [cell], spelled out as in [SolverSat]. *)
 Local Notation cellof := (fun T : Type => list T).
 
 (** What the result [r] of [solve_dimacs] says about the file [bs]. *)
@@ -28,6 +29,7 @@ Definition answer (bs : list nat) (r : nat) : Prop :=
 
 (** * Reading the bytes and writing the clauses *)
 
+(** Growing a prefix by one known element; [read_bytes] reads backwards. *)
 Lemma firstn_snoc {A} (xs : list A) i x : nth_error xs i = Some x -> firstn (S i) xs = firstn i xs ++ [x].
 Proof.
   revert i; induction xs as [|y xs IH]; intros [|i] H; cbn in *; try discriminate.
@@ -35,6 +37,8 @@ Proof.
   - f_equal. now apply IH.
 Qed.
 
+(** [read_bytes] stays in bounds and returns the first [i] bytes before
+    [acc], leaving the heap alone. *)
 Lemma read_bytes_safe bytes bs : forall i acc Q h,
   h (vloc bytes) = Some (existT cellof nat bs) -> i <= length bs ->
   Q (firstn i bs ++ acc) h -> safe (read_bytes bytes i acc) Q h.
@@ -48,9 +52,11 @@ Qed.
 (** The flat encoding [write_cnf] produces. *)
 Definition enc (F : list (list nat)) : list nat := concat (map (fun c => length c :: c) F).
 
+(** The tail-recursive [tlen] is [length]. *)
 Lemma tlen_eq {A} (l : list A) n : tlen l n = n + length l.
 Proof. revert n; induction l as [|x l IH]; intros n; cbn; [lia | rewrite IH; lia]. Qed.
 
+(** [write_lits] is safe and appends [c] to [input]. *)
 Lemma write_lits_safe input : forall c xs Q h,
   h (vloc input) = Some (existT cellof nat xs) ->
   (forall h', h' (vloc input) = Some (existT cellof nat (xs ++ c)) -> Q tt h') ->
@@ -62,6 +68,8 @@ Proof.
     intros h' Hh'. apply HQ. now rewrite <- app_assoc in Hh'.
 Qed.
 
+(** [write_cnf] is safe, appends [enc F] to [input] and returns the
+    position after it. *)
 Lemma write_cnf_safe input : forall F xs pos Q h,
   h (vloc input) = Some (existT cellof nat xs) ->
   (forall h', h' (vloc input) = Some (existT cellof nat (xs ++ enc F)) -> Q (pos + length (enc F)) h') ->
@@ -79,6 +87,8 @@ Proof.
     apply HQ. unfold enc in *. cbn. now rewrite <- !app_assoc in Hh'.
 Qed.
 
+(** [enc F] is an [encodes] of [F] wherever it is placed: the bridge from
+    what [write_cnf] wrote to the hypothesis the solver's theorems take. *)
 Lemma enc_encodes : forall F pre, encodes (pre ++ enc F) (length pre + length (enc F)) (length pre) F.
 Proof.
   induction F as [|c F IH]; intros pre.
@@ -97,6 +107,8 @@ Qed.
 
 (** * The theorem *)
 
+(** The guarantee of the module header: [solve_dimacs] is safe from any
+    heap holding [bs] in [bytes], and its answer is [answer bs]. *)
 Theorem solve_dimacs_correct fuel budget bytes bs h0 :
   h0 (vloc bytes) = Some (existT cellof nat bs) ->
   safe (Solver.solve_dimacs fuel budget bytes) (fun r _ => answer bs r) h0.

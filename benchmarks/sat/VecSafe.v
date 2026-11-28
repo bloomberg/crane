@@ -25,6 +25,7 @@ Inductive reach {R} : heap -> itree vecE R -> heap -> itree vecE R -> Prop :=
 | ReachVis h t X (e : vecE X) k x h1 h' u :
     observe t = VisF e k -> step h e x h1 -> reach h1 (k x) h' u -> reach h t h' u.
 
+(** The one event allowed to have no step. *)
 Definition is_abort {X} (e : vecE X) : Prop := match e with VAbort _ => True | _ => False end.
 
 (** A configuration that is not stuck. *)
@@ -38,17 +39,21 @@ Definition ok_at {R} (Q : R -> heap -> Prop) (h : heap) (t : itree vecE R) : Pro
 (** Only finitely many locations are allocated. *)
 Definition fin (h : heap) : Prop := exists N, forall l, N <= l -> h l = None.
 
+(** From a finite [h], every configuration [t] reaches is not stuck, and a
+    finished one satisfies [Q]. *)
 Definition safe {R} (t : itree vecE R) (Q : R -> heap -> Prop) (h : heap) : Prop :=
   fin h -> forall h' u, reach h t h' u -> ok_at Q h' u.
 
 (** ** Finite heaps *)
 
+(** A write, even to a fresh location, keeps a heap finite. *)
 Lemma fin_upd h l c : fin h -> fin (upd h l c).
 Proof.
   intros [N HN]. exists (max N (S l)). intros l' Hl. unfold upd.
   destruct (Nat.eqb_spec l' l); [lia | apply HN; lia].
 Qed.
 
+(** So does every step, which is why finiteness is assumed only once. *)
 Lemma fin_step {X} h (e : vecE X) x h' : fin h -> step h e x h' -> fin h'.
 Proof.
   intros Hf Hs. destruct e; cbn in Hs.
@@ -61,14 +66,17 @@ Proof.
   - destruct Hs.
 Qed.
 
+(** Every reachable heap is finite. *)
 Lemma fin_reach {R} h (t : itree vecE R) h' u : fin h -> reach h t h' u -> fin h'.
 Proof. intros Hf Hr. induction Hr; eauto using fin_step. Qed.
 
+(** Every final heap is finite. *)
 Lemma fin_runs {R} h (t : itree vecE R) r h' : fin h -> runs h t r h' -> fin h'.
 Proof. intros Hf Hr. induction Hr; eauto using fin_step. Qed.
 
 (** ** Safety and partial correctness *)
 
+(** A finished run reaches a [Ret] configuration. *)
 Lemma runs_reach {R} h (t : itree vecE R) r h' :
   runs h t r h' -> exists u, reach h t h' u /\ observe u = RetF r.
 Proof.
@@ -78,6 +86,7 @@ Proof.
   - exists u. split; [eapply ReachVis; eauto | exact Hu].
 Qed.
 
+(** A finished run of a safe program satisfies its postcondition. *)
 Lemma safe_runs {R} (t : itree vecE R) Q h r h' : safe t Q h -> fin h -> runs h t r h' -> Q r h'.
 Proof.
   intros Hs Hf Hr. destruct (runs_reach _ _ _ _ Hr) as (u & Hu & Ho).
@@ -88,6 +97,7 @@ Qed.
 Lemma safe_wp {R} (t : itree vecE R) Q h : safe t Q h -> fin h -> wp t Q h.
 Proof. intros Hs Hf r h' Hr. eapply safe_runs; eauto. Qed.
 
+(** Reaching a [Ret] configuration is a finished run. *)
 Lemma reach_runs {R} h (t : itree vecE R) h' u r :
   reach h t h' u -> observe u = RetF r -> runs h t r h'.
 Proof.
@@ -108,6 +118,8 @@ Qed.
 
 (** ** Structural rules *)
 
+(** A configuration reached from [ITree.bind t k] is either still inside
+    [t], or inside [k] after a finished run of [t]. *)
 Lemma reach_bind {T U} h (t : itree vecE T) (k : T -> itree vecE U) h' u :
   reach h (ITree.bind t k) h' u ->
   (exists t1, reach h t h' t1 /\ u = ITree.bind t1 k) \/
@@ -130,6 +142,7 @@ Proof.
       * right. exists r, h2. split; [eapply RunVis; eauto | exact H2].
 Qed.
 
+(** Sequencing, as [wp_bind]: [t] is safe and lands where [k] is. *)
 Lemma safe_bind {T U} (t : itree vecE T) (k : T -> itree vecE U) Q h :
   safe t (fun r h1 => safe (k r) Q h1) h -> safe (ITree.bind t k) Q h.
 Proof.
@@ -140,6 +153,8 @@ Proof.
   - eapply (safe_runs _ _ _ _ _ Hs Hf H1); [eapply fin_runs; eauto | exact H2].
 Qed.
 
+(** Sequencing through an intermediate postcondition [P], so that a spec
+    proved for a callee can be reused at each call. *)
 Lemma safe_seq {T U} (t : itree vecE T) (k : T -> itree vecE U) P Q h :
   safe t P h -> (forall r h1, P r h1 -> safe (k r) Q h1) -> safe (ITree.bind t k) Q h.
 Proof.
@@ -147,11 +162,13 @@ Proof.
   unfold ok_at in *. destruct (observe u); auto.
 Qed.
 
+(** [Ret x] is safe when [x] already satisfies the postcondition. *)
 Lemma safe_ret {R} (x : R) (Q : R -> heap -> Prop) h : Q x h -> safe (Ret x) Q h.
 Proof.
   intros HQ _ h' u Hr. inversion Hr; subst; cbn in *; try discriminate. exact HQ.
 Qed.
 
+(** Weakening the postcondition. *)
 Lemma safe_conseq {R} (t : itree vecE R) (Q Q' : R -> heap -> Prop) h :
   safe t Q h -> (forall r h', Q r h' -> Q' r h') -> safe t Q' h.
 Proof.
@@ -161,6 +178,8 @@ Qed.
 
 (** ** Events *)
 
+(** A single event is safe if it has some step from every finite heap and
+    each of its steps satisfies [Q]. *)
 Lemma safe_trigger {X} (t : itree vecE X) (e : vecE X) (Q : X -> heap -> Prop) h :
   observe t = VisF e (fun x => go (RetF x)) ->
   (fin h -> exists x h', step h e x h') ->
@@ -174,6 +193,7 @@ Proof.
     inversion H1; subst; cbn in *; try discriminate. unfold ok_at. cbn. auto.
 Qed.
 
+(** Giving up is always safe: it is the sanctioned way out of a loop. *)
 Lemma safe_vabort {A} site (Q : A -> heap -> Prop) h : safe (vabort (E := vecE) site) Q h.
 Proof.
   intros _ h' u Hr. inversion Hr; subst.
@@ -182,9 +202,13 @@ Proof.
   - cbn in H. injection H as -> He Hk. apply inj_pair2 in He. subst. destruct H0.
 Qed.
 
+(** One rule per event.  Unlike [wp]'s, each demands what makes the step
+    exist: a live handle, and an index or length in bounds. *)
 Section Events.
+(** The element type of the vector the event acts on. *)
 Context {A : Type}.
 
+(** Always safe: a finite heap has a free location. *)
 Lemma safe_vmake n (x : A) (Q : vec A -> heap -> Prop) h :
   (forall v, h (vloc v) = None -> Q v (upd h (vloc v) (existT _ A (repeat x n)))) ->
   safe (vmake (E := vecE) n x) Q h.
@@ -195,6 +219,7 @@ Proof.
   - intros v h' [Hn ->]. auto.
 Qed.
 
+(** Safe on a live cell of type [A] with [i] in bounds. *)
 Lemma safe_vget (v : vec A) i xs (Q : A -> heap -> Prop) h :
   h (vloc v) = Some (existT _ A xs) -> i < length xs ->
   (forall x, nth_error xs i = Some x -> Q x h) ->
@@ -206,6 +231,7 @@ Proof.
   - intros x h' [-> (ys & Hy & Hx)]. rewrite (cell_inj _ _ _ _ Hy Hv) in Hx. auto.
 Qed.
 
+(** Safe on a live cell of type [A] with [i] in bounds. *)
 Lemma safe_vset (v : vec A) i (x : A) xs (Q : unit -> heap -> Prop) h :
   h (vloc v) = Some (existT _ A xs) -> i < length xs ->
   Q tt (upd h (vloc v) (existT _ A (lset xs i x))) ->
@@ -216,6 +242,7 @@ Proof.
   - intros [] h' (ys & Hy & _ & ->). now rewrite (cell_inj _ _ _ _ Hy Hv).
 Qed.
 
+(** Safe on any live cell of type [A]. *)
 Lemma safe_vlen (v : vec A) xs (Q : nat -> heap -> Prop) h :
   h (vloc v) = Some (existT _ A xs) -> Q (length xs) h -> safe (vlen (E := vecE) v) Q h.
 Proof.
@@ -224,6 +251,7 @@ Proof.
   - intros n h' [-> (ys & Hy & ->)]. now rewrite (cell_inj _ _ _ _ Hy Hv).
 Qed.
 
+(** Safe on any live cell of type [A]. *)
 Lemma safe_vpush (v : vec A) (x : A) xs (Q : unit -> heap -> Prop) h :
   h (vloc v) = Some (existT _ A xs) ->
   Q tt (upd h (vloc v) (existT _ A (xs ++ [x]))) ->
@@ -234,6 +262,7 @@ Proof.
   - intros [] h' (ys & Hy & ->). now rewrite (cell_inj _ _ _ _ Hy Hv).
 Qed.
 
+(** Safe on a live cell of type [A] at least [n] long. *)
 Lemma safe_vshrink (v : vec A) n xs (Q : unit -> heap -> Prop) h :
   h (vloc v) = Some (existT _ A xs) -> n <= length xs ->
   Q tt (upd h (vloc v) (existT _ A (firstn n xs))) ->

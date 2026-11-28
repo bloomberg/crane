@@ -17,12 +17,15 @@ Require Import SatVec.
 
 Module Solver.
 
+(** The variable of a literal. *)
 Definition lvar (l : nat) : nat := Nat.div l 2.
+(** The opposite literal: flip the low bit. *)
 Definition lneg (l : nat) : nat :=
   if Nat.eqb (Nat.modulo l 2) 0 then l + 1 else l - 1.
 (** The literal of [v] that a value of [a] (1 or 2) makes true. *)
 Definition lit_of (v a : nat) : nat := if Nat.eqb a 1 then 2 * v else 2 * v + 1.
 
+(** The solver state: handles to every vector, created once by [run]. *)
 Record state := mk_state {
   clauses : vec (vec nat);   (** clause database; a reason's implied literal is at 0 *)
   watches : vec (vec nat);   (** per literal: the clauses watching it at 0 or 1 *)
@@ -38,21 +41,30 @@ Record state := mk_state {
                                  3: conflicts since restart *)
 }.
 
+(** The propagation queue head: a trail position. *)
 Definition QHEAD := 0.
+(** Conflicts so far. *)
 Definition CONFLICTS := 1.
+(** Conflicts allowed before the next restart. *)
 Definition RLIMIT := 2.
+(** Conflicts since the last restart. *)
 Definition RCOUNT := 3.
 
 Section Ops.
+(** Every operation below acts on this one state. *)
 Variable s : state.
 
+(** The value of a literal: 0 unassigned, 1 true, 2 false. *)
 Definition lit_value (l : nat) : itree vecE nat :=
   a <- vget (assigns s) (lvar l) ;;
   Ret (if Nat.eqb a 0 then 0
        else if Nat.eqb (Nat.modulo l 2) 0 then a else 3 - a).
 
+(** The current decision level: the number of trail limits. *)
 Definition decision_level : itree vecE nat := vlen (trail_lim s).
 
+(** Make [l] true with reason [r] (clause index + 1, 0 for a decision),
+    at the current level, and push it on the trail. *)
 Definition enqueue (l : nat) (r : nat) : itree vecE unit :=
   let v := lvar l in
   vset (assigns s) v (if Nat.eqb (Nat.modulo l 2) 0 then 1 else 2) ;;
@@ -155,6 +167,8 @@ Fixpoint unassign (fuel : nat) (i lim : nat) : itree vecE unit :=
       unassign f (i - 1) lim
   end.
 
+(** Backjump to decision level [lvl]: undo the trail above where level
+    [lvl + 1] began, and resume propagation from there. *)
 Definition backtrack (fuel lvl : nat) : itree vecE unit :=
   dl <- decision_level ;;
   if Nat.leb dl lvl then Ret tt
@@ -238,6 +252,7 @@ Fixpoint finish_learnt (fuel : nat) (learnt : vec nat) (i len best bestlv : nat)
       else finish_learnt f learnt (i + 1) len best bestlv
   end.
 
+(** Watch the first two literals of clause [ci], whose vector is [c]. *)
 Definition attach (ci : nat) (c : vec nat) : itree vecE unit :=
   c0 <- vget c 0 ;; c1 <- vget c 1 ;;
   w0 <- vget (watches s) c0 ;; vpush w0 ci ;;
@@ -279,7 +294,8 @@ Fixpoint pick (fuel : nat) (v n best beststamp : nat) : itree vecE nat :=
       else pick f (v + 1) n best beststamp
   end.
 
-(** 1: satisfiable, 0: unsatisfiable, 2: out of fuel. *)
+(** At most [budget] rounds of propagating, then deciding or learning.
+    1: satisfiable, 0: unsatisfiable, 2: out of budget. *)
 Fixpoint search (fuel : nat) (budget nvars : nat) : itree vecE nat :=
   match budget with
   | O => Ret 2
@@ -476,7 +492,9 @@ Definition solve (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
     parser is pure and every list function on its path is tail-recursive,
     so the extracted code needs constant stack whatever the input. *)
 
+(** Whitespace: space (byte 32) and bytes 9 to 13 ([\t] to [\r]). *)
 Definition is_space (b : nat) : bool := Nat.eqb b 32 || (Nat.leb 9 b && Nat.leb b 13).
+(** An ASCII decimal digit, ['0'] (48) to ['9'] (57). *)
 Definition is_digit (b : nat) : bool := Nat.leb 48 b && Nat.leb b 57.
 
 (** The length of [l], plus [n]. *)
@@ -524,6 +542,8 @@ Fixpoint words_tr (ls acc : list (list nat)) : list (list nat) :=
   | l :: ls' => words_tr ls' (nonempty_tr (split_tr is_space l [] []) acc)
   end.
 
+(** The tokens of a file, in order: the words of its content lines.
+    [DimacsSpec.tokens_tr_eq] equates it with the declarative [tokens]. *)
 Definition tokens_tr (bs : list nat) : list (list nat) :=
   rev_append (words_tr (content_tr (split_tr (Nat.eqb 10) bs [] []) []) []) [].
 
@@ -541,6 +561,7 @@ Fixpoint sdigits (cap acc : nat) (w : list nat) : option nat :=
     else None
   end.
 
+(** The value of the non-empty digit string [w], if it is at most [cap]. *)
 Definition snum (cap : nat) (w : list nat) : option nat :=
   match w with [] => None | _ :: _ => sdigits cap 0 w end.
 
@@ -556,6 +577,7 @@ Definition slit (nv : nat) (w : list nat) : option nat :=
   | _ => None
   end.
 
+(** Whether [w] ends a clause: a digit string of value 0. *)
 Definition is_zero (w : list nat) : bool :=
   match snum 0 w with Some _ => true | None => false end.
 
@@ -607,6 +629,7 @@ Fixpoint read_bytes (bytes : vec nat) (i : nat) (acc : list nat) : itree vecE (l
   | S i' => b <- vget bytes i' ;; read_bytes bytes i' (b :: acc)
   end.
 
+(** Append the literals [c] to [input]. *)
 Fixpoint write_lits (input : vec nat) (c : list nat) : itree vecE unit :=
   match c with
   | [] => Ret tt

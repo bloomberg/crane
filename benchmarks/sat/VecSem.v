@@ -14,15 +14,21 @@ From Crane Require Import Monads.ITree.
 Require Import SatVec.
 Import ListNotations.
 
+(** A vector's contents, tagged with its element type, so one heap holds
+    vectors of [nat] and vectors of handles alike. *)
 Definition cell := {A : Type & list A}.
+(** [None] is a free location: [VMake] allocates there. *)
 Definition heap := loc -> option cell.
 
+(** [h] with location [l] set to [c]. *)
 Definition upd (h : heap) (l : loc) (c : cell) : heap :=
   fun l' => if Nat.eqb l' l then Some c else h l'.
 
+(** Reading back the location just written. *)
 Lemma upd_eq h l c : upd h l c l = Some c.
 Proof. unfold upd. now rewrite Nat.eqb_refl. Qed.
 
+(** A write leaves every other location alone. *)
 Lemma upd_neq h l c l' : l' <> l -> upd h l c l' = h l'.
 Proof. intros. unfold upd. now rewrite (proj2 (Nat.eqb_neq _ _) H). Qed.
 
@@ -34,6 +40,7 @@ Fixpoint lset {A} (xs : list A) (i : nat) (x : A) : list A :=
   | y :: xs', S i' => y :: lset xs' i' x
   end.
 
+(** [VSet] never changes a vector's length. *)
 Lemma lset_length {A} (xs : list A) i x : length (lset xs i x) = length xs.
 Proof. revert i; induction xs; destruct i; cbn; auto. Qed.
 
@@ -68,11 +75,15 @@ Inductive runs {R} : heap -> itree vecE R -> R -> heap -> Prop :=
 | RunVis h t X (e : vecE X) k x h1 r h' :
     observe t = VisF e k -> step h e x h1 -> runs h1 (k x) r h' -> runs h t r h'.
 
+(** Partial correctness: every run of [t] from [h] that finishes satisfies
+    [Q].  Aborting or stuck runs never finish, so they count for nothing. *)
 Definition wp {R} (t : itree vecE R) (Q : R -> heap -> Prop) (h : heap) : Prop :=
   forall r h', runs h t r h' -> Q r h'.
 
 (** ** Structural rules *)
 
+(** One unfolding of [bind]: what the proofs rewrite with to step through a
+    sequenced tree. *)
 Lemma observe_bind {E T U} (t : itree E T) (k : T -> itree E U) :
   observe (ITree.bind t k) =
   match observe t with
@@ -82,6 +93,8 @@ Lemma observe_bind {E T U} (t : itree E T) (k : T -> itree E U) :
   end.
 Proof. unfold ITree.bind, ITree.subst, observe. cbn. destruct (_observe t); reflexivity. Qed.
 
+(** A finished run of [ITree.bind t k] splits into a finished run of [t] and one
+    of [k] on its result. *)
 Lemma runs_bind {T U} h (t : itree vecE T) (k : T -> itree vecE U) r h' :
   runs h (ITree.bind t k) r h' ->
   exists r1 h1, runs h t r1 h1 /\ runs h1 (k r1) r h'.
@@ -100,6 +113,8 @@ Proof.
     exists r1, h2. split; [eapply RunVis; eauto | exact H2].
 Qed.
 
+(** Sequencing: prove [t] lands where [k] may start.  Every proof walks a
+    program with this rule, one [bind] at a time. *)
 Lemma wp_bind {T U} (t : itree vecE T) (k : T -> itree vecE U) Q h :
   wp t (fun r h1 => wp (k r) Q h1) h -> wp (ITree.bind t k) Q h.
 Proof.
@@ -107,9 +122,11 @@ Proof.
   exact (Ht _ _ H1 _ _ H2).
 Qed.
 
+(** [Ret x] finishes at once, with [x], in the heap it started in. *)
 Lemma wp_ret {R} (x : R) (Q : R -> heap -> Prop) h : Q x h -> wp (Ret x) Q h.
 Proof. intros HQ r h' Hr. inversion Hr; subst; cbn in *; try discriminate. congruence. Qed.
 
+(** Weakening the postcondition. *)
 Lemma wp_conseq {R} (t : itree vecE R) (Q Q' : R -> heap -> Prop) h :
   wp t Q h -> (forall r h', Q r h' -> Q' r h') -> wp t Q' h.
 Proof. intros H HQ r h' Hr. exact (HQ _ _ (H _ _ Hr)). Qed.
@@ -135,42 +152,54 @@ Proof.
   injection H as ->. now apply HQ.
 Qed.
 
+(** One rule per event, read off [step]: the postcondition must hold of
+    every answer and heap the event may produce.  It may assume the event
+    was in bounds; [VecSafe] is where that is proved. *)
 Section Events.
+(** The element type of the vector the event acts on. *)
 Context {A : Type}.
 
+(** The new vector is at some location that was free. *)
 Lemma wp_vmake n (x : A) (Q : vec A -> heap -> Prop) h :
   (forall v, h (vloc v) = None -> Q v (upd h (vloc v) (existT _ A (repeat x n)))) ->
   wp (vmake (E := vecE) n x) Q h.
 Proof. intros HQ. apply wp_trigger with (e := VMake n x); [reflexivity |]. intros v h' [Hn ->]. auto. Qed.
 
+(** The answer is element [i] of the cell, and the heap is unchanged. *)
 Lemma wp_vget (v : vec A) i (Q : A -> heap -> Prop) h :
   (forall xs x, h (vloc v) = Some (existT _ A xs) -> nth_error xs i = Some x -> Q x h) ->
   wp (vget (E := vecE) v i) Q h.
 Proof. intros HQ. apply wp_trigger with (e := VGet v i); [reflexivity |]. intros x h' [-> (xs & Hv & Hi)]. eauto. Qed.
 
+(** The cell, known to have [i] in bounds, gets [x] at [i]. *)
 Lemma wp_vset (v : vec A) i (x : A) (Q : unit -> heap -> Prop) h :
   (forall xs, h (vloc v) = Some (existT _ A xs) -> i < length xs ->
      Q tt (upd h (vloc v) (existT _ A (lset xs i x)))) ->
   wp (vset (E := vecE) v i x) Q h.
 Proof. intros HQ. apply wp_trigger with (e := VSet v i x); [reflexivity |]. intros [] h' (xs & Hv & Hi & ->). auto. Qed.
 
+(** The answer is the cell's length, and the heap is unchanged. *)
 Lemma wp_vlen (v : vec A) (Q : nat -> heap -> Prop) h :
   (forall xs, h (vloc v) = Some (existT _ A xs) -> Q (length xs) h) ->
   wp (vlen (E := vecE) v) Q h.
 Proof. intros HQ. apply wp_trigger with (e := VLen v); [reflexivity |]. intros n h' [-> (xs & Hv & ->)]. auto. Qed.
 
+(** The cell gets [x] at its end. *)
 Lemma wp_vpush (v : vec A) (x : A) (Q : unit -> heap -> Prop) h :
   (forall xs, h (vloc v) = Some (existT _ A xs) ->
      Q tt (upd h (vloc v) (existT _ A (xs ++ [x])))) ->
   wp (vpush (E := vecE) v x) Q h.
 Proof. intros HQ. apply wp_trigger with (e := VPush v x); [reflexivity |]. intros [] h' (xs & Hv & ->). auto. Qed.
 
+(** The cell, known to be at least [n] long, keeps its first [n]. *)
 Lemma wp_vshrink (v : vec A) n (Q : unit -> heap -> Prop) h :
   (forall xs, h (vloc v) = Some (existT _ A xs) -> n <= length xs ->
      Q tt (upd h (vloc v) (existT _ A (firstn n xs)))) ->
   wp (vshrink (E := vecE) v n) Q h.
 Proof. intros HQ. apply wp_trigger with (e := VShrink v n); [reflexivity |]. intros [] h' (xs & Hv & Hn & ->). auto. Qed.
 
+(** Giving up satisfies anything: an aborted run has no result.  This is
+    what lets every fuel loop's [O] case go unproved. *)
 Lemma wp_vabort site (Q : A -> heap -> Prop) h : wp (vabort (E := vecE) site) Q h.
 Proof. apply wp_trigger with (e := VAbort site); [reflexivity | intros _ _ []]. Qed.
 
