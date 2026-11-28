@@ -35,13 +35,13 @@ Local Open Scope pstring_scope.
 (* A sum of event families is a real type: a handler over [E +' F] matches on
    which side the event came from, and the answer is not in the type.  The
    index the families are applied at is erased, so the two parameters are the
-   event structs themselves, and the third, the index, is left to its
-   default. *)
+   event structs themselves. *)
 #[export] Instance sum1_mapping (E1 E2 : Type -> Type) (X : Type) : TypeMapping (sum1 E1 E2 X) :=
   {| type_headers := ["crane_itree.h"];
      type_cpp :=
        Crane.Cpp.Apply "Sum1"
-         [Crane.Cpp.TypeArg (Crane.Cpp.SourceType E1); Crane.Cpp.TypeArg (Crane.Cpp.SourceType E2)];
+         [Crane.Cpp.TypeArg (Crane.Cpp.SourceType E1); Crane.Cpp.TypeArg (Crane.Cpp.SourceType E2);
+          Crane.Cpp.TypeArg (Crane.Cpp.SourceType X)];
      type_components := [];
      type_copy := UnknownCopy;
      type_access := ReadOnlyValue ReadByConstReference;
