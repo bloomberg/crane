@@ -615,7 +615,7 @@ and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_oc
         CErrors.anomaly (Pp.str "gen_case_cpp: enum type expected to be a Global_app")
     in
     let scrutinee =
-      Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr)
+      Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ (gen_expr_typed cx (Slot.at ~ret ()) env t)
     in
     let rec gen_enum_branches ~ret = function
       | [] -> []
@@ -690,9 +690,9 @@ and gen_cpp_case_once cx (slot : Slot.slot) (typ : Core.Type.t) t env pv case_oc
     in
     (* The scrutinee is referenced across all branches, so the plan has a
        read of it as one in place, never moved ({!Ownership_ir.Region.Inspected}). *)
-    let scrut_expr = (gen_expr_typed cx (Slot.at ~ret ()) env t).expr in
     let scrut_expr =
-      Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ scrut_expr
+      Match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ
+        (gen_expr_typed cx (Slot.at ~ret ()) env t)
     in
     (* A shared variant is matched by reading: a field taken out of it is a
        count bump, while decomposing it through [v_mut()] would first copy a

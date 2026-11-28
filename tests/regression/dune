@@ -16498,6 +16498,17 @@
   (deps id_any_cast_flat_fn.t.exe)
   (action (run ./id_any_cast_flat_fn.t.exe))))
 
+(subdir id_fn_result_unboxed
+ (rule
+  (targets id_fn_result_unboxed.t.exe)
+  (deps IdFnResultUnboxed.vo id_fn_result_unboxed.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} id_fn_result_unboxed.t.exe id_fn_result_unboxed.t.cpp id_fn_result_unboxed.cpp)))
+ (rule
+  (alias runtest)
+  (deps id_fn_result_unboxed.t.exe)
+  (action (run ./id_fn_result_unboxed.t.exe))))
+
 (subdir composed_fn_default_regroup
  (rule
   (targets composed_fn_default_regroup.t.exe)

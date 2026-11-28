@@ -539,12 +539,22 @@ let record_field_cpp_ty cx env typ fld : Cpp_ir.Lowered.Type.t option =
     [typ], the inductive recovered from the branch patterns.  Neither the
     [switch] of an enum match nor the [v()] of a variant match is applicable to
     a [std::any].  When [typ] itself erases there is nothing to recover to and
-    the scrutinee is returned unchanged. *)
-let recover_erased_scrutinee cx env ~is_magic typ (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  if not is_magic then expr
+    the scrutinee is returned unchanged.
+
+    Where Core records no crossing, the scrutinee as lowered is the evidence:
+    a value lowering typed a box -- what a callable recovered from one hands
+    back, [id f x] with [id] declared at [crane::obj] -- is opened too. *)
+let recover_erased_scrutinee cx env ~is_magic typ (scrut : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Expr.t =
+  let expr = scrut.expr in
+  let lowered_boxed =
+    match scrut.ty with Typed t -> Erasure.classify_erasure cx (Some t) = `Boxed | _ -> false
+  in
+  if not (is_magic || lowered_boxed) then expr
   else
     let cpp_ty = Types.cpp_of_core cx env typ in
-    if Cpp_ir.Types.prints_as_any cpp_ty then expr else Coerce.unbox cpp_ty expr
+    if Cpp_ir.Types.prints_as_any cpp_ty then expr
+    else if is_magic then Coerce.unbox cpp_ty expr
+    else Coerce.coerce cx ~from:Any ~into:cpp_ty expr
 
 (** Build the qualified constructor struct type for a pattern match branch.
 

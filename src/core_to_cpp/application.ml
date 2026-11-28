@@ -2463,7 +2463,11 @@ let gen_application cx (slot : Slot.slot) env (f : Core.Expr.t) (args : Core.Exp
      at [crane::obj] -- hand back anything else, however this call
      instantiates it. *)
   let declared_result_is_boxed =
-    match f with Core.Expr.Global {callee = r; _} -> Erasure.glob_declared_cod_erases cx r | _ -> false
+    match f with
+    | Core.Expr.Global {callee = r; _} ->
+      let applied = List.length (List.filter (fun a -> not (Base.Core_util.is_erased_value (strip_magic a))) args) in
+      Erasure.glob_declared_cod_erases ~applied cx r
+    | _ -> false
   in
   let recovered =
     if

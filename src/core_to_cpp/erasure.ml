@@ -210,12 +210,20 @@ let core_erases_to_box cx env t = Types.resolves_to_any_type cx (Types.cpp_of_co
     type variables in scope, and that conversion erases a result no parameter
     pins down -- a type index, say -- however concrete the type is at a given
     call site.  So the question can only be asked of the whole type: the
-    codomain alone converts to the type variable and reveals nothing. *)
-let glob_declared_cod_erases cx r =
+    codomain alone converts to the type variable and reveals nothing.
+
+    Given the number of runtime arguments a call [applied], whether that
+    call hands back the declaration's box: one applying more arguments than
+    the declaration takes applies the box to the rest, and what comes back
+    is what the erased callable returns, recovered there
+    ({!Application.eta_fun}'s excess arguments). *)
+let glob_declared_cod_erases ?applied cx r =
   match callee_core_type cx r with
   | Some ty -> (
     match Types.cpp_ir_of_core_type cx (empty_env ()) [] (type_simpl ty) with
-    | Function (_, cod) -> Cpp_ir.Types.prints_as_any cod
+    | Function (dom, cod) ->
+      Cpp_ir.Types.prints_as_any cod
+      && (match applied with Some n -> n <= List.length dom | None -> true)
     | _ -> false )
   | None -> false
 
