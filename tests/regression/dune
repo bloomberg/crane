@@ -480,6 +480,17 @@
   (deps add_one.t.exe)
   (action (run ./add_one.t.exe))))
 
+(subdir demoted_dictionary_operation
+ (rule
+  (targets demoted_dictionary_operation.t.exe)
+  (deps DemotedDictionaryOperation.vo demoted_dictionary_operation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} demoted_dictionary_operation.t.exe demoted_dictionary_operation.t.cpp demoted_dictionary_operation.cpp)))
+ (rule
+  (alias runtest)
+  (deps demoted_dictionary_operation.t.exe)
+  (action (run ./demoted_dictionary_operation.t.exe))))
+
 (subdir boxed_fields
  (rule
   (targets boxed_fields.t.exe)

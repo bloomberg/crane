@@ -144,8 +144,27 @@ let classify ~lex id written =
   (* An erased instance leaves the call but not the declaration: its
      parameter is still one of the callee's, so a position counted in the
      declaration's parameter list steps over it. *)
-  let instances, regular = List.partition (fun (_, a) -> is_typeclass_instance_arg ~lex a) args in
-  let erased, kept = List.partition (fun (_, a) -> instance_arg_is_erased ~lex a) instances in
+  let erased, kept, regular =
+    if Base.Table.is_mapped_operation id then
+      (* An operation's text names no dictionary, so a call passes none, as
+         a value or as a type.  Which arguments are dictionaries is the
+         operation's own binders' say ([call_binders], one per argument the
+         call writes), not the arguments' classes: a class this unit demotes
+         to a struct still binds an instance there, and passing it would
+         shift every argument the text names. *)
+      let op = Base.Mapping_operation.find id in
+      let is_instance i =
+        match List.nth_opt op.call_binders i with
+        | Some k -> not (List.exists (fun (a : Base.Mapping_operation.argument) -> a.binder = k) op.arguments)
+        | None -> false
+      in
+      let instances, regular = List.partition (fun (i, _) -> is_instance i) args in
+      (instances, [], regular)
+    else
+      let instances, regular = List.partition (fun (_, a) -> is_typeclass_instance_arg ~lex a) args in
+      let erased, kept = List.partition (fun (_, a) -> instance_arg_is_erased ~lex a) instances in
+      (erased, kept, regular)
+  in
   (* The erased arguments left among the regular ones are the ones the
      declaration takes a value at (see [value_args] above); they are
      generated as empty boxes rather than as the [Abort] an [Core.Expr.Erased_value] is

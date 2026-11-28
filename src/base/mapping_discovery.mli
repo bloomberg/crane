@@ -94,15 +94,6 @@ type operation_binders = {
     the [Crane Extraction Implicit] arguments of a global. *)
 val implicit_positions : (Names.GlobRef.t -> Int.Set.t) ref
 
-(** Whether a class is one Crane skips ([Crane Extract Skip], a mapping to
-    the empty string), set by [Table]: its instances are passed at no
-    template parameter. *)
-val skipped_class : (Names.GlobRef.t -> bool) ref
-
-(** Whether an instance binder of type [t] is a dictionary a call passes as
-    a template argument: its class is not one Crane skips. *)
-val is_kept_instance : Environ.env -> Evd.evar_map -> EConstr.types -> bool
-
 (** The binders of the type of the operation [g], classified as Crane's
     erasure classifies them. *)
 val operation_binders : Environ.env -> Evd.evar_map -> Names.GlobRef.t -> operation_binders

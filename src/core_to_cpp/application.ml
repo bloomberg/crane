@@ -1189,10 +1189,20 @@ let eta_fun cx (slot : Slot.slot) env f args :
            parameter whose type erases, [e : a T] at an erased family, prints
            as [std::any] and is a parameter all the same: dropping it made a
            call one short look saturated. *)
+        (* An operation mapping's call passes no dictionary, whatever this
+           unit made of the class: its instance parameters are the ones at a
+           Rocq class ({!Core_plan.Elaborate.classify}). *)
+        let rec rocq_class_param : Cpp_ir.Lowered.Type.t -> bool = function
+          | Entity_application (r, _, _) -> Typeclasses.is_class r
+          | Const t | Reference ((Lvalue | Forwarding), t) | Shared_pointer t -> rocq_class_param t
+          | _ -> false
+        in
+        let mapped_operation = Base.Table.is_mapped_operation id in
         let dom =
           List.filter
             (fun t ->
               (not (Base.Type_util.is_typeclass_type_cpp t))
+              && (not (mapped_operation && rocq_class_param t))
               && (not (is_cpp_dummy_type t))
               && not (is_skipped_cpp_type t) )
             dom

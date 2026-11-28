@@ -242,16 +242,10 @@ let compile g =
     List.map (fun ((b : Mapping_discovery.operation_binder), _, _) -> (true, b.binder_type)) runtime
     @ [(false, binders.result_type)]
   in
-  (* A call's type arguments are its kept dictionaries' first, then the
-     type parameters ({!Core_to_cpp.Calls.call_type_args}). *)
-  let dictionaries =
-    List.length
-      (List.filter
-         (fun (b : Mapping_discovery.operation_binder) ->
-           b.role = Instance && Mapping_discovery.is_kept_instance binders.binders_env sigma b.binder_type)
-         binders.binders)
-  in
-  let stored c = dictionaries + stored_parameter ~fail sigma binders candidates c in
+  (* A call's type arguments are the type parameters alone: an operation's
+     text names no dictionary, so a call passes none, as a value or as a
+     type ({!Core_plan.Elaborate.classify}). *)
+  let stored c = stored_parameter ~fail sigma binders candidates c in
   (* The position of the type parameter named [x] among a call's type
      arguments. *)
   let type_parameter x =
@@ -263,7 +257,7 @@ let compile g =
           | _ -> None)
         binders.binders
     with
-    | Some m -> dictionaries + m
+    | Some m -> m
     | None ->
       fail
         (Pp.strbrk
@@ -291,7 +285,7 @@ let compile g =
           ( match component k with
           | Some c ->
             Buffer.add_string b
-              (Printf.sprintf "%%t%d" (dictionaries + stored_parameter ~fail sigma binders [(whole, t)] c))
+              (Printf.sprintf "%%t%d" (stored_parameter ~fail sigma binders [(whole, t)] c))
           | None ->
             fail
               (Pp.strbrk
