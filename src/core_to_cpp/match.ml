@@ -1145,12 +1145,10 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
      a [bool]. *)
   let scrut_typed = gen_expr_typed cx (Slot.at ~ret:(Some typ_ir) ?expected_ty:scrut_expected ()) env t in
   let t = scrut_typed.expr in
-  (* What lowering typed a box -- a callable recovered from one hands one
+  (* What is evidently a box -- a callable recovered from one hands one
      back -- is opened at the matched type, where Core records no crossing
      ({!Match_types.recover_erased_scrutinee}). *)
-  let lowered_boxed =
-    match scrut_typed.ty with Typed ty -> Erasure.classify_erasure cx (Some ty) = `Boxed | _ -> false
-  in
+  let lowered_boxed = Erasure.hands_back_a_box scrut_typed in
   let pair_g_opt = cs.Match_types.pair in
   (* Insert [any_cast] on the scrutinee when the runtime value is [std::any]
      but the template needs a typed expression.

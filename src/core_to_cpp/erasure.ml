@@ -205,6 +205,12 @@ let boxed_shape_of : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
     behind a [using] alias that {!Types.resolves_to_any_type} follows. *)
 let core_erases_to_box cx env t = Types.resolves_to_any_type cx (Types.cpp_of_core cx env t)
 
+(** [hands_back_a_box x] -- the lowered value [x] is evidently a box: a
+    call through the erased convention, or of a method declared to return
+    one ({!Cpp_passes.Erasure.returns_a_box}).  A variable lowering types a
+    box may be held under a concrete C++ type, and is not evidence. *)
+let hands_back_a_box (x : Cpp_ir.Typed.t) = Cpp_passes.Erasure.returns_a_box (Cpp_ir.Typed.head x.expr)
+
 (** [glob_declared_cod_erases r] -- whether the declaration of [r] returns a
     box.  A declaration is converted from the global's own Core type with no
     type variables in scope, and that conversion erases a result no parameter

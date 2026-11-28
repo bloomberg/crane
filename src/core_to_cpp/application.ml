@@ -1148,7 +1148,7 @@ let eta_fun cx (slot : Slot.slot) env f args :
                callable whose C++ type only template deduction knows, and it
                may hand back a box.  The position says what the value is; the
                tolerant cast passes through one that was never boxed. *)
-            (* An argument lowering typed a box -- what a callable recovered
+            (* An argument evidently a box -- what a callable recovered
                from one hands back -- is opened at the parameter the
                codomain takes it at, where that states a type. *)
             let excess =
@@ -1159,9 +1159,8 @@ let eta_fun cx (slot : Slot.slot) env f args :
               in
               List.mapi
                 (fun i (x : Cpp_ir.Typed.t) ->
-                  match (x.ty, List.nth_opt doms i) with
-                  | Typed t, Some d
-                    when Erasure.classify_erasure cx (Some t) = `Boxed && Coerce.states_unboxed_target d ->
+                  match List.nth_opt doms i with
+                  | Some d when Erasure.hands_back_a_box x && Coerce.states_unboxed_target d ->
                     Coerce.coerce cx ~from:Any ~into:d x.expr
                   | _ -> x.expr )
                 excess_typed
@@ -2173,10 +2172,10 @@ let eta_fun cx (slot : Slot.slot) env f args :
               (Slot.at ~ret ?expected_ty ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} ())
               env x
           in
-          (* A value lowering typed a box -- what a callable recovered from
+          (* A value evidently a box -- what a callable recovered from
              one hands back -- is opened at the parameter's type. *)
-          ( match (value.ty, dom) with
-          | Typed t, Some d when Erasure.classify_erasure cx (Some t) = `Boxed && Coerce.states_unboxed_target d ->
+          ( match dom with
+          | Some d when Erasure.hands_back_a_box value && Coerce.states_unboxed_target d ->
             Cpp_ir.Typed.typed d (Coerce.coerce cx ~from:Any ~into:d value.expr)
           | _ -> value )
       in

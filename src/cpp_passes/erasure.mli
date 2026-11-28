@@ -71,6 +71,11 @@ val converting_ctor : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t list -> Cpp
     the [Abort] a genuinely unreachable erased position gets. *)
 val empty_box : Cpp_ir.Lowered.Expr.t
 
+(** [returns_a_box e] -- [e] is a call whose result is declared
+    [std::any]: of a method the registry says returns one, or through the
+    erased convention. *)
+val returns_a_box : Cpp_ir.Lowered.Expr.t -> bool
+
 (** [unbox ty e] reads [e] back out of its box at type [ty].
 
     Two readings are no reading at all, and neither is built.  [any_cast] to

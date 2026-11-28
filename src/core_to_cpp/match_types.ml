@@ -542,13 +542,12 @@ let record_field_cpp_ty cx env typ fld : Cpp_ir.Lowered.Type.t option =
     the scrutinee is returned unchanged.
 
     Where Core records no crossing, the scrutinee as lowered is the evidence:
-    a value lowering typed a box -- what a callable recovered from one hands
-    back, [id f x] with [id] declared at [crane::obj] -- is opened too. *)
+    a box -- what a callable recovered from one hands back, [id f x] with
+    [id] declared at [crane::obj] ({!Erasure.hands_back_a_box}) -- is opened
+    too. *)
 let recover_erased_scrutinee cx env ~is_magic typ (scrut : Cpp_ir.Typed.t) : Cpp_ir.Lowered.Expr.t =
   let expr = scrut.expr in
-  let lowered_boxed =
-    match scrut.ty with Typed t -> Erasure.classify_erasure cx (Some t) = `Boxed | _ -> false
-  in
+  let lowered_boxed = Erasure.hands_back_a_box scrut in
   if not (is_magic || lowered_boxed) then expr
   else
     let cpp_ty = Types.cpp_of_core cx env typ in
