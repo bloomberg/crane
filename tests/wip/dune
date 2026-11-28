@@ -150,3 +150,69 @@
   (alias runtest)
   (deps itree_two_self_calls.t.exe)
   (action (run ./itree_two_self_calls.t.exe))))
+
+(subdir twice_curried_slot_flat_args
+ (rule
+  (targets twice_curried_slot_flat_args.t.exe)
+  (deps TwiceCurriedSlotFlatArgs.vo twice_curried_slot_flat_args.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} twice_curried_slot_flat_args.t.exe twice_curried_slot_flat_args.t.cpp twice_curried_slot_flat_args.cpp)))
+ (rule
+  (alias runtest)
+  (deps twice_curried_slot_flat_args.t.exe)
+  (action (run ./twice_curried_slot_flat_args.t.exe))))
+
+(subdir id_poly_helper_elements_erased
+ (rule
+  (targets id_poly_helper_elements_erased.t.exe)
+  (deps IdPolyHelperElementsErased.vo id_poly_helper_elements_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} id_poly_helper_elements_erased.t.exe id_poly_helper_elements_erased.t.cpp id_poly_helper_elements_erased.cpp)))
+ (rule
+  (alias runtest)
+  (deps id_poly_helper_elements_erased.t.exe)
+  (action (run ./id_poly_helper_elements_erased.t.exe))))
+
+(subdir id_mapped_option_shape
+ (rule
+  (targets id_mapped_option_shape.t.exe)
+  (deps IdMappedOptionShape.vo id_mapped_option_shape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} id_mapped_option_shape.t.exe id_mapped_option_shape.t.cpp id_mapped_option_shape.cpp)))
+ (rule
+  (alias runtest)
+  (deps id_mapped_option_shape.t.exe)
+  (action (run ./id_mapped_option_shape.t.exe))))
+
+(subdir id_method_value_unerased
+ (rule
+  (targets id_method_value_unerased.t.exe)
+  (deps IdMethodValueUnerased.vo id_method_value_unerased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} id_method_value_unerased.t.exe id_method_value_unerased.t.cpp id_method_value_unerased.cpp)))
+ (rule
+  (alias runtest)
+  (deps id_method_value_unerased.t.exe)
+  (action (run ./id_method_value_unerased.t.exe))))
+
+(subdir id_branch_box_unrecovered
+ (rule
+  (targets id_branch_box_unrecovered.t.exe)
+  (deps IdBranchBoxUnrecovered.vo id_branch_box_unrecovered.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} id_branch_box_unrecovered.t.exe id_branch_box_unrecovered.t.cpp id_branch_box_unrecovered.cpp)))
+ (rule
+  (alias runtest)
+  (deps id_branch_box_unrecovered.t.exe)
+  (action (run ./id_branch_box_unrecovered.t.exe))))
+
+(subdir id_box_shape_in_body
+ (rule
+  (targets id_box_shape_in_body.t.exe)
+  (deps IdBoxShapeInBody.vo id_box_shape_in_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} id_box_shape_in_body.t.exe id_box_shape_in_body.t.cpp id_box_shape_in_body.cpp)))
+ (rule
+  (alias runtest)
+  (deps id_box_shape_in_body.t.exe)
+  (action (run ./id_box_shape_in_body.t.exe))))
