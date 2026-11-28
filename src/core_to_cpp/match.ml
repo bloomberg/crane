@@ -1552,15 +1552,23 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
     This produces more readable C++ and avoids interfering with compiler
     optimisations (e.g. copy elision / RVO through a lambda boundary). *)
 
+(** The record [t] of type [typ] a projection reads, lowered: opened at
+    [typ] where lowering typed it a box, as a scrutinee is
+    ({!Match_types.recover_erased_scrutinee}).  An instance is a type, not a
+    value, and is left alone. *)
+let inspected_record cx ~ret env ~is_typeclass ~typ t =
+  let x = gen_expr_typed cx (Slot.at ~ret ()) env t in
+  if is_typeclass then x.expr else Match_types.recover_erased_scrutinee cx env ~is_magic:false typ x
+
 (** The record [t] a match takes apart into its fields, read once however many
    fields are bound out of it: a call standing in its place is evaluated into
    a temporary first, rather than once per field -- which a recursive call
    taken apart into three fields made three calls per level.  The temporary
    is read for nothing else, so each field is moved out of it.  Returns what
    the fields are read out of, and the statements evaluating it. *)
-let record_read_once cx (slot : Slot.slot) env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Stmt.t list =
+let record_read_once cx (slot : Slot.slot) env ~is_typeclass ~typ t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Stmt.t list =
   let ret = slot.Slot.ret in
-  let scrut = (gen_expr_typed cx (Slot.at ~ret ()) env t).expr in
+  let scrut = inspected_record cx ~ret env ~is_typeclass ~typ t in
   if is_typeclass || Match_types.is_trivial_scrut scrut then (scrut, [])
   else
     let n = cx.ctx.threaded.cs_counter in
@@ -1681,7 +1689,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
     in
     ( match fld with
     | Some fld ->
-      let access = make_field_access ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr) fld in
+      let access = make_field_access (inspected_record cx ~ret env ~is_typeclass ~typ t) fld in
       let access = wrap_record_field_to_api field access in
       if is_typeclass then
         (* For typeclasses, non-function value fields (like m_id : carrier)
@@ -1915,7 +1923,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
             value_args
         in
         let callee =
-          if not member_template then make_field_access ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr) fld
+          if not member_template then make_field_access (inspected_record cx ~ret env ~is_typeclass ~typ t) fld
           else
             (* The instance's method is a member template (its own [forall A]
                survives), and its type parameters are not always deducible --
@@ -1932,7 +1940,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
               | Some ft -> Base.Core_util.type_maxvar ft
               | None -> 0
             in
-            if nmax <= ipv then make_field_access ((gen_expr_typed cx (Slot.at ~ret ()) env t).expr) fld
+            if nmax <= ipv then make_field_access (inspected_record cx ~ret env ~is_typeclass ~typ t) fld
             else
               let tvars = get_current_type_vars cx in
               let targs =
@@ -1999,7 +2007,7 @@ let gen_record_projection cx (slot : Slot.slot) env (core_e : Core.Expr.t) ~typ 
     (* renamed_ids is in reversed order (from List.rev_map above). Reverse it
        back so it aligns with ids (constructor / field order). *)
     let renamed_ids_fwd = List.rev renamed_ids in
-    let base, cache = record_read_once cx (Slot.at ~ret ()) env ~is_typeclass t in
+    let base, cache = record_read_once cx (Slot.at ~ret ()) env ~is_typeclass ~typ t in
     let taken = record_taken cx ~is_typeclass t base in
     let asgns =
       List.map
@@ -2107,7 +2115,7 @@ let gen_record_match_stmts cx (slot : Slot.slot) env (k : Destination.t) (ast : 
     in
     let renamed_ids_fwd = List.rev renamed_ids in
     let tvars = get_current_type_vars cx in
-    let base, cache = record_read_once cx (Slot.at ~ret ()) env ~is_typeclass t in
+    let base, cache = record_read_once cx (Slot.at ~ret ()) env ~is_typeclass ~typ t in
     let taken = record_taken cx ~is_typeclass t base in
     let asgns =
       List.map

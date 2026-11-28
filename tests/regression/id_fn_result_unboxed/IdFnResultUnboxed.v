@@ -7,18 +7,22 @@
     time.  And a match on [id f x] opened no box at all: [_sv.v()] on a
     [crane::obj] ("no member named 'v'", also seen as a Crane Bake failure),
     nor did a match through a mapping's case template ([std::pair]):
-    [bad_any_cast] on the boxed [pair<obj, obj>].
+    [bad_any_cast] on the boxed [pair<obj, obj>], nor did a record
+    projection: [.px] on a [crane::obj].
 
     Fixed: a call applying more arguments than its declaration takes does not
     hand back the declaration's box ([Erasure.glob_declared_cod_erases]), and
     a scrutinee lowering typed a box is opened at the matched type
-    ([Match_types.recover_erased_scrutinee], [Match.gen_custom_cpp_case]). *)
+    ([Match_types.recover_erased_scrutinee], [Match.gen_custom_cpp_case],
+    [Match.inspected_record]). *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatInt Mapping.Std.
 From Stdlib Require Import List.
 Import ListNotations.
 
 Module IdFnResultUnboxed.
+
+Record pt : Type := mkpt { px : nat; py : bool }.
 
 CoInductive stream : Type := SCons : nat -> stream -> stream.
 CoFixpoint sconst (n : nat) : stream := SCons n (sconst n).
@@ -41,6 +45,8 @@ Definition stream_head : nat :=
 Definition pair_sum : nat := match (id (fun k : nat => (k, 2))) 5 with (a, b) => a + b end.
 Definition pair_list_sum : nat :=
   match (id (fun k : nat => [(k, 3)])) 5 with (a, b) :: _ => a + b | [] => 0 end.
+
+Definition record_field : nat := px ((id (fun k : nat => mkpt k true)) 6).
 
 End IdFnResultUnboxed.
 
