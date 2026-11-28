@@ -12,5 +12,7 @@ int main() {
   assert(M::matched_nil == 7);
   assert(M::matched_head == 5);
   assert(M::stream_head == 9);
+  assert(M::pair_sum == 7);
+  assert(M::pair_list_sum == 8);
   return 0;
 }

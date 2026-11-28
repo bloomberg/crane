@@ -1143,7 +1143,14 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
      match's own type here keeps {!Coerce.position_cpp_ty}'s fallback from recovering a
      boxed scrutinee at the return type -- [any_cast<step_result>] on what is
      a [bool]. *)
-  let t = (gen_expr_typed cx (Slot.at ~ret:(Some typ_ir) ?expected_ty:scrut_expected ()) env t).expr in
+  let scrut_typed = gen_expr_typed cx (Slot.at ~ret:(Some typ_ir) ?expected_ty:scrut_expected ()) env t in
+  let t = scrut_typed.expr in
+  (* What lowering typed a box -- a callable recovered from one hands one
+     back -- is opened at the matched type, where Core records no crossing
+     ({!Match_types.recover_erased_scrutinee}). *)
+  let lowered_boxed =
+    match scrut_typed.ty with Typed ty -> Erasure.classify_erasure cx (Some ty) = `Boxed | _ -> false
+  in
   let pair_g_opt = cs.Match_types.pair in
   (* Insert [any_cast] on the scrutinee when the runtime value is [std::any]
      but the template needs a typed expression.
@@ -1189,6 +1196,8 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
         | _ -> concrete_match_type
       in
       (Coerce.unbox cast_ty t, false, Some cast_ty)
+    else if lowered_boxed && not (Cpp_ir.Types.prints_as_any typ_ir) then
+      (Coerce.coerce cx ~from:Any ~into:typ_ir t, false, None)
     else
       (t, false, None)
   in

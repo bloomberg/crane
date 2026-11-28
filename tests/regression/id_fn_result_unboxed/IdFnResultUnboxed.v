@@ -5,14 +5,16 @@
     expects, and then again as the declaration's own boxed result, an
     [any_cast] of a value that was no longer a box: [bad_any_cast] at run
     time.  And a match on [id f x] opened no box at all: [_sv.v()] on a
-    [crane::obj] ("no member named 'v'", also seen as a Crane Bake failure).
+    [crane::obj] ("no member named 'v'", also seen as a Crane Bake failure),
+    nor did a match through a mapping's case template ([std::pair]):
+    [bad_any_cast] on the boxed [pair<obj, obj>].
 
     Fixed: a call applying more arguments than its declaration takes does not
     hand back the declaration's box ([Erasure.glob_declared_cod_erases]), and
     a scrutinee lowering typed a box is opened at the matched type
-    ([Match_types.recover_erased_scrutinee]). *)
+    ([Match_types.recover_erased_scrutinee], [Match.gen_custom_cpp_case]). *)
 From Crane Require Extraction.
-From Crane Require Import Mapping.NatInt.
+From Crane Require Import Mapping.NatInt Mapping.Std.
 From Stdlib Require Import List.
 Import ListNotations.
 
@@ -35,6 +37,10 @@ Definition head_or_7 (n : nat) : nat :=
 Definition matched_head : nat := head_or_7 5.
 Definition stream_head : nat :=
   match (id (fun _ : bool => sconst 9)) true with SCons h _ => h end.
+
+Definition pair_sum : nat := match (id (fun k : nat => (k, 2))) 5 with (a, b) => a + b end.
+Definition pair_list_sum : nat :=
+  match (id (fun k : nat => [(k, 3)])) 5 with (a, b) :: _ => a + b | [] => 0 end.
 
 End IdFnResultUnboxed.
 
