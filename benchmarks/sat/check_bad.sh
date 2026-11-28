@@ -3,7 +3,7 @@
 # and compare each answer with inst_bad/expected.txt.  Each run gets 30 s
 # and 4 GB, since old drivers looped or allocated without bound on some.
 HERE="$(cd "$(dirname "$0")" && pwd)"
-SOLVERS=(${SOLVERS:-solver_cpp solver_cpp_checked solver_direct_ml solver_direct_ml_fl solver_ml solver_ml_fl})
+SOLVERS=(${SOLVERS:-solver_cpp solver_cpp_checked solver_cpp_global solver_cpp_global_checked solver_direct_ml solver_direct_ml_fl solver_ml solver_ml_fl})
 fail=0
 while read -r name want; do
   for s in "${SOLVERS[@]}"; do

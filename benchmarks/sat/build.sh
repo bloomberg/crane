@@ -6,10 +6,14 @@ CRANE="$(cd "$HERE/../.." && pwd)"
 (cd "$CRANE" && dune build benchmarks/sat 2>&1 | grep -v -i "deprecat\|Hint:\|warnings (\|Please upgrade" || true)
 mkdir -p "$HERE/build"
 cd "$HERE/build"
-cp "$HERE"/out/SatBench/solver.{h,cpp} "$HERE"/{sat_vec.h,solver_main.cpp,solver_checked.cpp} .
+cp "$HERE"/out/SatBench/solver{,_global}.{h,cpp} "$HERE"/{sat_vec.h,solver_main.cpp,solver_global_main.cpp,solver_checked.cpp} .
 CRANE_CPP_OPTIMIZATION="${OPT:-O2}" "$CRANE/scripts/compile-std.sh" "$CRANE" solver_cpp.exe solver.cpp solver_main.cpp
+# The same solver on Global arrays (SolverGlobal.v).
+CRANE_CPP_OPTIMIZATION="${OPT:-O2}" "$CRANE/scripts/compile-std.sh" "$CRANE" solver_cpp_global.exe solver_global.cpp solver_global_main.cpp
 # Not benchmarked: bounds checks plus ASan/UBSan, for testing memory safety.
 CRANE_CPP_OPTIMIZATION=O1 CRANE_CPP_SANITIZE=1 "$CRANE/scripts/compile-std.sh" "$CRANE" solver_cpp_checked.exe solver_checked.cpp
+# Global arrays are unchecked; ASan catches an access past an array's end.
+CRANE_CPP_OPTIMIZATION=O1 CRANE_CPP_SANITIZE=1 "$CRANE/scripts/compile-std.sh" "$CRANE" solver_cpp_global_checked.exe solver_global.cpp solver_global_main.cpp
 cp "$HERE"/out/solver_ml.ml{,i} "$HERE"/out/solver_direct_ml.ml{,i} \
    "$HERE"/{vec_impl.ml,itree_run.ml,direct.ml,solver_main_common.ml,solver_main.ml,solver_direct_main.ml} .
 OCAMLOPT=(ocamlfind ocamlopt -package unix -linkpkg -unsafe -inline 200)

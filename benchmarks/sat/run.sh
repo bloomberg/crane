@@ -5,7 +5,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPS="${REPS:-3}"
-SOLVERS=(solver_cpp solver_direct_ml_fl solver_direct_ml solver_ml_fl solver_ml)
+SOLVERS=(${SOLVERS:-solver_cpp solver_cpp_global solver_direct_ml_fl solver_direct_ml solver_ml_fl solver_ml})
 OUT="$HERE/results.csv"
 echo "instance,solver,result,conflicts,median_s" > "$OUT"
 for f in "$HERE"/inst/*.cnf; do

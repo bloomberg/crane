@@ -8,10 +8,13 @@ rows = list(csv.DictReader(open(sys.argv[1] if len(sys.argv) > 1 else "results.c
 by = defaultdict(dict)
 for r in rows:
     by[r["instance"]][r["solver"]] = r
-solvers = ["solver_cpp", "solver_direct_ml_fl", "solver_direct_ml", "solver_ml_fl", "solver_ml"]
-label = {"solver_cpp": "Crane C++", "solver_direct_ml_fl": "OCaml erased (flambda)",
+all_solvers = ["solver_cpp", "solver_cpp_global", "solver_direct_ml_fl", "solver_direct_ml", "solver_ml_fl", "solver_ml"]
+label = {"solver_cpp": "Crane C++", "solver_cpp_global": "Crane C++ (Global arrays)",
+         "solver_direct_ml_fl": "OCaml erased (flambda)",
          "solver_direct_ml": "OCaml erased", "solver_ml_fl": "OCaml itree (flambda)",
          "solver_ml": "OCaml itree"}
+# Only the builds results.csv has (run.sh's SOLVERS may select some).
+solvers = [s for s in all_solvers if all(s in d for d in by.values())]
 print("| instance | result | conflicts | " + " | ".join(label[s] for s in solvers) + " |")
 print("|---" * (3 + len(solvers)) + "|")
 ratios = defaultdict(list)
@@ -22,7 +25,7 @@ for inst in sorted(by):
     cells = []
     for s in solvers:
         t = float(d[s]["median_s"])
-        cells.append(f"{t:.3f}s" if s == "solver_cpp" else f"{t:.3f}s ({t / base:.0f}×)")
+        cells.append(f"{t:.3f}s" if s == "solver_cpp" else f"{t:.3f}s ({t / base:.{2 if t < 10 * base else 0}f}×)")
         if s != "solver_cpp":
             ratios[s].append(t / base)
     print(f"| {inst} | {d['solver_cpp']['result']} | {d['solver_cpp']['conflicts']} | " + " | ".join(cells) + " |")

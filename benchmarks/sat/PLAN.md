@@ -55,7 +55,9 @@ Decision: write our own solver directly in `itree vecE`.
 | `Solver.v` | the CDCL solver, module `Solver`, entry point `Solver.solve` |
 | `CraneVec.v` | Crane mappings: `vec` → `satbench::vec<T>`, events → method calls, `vabort` → `satbench::abort<T>(site)` |
 | `sat_vec.h` | `satbench::vec<T>`: `shared_ptr<std::vector<T>>`, so vectors are reference-semantics handles; `abort` throws `out_of_fuel`, which the driver reports as UNKNOWN |
-| `SolverCrane.v` | `Set Crane Loopify. Set Crane SharedVariant. Crane Extraction "solver" Solver.` || `OcamlNat.v` | native-int realizers for the `nat` ops used (so OCaml doesn't pay for Peano arithmetic) |
+| `SolverCrane.v` | `Set Crane Loopify. Set Crane SharedVariant. Crane Extraction "solver" Solver.` |
+| `SolverGlobal.v`, `SolverGlobalCrane.v`, `solver_global_main.cpp` | the same solver on `Global` arrays (`theories/Monads/Global.v`) instead of `vecE`, its Crane extraction, and its driver; builds `solver_cpp_global.exe` and the ASan/UBSan `solver_cpp_global_checked.exe`. Not proved; see "Global-array port" |
+| `OcamlNat.v` | native-int realizers for the `nat` ops used (so OCaml doesn't pay for Peano arithmetic) |
 | `SolverOcaml.v` | stock OCaml extraction of `Solver.solve` (real ITree, lazy `Go`/`RetF`/`TauF`/`VisF` nodes) |
 | `vec_impl.ml`, `itree_run.ml` | OCaml growable arrays; the cheapest possible ITree interpreter (force, handle event, continue; no `interp`) |
 | `SolverOcamlDirect.v`, `direct.ml` | control: stock OCaml extraction with the tree erased by hand (`itree E R := R`, `bind m k := k m`, events → direct `Vec_impl` calls) |
@@ -252,6 +254,43 @@ Reading:
    satisfy every `wp` vacuously. Fix: reject such files in both drivers
    (exit with an error, don't print UNKNOWN). This is the first item of
    stage 4.
+
+## Global-array port (2026-11-27)
+
+`SolverGlobal.v` is `Solver.v` with every `vec` replaced by a `Global`
+array (`std::shared_ptr<crane::array_storage<uint64_t>>` in C++, the type
+ST arrays extract to). The search is unchanged: every build gives the same
+answer and conflict count on `inst/` and `inst_bad/`.
+
+- **What Global arrays lack.** They have a fixed size and no length, push
+  or shrink. The port works around each:
+  - lengths live in counter cells (`misc`) or a per-literal `wlen` array;
+  - the trail, the trail limits and the learnt clause hold at most `nvars`
+    (+ 1) literals, so they are allocated at that size up front;
+  - the clause database is one `nat` arena of `[len; lits...]` records in a
+    `Global.ref`, reallocated at twice the size when a clause does not fit;
+    a clause is its offset (unbounded: learning never deletes);
+  - each literal's watch list has a capacity in `wcap` and moves to storage
+    twice as large (+ 4) when full;
+  - the driver passes the byte count, since an array has no length.
+  Fuel-out is `failwith` (a C++ `std::runtime_error`), so `vecE`'s
+  `VAbort` is not needed either.
+- **Crane constraints found on the way.** The value-type family `V` must
+  be a notation (or a section `Let`), not a global definition: as a
+  definition, `V 0` stays opaque, array cells become `crane::obj`, and with
+  a concrete `T` the IR check rejects the binders. A type definition for the
+  effect sum (`Global.Event nat V +' ...`) crashes extraction
+  (`method_registry not initialized`, from `Entities.alias_template_kinds`
+  lowering the erased `RefClass` argument); a notation avoids it.
+- **Timings** (`SOLVERS="solver_cpp solver_cpp_global" REPS=5 ./run.sh`,
+  two runs, Apple M2 Pro with another job running): the Global build is 0.57x to
+  0.93x the `vecE` build's time, geomean 0.7x (uf175_3 1.69 s -> 1.03 s,
+  php8 0.63 s -> 0.54 s). The gain is the flat clause arena (one
+  allocation, no `shared_ptr` copy per clause visit), not the array type.
+- **Why `vecE` stays.** Every theorem (`VecSem.v` to `SolverMain.v`) is
+  about `Solver` over `vecE`'s heap semantics, and the OCaml builds
+  interpret `vecE`. `SolverGlobal` reuses only `Solver.parse` and
+  `Solver.tlen`, which are pure.
 
 ## Tuning ideas
 
