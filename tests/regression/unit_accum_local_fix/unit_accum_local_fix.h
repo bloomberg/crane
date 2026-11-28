@@ -5,7 +5,6 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
-#include <concepts>
 #include <crane_itree.h>
 #include <crane_st.h>
 #include <cstddef>
@@ -19,14 +18,9 @@
 #include <utility>
 #include <variant>
 
-template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
-template <typename I, typename V, typename A>
-concept Code = requires {
-  { I::code() } -> std::convertible_to<uint64_t>;
-};
 
 struct ListDef {
   static List<uint64_t> seq(uint64_t start, uint64_t len);
@@ -250,10 +244,6 @@ struct Err {
 
   // CREATORS
   static Err error(std::string x) { return {std::move(x)}; }
-};
-
-template <typename T1> struct code_const {
-  constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
 struct UnitAccumLocalFix {

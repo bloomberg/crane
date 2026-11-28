@@ -3,7 +3,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <concepts>
 #include <crane_itree.h>
 #include <cstdint>
 #include <memory>
@@ -14,16 +13,11 @@
 #include <utility>
 #include <variant>
 
-template <typename T1> struct code_const;
 template <typename Err> struct ExceptE;
 struct Err;
 struct Point;
 struct Account;
 struct BankAccountCollection;
-template <typename I, typename V, typename A>
-concept Code = requires {
-  { I::code() } -> std::convertible_to<uint64_t>;
-};
 
 struct Z {};
 
@@ -58,10 +52,6 @@ struct Err {
 
   // CREATORS
   static Err error(std::string x) { return {std::move(x)}; }
-};
-
-template <typename T1> struct code_const {
-  constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
 struct Point {

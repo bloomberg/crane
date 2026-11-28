@@ -3,7 +3,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include <atomic>
-#include <concepts>
 #include <crane_itree.h>
 #include <crane_st.h>
 #include <cstddef>
@@ -16,15 +15,10 @@
 #include <utility>
 #include <variant>
 
-template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
 enum class Refs;
-template <typename I, typename V, typename A>
-concept Code = requires {
-  { I::code() } -> std::convertible_to<uint64_t>;
-};
 
 template <typename A> struct List {
   // TYPES
@@ -141,11 +135,6 @@ struct Err {
 };
 
 enum class Refs { BUILD_REFS };
-
-template <typename T1> struct code_const {
-  constexpr static uint64_t code() { return UINT64_C(0); }
-};
-
 uint64_t bump_twice();
 std::pair<uint64_t, uint64_t> bump_each();
 std::pair<List<uint64_t>, List<uint64_t>> fill_each();

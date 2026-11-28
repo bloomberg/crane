@@ -20,7 +20,6 @@
 #include <utility>
 #include <variant>
 
-template <typename T1> struct code_const;
 template <typename A> struct List;
 enum class Comparison;
 struct Positive;
@@ -30,10 +29,6 @@ struct Err;
 template <typename X> struct Compare;
 enum class Refs;
 struct Op;
-template <typename I, typename V, typename A>
-concept Code = requires {
-  { I::code() } -> std::convertible_to<uint64_t>;
-};
 
 struct Datatypes {
   static Comparison CompOpp(Comparison r);
@@ -465,10 +460,6 @@ struct BinInt {
 };
 
 enum class Refs { BUILD_REFS };
-
-template <typename T1> struct code_const {
-  constexpr static uint64_t code() { return UINT64_C(0); }
-};
 
 template <OrderedType X> struct Coq_Raw {
   using MX = OrderedTypeFacts<X>;

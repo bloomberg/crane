@@ -4,7 +4,6 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
-#include <concepts>
 #include <crane_itree.h>
 #include <crane_st.h>
 #include <cstddef>
@@ -17,15 +16,10 @@
 #include <utility>
 #include <variant>
 
-template <typename T1> struct code_const;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
 enum class Refs;
-template <typename I, typename V, typename A>
-concept Code = requires {
-  { I::code() } -> std::convertible_to<uint64_t>;
-};
 
 struct STArrays {
   static uint64_t array_simp_fixed_init();
@@ -188,11 +182,6 @@ struct Err {
 };
 
 enum class Refs { BUILD_REFS };
-
-template <typename T1> struct code_const {
-  constexpr static uint64_t code() { return UINT64_C(0); }
-};
-
 uint64_t array_simp_fixed_init();
 std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>> array_simp_list();
 List<uint64_t> swap_first_and_last_list(const List<uint64_t> &xs);

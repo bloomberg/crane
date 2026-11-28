@@ -2,7 +2,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <concepts>
 #include <crane_itree.h>
 #include <cstdint>
 #include <stdexcept>
@@ -10,14 +9,9 @@
 #include <string_view>
 #include <utility>
 
-template <typename T1> struct code_const;
 template <typename Err> struct ExceptE;
 struct Err;
 enum class Refs;
-template <typename I, typename V, typename A>
-concept Code = requires {
-  { I::code() } -> std::convertible_to<uint64_t>;
-};
 
 template <typename Err> struct ExceptE {
   // DATA
@@ -53,11 +47,6 @@ struct Err {
 };
 
 enum class Refs { BUILD_REFS };
-
-template <typename T1> struct code_const {
-  constexpr static uint64_t code() { return UINT64_C(0); }
-};
-
 /// The loop h allocates a reference from acc that nothing reads.
 uint64_t st_1();
 
