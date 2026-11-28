@@ -327,6 +327,17 @@
   (deps global_state.t.exe)
   (action (run ./global_state.t.exe))))
 
+(subdir global_arrays
+ (rule
+  (targets global_arrays.t.exe)
+  (deps GlobalArrays.vo global_arrays.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} global_arrays.t.exe global_arrays.t.cpp global_arrays.cpp)))
+ (rule
+  (alias runtest)
+  (deps global_arrays.t.exe)
+  (action (run ./global_arrays.t.exe))))
+
 
 (subdir thread
  (rule
