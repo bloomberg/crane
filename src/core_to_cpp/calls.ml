@@ -1052,12 +1052,17 @@ let call_type_args cx ~ret ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t op
   in
   (* The callee's leading phantoms, as its plan has them: it writes [void]
      at them when anything after them is written.  An erased argument there
-     costs the call nothing. *)
+     costs the call nothing.  Nor does one at a defaulted parameter, a
+     phantom behind the deducible ones ([V] of [STHashTable.new_sized]): the
+     plan writes its default there when anything after it is written, and
+     an erased argument there must not cost the call the arguments before
+     it. *)
   let phantom_vars =
     List.filter_map
       (fun p ->
         match (p.Core_plan.Callable_abi.write, p.Core_plan.Callable_abi.origin) with
-        | Core_plan.Callable_abi.Phantom _, Core_plan.Callable_abi.From_scheme v -> Some v
+        | (Core_plan.Callable_abi.Phantom _ | Core_plan.Callable_abi.Defaulted _), Core_plan.Callable_abi.From_scheme v ->
+          Some v
         | _ -> None )
       (Core_plan.Callable_abi.template_head (callee_abi cx ~instances:0 id))
   in

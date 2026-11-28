@@ -360,3 +360,25 @@
   (alias runtest)
   (deps imp_while.t.exe)
   (action (run ./imp_while.t.exe))))
+
+(subdir st_hash_table_test
+ (rule
+  (targets st_hash_table_test.t.exe)
+  (deps STHashTableTest.vo st_hash_table_test.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_hash_table_test.t.exe st_hash_table_test.t.cpp st_hash_table_test.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_hash_table_test.t.exe)
+  (action (run ./st_hash_table_test.t.exe))))
+
+(subdir global_hash_table_test
+ (rule
+  (targets global_hash_table_test.t.exe)
+  (deps GlobalHashTableTest.vo global_hash_table_test.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} global_hash_table_test.t.exe global_hash_table_test.t.cpp global_hash_table_test.cpp)))
+ (rule
+  (alias runtest)
+  (deps global_hash_table_test.t.exe)
+  (action (run ./global_hash_table_test.t.exe))))

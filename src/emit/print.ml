@@ -140,6 +140,18 @@ let rec expr_precedence (e : expr) =
   | Foreign _ | Foreign_text _ -> 0
   | _ -> 16
 
+(* A mapping's text that starts with a prefix operator, [*%arg(r)]: as the
+   object of a member access it needs parentheses, [( *r).f], since [.] binds
+   tighter. *)
+and foreign_prefix_operator (e : expr) =
+  match e with
+  | Mapped_operation (_, e) -> foreign_prefix_operator e
+  | Foreign (_, fr) -> (
+    match fr.pieces with
+    | Text lit :: _ -> String.length lit > 0 && String.contains "*&!-~" lit.[0]
+    | _ -> false )
+  | _ -> false
+
 (* Text that is one primary expression: a (qualified) name or number, or a
    character literal. *)
 and atomic_text s =
@@ -1060,12 +1072,16 @@ and pp_cpp_expr ctx env args (t : expr) =
     | Dereference This -> str "this->" ++ Id.print id
     | Dereference _ | Foreign_text _ ->
       str "(" ++ pp_cpp_expr ctx env args e ++ str ")." ++ Id.print id
+    | e when foreign_prefix_operator e ->
+      str "(" ++ pp_cpp_expr ctx env args e ++ str ")." ++ Id.print id
     | _ -> pp_cpp_expr ctx env args e ++ str "." ++ Id.print id )
   | Project (e, id, _) ->
     let field_name = str (short_name ctx Type id) in
     ( match e with
     | Dereference This -> str "this->" ++ field_name
     | Dereference _ | Foreign_text _ ->
+      str "(" ++ pp_cpp_expr ctx env args e ++ str ")." ++ field_name
+    | e when foreign_prefix_operator e ->
       str "(" ++ pp_cpp_expr ctx env args e ++ str ")." ++ field_name
     | _ -> pp_cpp_expr ctx env args e ++ str "." ++ field_name )
   | Literal (String s) ->

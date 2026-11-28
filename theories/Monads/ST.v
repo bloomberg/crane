@@ -275,6 +275,12 @@ Definition run {V : nat -> Type} {E : Type -> Type} `{exceptE Err -< E} {A : Typ
   (f : forall R : Refs, itree (Event R V +' E) A) : itree E A :=
   ITree.map snd (interp _ (f model_refs) (@empty _ _ _ (hmap V))).
 
+(** [run] for a store whose value types mention the references and arrays
+    themselves, such as a reference to an array: [V] takes the [Refs]. *)
+Definition run_dependent {V : Refs -> nat -> Type} {E : Type -> Type} `{exceptE Err -< E}
+  {A : Type} (f : forall R : Refs, itree (Event R (V R) +' E) A) : itree E A :=
+  ITree.map snd (interp _ (f model_refs) (@empty _ _ _ (hmap (V model_refs)))).
+
 (** * Extraction *)
 
 From Crane Require Import Mapping.Descriptor Mapping.Cpp.
@@ -289,10 +295,13 @@ Axiom cpp_refs : Refs.
 Axiom run_cpp : forall {V : nat -> Type} {A : Type},
   itree (Event cpp_refs V +' exceptE Err) A -> A.
 
-(** The events and the code proofs have no C++: the operations are mapped
-    directly. *)
+(** The events and the codes have no C++: the operations are mapped
+    directly and take no code. *)
 Crane Extract Skip Event.
+Crane Extract Skip Code.
+Crane Extract Skip code.
 Crane Extract Skip code_ok.
+Crane Extract Skip code_const.
 
 (** [run_cpp t] is just [t]: its effects already happened. *)
 #[global] Instance run_cpp_mapping : OperationMapping (Ref (@run_cpp)) := pass_through [] "t" [].
