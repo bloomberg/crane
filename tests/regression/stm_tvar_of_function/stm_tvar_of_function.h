@@ -4,7 +4,6 @@
 #include "shared_block.h"
 #include <cstdint>
 #include <stm_adapter.h>
-#include <utility>
 #include <variant>
 static_assert(crane::rc_is_atomic,
               "this unit runs on several threads, but a header included before "

@@ -69,4 +69,4 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-std::shared_ptr<ITree<Nat>> f(const std::shared_ptr<ITree<Nat>> &x);
+std::shared_ptr<ITree<Nat>> f(std::shared_ptr<ITree<Nat>> x);

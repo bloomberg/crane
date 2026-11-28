@@ -1,6 +1,7 @@
 #include "boxed_element_block_template.h"
 
-/// A Boxed Element container whose constructors are %result blocks.
+/// A container boxing its element (BoxedComponent) whose constructors are
+/// %result blocks.
 ///
 /// A block's text is spliced as statements, and its %elem hole is decided
 /// like a constructor template's: boxed where the element recurses through
@@ -19,7 +20,8 @@ BoxedElementBlockTemplate::total(const BoxedElementBlockTemplate::rose &r) {
             return UINT64_C(0);
           } else {
             const BoxedElementBlockTemplate::rose &k = l.front();
-            auto t = l.tail();
+            crane::list<crane::box<BoxedElementBlockTemplate::rose>> t =
+                l.tail();
             return total(k) + _self_go(_self_go, std::move(t));
           }
         };

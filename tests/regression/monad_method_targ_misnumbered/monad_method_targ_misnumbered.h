@@ -220,15 +220,14 @@ static_assert(Monad<Monad_option>);
 template <Monad _tcI0, typename T2, typename T3>
 typename _tcI0::template m<T3> monad_fold_right(const std::type_identity_t<
     crane::fn<typename _tcI0::template m<T3>(T3, T2)>> &f,
-                                                const List<T2> &l,
-                                                const T3 &b) {
+                                                const List<T2> &l, T3 b) {
   if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-    return _tcI0::template ret<T3>(b);
+    return _tcI0::template ret<T3>(std::move(b));
   } else {
     const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
     const List<T2> &a1_value = *a1;
     return _tcI0::template bind<T3, T3>(
-        monad_fold_right<_tcI0, T2, T3>(f, a1_value, b),
+        monad_fold_right<_tcI0, T2, T3>(f, a1_value, std::move(b)),
         [=, a0 = a0, f = f](const T3 &r) { return f(r, a0); });
   }
 }

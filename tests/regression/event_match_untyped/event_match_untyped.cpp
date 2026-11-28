@@ -5,17 +5,16 @@
 Nat EventMatchUntyped::weight(const std::shared_ptr<ITree<Nat>> &t) {
   auto _cs = t->observe();
   if (std::holds_alternative<typename ITree<Nat>::Ret>(_cs)) {
-    const auto &_itf = *std::get_if<typename ITree<Nat>::Ret>(&_cs);
-    auto r = _itf.value;
+    Nat r = std::get_if<typename ITree<Nat>::Ret>(&_cs)->value;
     return r;
   } else if (std::holds_alternative<typename ITree<Nat>::Tau>(_cs)) {
-    const auto &_itf = *std::get_if<typename ITree<Nat>::Tau>(&_cs);
-    auto _x = _itf.next;
+    std::shared_ptr<ITree<Nat>> _x =
+        std::get_if<typename ITree<Nat>::Tau>(&_cs)->next;
     return Nat::o();
   } else {
-    const auto &_itf = *std::get_if<typename ITree<Nat>::Vis>(&_cs);
-    auto e = crane_event_as<EventMatchUntyped::IOE>(_itf.effect);
-    auto _x = _itf.cont;
+    auto e = crane_event_as<EventMatchUntyped::IOE>(
+        std::get_if<typename ITree<Nat>::Vis>(&_cs)->effect);
+    auto _x = std::get_if<typename ITree<Nat>::Vis>(&_cs)->cont;
     if (std::holds_alternative<typename EventMatchUntyped::IOE::Rd>(e.v_mut())) {
       return Nat::s(Nat::o());
     } else {

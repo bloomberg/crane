@@ -38,7 +38,7 @@ EffectComplexArgs::round_trip(const std::string &prefix,
   std::string key = (prefix + suffix).substr(0, 16777211);
   setenv(key.c_str(), value.c_str(), 1);
   return [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(std::move(key).c_str());
+    auto *v = std::getenv(key.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }
@@ -58,8 +58,8 @@ void EffectComplexArgs::chain_with_concat(const std::string &name) {
   }();
   if (r.has_value()) {
     const std::string &v = *r;
-    setenv(((std::string("COPY_") + name).substr(0, 16777211)).c_str(),
-           v.c_str(), 1);
+    setenv((std::string("COPY_") + name).substr(0, 16777211).c_str(), v.c_str(),
+           1);
     return;
   } else {
     return;

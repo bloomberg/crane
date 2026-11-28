@@ -86,22 +86,22 @@ bool Bool::eqb(bool b1, bool b2) {
 }
 
 bool Ascii0::eqb0(char a, char b) {
-  bool a0 = a & 1;
-  bool a1 = (a >> 1) & 1;
-  bool a2 = (a >> 2) & 1;
-  bool a3 = (a >> 3) & 1;
-  bool a4 = (a >> 4) & 1;
-  bool a5 = (a >> 5) & 1;
-  bool a6 = (a >> 6) & 1;
-  bool a7 = (a >> 7) & 1;
-  bool b0 = b & 1;
-  bool b1 = (b >> 1) & 1;
-  bool b2 = (b >> 2) & 1;
-  bool b3 = (b >> 3) & 1;
-  bool b4 = (b >> 4) & 1;
-  bool b5 = (b >> 5) & 1;
-  bool b6 = (b >> 6) & 1;
-  bool b7 = (b >> 7) & 1;
+  bool a0 = static_cast<bool>((a >> 0) & 1);
+  bool a1 = static_cast<bool>((a >> 1) & 1);
+  bool a2 = static_cast<bool>((a >> 2) & 1);
+  bool a3 = static_cast<bool>((a >> 3) & 1);
+  bool a4 = static_cast<bool>((a >> 4) & 1);
+  bool a5 = static_cast<bool>((a >> 5) & 1);
+  bool a6 = static_cast<bool>((a >> 6) & 1);
+  bool a7 = static_cast<bool>((a >> 7) & 1);
+  bool b0 = static_cast<bool>((b >> 0) & 1);
+  bool b1 = static_cast<bool>((b >> 1) & 1);
+  bool b2 = static_cast<bool>((b >> 2) & 1);
+  bool b3 = static_cast<bool>((b >> 3) & 1);
+  bool b4 = static_cast<bool>((b >> 4) & 1);
+  bool b5 = static_cast<bool>((b >> 5) & 1);
+  bool b6 = static_cast<bool>((b >> 6) & 1);
+  bool b7 = static_cast<bool>((b >> 7) & 1);
   if ((
           (((((Bool::eqb(a0, b0) ? Bool::eqb(a1, b1) : false) ? Bool::eqb(a2,
                                                                           b2)
@@ -135,7 +135,7 @@ bool String0::eqb1(const std::string &s1, const std::string &s2) {
       char c2 = s2[0];
       std::string s2_ = s2.substr(1);
       if (Ascii0::eqb0(c1, c2)) {
-        return String0::eqb1(s1_, s2_);
+        return String0::eqb1(std::move(s1_), std::move(s2_));
       } else {
         return false;
       }

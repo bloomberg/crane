@@ -129,13 +129,13 @@ public:
 struct STMDefs {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, T1 &&>
-  static void modify_tvar(stm::TVar<T1> a, F1 &&f);
+  static void modify_tvar(const stm::TVar<T1> &a, F1 &&f);
 };
 
 struct stmtest {
   template <typename T1, typename F1>
-  static T1 readOrRetry(stm::TVar<T1> tv, F1 &&ok) {
-    T1 x = stm::readTVar(std::move(tv));
+  static T1 readOrRetry(const stm::TVar<T1> &tv, F1 &&ok) {
+    T1 x = stm::readTVar(tv);
     if (ok(x)) {
       return x;
     } else {
@@ -149,9 +149,10 @@ struct stmtest {
   static uint64_t io_inc(uint64_t x);
   static uint64_t stm_add_self(uint64_t x);
   static uint64_t io_add_self(uint64_t x);
-  static void stm_enqueue(stm::TVar<List<uint64_t>> q, uint64_t x);
-  static uint64_t stm_dequeue(stm::TVar<List<uint64_t>> q);
-  static uint64_t stm_tryDequeue(stm::TVar<List<uint64_t>> q, uint64_t dflt);
+  static void stm_enqueue(const stm::TVar<List<uint64_t>> &q, uint64_t x);
+  static uint64_t stm_dequeue(const stm::TVar<List<uint64_t>> &q);
+  static uint64_t stm_tryDequeue(const stm::TVar<List<uint64_t>> &q,
+                                 uint64_t dflt);
   static uint64_t stm_queue_roundtrip(uint64_t x);
   static uint64_t io_queue_roundtrip(uint64_t x);
   static uint64_t stm_orElse_retry_example();
@@ -160,7 +161,7 @@ struct stmtest {
 
 template <typename T1, typename F1>
   requires std::is_invocable_r_v<T1, F1 &, T1 &&>
-void STMDefs::modify_tvar(stm::TVar<T1> a, F1 &&f) {
+void STMDefs::modify_tvar(const stm::TVar<T1> &a, F1 &&f) {
   T1 val = stm::readTVar(a);
-  stm::writeTVar(std::move(a), f(std::move(val)));
+  stm::writeTVar(a, f(std::move(val)));
 }

@@ -90,20 +90,21 @@ struct FailE {
 
 using st = Nat;
 template <typename CraneTcArg>
-using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
+using crane_carrier_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 struct M {
   template <typename T1, typename T2>
-  static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> base(AE) {
+  static Monads::template stateT<st, crane_carrier_tc_609e8855cd7ad294, T2>
+  base(AE) {
     return [](const Nat &s) {
       return itree_ret(std::make_pair(s, crane_convert<T2>(s)));
     };
   }
 
   template <typename T1, typename T2>
-  static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> run(
-      std::type_identity_t<crane::fn<Monads::template stateT<
-          st, itree_tc_609e8855cd7ad294, crane::obj>(AE)>> h,
+  static Monads::template stateT<st, crane_carrier_tc_609e8855cd7ad294, T2>
+  run(std::type_identity_t<crane::fn<Monads::template stateT<
+      st, crane_carrier_tc_609e8855cd7ad294, crane::obj>(AE)>> h,
       AE e) {
     return [=, h = std::move(h)](const Nat &s) {
       return crane::apply2(h, e, s);
@@ -111,7 +112,7 @@ struct M {
   }
 
   template <typename T1, typename T2>
-  static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2>
+  static Monads::template stateT<st, crane_carrier_tc_609e8855cd7ad294, T2>
   fused(AE e) {
     return run<T1, T2>(
         [](const AE &a0) -> decltype(auto) {

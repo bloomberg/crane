@@ -95,5 +95,5 @@ public:
 struct LoopifyUnitVoidRepro {
   static constexpr uint64_t cell_size = UINT64_C(42);
   static void loop(uint64_t x, uint64_t y, const List<bool> &cells);
-  static int run();
+  static int32_t run();
 };

@@ -95,7 +95,7 @@ std::string String0::append(const std::string &s1, std::string s2) {
   } else {
     char c = s1[0];
     std::string s1_ = s1.substr(1);
-    return std::string(1, c) + String0::append(s1_, std::move(s2));
+    return std::string(1, c) + String0::append(std::move(s1_), std::move(s2));
   }
 }
 

@@ -189,7 +189,7 @@ struct BakedConstantsDefault {
       return f;
     } else {
       const T1 &a = v.front();
-      auto v0 = v.drop(1);
+      crane::shared_array<T1> v0 = v.drop(1);
       return f0(a, v0, vec_rect<T1, T2>(std::move(f), f0, v0));
     }
   }

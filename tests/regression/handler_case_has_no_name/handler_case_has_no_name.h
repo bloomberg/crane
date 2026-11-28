@@ -189,7 +189,7 @@ struct Interp {
 
 enum class AE { A0 };
 enum class BE { B0 };
-template <typename x = void> using Eff = Sum1<AE, BE, x>;
+template <typename x> using Eff = Sum1<AE, BE, x>;
 std::shared_ptr<ITree<crane::obj>> e_trigger(AE e);
 std::shared_ptr<ITree<crane::obj>> b_trigger(BE e);
 std::shared_ptr<ITree<crane::obj>> h(Sum1<AE, BE, crane::obj> x);
@@ -219,19 +219,17 @@ Interp::interp(const std::type_identity_t<
           Sum<std::shared_ptr<ITree<T3>>, T3>> {
         auto _cs = t->observe();
         if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {
-          const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);
-          auto r = _itf.value;
+          T3 r = std::get_if<typename ITree<T3>::Ret>(&_cs)->value;
           return _tcI1::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
               Sum<std::shared_ptr<ITree<T3>>, T3>::inr(std::move(r)));
         } else if (std::holds_alternative<typename ITree<T3>::Tau>(_cs)) {
-          const auto &_itf = *std::get_if<typename ITree<T3>::Tau>(&_cs);
-          auto t0 = _itf.next;
+          auto t0 = std::get_if<typename ITree<T3>::Tau>(&_cs)->next;
           return _tcI1::template ret<Sum<std::shared_ptr<ITree<T3>>, T3>>(
               Sum<std::shared_ptr<ITree<T3>>, T3>::inl(std::move(t0)));
         } else {
-          const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
-          auto e = crane_event_as<T1>(_itf.effect);
-          auto k = _itf.cont;
+          auto e = crane_event_as<T1>(
+              std::get_if<typename ITree<T3>::Vis>(&_cs)->effect);
+          auto k = std::get_if<typename ITree<T3>::Vis>(&_cs)->cont;
           return _tcI2::template fmap<crane::obj,
                                       Sum<std::shared_ptr<ITree<T3>>, T3>>(
               [=, k = std::move(k)](const auto &x) {

@@ -184,4 +184,4 @@ struct Monad_Err {
 };
 
 static_assert(Monad<Monad_Err>);
-Err<Nat> twice(const Err<Nat> &x);
+Err<Nat> twice(Err<Nat> x);

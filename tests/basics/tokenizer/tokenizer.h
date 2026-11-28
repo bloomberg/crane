@@ -229,7 +229,7 @@ struct Tokenizer {
              std::basic_string_view<char> soft,
              std::basic_string_view<char> hard);
   static List<std::basic_string_view<char>>
-  list_tokens(std::basic_string_view<char> input,
+  list_tokens(const std::basic_string_view<char> &input,
               std::basic_string_view<char> soft,
               std::basic_string_view<char> hard);
 

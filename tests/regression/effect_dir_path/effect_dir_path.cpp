@@ -30,7 +30,7 @@ void EffectDirPath::save_cwd() {
     auto _p = std::filesystem::current_path(_ec);
     return _ec ? std::string{} : _p.string();
   }();
-  setenv(std::string("CWD").c_str(), std::move(cwd).c_str(), 1);
+  setenv(std::string("CWD").c_str(), cwd.c_str(), 1);
 }
 
 /// 3. is_directory bool result used in conditional with effects in arms
@@ -49,11 +49,12 @@ EffectDirPath::check_and_list(const std::string &path) {
 
 /// 4. Path effect result chained to print
 void EffectDirPath::show_absolute(const std::string &path) {
-  std::cout << [&]() -> std::string {
+  std::string abs = [&]() -> std::string {
     std::error_code _ec;
     auto _r = std::filesystem::absolute(std::filesystem::path(path), _ec);
     return _ec ? std::string{} : _r.string();
-  }() << '\n';
+  }();
+  std::cout << abs << '\n';
 }
 
 /// 5. Multiple bool effects composed

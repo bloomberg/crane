@@ -221,21 +221,20 @@ run_exc(const std::shared_ptr<ITree<T1>> &t) {
           Sum<std::shared_ptr<ITree<T1>>, Sum<exc<typename _tcI0::ptr>, T1>>>> {
         auto _cs = u->observe();
         if (std::holds_alternative<typename ITree<T1>::Ret>(_cs)) {
-          const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&_cs);
-          auto a = _itf.value;
+          T1 a = std::get_if<typename ITree<T1>::Ret>(&_cs)->value;
           return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
                                Sum<Dvalue<typename _tcI0::ptr>, T1>>::inr(
               Sum<Dvalue<typename _tcI0::ptr>, T1>::inr(std::move(a))));
         } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
-          const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
-          auto u_ = _itf.next;
+          std::shared_ptr<ITree<T1>> u_ =
+              std::get_if<typename ITree<T1>::Tau>(&_cs)->next;
           return itree_ret(
               Sum<std::shared_ptr<ITree<T1>>,
                   Sum<Dvalue<typename _tcI0::ptr>, T1>>::inl(std::move(u_)));
         } else {
-          const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&_cs);
-          auto e = crane_event_as<FailE>(_itf.effect);
-          auto k = _itf.cont;
+          auto e = crane_event_as<FailE>(
+              std::get_if<typename ITree<T1>::Vis>(&_cs)->effect);
+          auto k = std::get_if<typename ITree<T1>::Vis>(&_cs)->cont;
           auto _cs1 = exc_of_event<_tcI0>(e);
           if (_cs1.has_value()) {
             const Dvalue<typename _tcI0::ptr> &x = *_cs1;

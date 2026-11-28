@@ -4,7 +4,7 @@
 void EffectHigherOrder::greet_all(const List<std::string> &names) {
   for_each_str(
       [](const std::string &name) {
-        std::cout << (std::string("Hello, ") + name).substr(0, 16777211) <<
+        std::cout << ((std::string("Hello, ") + name).substr(0, 16777211)) <<
         '\n';
         return std::monostate{};
       },
@@ -21,9 +21,9 @@ std::string EffectHigherOrder::lookup_or_ask(const std::string &name) {
     const std::string &v = *mv;
     return v;
   } else {
-    std::cout << (std::string("Enter ") +
-                  (name + std::string(":")).substr(0, 16777211))
-                     .substr(0, 16777211) <<
+    std::cout << ((std::string("Enter ") +
+                   (name + std::string(":")).substr(0, 16777211))
+                      .substr(0, 16777211)) <<
     '\n';
     std::string line;
     std::getline(std::cin, line);

@@ -66,8 +66,8 @@ void NonatomicRcThreadRace::test() {
           worker,
           UINT64_C(200))
           .share();
-  std::move(t1).wait();
-  std::move(t2).wait();
+  t1.wait();
+  t2.wait();
 }
 
 void NonatomicRcThreadRace::run() {

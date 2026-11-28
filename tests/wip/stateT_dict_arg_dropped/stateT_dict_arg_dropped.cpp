@@ -12,9 +12,9 @@ stateT<env, std::shared_ptr<ITree<crane::obj>>, Nat> twice(Nat n) {
       step(std::move(n)), [](Nat a) {
         return Monad_stateT<Monad_itree<crane::obj>, env>::template bind<Nat,
                                                                          Nat>(
-            step(std::move(a)), [](const Nat &b) {
+            step(std::move(a)), [](Nat b) {
               return Monad_stateT<Monad_itree<crane::obj>, env>::template ret<
-                  Nat>(b);
+                  Nat>(std::move(b));
             });
       });
 }

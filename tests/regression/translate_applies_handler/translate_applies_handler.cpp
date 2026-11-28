@@ -30,29 +30,19 @@ uint64_t TranslateAppliesHandler::which_b(BE e) {
 }
 
 uint64_t
-TranslateAppliesHandler::which_side(const Sum1<AE, AE, crane::obj> &e) {
-  if (std::holds_alternative<typename Sum1<AE, AE, crane::obj>::Inl1>(e.v())) {
-    return UINT64_C(1);
-  } else {
-    return UINT64_C(2);
-  }
-}
-
-uint64_t
 TranslateAppliesHandler::b_of(const std::shared_ptr<ITree<uint64_t>> &t) {
   auto _cs = t->observe();
   if (std::holds_alternative<typename ITree<uint64_t>::Ret>(_cs)) {
-    const auto &_itf = *std::get_if<typename ITree<uint64_t>::Ret>(&_cs);
-    auto _x = _itf.value;
+    uint64_t _x = std::get_if<typename ITree<uint64_t>::Ret>(&_cs)->value;
     return UINT64_C(9);
   } else if (std::holds_alternative<typename ITree<uint64_t>::Tau>(_cs)) {
-    const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
-    auto _x = _itf.next;
+    std::shared_ptr<ITree<uint64_t>> _x =
+        std::get_if<typename ITree<uint64_t>::Tau>(&_cs)->next;
     return UINT64_C(9);
   } else {
-    const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
-    auto e = crane_event_as<BE>(_itf.effect);
-    auto _x = _itf.cont;
+    auto e = crane_event_as<BE>(
+        std::get_if<typename ITree<uint64_t>::Vis>(&_cs)->effect);
+    auto _x = std::get_if<typename ITree<uint64_t>::Vis>(&_cs)->cont;
     return which_b(e);
   }
 }
@@ -61,17 +51,15 @@ uint64_t
 TranslateAppliesHandler::side_of(const std::shared_ptr<ITree<uint64_t>> &t) {
   auto _cs = t->observe();
   if (std::holds_alternative<typename ITree<uint64_t>::Ret>(_cs)) {
-    const auto &_itf = *std::get_if<typename ITree<uint64_t>::Ret>(&_cs);
-    auto _x = _itf.value;
+    uint64_t _x = std::get_if<typename ITree<uint64_t>::Ret>(&_cs)->value;
     return UINT64_C(9);
   } else if (std::holds_alternative<typename ITree<uint64_t>::Tau>(_cs)) {
-    const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
-    auto _x = _itf.next;
+    auto _x = std::get_if<typename ITree<uint64_t>::Tau>(&_cs)->next;
     return UINT64_C(9);
   } else {
-    const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
-    auto e = crane_event_as<Sum1<AE, AE, crane::obj>>(_itf.effect);
-    auto _x = _itf.cont;
+    auto e = crane_event_as<Sum1<AE, AE, crane::obj>>(
+        std::get_if<typename ITree<uint64_t>::Vis>(&_cs)->effect);
+    auto _x = std::get_if<typename ITree<uint64_t>::Vis>(&_cs)->cont;
     return which_side(std::move(e));
   }
 }

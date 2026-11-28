@@ -4,7 +4,6 @@
 #include <iostream>
 #include <string>
 #include <string_view>
-#include <utility>
 
 struct BlockTemplateTypes {
   /// %result inferred as unsigned int.

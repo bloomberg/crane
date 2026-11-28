@@ -86,7 +86,7 @@ public:
   }
 
   /// Convert a Peano nat to a machine int.
-  int nat_to_int() const {
+  int32_t nat_to_int() const {
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return 0;
     } else {

@@ -9,7 +9,7 @@
 #include <utility>
 #include <variant>
 
-/// A rose tree over a container with a Boxed Element wrapper and a
+/// A rose tree over a container with a BoxedComponent box and a
 /// Drain clause, as ParseALot's ConsList.v maps lists: the destructor
 /// takes a deep tree apart through the drain rather than by recursion.
 struct BoxedElementDrain {
@@ -17,7 +17,7 @@ struct BoxedElementDrain {
     // TYPES
     struct Node {
       uint64_t n;
-      crane::list<rose> kids;
+      crane::list<crane::box<rose>> kids;
     };
 
     using variant_t = std::variant<Node>;
@@ -32,7 +32,7 @@ struct BoxedElementDrain {
 
     explicit rose(Node _v) : v_(std::move(_v)) {}
 
-    static rose node(uint64_t n, crane::list<rose> kids) {
+    static rose node(uint64_t n, crane::list<crane::box<rose>> kids) {
       return rose(Node{n, std::move(kids)});
     }
 
@@ -73,7 +73,7 @@ struct BoxedElementDrain {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
-                                   const crane::list<rose> &>
+                                   const crane::list<crane::box<rose>> &>
   static T1 rose_rect(F0 &&f, const rose &r) {
     const auto &[n0, kids0] = std::get<typename rose::Node>(r.v());
     return f(n0, kids0);
@@ -86,13 +86,15 @@ struct BoxedElementDrain {
 
   static uint64_t total(const rose &r);
   static rose spine(uint64_t d);
-  static inline const rose sample = rose::node(
-      UINT64_C(2),
-      crane::cons(rose::node(UINT64_C(3), crane::list<rose>{}),
-                  crane::cons(rose::node(
-                      UINT64_C(4),
-                      crane::cons(rose::node(UINT64_C(5), crane::list<rose>{}),
-                                  crane::list<rose>{})),
-                              crane::list<rose>{})));
+  static inline const rose sample =
+      rose::node(
+          UINT64_C(2),
+          crane::cons(rose::node(UINT64_C(3), crane::list<crane::box<rose>>{}),
+                      crane::cons(rose::node(
+                          UINT64_C(4),
+                          crane::cons(rose::node(
+                              UINT64_C(5), crane::list<crane::box<rose>>{}),
+                                      crane::list<crane::box<rose>>{})),
+                                  crane::list<crane::box<rose>>{})));
   static inline const uint64_t sample_total = total(sample);
 };

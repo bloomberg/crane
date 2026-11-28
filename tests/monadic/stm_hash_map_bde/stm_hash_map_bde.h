@@ -132,27 +132,28 @@ template <typename K, typename V> struct CHT {
 
   bsl::optional<V> stm_get(const K &k) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
-    return CHT<int, int>::template assoc_lookup<K, V>(
-        this->cht_eqb, k, stm::readTVar(bsl::move(b)));
+    List<bsl::pair<K, V>> xs = stm::readTVar(b);
+    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k,
+                                                      bsl::move(xs));
   }
 
   void stm_put(const K &k, const V &v) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
-    List<bsl::pair<K, V>> xs_ =
-        CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            this->cht_eqb, k, v, stm::readTVar(b));
-    stm::writeTVar(bsl::move(b), bsl::move(xs_));
+    List<bsl::pair<K, V>> xs = stm::readTVar(b);
+    stm::writeTVar(b, CHT<int, int>::template assoc_insert_or_replace<K, V>(
+                          this->cht_eqb, k, v, bsl::move(xs)));
   }
 
   bsl::optional<V> stm_delete(const K &k) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
+    List<bsl::pair<K, V>> xs = stm::readTVar(b);
     bsl::pair<bsl::optional<V>, List<bsl::pair<K, V>>> p =
         CHT<int, int>::template assoc_remove<K, V>(this->cht_eqb, k,
-                                                   stm::readTVar(b));
+                                                   bsl::move(xs));
     auto _cs = p.first;
     if (_cs.has_value()) {
       const V &_x = *_cs;
-      stm::writeTVar(bsl::move(b), bsl::move(p.second));
+      stm::writeTVar(b, bsl::move(p.second));
       return bsl::move(p.first);
     } else {
       return bsl::move(p.first);
@@ -165,9 +166,8 @@ template <typename K, typename V> struct CHT {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     V v = f(CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs));
-    stm::writeTVar(bsl::move(b),
-                   CHT<int, int>::template assoc_insert_or_replace<K, V>(
-                       this->cht_eqb, k, v, bsl::move(xs)));
+    stm::writeTVar(b, CHT<int, int>::template assoc_insert_or_replace<K, V>(
+                          this->cht_eqb, k, v, bsl::move(xs)));
     return v;
   }
 
@@ -268,7 +268,7 @@ template <typename K, typename V> struct CHT {
   static bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>>
   mk_buckets(int64_t num) {
     bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> buckets = {};
-    unsigned int _lc1_n = static_cast<unsigned int>(num);
+    unsigned int _lc1_n = static_cast<uint32_t>(num);
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     unsigned int _lc1_loop_n = _lc1_n;

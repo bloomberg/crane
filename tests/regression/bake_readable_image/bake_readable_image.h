@@ -157,7 +157,7 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
     return crane::list<T2>{};
   } else {
     const T1 &a = l.front();
-    auto l0 = l.tail();
+    crane::list<T1> l0 = l.tail();
     return crane::cons(f(a), ListDef::template map<T1, T2>(f, std::move(l0)));
   }
 }
@@ -168,7 +168,7 @@ T1 List::fold_left(F0 &&f, const crane::list<T2> &l, T1 a0) {
     return a0;
   } else {
     const T2 &b = l.front();
-    auto l0 = l.tail();
+    crane::list<T2> l0 = l.tail();
     return List::template fold_left<T1, T2>(f, std::move(l0),
                                             f(std::move(a0), b));
   }

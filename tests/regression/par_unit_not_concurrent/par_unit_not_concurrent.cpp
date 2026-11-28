@@ -168,9 +168,9 @@ uint64_t ParUnitNotConcurrent::race(uint64_t k) {
       std::async(std::launch::async, work, k).share();
   std::shared_future<uint64_t> d =
       std::async(std::launch::async, work, k).share();
-  uint64_t x = std::move(a).get();
-  uint64_t y = std::move(b).get();
-  uint64_t z = std::move(c).get();
-  uint64_t w = std::move(d).get();
+  uint64_t x = a.get();
+  uint64_t y = b.get();
+  uint64_t z = c.get();
+  uint64_t w = d.get();
   return x + y + z + w;
 }

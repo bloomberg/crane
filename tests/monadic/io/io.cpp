@@ -10,7 +10,7 @@ std::string iotest::test4() {
   std::cout << std::string("what is your name?") << '\n';
   std::string s2;
   std::getline(std::cin, s2);
-  std::cout << (std::string("hello ") + s2).substr(0, 16777211) << '\n';
+  std::cout << ((std::string("hello ") + s2).substr(0, 16777211)) << '\n';
   return (std::string("I read the name ") +
           (s2 + std::string(" from the command line!")).substr(0,
                                                                16777211))
@@ -18,7 +18,7 @@ std::string iotest::test4() {
 }
 
 void iotest::test5() {
-  std::cout << [&]() -> std::string {
+  std::string s = [&]() -> std::string {
     std::ifstream file(std::string("file.txt"));
     if (!file) {
       std::cerr << "Failed to open file " << std::string("file.txt") << '\n';
@@ -26,5 +26,6 @@ void iotest::test5() {
     }
     return std::string(std::istreambuf_iterator<char>(file),
                        std::istreambuf_iterator<char>());
-  }() << '\n';
+  }();
+  std::cout << s << '\n';
 }

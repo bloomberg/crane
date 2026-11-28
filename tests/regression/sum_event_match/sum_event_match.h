@@ -76,11 +76,13 @@ enum class BE { B0 };
 
 template <typename T1>
 std::shared_ptr<ITree<T1>> handle(const Sum1<AE, BE, T1> &e) {
-  if (std::holds_alternative<typename Sum1<AE, BE, T1>::Inl1>(e.v())) {
-    const auto &[a0] = std::get<typename Sum1<AE, BE, T1>::Inl1>(e.v());
-    return itree_trigger(sum1_inl(a0));
+  if (std::holds_alternative<typename std::decay_t<decltype(e)>::Inl1>(e.v())) {
+    const auto &a =
+        std::get<typename std::decay_t<decltype(e)>::Inl1>(e.v()).a0;
+    return itree_trigger(sum1_inl(a));
   } else {
-    const auto &[a0] = std::get<typename Sum1<AE, BE, T1>::Inr1>(e.v());
-    return itree_trigger(sum1_inr(a0));
+    const auto &b =
+        std::get<typename std::decay_t<decltype(e)>::Inr1>(e.v()).a0;
+    return itree_trigger(sum1_inr(b));
   }
 }

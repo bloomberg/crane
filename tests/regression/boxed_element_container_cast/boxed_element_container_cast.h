@@ -56,7 +56,7 @@ struct ListDef {
 };
 
 /// A container cast into a callee generic over the element, over a list
-/// mapped with a Boxed Element wrapper.
+/// mapped with a BoxedComponent box.
 ///
 /// val recurses through list, so list (string * val) is
 /// crane::list<crane::box<std::pair<std::string, Val>>> wherever it is
@@ -156,7 +156,7 @@ struct BoxedElementContainerCast {
       return true;
     } else {
       const std::pair<std::string, T1> &_x = prs.front();
-      auto _x0 = prs.tail();
+      crane::list<std::pair<std::string, T1>> _x0 = prs.tail();
       return false;
     }
   }
@@ -309,7 +309,7 @@ template <typename T1> uint64_t Datatypes::length(const crane::list<T1> &l) {
     return UINT64_C(0);
   } else {
     const T1 &_x = l.front();
-    auto l_ = l.tail();
+    crane::list<T1> l_ = l.tail();
     return (Datatypes::template length<T1>(std::move(l_)) + 1);
   }
 }
@@ -320,7 +320,7 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
     return crane::list<T2>{};
   } else {
     const T1 &a = l.front();
-    auto l0 = l.tail();
+    crane::list<T1> l0 = l.tail();
     return crane::cons(f(a), ListDef::template map<T1, T2>(f, std::move(l0)));
   }
 }

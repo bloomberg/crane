@@ -17,17 +17,16 @@ CaseHandlerConcreteResult::result(uint64_t fuel,
     uint64_t f = fuel - 1;
     auto _cs = t->observe();
     if (std::holds_alternative<typename ITree<uint64_t>::Ret>(_cs)) {
-      const auto &_itf = *std::get_if<typename ITree<uint64_t>::Ret>(&_cs);
-      auto r = _itf.value;
+      uint64_t r = std::get_if<typename ITree<uint64_t>::Ret>(&_cs)->value;
       return r;
     } else if (std::holds_alternative<typename ITree<uint64_t>::Tau>(_cs)) {
-      const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
-      auto t_ = _itf.next;
+      std::shared_ptr<ITree<uint64_t>> t_ =
+          std::get_if<typename ITree<uint64_t>::Tau>(&_cs)->next;
       return result(f, std::move(t_));
     } else {
-      const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
-      auto _x = crane_event_as<crane::obj>(_itf.effect);
-      auto _x0 = _itf.cont;
+      auto _x = crane_event_as<crane::obj>(
+          std::get_if<typename ITree<uint64_t>::Vis>(&_cs)->effect);
+      auto _x0 = std::get_if<typename ITree<uint64_t>::Vis>(&_cs)->cont;
       throw std::logic_error("absurd case");
     }
   }

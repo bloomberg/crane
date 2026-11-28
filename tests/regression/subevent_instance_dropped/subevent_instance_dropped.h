@@ -89,7 +89,7 @@ struct FailE {
 
 template <typename T1 = void, typename T3, typename CraneP0>
 std::shared_ptr<ITree<T3>> cast(CraneP0 e) {
-  return itree_trigger(std::move(e));
+  return itree_trigger(e);
 }
 
 template <typename T2> std::shared_ptr<ITree<T2>> boom(const Nat &n) {

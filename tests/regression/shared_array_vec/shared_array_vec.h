@@ -22,7 +22,7 @@ struct SharedArrayVec {
       return f;
     } else {
       const T1 &y = v.front();
-      auto v0 = v.drop(1);
+      crane::shared_array<T1> v0 = v.drop(1);
       return f0(y, v0, vec_rect<T1, T2>(std::move(f), f0, v0));
     }
   }
@@ -38,7 +38,7 @@ struct SharedArrayVec {
       return d;
     } else {
       const T1 &h = v.front();
-      auto t = v.drop(1);
+      crane::shared_array<T1> t = v.drop(1);
       if (n <= 0) {
         return h;
       } else {
@@ -108,7 +108,7 @@ T1 List::fold_left(F0 &&f, const crane::list<T2> &l, T1 a0) {
     return a0;
   } else {
     const T2 &b = l.front();
-    auto l0 = l.tail();
+    crane::list<T2> l0 = l.tail();
     return List::template fold_left<T1, T2>(f, std::move(l0),
                                             f(std::move(a0), b));
   }
@@ -120,7 +120,7 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
     return crane::list<T2>{};
   } else {
     const T1 &a = l.front();
-    auto l0 = l.tail();
+    crane::list<T1> l0 = l.tail();
     return crane::cons(f(a), ListDef::template map<T1, T2>(f, std::move(l0)));
   }
 }

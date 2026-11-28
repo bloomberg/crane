@@ -28,7 +28,7 @@ uint64_t BlockTemplateTypes::test_parse_nat() {
   std::string s;
   std::getline(std::cin, s);
   uint64_t n;
-  n = static_cast<unsigned int>(std::stoul(std::move(s)));
+  n = static_cast<unsigned int>(std::stoul(s));
   return n + UINT64_C(2);
 }
 

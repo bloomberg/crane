@@ -16,7 +16,7 @@ uint64_t BoxedElementRoseTree::size(const BoxedElementRoseTree::rose &r) {
             return UINT64_C(0);
           } else {
             const BoxedElementRoseTree::rose &k = l.front();
-            auto t = l.tail();
+            crane::list<crane::box<BoxedElementRoseTree::rose>> t = l.tail();
             return size(k) + _self_go(_self_go, std::move(t));
           }
         };
@@ -40,7 +40,7 @@ uint64_t BoxedElementRoseTree::total(const BoxedElementRoseTree::rose &r) {
             return UINT64_C(0);
           } else {
             const BoxedElementRoseTree::rose &k = l.front();
-            auto t = l.tail();
+            crane::list<crane::box<BoxedElementRoseTree::rose>> t = l.tail();
             return total(k) + _self_go(_self_go, std::move(t));
           }
         };

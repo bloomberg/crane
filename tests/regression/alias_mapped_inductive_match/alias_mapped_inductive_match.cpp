@@ -1,6 +1,6 @@
 #include "alias_mapped_inductive_match.h"
 
-uint64_t AliasMappedInductiveMatch::get(const std::optional<uint64_t> &o) {
+uint64_t AliasMappedInductiveMatch::get(std::optional<uint64_t> o) {
   if (o.has_value()) {
     const uint64_t &n = *o;
     return n;

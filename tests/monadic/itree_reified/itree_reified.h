@@ -16,7 +16,7 @@ struct ITreeReified {
   run_tree(std::shared_ptr<ITree<std::monostate>> t);
   /// Sequence two reified itrees.
   static std::shared_ptr<ITree<std::monostate>>
-  sequence_trees(const std::shared_ptr<ITree<std::monostate>> &t1,
+  sequence_trees(std::shared_ptr<ITree<std::monostate>> t1,
                  const std::shared_ptr<ITree<std::monostate>> &t2);
   /// Direct mode (no itree params) should be unchanged.
   static std::shared_ptr<ITree<std::monostate>> test_direct();
@@ -30,12 +30,10 @@ struct ITreeReified {
       crane::fn<std::shared_ptr<ITree<T2>>(std::shared_ptr<ITree<T2>>)>> &rec,
                     const itreeF_t<T2> &ot) {
     if (std::holds_alternative<typename ITree<T2>::Ret>(ot)) {
-      const auto &_itf = *std::get_if<typename ITree<T2>::Ret>(&ot);
-      auto r = _itf.value;
+      T2 r = std::get_if<typename ITree<T2>::Ret>(&ot)->value;
       return ITree<T2>::ret(std::move(r));
     } else if (std::holds_alternative<typename ITree<T2>::Tau>(ot)) {
-      const auto &_itf = *std::get_if<typename ITree<T2>::Tau>(&ot);
-      auto t_ = _itf.next;
+      auto t_ = std::get_if<typename ITree<T2>::Tau>(&ot)->next;
       return itree_vis(
           sum1_inl([&]() -> std::any {
             std::cout << std::string("[tau]") << '\n';
@@ -45,9 +43,9 @@ struct ITreeReified {
             return itree_tau(rec(t_));
           });
     } else {
-      const auto &_itf = *std::get_if<typename ITree<T2>::Vis>(&ot);
-      auto e = crane_event_as<crane::obj>(_itf.effect);
-      auto k = _itf.cont;
+      auto e = crane_event_as<crane::obj>(
+          std::get_if<typename ITree<T2>::Vis>(&ot)->effect);
+      auto k = std::get_if<typename ITree<T2>::Vis>(&ot)->cont;
       return itree_vis(
           sum1_inl([&]() -> std::any {
             std::cout << std::string("[vis]") << '\n';

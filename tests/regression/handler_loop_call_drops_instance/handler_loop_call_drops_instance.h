@@ -229,22 +229,22 @@ struct Denot {
     static OtherE other(Nat a0) { return {std::move(a0)}; }
   };
 
-  template <typename ptr, typename x = void>
+  template <typename ptr, typename x>
   using CFGEtop = Sum1<OtherE, FailE<ptr>, x>;
   template <typename ptr, typename r> using CFGtop = std::shared_ptr<ITree<r>>;
 
   template <Params _tcI0, typename T1>
   static std::optional<exc<typename _tcI0::ptr>>
   exc_of_event(const CFGEtop<typename _tcI0::ptr, T1> &e) {
-    if (std::holds_alternative<
-            typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inl1>(e.v())) {
+    if (std::holds_alternative<typename std::decay_t<decltype(e)>::Inl1>(e.v())) {
+      const auto &_x =
+          std::get<typename std::decay_t<decltype(e)>::Inl1>(e.v()).a0;
       return std::optional<dvalue<typename _tcI0::ptr>>();
     } else {
-      const auto &[a0] =
-          std::get<typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inr1>(
-              e.v());
-      const auto &[a00] = a0;
-      return std::make_optional<dvalue<typename _tcI0::ptr>>(a00);
+      const auto &f =
+          std::get<typename std::decay_t<decltype(e)>::Inr1>(e.v()).a0;
+      const auto &[a0] = f;
+      return std::make_optional<dvalue<typename _tcI0::ptr>>(a0);
     }
   }
 
@@ -257,23 +257,20 @@ struct Denot {
                 Sum<exc<typename _tcI0::ptr>, T1>>>> {
           auto _cs = u->observe();
           if (std::holds_alternative<typename ITree<T1>::Ret>(_cs)) {
-            const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&_cs);
-            auto a = _itf.value;
+            T1 a = std::get_if<typename ITree<T1>::Ret>(&_cs)->value;
             return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
                                  Sum<dvalue<typename _tcI0::ptr>, T1>>::inr(
                 Sum<dvalue<typename _tcI0::ptr>, T1>::inr(std::move(a))));
           } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
-            const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
-            auto u_ = _itf.next;
+            auto u_ = std::get_if<typename ITree<T1>::Tau>(&_cs)->next;
             return itree_ret(
                 Sum<std::shared_ptr<ITree<T1>>,
                     Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(std::move(u_)));
           } else {
-            const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&_cs);
             auto e = crane_event_as<
                 Sum1<OtherE, FailE<typename _tcI0::ptr>, crane::obj>>(
-                _itf.effect);
-            auto k = _itf.cont;
+                std::get_if<typename ITree<T1>::Vis>(&_cs)->effect);
+            auto k = std::get_if<typename ITree<T1>::Vis>(&_cs)->cont;
             auto _cs1 = exc_of_event<_tcI0>(e);
             if (_cs1.has_value()) {
               const dvalue<typename _tcI0::ptr> &x = *_cs1;

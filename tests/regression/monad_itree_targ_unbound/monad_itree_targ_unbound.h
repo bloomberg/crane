@@ -196,18 +196,20 @@ struct FailE {
 enum class Ev { EV0 };
 using env = Nat;
 template <typename CraneTcArg>
-using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
+using crane_carrier_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 template <Params _tcI0, typename T1>
-Monads::template stateT<env, itree_tc_609e8855cd7ad294, Nat> step(Nat n) {
+Monads::template stateT<env, crane_carrier_tc_609e8855cd7ad294, Nat>
+step(Nat n) {
   return [=, n = std::move(n)](const Nat &s) {
     return itree_ret(std::make_pair(s, n.add(_tcI0::width())));
   };
 }
 
 template <typename T1, typename T2>
-Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> handle(Ev) {
-  return [](const Nat &s) -> itree_tc_609e8855cd7ad294<std::pair<env, T2>> {
+Monads::template stateT<env, crane_carrier_tc_609e8855cd7ad294, T2> handle(Ev) {
+  return [](const Nat &s) -> crane_carrier_tc_609e8855cd7ad294<
+      std::pair<env, T2>> {
     if (s.eqb(Nat::o())) {
       return itree_vis(
           FailE::Throw_(std::monostate{}),
@@ -222,13 +224,14 @@ Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> handle(Ev) {
 }
 
 template <Params _tcI0, typename T1, typename T2>
-Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> twice(Ev e) {
+Monads::template stateT<env, crane_carrier_tc_609e8855cd7ad294, T2>
+twice(Ev e) {
   return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<T2,
                                                                             T2>(
-      handle<T1, T2>(e), [](const T2 &res) {
+      handle<T1, T2>(e), [](T2 res) {
         return Monads::template Monad_stateT<Monad_itree<T1>,
                                              env>::template bind<Nat, T2>(
-            step<_tcI0, T1>(Nat::s(Nat::o())), [=, res = res](Nat) {
+            step<_tcI0, T1>(Nat::s(Nat::o())), [=, res = std::move(res)](Nat) {
               return Monads::template Monad_stateT<Monad_itree<T1>,
                                                    env>::template ret<T2>(res);
             });

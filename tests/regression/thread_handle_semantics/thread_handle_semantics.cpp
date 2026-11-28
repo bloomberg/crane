@@ -22,7 +22,7 @@ uint64_t ThreadHandleSemantics::joined_twice(uint64_t n) {
           n)
           .share();
   t.wait();
-  std::move(t).wait();
+  t.wait();
   return n;
 }
 

@@ -98,4 +98,4 @@ public:
   }
 };
 
-std::shared_ptr<ITree<Nat>> g(const std::shared_ptr<ITree<Nat>> &x);
+std::shared_ptr<ITree<Nat>> g(std::shared_ptr<ITree<Nat>> x);

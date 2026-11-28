@@ -61,7 +61,7 @@ std::string EffectWorkflow::conditional_create(const std::string &path) {
 void EffectWorkflow::read_and_set() {
   std::string line;
   std::getline(std::cin, line);
-  setenv(std::string("USER_INPUT").c_str(), std::move(line).c_str(), 1);
+  setenv(std::string("USER_INPUT").c_str(), line.c_str(), 1);
 }
 
 /// 4. Recursive function using effects

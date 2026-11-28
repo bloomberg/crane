@@ -82,7 +82,7 @@ std::string BlockTemplateHygiene::block_with_args_same_name() {
 void BlockTemplateHygiene::result_in_expr() {
   std::string name;
   std::getline(std::cin, name);
-  std::cout << (std::string("Hello, ") + name).substr(0, 16777211) << '\n';
+  std::cout << ((std::string("Hello, ") + name).substr(0, 16777211)) << '\n';
 }
 
 /// Test 8: Block template in a let-binding context (non-monadic).

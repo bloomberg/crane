@@ -16,16 +16,16 @@ struct StringGetBounds {
       100uz < s.size() ? static_cast<unsigned char>(s[100uz]) : 0);
   static inline const std::basic_string_view<char> sv = {s.data(), s.size()};
   /// Same contract for string views.
-  static inline const int64_t sv_first = ((INT64_C(0) >= 0 &&
-                                           INT64_C(0) <
-                                           static_cast<int64_t>(sv.length()))
+  static inline const int64_t sv_first = (INT64_C(0) >= 0 &&
+                                          INT64_C(0) <
+                                          static_cast<int64_t>(sv.length())
                                               ? static_cast<int64_t>(
                                                     static_cast<unsigned char>(
                                                         sv[INT64_C(0)]))
                                               : INT64_C(0));
-  static inline const int64_t sv_oob = ((INT64_C(100) >= 0 &&
-                                         INT64_C(100) <
-                                         static_cast<int64_t>(sv.length()))
+  static inline const int64_t sv_oob = (INT64_C(100) >= 0 &&
+                                        INT64_C(100) <
+                                        static_cast<int64_t>(sv.length())
                                             ? static_cast<int64_t>(
                                                   static_cast<unsigned char>(
                                                       sv[INT64_C(100)]))

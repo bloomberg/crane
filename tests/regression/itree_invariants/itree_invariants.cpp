@@ -10,17 +10,15 @@ ItreeInvariants::count_taus(uint64_t fuel,
     uint64_t fuel_ = fuel - 1;
     auto _cs = t->observe();
     if (std::holds_alternative<typename ITree<uint64_t>::Ret>(_cs)) {
-      const auto &_itf = *std::get_if<typename ITree<uint64_t>::Ret>(&_cs);
-      auto _x = _itf.value;
+      uint64_t _x = std::get_if<typename ITree<uint64_t>::Ret>(&_cs)->value;
       return UINT64_C(0);
     } else if (std::holds_alternative<typename ITree<uint64_t>::Tau>(_cs)) {
-      const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
-      auto t_ = _itf.next;
+      auto t_ = std::get_if<typename ITree<uint64_t>::Tau>(&_cs)->next;
       return (count_taus(fuel_, std::move(t_)) + 1);
     } else {
-      const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
-      auto _x = crane_event_as<crane::obj>(_itf.effect);
-      auto _x0 = _itf.cont;
+      auto _x = crane_event_as<crane::obj>(
+          std::get_if<typename ITree<uint64_t>::Vis>(&_cs)->effect);
+      auto _x0 = std::get_if<typename ITree<uint64_t>::Vis>(&_cs)->cont;
       return UINT64_C(0);
     }
   }

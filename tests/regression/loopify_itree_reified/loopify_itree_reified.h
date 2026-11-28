@@ -27,17 +27,15 @@ struct LoopifyItreeReified {
       crane::fn<std::shared_ptr<ITree<T1>>(std::shared_ptr<ITree<T1>>)>> &rec,
                                               const itreeF_t<T1> &ot) {
     if (std::holds_alternative<typename ITree<T1>::Ret>(ot)) {
-      const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&ot);
-      auto r = _itf.value;
+      T1 r = std::get_if<typename ITree<T1>::Ret>(&ot)->value;
       return ITree<T1>::ret(std::move(r));
     } else if (std::holds_alternative<typename ITree<T1>::Tau>(ot)) {
-      const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&ot);
-      auto t_ = _itf.next;
+      auto t_ = std::get_if<typename ITree<T1>::Tau>(&ot)->next;
       return itree_tau(rec(std::move(t_)));
     } else {
-      const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&ot);
-      auto e = crane_event_as<crane::obj>(_itf.effect);
-      auto k = _itf.cont;
+      auto e = crane_event_as<crane::obj>(
+          std::get_if<typename ITree<T1>::Vis>(&ot)->effect);
+      auto k = std::get_if<typename ITree<T1>::Vis>(&ot)->cont;
       return itree_vis(std::move(e), [=, rec = rec, k = std::move(k)](
                                          const auto &x) { return rec(k(x)); });
     }

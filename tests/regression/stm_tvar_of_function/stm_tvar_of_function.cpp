@@ -1,9 +1,10 @@
 #include "stm_tvar_of_function.h"
 
 uint64_t StmTvarOfFunction::fntv() {
-  crane::fn<uint64_t(uint64_t)> f =
-      stm::readTVar(stm::newTVar<crane::fn<uint64_t(uint64_t)>>(
-          crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; })));
+  stm::TVar<crane::fn<uint64_t(uint64_t)>> a =
+      stm::newTVar<crane::fn<uint64_t(uint64_t)>>(
+          crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }));
+  crane::fn<uint64_t(uint64_t)> f = stm::readTVar(a);
   return f(UINT64_C(1));
 }
 
@@ -17,7 +18,7 @@ uint64_t StmTvarOfFunction::fnw() {
           crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return (x + 1); }));
   stm::writeTVar(a, crane::fn<uint64_t(uint64_t)>(
                         [](uint64_t x) { return x + UINT64_C(2); }));
-  crane::fn<uint64_t(uint64_t)> f = stm::readTVar(std::move(a));
+  crane::fn<uint64_t(uint64_t)> f = stm::readTVar(a);
   return f(UINT64_C(1));
 }
 

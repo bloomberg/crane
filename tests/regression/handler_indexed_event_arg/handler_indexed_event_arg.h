@@ -132,10 +132,11 @@ template <typename T> struct MemM {
 };
 
 template <typename CraneTcArg>
-using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
+using crane_carrier_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 template <Params _tcI0, typename T1, typename T2>
-Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> base(MemM<T2> m) {
+Monads::template stateT<st, crane_carrier_tc_609e8855cd7ad294, T2>
+base(MemM<T2> m) {
   return [=, m = std::move(m)](const Nat &s) {
     const auto &[a0] = m;
     return itree_ret(std::make_pair(s.add(_tcI0::width()), a0));
@@ -143,18 +144,18 @@ Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> base(MemM<T2> m) {
 }
 
 template <typename T1, typename T2, typename F0>
-Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2>
+Monads::template stateT<st, crane_carrier_tc_609e8855cd7ad294, T2>
 run(F0 &&h, const MemM<T2> &m) {
   return h(m);
 }
 
 template <Params _tcI0, typename T1>
-Monads::template stateT<st, itree_tc_609e8855cd7ad294, T1>
+Monads::template stateT<st, crane_carrier_tc_609e8855cd7ad294, T1>
 fused(const MemM<T1> &m) {
   return run<void, T1>(
       []() {
         return []<typename T2>(MemM<T2> _x0) -> Monads::template stateT<
-            st, itree_tc_609e8855cd7ad294,
+            st, crane_carrier_tc_609e8855cd7ad294,
             T2> { return base<_tcI0, void>(_x0); };
       }(),
       m);

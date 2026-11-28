@@ -8,9 +8,9 @@ ITreeReified::run_tree(std::shared_ptr<ITree<std::monostate>> t) {
 
 /// Sequence two reified itrees.
 std::shared_ptr<ITree<std::monostate>>
-ITreeReified::sequence_trees(const std::shared_ptr<ITree<std::monostate>> &t1,
+ITreeReified::sequence_trees(std::shared_ptr<ITree<std::monostate>> t1,
                              const std::shared_ptr<ITree<std::monostate>> &t2) {
-  return itree_bind(t1, [=, t2 = t2](std::monostate) { return t2; });
+  return itree_bind(std::move(t1), [=, t2 = t2](std::monostate) { return t2; });
 }
 
 /// Direct mode (no itree params) should be unchanged.

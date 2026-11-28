@@ -89,6 +89,6 @@ struct NonatomicRcStmShared {
 
   static uint64_t len(const lst &l);
   static stm::TVar<lst> make();
-  static void push(stm::TVar<lst> t, uint64_t n);
-  static uint64_t size(stm::TVar<lst> t);
+  static void push(const stm::TVar<lst> &t, uint64_t n);
+  static uint64_t size(const stm::TVar<lst> &t);
 };

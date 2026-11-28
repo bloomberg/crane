@@ -20,7 +20,7 @@ struct List {
 };
 
 /// A module type naming a mapped container of an element that recurses
-/// through it, under a Boxed Element wrapper: the module's struct holds
+/// through it, under a BoxedComponent box: the module's struct holds
 /// crane::list<crane::box<rose>>, so the concept the module type becomes
 /// has to ask for that type too, the element hole decided as everywhere
 /// else, or the module satisfying the module type does not satisfy the
@@ -124,7 +124,7 @@ crane::list<T1> Datatypes::app(const crane::list<T1> &l, crane::list<T1> m) {
     return m;
   } else {
     const T1 &a = l.front();
-    auto l1 = l.tail();
+    crane::list<T1> l1 = l.tail();
     return crane::cons(a,
                        Datatypes::template app<T1>(std::move(l1),
                                                    std::move(m)));
@@ -137,7 +137,7 @@ crane::list<T2> List::flat_map(F0 &&f, const crane::list<T1> &l) {
     return crane::list<T2>{};
   } else {
     const T1 &x = l.front();
-    auto l0 = l.tail();
+    crane::list<T1> l0 = l.tail();
     return Datatypes::template app<T2>(
         f(x), List::template flat_map<T1, T2>(f, std::move(l0)));
   }
@@ -149,7 +149,7 @@ T1 List::fold_left(F0 &&f, const crane::list<T2> &l, T1 a0) {
     return a0;
   } else {
     const T2 &b = l.front();
-    auto l0 = l.tail();
+    crane::list<T2> l0 = l.tail();
     return List::template fold_left<T1, T2>(f, std::move(l0),
                                             f(std::move(a0), b));
   }

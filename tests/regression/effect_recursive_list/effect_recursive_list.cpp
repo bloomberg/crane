@@ -35,7 +35,7 @@ uint64_t EffectRecursiveList::store_lines(const std::string &prefix,
     uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    setenv(prefix.c_str(), std::move(line).c_str(), 1);
+    setenv(prefix.c_str(), line.c_str(), 1);
     uint64_t rest = store_lines(prefix, n_);
     return (rest + 1);
   }

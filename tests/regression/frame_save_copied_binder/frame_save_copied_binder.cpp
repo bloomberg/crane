@@ -12,7 +12,7 @@ bool FrameSaveCopiedBinder::accepting(const crane::list<uint64_t> &st) {
     return false;
   } else {
     const uint64_t &x = st.front();
-    auto _x = st.tail();
+    crane::list<uint64_t> _x = st.tail();
     return Nat::even(x);
   }
 }
@@ -100,7 +100,7 @@ FrameSaveCopiedBinder::scan(std::optional<uint64_t> m,
         }
       } else {
         const uint64_t &a = s.front();
-        auto s_ = s.tail();
+        crane::list<uint64_t> s_ = s.tail();
         crane::list<uint64_t> st_ = step(a, st);
         std::pair<uint64_t, std::optional<std::pair<std::pair<
                                 crane::list<uint64_t>, crane::list<uint64_t>>,

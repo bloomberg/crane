@@ -31,9 +31,10 @@ template <typename K, typename V> struct SkipList {
   template <typename F0, typename F1>
   std::optional<V> lookup(F0 &&ltK, F1 &&eqK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            std::move(path).get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, k)) {
@@ -53,9 +54,10 @@ template <typename K, typename V> struct SkipList {
     uint64_t curLvl = stm::readTVar(this->slLevel);
     SkipList<int, int>::template extendPath<K, V>(path, this->slHead,
                                                   (newLevel + 1), curLvl);
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            path.get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
       if (eqK(existing->key, k)) {
@@ -88,9 +90,10 @@ template <typename K, typename V> struct SkipList {
   template <typename F0, typename F1>
   void remove(F0 &&ltK, F1 &&eqK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            path.get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, k)) {
@@ -148,11 +151,10 @@ template <typename K, typename V> struct SkipList {
   }
 
   uint64_t length() const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
     return SkipList<int, int>::template length_aux<K, V>(
-        10000u, std::move(firstOpt), UINT64_C(0));
+        10000u, ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
+                    this->slHead->forward[UINT64_C(0)])),
+        UINT64_C(0));
   }
 
   template <typename F0, typename F1>
@@ -212,9 +214,10 @@ template <typename K, typename V> struct SkipList {
     uint64_t curLvl = stm::readTVar(this->slLevel);
     SkipList<int, int>::template extendPath<K, V>(path, this->slHead,
                                                   (newLevel + 1), curLvl);
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            path.get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
       if (eqK(existing->key, k)) {
@@ -253,9 +256,10 @@ template <typename K, typename V> struct SkipList {
   std::optional<std::shared_ptr<SkipNode<K, V>>> find(F0 &&ltK, F1 &&eqK,
                                                       const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            std::move(path).get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, k)) {
@@ -270,7 +274,7 @@ template <typename K, typename V> struct SkipList {
 
   template <typename F0>
   std::optional<std::shared_ptr<SkipNode<K, V>>>
-  previous(F0 &&eqK, std::shared_ptr<SkipNode<K, V>> pair) const {
+  previous(F0 &&eqK, const std::shared_ptr<SkipNode<K, V>> &pair) const {
     std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
             this->slHead->forward[UINT64_C(0)]));
@@ -280,7 +284,7 @@ template <typename K, typename V> struct SkipList {
         return std::optional<std::shared_ptr<SkipNode<K, V>>>();
       } else {
         return SkipList<int, int>::template findPrev_aux<K, V>(
-            eqK, 10000u, first, this->slHead, std::move(pair)->key);
+            eqK, 10000u, first, this->slHead, pair->key);
       }
     } else {
       return std::optional<std::shared_ptr<SkipNode<K, V>>>();
@@ -291,9 +295,10 @@ template <typename K, typename V> struct SkipList {
   std::optional<std::shared_ptr<SkipNode<K, V>>>
   findLowerBound(F0 &&ltK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            std::move(path).get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       return std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node);
@@ -306,9 +311,10 @@ template <typename K, typename V> struct SkipList {
   std::optional<std::shared_ptr<SkipNode<K, V>>>
   findUpperBound(F0 &&ltK, F1 &&eqK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            std::move(path).get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, k)) {
@@ -324,13 +330,14 @@ template <typename K, typename V> struct SkipList {
 
   template <typename F0, typename F1>
   bool removePair(F0 &&ltK, F1 &&eqK,
-                  std::shared_ptr<SkipNode<K, V>> pair) const {
-    K k = std::move(pair)->key;
+                  const std::shared_ptr<SkipNode<K, V>> &pair) const {
+    K k = pair->key;
     SkipPath<K, V> path = this->findPath(ltK, k);
     uint64_t curLvl = stm::readTVar(this->slLevel);
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            path.get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, std::move(k))) {
@@ -365,9 +372,10 @@ template <typename K, typename V> struct SkipList {
     } else {
       isNewFront = true;
     }
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            path.get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
       if (eqK(existing->key, key0)) {
@@ -423,9 +431,10 @@ template <typename K, typename V> struct SkipList {
     } else {
       isNewFront = true;
     }
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            path.get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
       if (eqK(existing->key, key0)) {
@@ -476,9 +485,10 @@ template <typename K, typename V> struct SkipList {
   std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
   bde_find(F0 &&ltK, F1 &&eqK, const K &key0) const {
     SkipPath<K, V> path = this->findPath(ltK, key0);
+    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            std::move(path).get(UINT64_C(0))->forward[UINT64_C(0)]));
+            pred0->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
       if (eqK(node->key, key0)) {
@@ -545,8 +555,8 @@ template <typename K, typename V> struct SkipList {
 
   template <typename F0, typename F1>
   uint64_t bde_remove(F0 &&ltK, F1 &&eqK,
-                      std::shared_ptr<SkipNode<K, V>> pair) const {
-    bool result = this->removePair(ltK, eqK, std::move(pair));
+                      const std::shared_ptr<SkipNode<K, V>> &pair) const {
+    bool result = this->removePair(ltK, eqK, pair);
     if (result) {
       return SkipList<int, int>::e_SUCCESS;
     } else {
@@ -567,9 +577,9 @@ template <typename K, typename V> struct SkipList {
 
   template <typename F0>
   std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
-  bde_previous(F0 &&eqK, std::shared_ptr<SkipNode<K, V>> pair) const {
+  bde_previous(F0 &&eqK, const std::shared_ptr<SkipNode<K, V>> &pair) const {
     std::optional<std::shared_ptr<SkipNode<K, V>>> prevOpt =
-        this->previous(eqK, std::move(pair));
+        this->previous(eqK, pair);
     if (prevOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *prevOpt;
       return std::make_pair(
@@ -615,11 +625,12 @@ template <typename K, typename V> struct SkipList {
 
   template <typename T1, typename T2, typename F0>
   static std::shared_ptr<SkipNode<T1, T2>>
-  findPred_go(F0 &&ltK, uint64_t fuel, std::shared_ptr<SkipNode<T1, T2>> curr,
-              const T1 &target, uint64_t level) {
+  findPred_go(F0 &&ltK, uint64_t fuel,
+              const std::shared_ptr<SkipNode<T1, T2>> &curr, const T1 &target,
+              uint64_t level) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
+    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = curr;
     while (true) {
       if (fuel <= 0) {
         return _loop_curr;
@@ -645,23 +656,23 @@ template <typename K, typename V> struct SkipList {
 
   template <typename T1, typename T2, typename F0>
   static std::shared_ptr<SkipNode<T1, T2>>
-  findPred(F0 &&ltK, std::shared_ptr<SkipNode<T1, T2>> curr, const T1 &target,
-           uint64_t level) {
-    return SkipList<int, int>::template findPred_go<T1, T2>(
-        ltK, 10000u, std::move(curr), target, level);
+  findPred(F0 &&ltK, const std::shared_ptr<SkipNode<T1, T2>> &curr,
+           const T1 &target, uint64_t level) {
+    return SkipList<int, int>::template findPred_go<T1, T2>(ltK, 10000u, curr,
+                                                            target, level);
   }
 
   template <typename T1, typename T2, typename F0>
   static SkipPath<T1, T2>
-  findPath_aux(F0 &&ltK, std::shared_ptr<SkipNode<T1, T2>> curr,
-               const T1 &target, uint64_t level, SkipPath<T1, T2> path) {
+  findPath_aux(F0 &&ltK, const std::shared_ptr<SkipNode<T1, T2>> &curr,
+               const T1 &target, uint64_t level, const SkipPath<T1, T2> &path) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
+    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = curr;
     while (true) {
       std::shared_ptr<SkipNode<T1, T2>> pred =
-          SkipList<int, int>::template findPred<T1, T2>(
-              ltK, std::move(_loop_curr), target, level);
+          SkipList<int, int>::template findPred<T1, T2>(ltK, _loop_curr, target,
+                                                        level);
       path.set(level, pred);
       if (level <= 0) {
         return path;
@@ -674,27 +685,30 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  static void linkAtLevel(std::shared_ptr<SkipNode<T1, T2>> pred,
-                          std::shared_ptr<SkipNode<T1, T2>> newNode,
+  static void linkAtLevel(const std::shared_ptr<SkipNode<T1, T2>> &pred,
+                          const std::shared_ptr<SkipNode<T1, T2>> &newNode,
                           uint64_t level) {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> oldNext = ptr_to_opt(
         stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(pred->forward[level]));
     stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-        std::move(pred)->forward[level],
+        pred->forward[level],
         opt_to_ptr(
             std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(newNode)));
-    stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-        std::move(newNode)->forward[level], opt_to_ptr(std::move(oldNext)));
+    stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(newNode->forward[level],
+                                                      opt_to_ptr(oldNext));
   }
 
   template <typename T1, typename T2>
   static void
-  linkNode_aux(SkipPath<T1, T2> path, std::shared_ptr<SkipNode<T1, T2>>,
-               std::shared_ptr<SkipNode<T1, T2>> newNode, uint64_t level) {
+  linkNode_aux(const SkipPath<T1, T2> &path,
+               const std::shared_ptr<SkipNode<T1, T2>> &,
+               const std::shared_ptr<SkipNode<T1, T2>> &newNode,
+               uint64_t level) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     while (true) {
-      SkipList<int, int>::template linkAtLevel<T1, T2>(path.get(level), newNode,
+      std::shared_ptr<SkipNode<T1, T2>> pred = path.get(level);
+      SkipList<int, int>::template linkAtLevel<T1, T2>(std::move(pred), newNode,
                                                        level);
       if (level <= 0) {
         return;
@@ -706,14 +720,14 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  static void extendPath_aux(SkipPath<T1, T2> path,
-                             std::shared_ptr<SkipNode<T1, T2>> head,
+  static void extendPath_aux(const SkipPath<T1, T2> &path,
+                             const std::shared_ptr<SkipNode<T1, T2>> &head,
                              uint64_t level, uint64_t maxLevel) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     while (true) {
       if (level <= 0) {
-        std::move(path).set(UINT64_C(0), std::move(head));
+        path.set(UINT64_C(0), head);
         return;
       } else {
         uint64_t level_ = level - 1;
@@ -728,46 +742,47 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  static void extendPath(SkipPath<T1, T2> path,
-                         std::shared_ptr<SkipNode<T1, T2>> head,
+  static void extendPath(const SkipPath<T1, T2> &path,
+                         const std::shared_ptr<SkipNode<T1, T2>> &head,
                          uint64_t needed, uint64_t currentMax) {
     if (needed <= ((currentMax + 1))) {
       return;
     } else {
       SkipList<int, int>::template extendPath_aux<T1, T2>(
-          std::move(path), std::move(head),
+          path, head,
           (needed - UINT64_C(1) > needed ? 0 : needed - UINT64_C(1)),
           currentMax + UINT64_C(1));
     }
   }
 
   template <typename T1, typename T2>
-  static void linkNode(SkipPath<T1, T2> path,
-                       std::shared_ptr<SkipNode<T1, T2>> head,
-                       std::shared_ptr<SkipNode<T1, T2>> newNode) {
+  static void linkNode(const SkipPath<T1, T2> &path,
+                       const std::shared_ptr<SkipNode<T1, T2>> &head,
+                       const std::shared_ptr<SkipNode<T1, T2>> &newNode) {
     uint64_t lvl = newNode->level;
-    SkipList<int, int>::template linkNode_aux<T1, T2>(
-        std::move(path), std::move(head), std::move(newNode), lvl);
+    SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode, lvl);
   }
 
   template <typename T1, typename T2>
-  static void unlinkAtLevel(std::shared_ptr<SkipNode<T1, T2>> pred,
-                            std::shared_ptr<SkipNode<T1, T2>> target,
+  static void unlinkAtLevel(const std::shared_ptr<SkipNode<T1, T2>> &pred,
+                            const std::shared_ptr<SkipNode<T1, T2>> &target,
                             uint64_t level) {
-    stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-        std::move(pred)->forward[level],
-        opt_to_ptr(ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-            std::move(target)->forward[level]))));
+    std::optional<std::shared_ptr<SkipNode<T1, T2>>> targetNext =
+        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
+            target->forward[level]));
+    stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(pred->forward[level],
+                                                      opt_to_ptr(targetNext));
   }
 
   template <typename T1, typename T2>
-  static void unlinkNode_aux(SkipPath<T1, T2> path,
-                             std::shared_ptr<SkipNode<T1, T2>> target,
+  static void unlinkNode_aux(const SkipPath<T1, T2> &path,
+                             const std::shared_ptr<SkipNode<T1, T2>> &target,
                              uint64_t level) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     while (true) {
-      SkipList<int, int>::template unlinkAtLevel<T1, T2>(path.get(level),
+      std::shared_ptr<SkipNode<T1, T2>> pred = path.get(level);
+      SkipList<int, int>::template unlinkAtLevel<T1, T2>(std::move(pred),
                                                          target, level);
       if (level <= 0) {
         return;
@@ -779,28 +794,27 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  static void unlinkNode(SkipPath<T1, T2> path,
-                         std::shared_ptr<SkipNode<T1, T2>> target) {
+  static void unlinkNode(const SkipPath<T1, T2> &path,
+                         const std::shared_ptr<SkipNode<T1, T2>> &target) {
     uint64_t lvl = target->level;
-    SkipList<int, int>::template unlinkNode_aux<T1, T2>(std::move(path),
-                                                        std::move(target), lvl);
+    SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target, lvl);
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
   static bool findKey_aux(F0 &&ltK, F1 &&eqK,
-                          std::shared_ptr<SkipNode<T1, T2>> curr,
+                          const std::shared_ptr<SkipNode<T1, T2>> &curr,
                           const T1 &target, uint64_t level) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
+    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = curr;
     while (true) {
       std::shared_ptr<SkipNode<T1, T2>> pred =
-          SkipList<int, int>::template findPred<T1, T2>(
-              ltK, std::move(_loop_curr), target, level);
+          SkipList<int, int>::template findPred<T1, T2>(ltK, _loop_curr, target,
+                                                        level);
       if (level <= 0) {
         std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt =
             ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-                std::move(pred)->forward[UINT64_C(0)]));
+                pred->forward[UINT64_C(0)]));
         if (nextOpt.has_value()) {
           const std::shared_ptr<SkipNode<T1, T2>> &node = *nextOpt;
           return eqK(node->key, target);
@@ -845,14 +859,13 @@ template <typename K, typename V> struct SkipList {
 
   template <typename T1, typename T2>
   static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
-  findLast_aux(uint64_t fuel, std::shared_ptr<SkipNode<T1, T2>> curr) {
+  findLast_aux(uint64_t fuel, const std::shared_ptr<SkipNode<T1, T2>> &curr) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
+    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = curr;
     while (true) {
       if (fuel <= 0) {
-        return std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(
-            std::move(_loop_curr));
+        return std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(_loop_curr);
       } else {
         uint64_t fuel_ = fuel - 1;
         std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt =
@@ -864,24 +877,23 @@ template <typename K, typename V> struct SkipList {
           fuel = fuel_;
         } else {
           return std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(
-              std::move(_loop_curr));
+              _loop_curr);
         }
       }
     }
   }
 
   template <typename T1, typename T2>
-  static void unlinkFirstFromHead(std::shared_ptr<SkipNode<T1, T2>> head,
-                                  std::shared_ptr<SkipNode<T1, T2>> node,
+  static void unlinkFirstFromHead(const std::shared_ptr<SkipNode<T1, T2>> &head,
+                                  const std::shared_ptr<SkipNode<T1, T2>> &node,
                                   uint64_t lvl) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     while (true) {
-      stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-          head->forward[lvl],
-          opt_to_ptr(
-              ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-                  node->forward[lvl]))));
+      std::optional<std::shared_ptr<SkipNode<T1, T2>>> nodeNext = ptr_to_opt(
+          stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(node->forward[lvl]));
+      stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(head->forward[lvl],
+                                                        opt_to_ptr(nodeNext));
       if (lvl <= 0) {
         return;
       } else {
@@ -892,17 +904,17 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  static void unlinkNodeAtAllLevels(std::shared_ptr<SkipNode<T1, T2>> head,
-                                    std::shared_ptr<SkipNode<T1, T2>> node,
-                                    uint64_t lvl) {
-    SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(
-        std::move(head), std::move(node), lvl);
+  static void
+  unlinkNodeAtAllLevels(const std::shared_ptr<SkipNode<T1, T2>> &head,
+                        const std::shared_ptr<SkipNode<T1, T2>> &node,
+                        uint64_t lvl) {
+    SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(head, node, lvl);
   }
 
   template <typename T1, typename T2>
-  static uint64_t
-  removeAll_aux(uint64_t fuel, std::shared_ptr<SkipNode<T1, T2>> head,
-                uint64_t acc) {
+  static uint64_t removeAll_aux(uint64_t fuel,
+                                const std::shared_ptr<SkipNode<T1, T2>> &head,
+                                uint64_t acc) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     while (true) {
@@ -928,18 +940,19 @@ template <typename K, typename V> struct SkipList {
 
   template <typename T1, typename T2>
   static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
-  next(std::shared_ptr<SkipNode<T1, T2>> pair) {
+  next(const std::shared_ptr<SkipNode<T1, T2>> &pair) {
     return ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-        std::move(pair)->forward[UINT64_C(0)]));
+        pair->forward[UINT64_C(0)]));
   }
 
   template <typename T1, typename T2, typename F0>
   static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
-  findPrev_aux(F0 &&eqK, uint64_t fuel, std::shared_ptr<SkipNode<T1, T2>> curr,
-               std::shared_ptr<SkipNode<T1, T2>>, const T1 &target) {
+  findPrev_aux(F0 &&eqK, uint64_t fuel,
+               const std::shared_ptr<SkipNode<T1, T2>> &curr,
+               const std::shared_ptr<SkipNode<T1, T2>> &, const T1 &target) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
-    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
+    std::shared_ptr<SkipNode<T1, T2>> _loop_curr = curr;
     while (true) {
       if (fuel <= 0) {
         return std::optional<std::shared_ptr<SkipNode<T1, T2>>>();
@@ -952,7 +965,7 @@ template <typename K, typename V> struct SkipList {
           const std::shared_ptr<SkipNode<T1, T2>> &next0 = *nextOpt;
           if (eqK(next0->key, target)) {
             return std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(
-                std::move(_loop_curr));
+                _loop_curr);
           } else {
             std::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
             fuel = fuel_;
@@ -966,13 +979,13 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  static T1 key(std::shared_ptr<SkipNode<T1, T2>> pair) {
-    return std::move(pair)->key;
+  static T1 key(const std::shared_ptr<SkipNode<T1, T2>> &pair) {
+    return pair->key;
   }
 
   template <typename T1, typename T2>
-  static T2 data(std::shared_ptr<SkipNode<T1, T2>> pair) {
-    return stm::readTVar<T2>(std::move(pair)->value);
+  static T2 data(const std::shared_ptr<SkipNode<T1, T2>> &pair) {
+    return stm::readTVar<T2>(pair->value);
   }
 
   static constexpr uint64_t e_SUCCESS = UINT64_C(0);
@@ -982,9 +995,9 @@ template <typename K, typename V> struct SkipList {
 
   template <typename T1, typename T2>
   static std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<T1, T2>>>>
-  bde_next(std::shared_ptr<SkipNode<T1, T2>> pair) {
+  bde_next(const std::shared_ptr<SkipNode<T1, T2>> &pair) {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt =
-        SkipList<int, int>::template next<T1, T2>(std::move(pair));
+        SkipList<int, int>::template next<T1, T2>(pair);
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<T1, T2>> &node = *nextOpt;
       return std::make_pair(

@@ -5,7 +5,6 @@
 #include <crane_itree.h>
 #include <cstdint>
 #include <utility>
-#include <variant>
 
 enum class AE;
 enum class BE;
@@ -18,7 +17,19 @@ struct TranslateAppliesHandler {
   static std::shared_ptr<ITree<uint64_t>> relabelled();
   static std::shared_ptr<ITree<uint64_t>> injected();
   static uint64_t which_b(BE e);
-  static uint64_t which_side(const Sum1<AE, AE, crane::obj> &e);
+
+  template <typename T1> static uint64_t which_side(const Sum1<AE, AE, T1> &e) {
+    if (std::holds_alternative<typename std::decay_t<decltype(e)>::Inl1>(e.v())) {
+      const auto &_x =
+          std::get<typename std::decay_t<decltype(e)>::Inl1>(e.v()).a0;
+      return UINT64_C(1);
+    } else {
+      const auto &_x =
+          std::get<typename std::decay_t<decltype(e)>::Inr1>(e.v()).a0;
+      return UINT64_C(2);
+    }
+  }
+
   static uint64_t b_of(const std::shared_ptr<ITree<uint64_t>> &t);
   static uint64_t side_of(const std::shared_ptr<ITree<uint64_t>> &t);
   static inline const uint64_t relabelled_event = b_of(relabelled());

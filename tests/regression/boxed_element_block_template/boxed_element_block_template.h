@@ -11,7 +11,8 @@ struct ListDef {
   static crane::list<T2> map(F0 &&f, const crane::list<T1> &l);
 };
 
-/// A Boxed Element container whose constructors are %result blocks.
+/// A container boxing its element (BoxedComponent) whose constructors are
+/// %result blocks.
 ///
 /// A block's text is spliced as statements, and its %elem hole is decided
 /// like a constructor template's: boxed where the element recurses through
@@ -126,7 +127,7 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
     }();
   } else {
     const T1 &a = l.front();
-    auto l0 = l.tail();
+    crane::list<T1> l0 = l.tail();
     return [&]() -> crane::list<T2> {
       crane::list<T2> _r;
       _r = crane::cons(f(a), ListDef::template map<T1, T2>(f, std::move(l0)));

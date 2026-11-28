@@ -6,7 +6,7 @@ uint64_t ParFutureReadTwice::twice(uint64_t n) {
   std::shared_future<uint64_t> t =
       std::async(std::launch::async, sq, n).share();
   uint64_t a = t.get();
-  uint64_t b = std::move(t).get();
+  uint64_t b = t.get();
   return a + b;
 }
 

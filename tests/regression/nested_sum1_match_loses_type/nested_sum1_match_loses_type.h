@@ -159,41 +159,37 @@ template <typename ptr> struct FailE {
   static FailE<ptr> fail(Dvalue<ptr> a0) { return {std::move(a0)}; }
 };
 
-template <typename ptr, typename x = void>
+template <typename ptr, typename x>
 using CFGEtop =
     Sum1<AE, Sum1<BE, Sum1<CE, FailE<ptr>, crane::obj>, crane::obj>, x>;
 
 template <Params _tcI0, typename T1>
 std::optional<Dvalue<typename _tcI0::ptr>>
 exc_of_event(const CFGEtop<typename _tcI0::ptr, T1> &e) {
-  if (std::holds_alternative<typename Sum1<
-          AE, Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
-                   crane::obj>,
-          T1>::Inl1>(e.v())) {
+  if (std::holds_alternative<typename std::decay_t<decltype(e)>::Inl1>(e.v())) {
+    const auto &_x =
+        std::get<typename std::decay_t<decltype(e)>::Inl1>(e.v()).a0;
     return std::optional<Dvalue<typename _tcI0::ptr>>();
   } else {
-    const auto &[a0] = std::get<typename Sum1<
-        AE,
-        Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>, crane::obj>,
-        T1>::Inr1>(e.v());
-    if (std::holds_alternative<
-            typename Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
-                          crane::obj>::Inl1>(a0.v())) {
+    const auto &s =
+        std::get<typename std::decay_t<decltype(e)>::Inr1>(e.v()).a0;
+    if (std::holds_alternative<typename std::decay_t<decltype(s)>::Inl1>(s.v())) {
+      const auto &_x =
+          std::get<typename std::decay_t<decltype(s)>::Inl1>(s.v()).a0;
       return std::optional<Dvalue<typename _tcI0::ptr>>();
     } else {
-      const auto &[a00] = std::get<
-          typename Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
-                        crane::obj>::Inr1>(a0.v());
-      if (std::holds_alternative<
-              typename Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>::Inl1>(
-              a00.v())) {
+      const auto &s0 =
+          std::get<typename std::decay_t<decltype(s)>::Inr1>(s.v()).a0;
+      if (std::holds_alternative<typename std::decay_t<decltype(s0)>::Inl1>(
+              s0.v())) {
+        const auto &_x =
+            std::get<typename std::decay_t<decltype(s0)>::Inl1>(s0.v()).a0;
         return std::optional<Dvalue<typename _tcI0::ptr>>();
       } else {
-        const auto &[a01] = std::get<
-            typename Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>::Inr1>(
-            a00.v());
-        const auto &[a02] = a01;
-        return std::make_optional<Dvalue<typename _tcI0::ptr>>(a02);
+        const auto &f =
+            std::get<typename std::decay_t<decltype(s0)>::Inr1>(s0.v()).a0;
+        const auto &[a0] = f;
+        return std::make_optional<Dvalue<typename _tcI0::ptr>>(a0);
       }
     }
   }

@@ -41,8 +41,8 @@ void threadtest::test(uint64_t m, uint64_t n) {
           fun2,
           n)
           .share();
-  std::move(t1).wait();
-  std::move(t2).wait();
+  t1.wait();
+  t2.wait();
 }
 
 void threadtest::test_pure(uint64_t m, uint64_t n) {

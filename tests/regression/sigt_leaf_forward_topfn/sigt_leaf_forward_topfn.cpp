@@ -25,7 +25,7 @@
 /// already-concrete pair as if it were std::any does not compile. Fixed by
 /// only forcing that rewrite when the lambda's own parameter type is
 /// actually erased/generic at this instantiation.
-bool wrap_string(const std::string &s) { return (s == s); }
+bool wrap_string(const std::string &s) { return s == s; }
 
 domty garg(uint64_t n) {
   if (n <= 0) {

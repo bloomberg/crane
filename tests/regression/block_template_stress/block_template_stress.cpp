@@ -66,7 +66,7 @@ void BlockTemplateStress::block_result_as_arg() {
   std::cin >> _x;
   std::string s;
   std::getline(std::cin, s);
-  std::cout << (s + std::string(" read")).substr(0, 16777211) << '\n';
+  std::cout << ((s + std::string(" read")).substr(0, 16777211)) << '\n';
 }
 
 /// 9. Block template with %a0 inside a fixpoint
@@ -92,7 +92,7 @@ std::string BlockTemplateStress::interleaved_void() {
   std::cout << std::string("Enter name:") << '\n';
   std::string name;
   std::getline(std::cin, name);
-  std::cout << (std::string("Hello, ") + name).substr(0, 16777211) << '\n';
+  std::cout << ((std::string("Hello, ") + name).substr(0, 16777211)) << '\n';
   std::cout << std::string("Enter age:") << '\n';
   std::string age;
   std::getline(std::cin, age);

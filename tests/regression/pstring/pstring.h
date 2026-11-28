@@ -153,7 +153,7 @@ public:
 
 struct PString {
   static std::string nat_to_string(const Nat &n);
-  static int nat_to_int(const Nat &n);
+  static int32_t nat_to_int(const Nat &n);
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<std::string, F0 &, const T1 &>

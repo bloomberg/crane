@@ -220,33 +220,30 @@ Recursion::interp_mrec(const std::type_identity_t<
           ITree<Sum<std::shared_ptr<ITree<T3>>, T3>>> {
         auto _cs = t->observe();
         if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {
-          const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);
-          auto r = _itf.value;
+          T3 r = std::get_if<typename ITree<T3>::Ret>(&_cs)->value;
           return itree_ret(
               Sum<std::shared_ptr<ITree<T3>>, T3>::inr(std::move(r)));
         } else if (std::holds_alternative<typename ITree<T3>::Tau>(_cs)) {
-          const auto &_itf = *std::get_if<typename ITree<T3>::Tau>(&_cs);
-          auto t0 = _itf.next;
+          auto t0 = std::get_if<typename ITree<T3>::Tau>(&_cs)->next;
           return itree_ret(
               Sum<std::shared_ptr<ITree<T3>>, T3>::inl(std::move(t0)));
         } else {
-          const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
-          auto e0 = crane_event_as<Sum1<T1, T2, crane::obj>>(_itf.effect);
-          auto k = _itf.cont;
-          if (std::holds_alternative<typename Sum1<T1, T2, crane::obj>::Inl1>(
-                  e0.v_mut())) {
-            auto &[a0] =
-                std::get<typename Sum1<T1, T2, crane::obj>::Inl1>(e0.v_mut());
+          auto e0 = crane_event_as<Sum1<T1, T2, crane::obj>>(
+              std::get_if<typename ITree<T3>::Vis>(&_cs)->effect);
+          auto k = std::get_if<typename ITree<T3>::Vis>(&_cs)->cont;
+          if (std::holds_alternative<typename std::decay_t<decltype(e0)>::Inl1>(
+                  e0.v())) {
+            const auto &d =
+                std::get<typename std::decay_t<decltype(e0)>::Inl1>(e0.v()).a0;
             return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
-                itree_bind(ctx0(std::move(a0)), std::move(k))));
+                itree_bind(ctx0(d), std::move(k))));
           } else {
-            auto &[a0] =
-                std::get<typename Sum1<T1, T2, crane::obj>::Inr1>(e0.v_mut());
-            return itree_vis(
-                std::move(a0), [=, k = std::move(k)](const auto &x) {
-                  return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
-                      crane_call_erased(k, x)));
-                });
+            const auto &e =
+                std::get<typename std::decay_t<decltype(e0)>::Inr1>(e0.v()).a0;
+            return itree_vis(e, [=, k = std::move(k)](const auto &x) {
+              return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
+                  crane_call_erased(k, x)));
+            });
           }
         }
       },

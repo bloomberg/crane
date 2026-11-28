@@ -1,7 +1,7 @@
 #include "boxed_element_container_cast.h"
 
 /// A container cast into a callee generic over the element, over a list
-/// mapped with a Boxed Element wrapper.
+/// mapped with a BoxedComponent box.
 ///
 /// val recurses through list, so list (string * val) is
 /// crane::list<crane::box<std::pair<std::string, Val>>> wherever it is
@@ -61,7 +61,7 @@ BoxedElementContainerCast::sample_symbols(
     return std::monostate{};
   } else {
     const BoxedElementContainerCast::symbol &y = ys.front();
-    auto ys_ = ys.tail();
+    crane::list<BoxedElementContainerCast::symbol> ys_ = ys.tail();
     return std::make_pair(crane::obj(sample_symbol(y)),
                           crane::obj(sample_symbols(std::move(ys_))));
   }

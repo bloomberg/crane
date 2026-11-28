@@ -1,7 +1,7 @@
 #include "boxed_element_concept.h"
 
 /// A module type naming a mapped container of an element that recurses
-/// through it, under a Boxed Element wrapper: the module's struct holds
+/// through it, under a BoxedComponent box: the module's struct holds
 /// crane::list<crane::box<rose>>, so the concept the module type becomes
 /// has to ask for that type too, the element hole decided as everywhere
 /// else, or the module satisfying the module type does not satisfy the
@@ -18,7 +18,7 @@ uint64_t BoxedElementConcept::size(const BoxedElementConcept::rose &r) {
             return UINT64_C(0);
           } else {
             const BoxedElementConcept::rose &k = l.front();
-            auto t = l.tail();
+            crane::list<crane::box<BoxedElementConcept::rose>> t = l.tail();
             return size(k) + _self_go(_self_go, std::move(t));
           }
         };

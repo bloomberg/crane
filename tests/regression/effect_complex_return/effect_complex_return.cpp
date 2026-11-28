@@ -105,9 +105,9 @@ std::string EffectComplexReturn::env_or_prompt(const std::string &name) {
     const std::string &v = *mv;
     return v;
   } else {
-    std::cout << (std::string("Enter ") +
-                  (name + std::string(":")).substr(0, 16777211))
-                     .substr(0, 16777211) <<
+    std::cout << ((std::string("Enter ") +
+                   (name + std::string(":")).substr(0, 16777211))
+                      .substr(0, 16777211)) <<
     '\n';
     return []() -> std::string {
       std::string _r;

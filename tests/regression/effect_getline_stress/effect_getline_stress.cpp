@@ -55,7 +55,7 @@ EffectGetlineStress::read_lines(uint64_t n, const List<std::string> &acc) {
 void EffectGetlineStress::read_and_echo() {
   std::string line;
   std::getline(std::cin, line);
-  std::cout << std::move(line) << '\n';
+  std::cout << line << '\n';
 }
 
 /// 5. get_line result used in a let chain

@@ -104,19 +104,19 @@ struct Denotation {
   };
 
   enum class TickE { TICK };
-  template <typename x = void> using E = Sum1<TickE, FailE, x>;
+  template <typename x> using E = Sum1<TickE, FailE, x>;
 
-  template <Params _tcI0, typename T1 = void>
-  static std::optional<exc>
-  exc_of_event(const Sum1<TickE, FailE, crane::obj> &e) {
-    if (std::holds_alternative<typename Sum1<TickE, FailE, crane::obj>::Inl1>(
-            e.v())) {
+  template <Params _tcI0, typename T1>
+  static std::optional<exc> exc_of_event(const Sum1<TickE, FailE, T1> &e) {
+    if (std::holds_alternative<typename std::decay_t<decltype(e)>::Inl1>(e.v())) {
+      const auto &_x =
+          std::get<typename std::decay_t<decltype(e)>::Inl1>(e.v()).a0;
       return std::optional<exc>();
     } else {
-      const auto &[a0] =
-          std::get<typename Sum1<TickE, FailE, crane::obj>::Inr1>(e.v());
-      const auto &[a00] = a0;
-      return std::make_optional<exc>(a00);
+      const auto &f =
+          std::get<typename std::decay_t<decltype(e)>::Inr1>(e.v()).a0;
+      const auto &[a0] = f;
+      return std::make_optional<exc>(a0);
     }
   }
 
@@ -128,23 +128,20 @@ struct Denotation {
             ITree<Sum<std::shared_ptr<ITree<T1>>, Sum<exc, T1>>>> {
           auto _cs = u->observe();
           if (std::holds_alternative<typename ITree<T1>::Ret>(_cs)) {
-            const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&_cs);
-            auto a = _itf.value;
+            T1 a = std::get_if<typename ITree<T1>::Ret>(&_cs)->value;
             return itree_ret(
                 Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inr(
                     Sum<crane::obj, T1>::inr(std::move(a))));
           } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
-            const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
-            auto u_ = _itf.next;
+            auto u_ = std::get_if<typename ITree<T1>::Tau>(&_cs)->next;
             return itree_ret(
                 Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inl(
                     std::move(u_)));
           } else {
-            const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&_cs);
-            auto e =
-                crane_event_as<Sum1<TickE, FailE, crane::obj>>(_itf.effect);
-            auto k = _itf.cont;
-            auto _cs1 = exc_of_event<_tcI0, void>(e);
+            auto e = crane_event_as<Sum1<TickE, FailE, crane::obj>>(
+                std::get_if<typename ITree<T1>::Vis>(&_cs)->effect);
+            auto k = std::get_if<typename ITree<T1>::Vis>(&_cs)->cont;
+            auto _cs1 = exc_of_event<_tcI0>(e);
             if (_cs1.has_value()) {
               const auto &x = *_cs1;
               return itree_ret(

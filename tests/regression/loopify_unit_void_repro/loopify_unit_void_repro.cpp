@@ -26,7 +26,7 @@ void LoopifyUnitVoidRepro::loop(uint64_t x, uint64_t y,
   }
 }
 
-int LoopifyUnitVoidRepro::run() {
+int32_t LoopifyUnitVoidRepro::run() {
   loop(UINT64_C(0), UINT64_C(0),
        List<bool>::cons(true, List<bool>::cons(false, List<bool>::nil())));
   return 0;

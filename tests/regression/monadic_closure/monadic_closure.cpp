@@ -69,7 +69,7 @@ int64_t MonadicClosure::let_effect_capture() {
   std::string line;
   std::getline(std::cin, line);
   int64_t len = static_cast<int64_t>(std::string_view{line}.size());
-  std::cout << std::move(line) << '\n';
+  std::cout << line << '\n';
   return len;
 }
 
