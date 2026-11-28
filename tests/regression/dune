@@ -491,6 +491,17 @@
   (deps demoted_dictionary_operation.t.exe)
   (action (run ./demoted_dictionary_operation.t.exe))))
 
+(subdir global_indexed_value_type
+ (rule
+  (targets global_indexed_value_type.t.exe)
+  (deps GlobalIndexedValueType.vo global_indexed_value_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} global_indexed_value_type.t.exe global_indexed_value_type.t.cpp global_indexed_value_type.cpp)))
+ (rule
+  (alias runtest)
+  (deps global_indexed_value_type.t.exe)
+  (action (run ./global_indexed_value_type.t.exe))))
+
 (subdir boxed_fields
  (rule
   (targets boxed_fields.t.exe)

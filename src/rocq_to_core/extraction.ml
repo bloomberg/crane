@@ -873,9 +873,12 @@ and extract_spine env sg db j c args =
         else
           extract_type env sg db 0 reduced []
       else (
-        match sequential_monad_alias env sg (kn, u) args with
-        | Some monad -> extract_type env sg db 0 monad []
-        | None -> extract_type_app env sg db (r, type_sign env sg typ) args )
+        match value_indexed_reduct env sg (kn, u) args with
+        | Some reduced -> extract_type env sg db 0 reduced []
+        | None -> (
+          match sequential_monad_alias env sg (kn, u) args with
+          | Some monad -> extract_type env sg db 0 monad []
+          | None -> extract_type_app env sg db (r, type_sign env sg typ) args ) )
     | Info, Default ->
     (* Not a Core type, for example [(c:forall X, X->X) Type nat] *)
     match (lookup_constant kn env).const_body with
@@ -920,6 +923,55 @@ and extract_spine env sg db j c args =
 (** {2 Auxiliary function dealing with type application. Precondition: [r] is a
     type scheme represented by the signature [s], and is completely applied:
     [List.length args = List.length s]} *)
+
+(** The type constant [c] applied to [args], reduced, where [c]'s body
+    matches on a value parameter and the application computes past it: [V 0] for
+    [V i := match i with 0 => list nat | _ => nat end] is [list nat].  Core
+    has no type indexed by a value, so the application kept whole would
+    stand for whatever [c]'s body erases to, unrelated to the [list nat] a
+    term at the type has.  One whose reduction is stuck on the value -- [V
+    n] at a variable [n] -- is kept. *)
+and value_indexed_reduct env sg (kn, u) args =
+  (* Whether [c]'s body, under its parameters, is a [match] on one of them
+     that is a value: of an informative type that is no class (a class's
+     dictionary is how [Global.ref] reaches its carrier). *)
+  let rec matches_on_value env params c =
+    match EConstr.kind sg c with
+    | Lambda (x, t, d) -> matches_on_value (push_rel_assum (x, t) env) (params + 1) d
+    | _ -> (
+      match EConstr.kind sg (whd_all env sg c) with
+      | Case (_, _, _, _, _, scrut, _) -> (
+        match EConstr.kind sg (whd_all env sg scrut) with
+        | Rel k when k <= params ->
+          let t = EConstr.Vars.lift k (Context.Rel.Declaration.get_type (EConstr.lookup_rel k env)) in
+          let is_class t =
+            match EConstr.kind sg (fst (EConstr.decompose_app sg t)) with
+            | Ind (i, _) -> Typeclasses.is_class (GlobRef.IndRef i)
+            | Const (c, _) -> Typeclasses.is_class (GlobRef.ConstRef c)
+            | _ -> false
+          in
+          flag_of_type env sg t = (Info, Default) && not (is_class t || is_class (whd_all env sg t))
+        | _ -> false )
+      | _ -> false )
+  in
+  let body () =
+    match (lookup_constant kn env).const_body with
+    | Def b -> Some (get_body b)
+    | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ -> None
+  in
+  if lang () != Cpp || args = [] || Base.Table.is_custom (GlobRef.ConstRef kn) then None
+  else
+    match body () with
+    | Some b when (try matches_on_value env 0 b with e when CErrors.noncritical e -> false) -> (
+      let full = EConstr.applist (EConstr.mkConstU (kn, u), args) in
+      match whd_all env sg full with
+      | exception e when CErrors.noncritical e -> None
+      | reduced -> (
+        match EConstr.kind sg (fst (EConstr.decompose_app sg reduced)) with
+        | Const (kn', _) when Constant.CanOrd.equal kn kn' -> None
+        | Case _ | Fix _ | CoFix _ | Proj _ | Evar _ | Meta _ -> None
+        | _ -> Some reduced ) )
+    | _ -> None
 
 (** The type constant [c] applied to [args], unfolded, where it stands for a
     monad Crane runs sequentially.  Such a monad's value is the running of
@@ -2159,6 +2211,98 @@ and observe_type_arg env sg db a =
       if n' > 0 then Some (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = n'}) else None
     | _ -> None )
 
+(** Whether the type function [a] is a family that computes on a value:
+    a [match] on one decides the type ([fun i => match i with 0 => list nat
+    | _ => nat end], or a constant unfolding to one), so it is a different
+    type at each index.  One constant in its values ([fun _ => bucket K A])
+    is that one type, and a variable family (a motive [P : T -> Set]) is a
+    type variable, read as one. *)
+and is_value_family env sg a =
+  let rec in_match values c =
+    match EConstr.kind sg c with
+    | Case (_, _, _, _, _, scrut, _) when List.exists (fun k -> not (EConstr.Vars.noccurn sg k scrut)) values -> true
+    | _ -> EConstr.fold_with_binders sg (List.map succ) (fun values acc c -> acc || in_match values c) values false c
+  in
+  let rec go env values a t =
+    match EConstr.kind sg (whd_all env sg t) with
+    | Prod (x, d, c) ->
+      let values = List.map succ values in
+      let values = if flag_of_type env sg d = (Info, Default) then 1 :: values else values in
+      go (push_rel_assum (x, d) env) values (EConstr.mkApp (EConstr.Vars.lift 1 a, [|EConstr.mkRel 1|])) c
+    | _ -> values <> [] && in_match values (whd_all env sg a)
+  in
+  match EConstr.kind sg (fst (EConstr.decompose_app sg (whd_betaiotazeta env sg a))) with
+  | Lambda _ | Const _ -> (try go env [] a (type_of env sg a) with e when CErrors.noncritical e -> false)
+  | _ -> false
+
+(** What the value family [a], the argument at position [p] of a call of
+    [kn] to [args], is at the index the callee applies it to: the scheme
+    variable of [p]'s binder stands for [V idx] (Core drops a value index),
+    and at this call [idx] is an argument, so [V idx] is a type -- [list nat]
+    for [V 0] above.  Read off every application of the
+    binder the callee's type makes, with this call's arguments in place;
+    [None] where one is stuck on a value the call does not give, or two
+    disagree, or where the callee also names the family itself, unapplied
+    ([halist K V], whose [V] the variable then stands for too). *)
+and family_at_index env sg db kn args p a =
+  let marker = Id.of_string "crane_value_family" in
+  let found = ref [] and unapplied = ref false in
+  let rec collect c =
+    match EConstr.kind sg c with
+    | App (f, ts) when EConstr.isVarId sg marker f ->
+      found := Array.to_list ts :: !found;
+      Array.iter collect ts
+    | Var x when Id.equal x marker -> unapplied := true
+    | _ -> EConstr.iter sg collect c
+  in
+  (* A dictionary's type is no statement about values: [Event T V -< E]
+     names the family itself, where the instance is resolved. *)
+  let is_class env t =
+    let class_head t =
+      match EConstr.kind sg (fst (EConstr.decompose_app sg (snd (EConstr.decompose_prod sg t)))) with
+      | Ind (i, _) -> Typeclasses.is_class (GlobRef.IndRef i)
+      | Const (c, _) -> Typeclasses.is_class (GlobRef.ConstRef c)
+      | _ -> false
+    in
+    class_head t || class_head (whd_all env sg t)
+  in
+  let observe env d = if not (is_class env d) then collect d in
+  let rec rest env t =
+    match EConstr.kind sg (whd_all env sg t) with
+    | Prod (x, d, c) ->
+      observe env d;
+      rest (push_rel_assum (x, d) env) c
+    | _ -> collect t
+  in
+  let rec walk env i t =
+    match EConstr.kind sg (whd_all env sg t) with
+    | Prod (_, d, c) when i < List.length args ->
+      if i > p then observe env d;
+      let x = if i = p then EConstr.mkVar marker else List.nth args i in
+      let env =
+        if i = p then EConstr.push_named (Context.Named.Declaration.LocalAssum (Context.make_annot marker EConstr.ERelevance.relevant, d)) env
+        else env
+      in
+      walk env (i + 1) (EConstr.Vars.subst1 x c)
+    | _ -> if i > p then rest env t
+  in
+  try
+    walk env 0 (EConstr.of_constr (lookup_constant kn env).const_type);
+    let at ts =
+      if not (List.for_all (EConstr.Vars.closed0 sg) ts) then None
+      else
+        let t = whd_all env sg (EConstr.applist (a, ts)) in
+        match EConstr.kind sg (fst (EConstr.decompose_app sg t)) with
+        | Case _ | Fix _ | CoFix _ | Proj _ -> None
+        | _ when not (Termops.occur_var env sg marker t) -> Some (extract_type env sg db 0 t [])
+        | _ -> None
+    in
+    match List.map at !found with
+    | _ when !unapplied -> None
+    | Some t :: rest when List.for_all (function Some t' -> t' = t | None -> false) rest -> Some t
+    | _ -> None
+  with e when CErrors.noncritical e -> None
+
 (** {2 Extraction of a constant applied to arguments} *)
 
 (** The use's instantiation of [schema]: for each variable, the type its
@@ -2208,8 +2352,12 @@ and extract_cst_app env sg type_env extracted_ty kn args =
       (fun v ->
         ( v,
           Option.bind (Core.Schema.origin schema v) (fun b ->
-              Option.map (observe_type_arg env sg db)
-                (List.nth_opt args (Core.Scheme.Binder.position b.Core.Schema.binder)) ) ) )
+              let p = Core.Scheme.Binder.position b.Core.Schema.binder in
+              Option.map
+                (fun a ->
+                  let at_index = if is_value_family env sg a then family_at_index env sg db kn args p a else None in
+                  match at_index with Some _ -> at_index | None -> observe_type_arg env sg db a )
+                (List.nth_opt args p) ) ) )
       (Core.Schema.vars schema)
   in
   let written_at v =
