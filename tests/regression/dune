@@ -12687,6 +12687,17 @@
   (deps error_failwith.t.exe)
   (action (run ./error_failwith.t.exe))))
 
+(subdir poly_throwing_call
+ (rule
+  (targets poly_throwing_call.t.exe)
+  (deps PolyThrowingCall.vo poly_throwing_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_throwing_call.t.exe poly_throwing_call.t.cpp poly_throwing_call.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_throwing_call.t.exe)
+  (action (run ./poly_throwing_call.t.exe))))
+
 (subdir par_unit_not_concurrent
  (rule
   (targets par_unit_not_concurrent.t.exe)

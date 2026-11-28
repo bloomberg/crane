@@ -55,7 +55,7 @@ Notation E := (Global.Event nat Vn +' Global.Event nat Va +' exceptE Err).
 
 (** Give up: a loop ran out of fuel.  No answer comes back; the driver
     reports UNKNOWN. *)
-Definition out_of_fuel : itree E nat := failwith "out of fuel"%pstring.
+Definition out_of_fuel {A} : itree E A := failwith "out of fuel"%pstring.
 
 (** Handles to every array, made once by [new_state]. *)
 Record state := mk_state {

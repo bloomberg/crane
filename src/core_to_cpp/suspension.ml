@@ -20,14 +20,24 @@ open Core_plan.Query
     initialisation; a monadic action, run when performed. *)
 type thunk_reason = Cofixpoint | Throws | Monadic
 
+(** [t] past the binders extraction erased in front of it: a polymorphic
+    definition's type quantifiers, which no declaration takes as a parameter. *)
+let rec past_erased_binders t =
+  match resolve_meta t with
+  | Core.Type.Arrow {parameter; result} when Option.has_some (extraction_erasure parameter) ->
+    past_erased_binders result
+  | t -> t
+
 (** The {!thunk_reason} of the global [r], if it has one: the one place that
-    decides it, which the declaration of [r] and every reference to it read. *)
+    decides it, which the declaration of [r] and every reference to it read.
+    A monadic action is one whatever type quantifiers it takes: [{A} : itree
+    E A] is declared as a function of no parameters, as [itree E nat] is. *)
 let thunk_reason cx r =
   if Base.Table.is_cofixpoint r then Some Cofixpoint
   else if is_throwing_value cx r then Some Throws
   else
     match find_type_opt r with
-    | Some t when is_monadic_core_type t -> Some Monadic
+    | Some t when is_monadic_core_type (past_erased_binders t) -> Some Monadic
     | _ -> None
 
 (** Whether naming the global [r] calls it.  A definition that only throws is
