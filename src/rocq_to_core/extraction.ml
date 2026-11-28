@@ -3517,6 +3517,9 @@ let extract_constant access env kn cb =
     | Primitive _ | Undef _ ->
       warn_info ();
       mk_ax ()
+    (* A typed operation mapping replaces the body: what it reads (a match on
+       a mapped type with no constructor views, say) is never lowered. *)
+    | Def _ when Base.Mapping_operation.is_operation_head r -> mk_ax ()
     | Def c ->
       ( match Structures.PrimitiveProjections.find_opt kn with
       | None -> mk_def (get_body c)
