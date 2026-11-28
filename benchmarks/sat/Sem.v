@@ -961,3 +961,16 @@ Corollary safe_run {R} (t : itree Solver.E R) (Q : R -> heap -> Prop) :
   safe t Q ([], []) ->
   model_safe (fun '(ma', (mn', r)) => Q r (mn', ma')) (Global.run (Global.run t)).
 Proof. apply safe_model. Qed.
+
+(** Safety for a family of postconditions at once: [t] is safe for [Q0],
+    and for every [v] with [P v] safe for [Q v], so every answer satisfies
+    all of them.  UNSAT soundness combines one run per valuation this way. *)
+Lemma safe_conj_all {R A} (t : itree Solver.E R) (P : A -> Prop) (Q0 : R -> heap -> Prop)
+    (Q : A -> R -> heap -> Prop) h :
+  safe t Q0 h -> (forall v, P v -> safe t (Q v) h) ->
+  safe t (fun r h' => Q0 r h' /\ forall v, P v -> Q v r h') h.
+Proof.
+  intros H0 H h' u Hr. pose proof (H0 h' u Hr) as K0. unfold ok_at, rok in *.
+  destruct (observe u) eqn:E; auto. split; [exact K0|]. intros v Hv.
+  pose proof (H v Hv h' u Hr) as K. unfold ok_at, rok in K. rewrite E in K. exact K.
+Qed.

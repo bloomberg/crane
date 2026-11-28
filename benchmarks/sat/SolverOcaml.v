@@ -36,6 +36,6 @@ Extract Inlined Constant Global.read_ref => "(fun _ _ _ r -> !(Obj.obj r))".
 Extract Inlined Constant Global.write_ref => "(fun _ _ _ r x -> Obj.obj r := x)".
 Extract Inlined Constant Solver.out_of_fuel => "(raise Sat_rt.Out_of_fuel)".
 (** Only the type of [out_of_fuel]'s message is left of [Err]. *)
-Extract Constant PrimString.string => "string".
+Extract Constant PrimString.string => "Stdlib.String.t".
 
 Extraction "solver_ml.ml" Solver.solve_dimacs.
