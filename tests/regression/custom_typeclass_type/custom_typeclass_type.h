@@ -9,9 +9,7 @@ struct RefNat;
 struct nat_ref;
 template <typename CraneInst, typename I>
 concept RefClass = requires {
-  {
-    CraneInst::template mkRef<crane::obj>(std::declval<I>())
-  } -> std::convertible_to<crane::obj>;
+  { CraneInst::mkRef(std::declval<I>()) } -> std::convertible_to<crane::obj>;
 };
 
 struct RefNat {
@@ -26,9 +24,7 @@ struct RefNat {
 };
 
 struct nat_ref {
-  template <typename CraneA0> static CraneA0 mkRef(uint64_t i) {
-    return CraneA0::mkref(i);
-  }
+  static crane::obj mkRef(uint64_t i) { return RefNat::mkref(i); }
 };
 
 static_assert(RefClass<nat_ref, uint64_t>);

@@ -14,7 +14,6 @@ struct rec;
 enum class Nonterminal;
 struct Symbol;
 using tuple = crane::obj;
-using symbol_semty = crane::obj;
 using symbols_semty = tuple;
 using predicate_semty = crane::obj;
 using action_semty = crane::obj;

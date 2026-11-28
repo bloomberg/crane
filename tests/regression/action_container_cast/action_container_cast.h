@@ -19,7 +19,6 @@ struct R;
 enum class Nonterminal;
 struct Symbol;
 using tuple = crane::obj;
-using symbol_semty = crane::obj;
 using symbols_semty = tuple;
 using predicate_semty = crane::obj;
 using action_semty = crane::obj;
@@ -284,11 +283,10 @@ const std::deque<grammar_entry> entries = [](auto _a0, auto _a1) {
             Prod<crane::obj, crane::obj>::pair(
                 crane_erase_fn([](const crane::obj &) { return Bool0::TRUE_; }),
                 crane_erase_fn([](const crane::obj &_any_ss) {
-                  Prod<crane::obj, Unit> ss =
-                      crane::any_cast<Prod<crane::obj, Unit>>(_any_ss);
+                  Prod<std::deque<R>, Unit> ss =
+                      crane::any_cast<Prod<std::deque<R>, Unit>>(_any_ss);
                   auto &[a0, _] = ss;
-                  return R::rarr(crane_container_cast<std::deque<R>>(
-                      crane::any_cast<std::deque<crane::obj>>(std::move(a0))));
+                  return R::rarr(std::move(a0));
                 }))),
         std::deque<SigT<Prod<Nonterminal, std::deque<Symbol>>,
                         Prod<crane::obj, crane::obj>>>{}));

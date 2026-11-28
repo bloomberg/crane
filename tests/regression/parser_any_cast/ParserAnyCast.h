@@ -79,8 +79,8 @@ struct ParserAnyCast {
     return v;
   }
 
-  static const label_sem &def_literal() {
-    static const label_sem v = std::monostate{};
+  static const std::monostate &def_literal() {
+    static const std::monostate v = std::monostate{};
     return v;
   }
 

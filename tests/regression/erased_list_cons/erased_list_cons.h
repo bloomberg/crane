@@ -3,9 +3,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
+#include "small_vector.h"
 #include <atomic>
 #include <concepts>
-#include <functional>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -15,6 +16,7 @@
 
 template <typename A> struct List;
 template <typename A, typename P> struct SigT;
+struct Val;
 
 template <typename A> struct List {
   // TYPES
@@ -283,9 +285,8 @@ template <SYM Ty> struct DefsFn {
     const auto &[x0, a1] = e;
     auto [_, _] = x0;
     const auto &[_, a] = a1;
-    action_semty act = a;
-    return crane::any_cast<crane::fn<crane::obj(crane::obj)>>(std::move(act))(
-        std::move(x0_));
+    auto act = crane_any_cast<crane::fn<crane::obj(symbols_semty)>>(a);
+    return crane_call_erased(act, std::move(x0_));
   }
 
   static std::optional<crane::obj>
@@ -300,6 +301,46 @@ template <SYM Ty> struct DefsFn {
       return std::optional<crane::obj>();
     }
   }
+};
+
+struct Val {
+  // TYPES
+  struct VN {
+    uint64_t a0;
+  };
+
+  struct VL {
+    std::shared_ptr<List<Val>> a0;
+  };
+
+  using variant_t = std::variant<VN, VL>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Val() {}
+
+  explicit Val(VN _v) : v_(std::move(_v)) {}
+
+  explicit Val(VL _v) : v_(std::move(_v)) {}
+
+  static Val vn(uint64_t a0) { return Val(VN{a0}); }
+
+  static Val vl(List<Val> a0);
+  // MANIPULATORS
+  ~Val();
+  Val(const Val &) = default;
+  Val &operator=(const Val &) = default;
+  Val(Val &&) = default;
+  Val &operator=(Val &&) = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct MySym {
@@ -377,8 +418,50 @@ const MyDefs::grammar entries =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
                   const auto &[_, _] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
-                  return List<crane::obj>::cons(
-                      pr, crane::any_cast<List<crane::obj>>(prs));
+                  return List<std::pair<uint64_t, Val>>::cons(
+                      crane_any_cast<std::pair<uint64_t, Val>>(pr),
+                      crane::any_cast<List<crane::obj>>(prs));
                 })))),
         List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
                   std::pair<crane::obj, crane::obj>>>::nil());
+
+inline Val Val::vl(List<Val> a0) {
+  return Val(VL{std::make_shared<List<Val>>(std::move(a0))});
+}
+
+inline Val::~Val() {
+  // Release the children this node alone owns in a loop, not recursively, so a
+  // deep value cannot overflow the stack.
+  if (std::holds_alternative<VN>(v_mut())) {
+    return;
+  }
+  crane::small_vector<std::shared_ptr<Val>> _stack = {};
+  auto _drain = [&](variant_t &_v) {
+    if (auto *_alt = std::get_if<VL>(&_v)) {
+      if (_alt->a0 && _alt->a0.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        auto _lp = _alt->a0.get();
+        while (std::holds_alternative<typename List<Val>::Cons>(_lp->v())) {
+          auto &_lc = std::get<typename List<Val>::Cons>(_lp->v_mut());
+          _stack.push_back(std::make_shared<Val>(std::move(_lc.a)));
+          if (_lc.l && _lc.l.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            _lp = _lc.l.get();
+          } else {
+            break;
+          }
+        }
+        _alt->a0.reset();
+      }
+    }
+  };
+  _drain(v_mut());
+  while (!_stack.empty()) {
+    auto _cur = std::move(_stack.back());
+    _stack.pop_back();
+    if (_cur.use_count() == 1) {
+      std::atomic_thread_fence(std::memory_order_acquire);
+      _drain(_cur->v_mut());
+    }
+  }
+}

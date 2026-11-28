@@ -18,7 +18,6 @@ enum class Terminal;
 enum class Nonterminal;
 struct Symbol;
 using tuple = crane::obj;
-using symbol_semty = crane::obj;
 using symbols_semty = tuple;
 using predicate_semty = crane::obj;
 using action_semty = crane::obj;
@@ -235,7 +234,8 @@ using grammar_entry = SigT<production, production_semty>;
                       return [](auto _a0, auto _a1) {
                         _a1.push_front(_a0);
                         return _a1;
-                      }(pr, crane::any_cast<std::deque<crane::obj>>(prs));
+                      }(crane_any_cast<std::pair<String, uint64_t>>(pr),
+                        crane::any_cast<std::deque<crane::obj>>(prs));
                     })))),
             [](auto _a0, auto _a1) {
               _a1.push_front(_a0);
@@ -290,7 +290,7 @@ using grammar_entry = SigT<production, production_semty>;
                               return [](auto _a0, auto _a1) {
                                 _a1.push_front(_a0);
                                 return _a1;
-                              }(pr,
+                              }(crane_any_cast<std::pair<String, uint64_t>>(pr),
                                 crane::any_cast<std::deque<crane::obj>>(prs));
                             })))),
                     [](auto _a0, auto _a1) {
@@ -342,7 +342,9 @@ using grammar_entry = SigT<production, production_semty>;
                                           const auto &[n, _] =
                                               crane::any_cast<std::pair<
                                                   crane::obj, crane::obj>>(y1);
-                                          return std::make_pair(s, n);
+                                          return std::make_pair(
+                                              crane::any_cast<String>(s),
+                                              crane::any_cast<uint64_t>(n));
                                         })))),
                             std::deque<
                                 SigT<std::pair<Nonterminal, std::deque<Symbol>>,
