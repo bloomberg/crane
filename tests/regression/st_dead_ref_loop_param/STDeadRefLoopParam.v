@@ -21,9 +21,12 @@ Import Monads.
 Local Open Scope monad_scope.
 
 Section S.
+  (** The program is polymorphic in [R], as [ST.run] requires. *)
   Context {R : ST.Refs}.
+  (** Effects of a program whose store holds only pairs. *)
   Notation E0 := (ST.Event R (fun _ : nat => (nat * nat)%type) +' exceptE Err).
 
+  (** The loop [h] allocates a reference from [acc] that nothing reads. *)
   Definition st_1 : itree E0 nat :=
     r0 <- ST.new_ref (2, 1);;
     let fix h (k : nat) (acc : nat) (p : ST.ref (nat * nat)) : itree E0 nat :=
@@ -37,6 +40,7 @@ Section S.
 End S.
 
 Module STDeadRefLoopParam.
+  (** [st_1] run in C++: [53]. *)
   Definition result : nat := ST.run_cpp (@st_1 ST.cpp_refs).
 End STDeadRefLoopParam.
 

@@ -69,6 +69,7 @@ Definition z_mapping : TypeMapping Z :=
    inputs whose true result fits in int64_t this is identical to native signed
    arithmetic; only the out-of-range cases differ, and there they wrap
    deterministically instead of being UB. *)
+(** [Z.add] is [+] wrapping modulo 2^64, never signed overflow. *)
 Definition z_add_mapping : OperationMapping (Ref Z.add) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Add Wrapping) (Arg "x") (Arg "y"));
@@ -77,6 +78,7 @@ Definition z_add_mapping : OperationMapping (Ref Z.add) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.sub] is [-] wrapping modulo 2^64, never signed overflow. *)
 Definition z_sub_mapping : OperationMapping (Ref Z.sub) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Sub Wrapping) (Arg "m") (Arg "n"));
@@ -85,6 +87,7 @@ Definition z_sub_mapping : OperationMapping (Ref Z.sub) :=
          [{| argument_name := "m"; argument_use := Read |};
           {| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.mul] is [*] wrapping modulo 2^64, never signed overflow. *)
 Definition z_mul_mapping : OperationMapping (Ref Z.mul) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Mul Wrapping) (Arg "x") (Arg "y"));
@@ -93,12 +96,11 @@ Definition z_mul_mapping : OperationMapping (Ref Z.mul) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
-(* Rocq's Z.div / Z.modulo use *floored* division (the remainder takes the sign
-   of the divisor), whereas C++ / and % truncate toward zero. We compute the
-   truncated quotient/remainder once and apply the flooring correction so the
-   results match Rocq for negative operands, and follow Rocq's a/0 = 0 and
-   a mod 0 = a conventions for a zero divisor (CWE-682). The [_b == -1] case is
-   handled separately because INT64_MIN / -1 and INT64_MIN % -1 are UB. *)
+(** [Z.div] and [Z.modulo] floor (the remainder takes the divisor's sign),
+    whereas C++ [/] and [%] truncate toward zero: the truncated quotient or
+    remainder is corrected for operands of opposite sign.  A zero divisor
+    follows Rocq ([a / 0 = 0], [a mod 0 = a]), and [b = -1] is answered
+    without dividing, since [INT64_MIN / -1] is undefined behaviour. *)
 Definition z_div_mapping : OperationMapping (Ref Z.div) :=
   {| operation_headers := [];
      operation_cpp := Expr "[](int64_t _a, int64_t _b) -> int64_t {
@@ -114,6 +116,7 @@ Definition z_div_mapping : OperationMapping (Ref Z.div) :=
          [{| argument_name := "a"; argument_use := Read |};
           {| argument_name := "b"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.modulo]: the floored remainder, as for [z_div_mapping]. *)
 Definition z_modulo_mapping : OperationMapping (Ref Z.modulo) :=
   {| operation_headers := [];
      operation_cpp := Expr "[](int64_t _a, int64_t _b) -> int64_t {
@@ -128,6 +131,8 @@ Definition z_modulo_mapping : OperationMapping (Ref Z.modulo) :=
          [{| argument_name := "a"; argument_use := Read |};
           {| argument_name := "b"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.opp] negates in [uint64_t], so [-INT64_MIN] wraps to [INT64_MIN]
+    instead of being undefined. *)
 Definition z_opp_mapping : OperationMapping (Ref Z.opp) :=
   {| operation_headers := [];
      operation_cpp := Structured (wrap I64 (Unop Negate (wrap U64 (Arg "x"))));
@@ -135,6 +140,7 @@ Definition z_opp_mapping : OperationMapping (Ref Z.opp) :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.abs] negates negatives in [uint64_t]; [INT64_MIN] stays itself. *)
 Definition z_abs_mapping : OperationMapping (Ref Z.abs) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Binop Less (Arg "z") (lit 0)) (wrap I64 (Unop Negate (wrap U64 (Arg "z")))) (Arg "z"));
@@ -142,6 +148,7 @@ Definition z_abs_mapping : OperationMapping (Ref Z.abs) :=
        PureOperation
          [{| argument_name := "z"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.succ] is [x + 1] in [uint64_t]; wraps at [INT64_MAX]. *)
 Definition z_succ_mapping : OperationMapping (Ref Z.succ) :=
   {| operation_headers := [];
      operation_cpp := Structured (wrap I64 (Binop (Add Unchecked) (wrap U64 (Arg "x")) (lit 1)));
@@ -149,6 +156,7 @@ Definition z_succ_mapping : OperationMapping (Ref Z.succ) :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.pred] is [x - 1] in [uint64_t]; wraps at [INT64_MIN]. *)
 Definition z_pred_mapping : OperationMapping (Ref Z.pred) :=
   {| operation_headers := [];
      operation_cpp := Structured (wrap I64 (Binop (Sub Unchecked) (wrap U64 (Arg "x")) (lit 1)));
@@ -156,6 +164,7 @@ Definition z_pred_mapping : OperationMapping (Ref Z.pred) :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.eqb] is [==]. *)
 Definition z_eqb_mapping : OperationMapping (Ref Z.eqb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Equal (Arg "x") (Arg "y"));
@@ -164,6 +173,7 @@ Definition z_eqb_mapping : OperationMapping (Ref Z.eqb) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.ltb] is [<]. *)
 Definition z_ltb_mapping : OperationMapping (Ref Z.ltb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Less (Arg "x") (Arg "y"));
@@ -172,6 +182,7 @@ Definition z_ltb_mapping : OperationMapping (Ref Z.ltb) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.leb] is [<=]. *)
 Definition z_leb_mapping : OperationMapping (Ref Z.leb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop LessEq (Arg "x") (Arg "y"));
@@ -180,6 +191,7 @@ Definition z_leb_mapping : OperationMapping (Ref Z.leb) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.gtb] is [>]. *)
 Definition z_gtb_mapping : OperationMapping (Ref Z.gtb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Greater (Arg "x") (Arg "y"));
@@ -188,6 +200,7 @@ Definition z_gtb_mapping : OperationMapping (Ref Z.gtb) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.geb] is [>=]. *)
 Definition z_geb_mapping : OperationMapping (Ref Z.geb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop GreaterEq (Arg "x") (Arg "y"));
@@ -196,6 +209,7 @@ Definition z_geb_mapping : OperationMapping (Ref Z.geb) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.compare] is two [<] tests yielding [Lt], [Gt] or [Eq]. *)
 Definition z_compare_mapping : OperationMapping (Ref Z.compare) :=
   {| operation_headers := [];
      operation_cpp := Structured (three_way (Arg "x") (Arg "y"));
@@ -204,6 +218,7 @@ Definition z_compare_mapping : OperationMapping (Ref Z.compare) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.eq_dec] is [==]: the [sumbool] is a [bool]. *)
 Definition z_eq_dec_mapping : OperationMapping (Ref Z.eq_dec) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Equal (Arg "x") (Arg "y"));
@@ -212,6 +227,7 @@ Definition z_eq_dec_mapping : OperationMapping (Ref Z.eq_dec) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.min] is the flavour's [min] ([std::min] or [bsl::min]). *)
 Definition z_min_mapping (f : Flavour) : OperationMapping (Ref Z.min) :=
   {| operation_headers := [(flavour_algorithm f)];
      operation_cpp := Structured (Call (flavour_min f) [] [(Arg "n"); (Arg "m")]);
@@ -220,6 +236,7 @@ Definition z_min_mapping (f : Flavour) : OperationMapping (Ref Z.min) :=
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.max] is the flavour's [max] ([std::max] or [bsl::max]). *)
 Definition z_max_mapping (f : Flavour) : OperationMapping (Ref Z.max) :=
   {| operation_headers := [(flavour_algorithm f)];
      operation_cpp := Structured (Call (flavour_max f) [] [(Arg "n"); (Arg "m")]);
@@ -230,6 +247,8 @@ Definition z_max_mapping (f : Flavour) : OperationMapping (Ref Z.max) :=
          ReturnValue [] |}.
 
 (* Conversions *)
+(** [Z.of_nat] wraps the [nat] into [int64_t]: a [uint64_t] at or above
+    2^63 turns negative. *)
 Definition z_of_nat_mapping : OperationMapping (Ref Z.of_nat) :=
   {| operation_headers := [];
      operation_cpp := Structured (wrap I64 (Arg "n"));
@@ -237,6 +256,7 @@ Definition z_of_nat_mapping : OperationMapping (Ref Z.of_nat) :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.to_nat] clamps negatives to [0], then wraps into the [nat] type. *)
 Definition z_to_nat_mapping : OperationMapping (Ref Z.to_nat) :=
   {| operation_headers := [];
      operation_cpp := Structured (Convert Wrap ResultType (Cond (Binop Less (Arg "z") (lit 0)) (lit 0) (Arg "z")));
@@ -244,6 +264,7 @@ Definition z_to_nat_mapping : OperationMapping (Ref Z.to_nat) :=
        PureOperation
          [{| argument_name := "z"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.of_N] widens the [unsigned int] to [int64_t]. *)
 Definition z_of_N_mapping : OperationMapping (Ref Z.of_N) :=
   {| operation_headers := [];
      operation_cpp := Structured (wrap I64 (Arg "n"));
@@ -251,6 +272,8 @@ Definition z_of_N_mapping : OperationMapping (Ref Z.of_N) :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.to_N] clamps negatives to [0], then wraps into the [N] type,
+    dropping bits above [UINT_MAX]. *)
 Definition z_to_N_mapping : OperationMapping (Ref Z.to_N) :=
   {| operation_headers := [];
      operation_cpp := Structured (Convert Wrap ResultType (Cond (Binop Less (Arg "z") (lit 0)) (lit 0) (Arg "z")));
@@ -258,6 +281,8 @@ Definition z_to_N_mapping : OperationMapping (Ref Z.to_N) :=
        PureOperation
          [{| argument_name := "z"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Z.abs_N] takes the magnitude in [uint64_t], then wraps into the [N]
+    type. *)
 Definition z_abs_N_mapping : OperationMapping (Ref Z.abs_N) :=
   {| operation_headers := [];
      operation_cpp := Structured (Convert Wrap ResultType (Cond (Binop Less (Arg "z") (lit 0)) (Unop Negate (wrap U64 (Arg "z"))) (wrap U64 (Arg "z"))));

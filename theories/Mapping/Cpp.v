@@ -28,9 +28,11 @@ Definition to_size (e : Term) : Term := Convert Exact (Int Size) e.
     type, as an unsuffixed literal in C++ text is. *)
 Definition lit (v : Z) : Term := IntLit I32 v.
 
-(** [e] converted to the integer type [t]: [exact] asserts it holds the
-    value, [wrap] reduces it modulo two to the width of [t]. *)
+(** [e] converted to the integer type [t], asserting [t] holds its value. *)
 Definition exact (t : IntType) (e : Term) : Term := Convert Exact (Int t) e.
+
+(** [e] converted to the integer type [t] as C++ converts integers:
+    modulo two to the width of [t]. *)
 Definition wrap (t : IntType) (e : Term) : Term := Convert Wrap (Int t) e.
 
 (** [Nat.compare]'s and its kin's three-way result, by two comparisons. *)
@@ -46,10 +48,12 @@ Record Flavour : Type := {
   flavour_max : string
 }.
 
+(** The standard library: [<algorithm>], [std::min], [std::max]. *)
 Definition std_flavour : Flavour :=
   {| flavour_algorithm := "algorithm"%pstring; flavour_min := "std::min"%pstring;
      flavour_max := "std::max"%pstring |}.
 
+(** BDE: [bsl_algorithm.h], [bsl::min], [bsl::max]. *)
 Definition bde_flavour : Flavour :=
   {| flavour_algorithm := "bsl_algorithm.h"%pstring; flavour_min := "bsl::min"%pstring;
      flavour_max := "bsl::max"%pstring |}.

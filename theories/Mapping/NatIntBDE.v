@@ -66,6 +66,7 @@ Import Crane.Cpp.
                numeral_emitter := IntegerToken "" "u";
                numeral_converters := [Ref Nat.of_num_uint] |} |}.
 
+(** [Nat.add] is [+] on [unsigned int]; wraps at 2^32. *)
 #[export] Instance bde_nat_add_mapping : OperationMapping (Ref Nat.add) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Add Unchecked) (Arg "n") (Arg "m"));
@@ -74,6 +75,7 @@ Import Crane.Cpp.
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.mul] is [*] on [unsigned int]; wraps at 2^32. *)
 #[export] Instance bde_nat_mul_mapping : OperationMapping (Ref Nat.mul) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Mul Unchecked) (Arg "n") (Arg "m"));
@@ -82,6 +84,7 @@ Import Crane.Cpp.
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.div] is C++ [/], with Rocq's [x / 0 = 0]. *)
 #[export] Instance bde_nat_div_mapping : OperationMapping (Ref Nat.div) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Arg "y") (Binop Div (Arg "x") (Arg "y")) (lit 0));
@@ -90,6 +93,7 @@ Import Crane.Cpp.
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.modulo] is C++ [%], with Rocq's [x mod 0 = x]. *)
 #[export] Instance bde_nat_modulo_mapping : OperationMapping (Ref Nat.modulo) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Arg "y") (Binop Mod (Arg "x") (Arg "y")) (Arg "x"));
@@ -98,6 +102,7 @@ Import Crane.Cpp.
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.double] is [n + n]; wraps at 2^32. *)
 #[export] Instance bde_nat_double_mapping : OperationMapping (Ref Nat.double) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Add Unchecked) (Arg "n") (Arg "n"));
@@ -105,6 +110,7 @@ Import Crane.Cpp.
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.pred] is [n - 1], keeping [pred 0 = 0]. *)
 #[export] Instance bde_nat_pred_mapping : OperationMapping (Ref Nat.pred) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Arg "n") (Binop (Sub Unchecked) (Arg "n") (lit 1)) (Arg "n"));
@@ -112,6 +118,8 @@ Import Crane.Cpp.
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.sub] truncates at [0]: the wrapped difference exceeds [n] exactly
+    when [m > n]. *)
 #[export] Instance bde_nat_sub_mapping : OperationMapping (Ref Nat.sub) :=
   {| operation_headers := [];
      operation_cpp := Structured (LetIn "d" (Binop (Sub Unchecked) (Arg "n") (Arg "m")) (Cond (Binop Greater (Var "d") (Arg "n")) (lit 0) (Var "d")));
@@ -120,6 +128,7 @@ Import Crane.Cpp.
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.max] is [bsl::max]. *)
 #[export] Instance bde_nat_max_mapping : OperationMapping (Ref Nat.max) :=
   {| operation_headers := ["bsl_algorithm.h"];
      operation_cpp := Structured (Call "bsl::max" [] [(Arg "n"); (Arg "m")]);
@@ -128,6 +137,7 @@ Import Crane.Cpp.
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.min] is [bsl::min]. *)
 #[export] Instance bde_nat_min_mapping : OperationMapping (Ref Nat.min) :=
   {| operation_headers := ["bsl_algorithm.h"];
      operation_cpp := Structured (Call "bsl::min" [] [(Arg "n"); (Arg "m")]);
@@ -136,6 +146,7 @@ Import Crane.Cpp.
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.eqb] is [==]. *)
 #[export] Instance bde_nat_eqb_mapping : OperationMapping (Ref Nat.eqb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Equal (Arg "n") (Arg "m"));
@@ -144,6 +155,7 @@ Import Crane.Cpp.
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.ltb] is [<]. *)
 #[export] Instance bde_nat_ltb_mapping : OperationMapping (Ref Nat.ltb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Less (Arg "n") (Arg "m"));
@@ -152,6 +164,7 @@ Import Crane.Cpp.
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.leb] is [<=]. *)
 #[export] Instance bde_nat_leb_mapping : OperationMapping (Ref Nat.leb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop LessEq (Arg "n") (Arg "m"));
@@ -160,6 +173,7 @@ Import Crane.Cpp.
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Nat.compare] is two [<] tests yielding [Lt], [Gt] or [Eq]. *)
 #[export] Instance bde_nat_compare_mapping : OperationMapping (Ref Nat.compare) :=
   {| operation_headers := [];
      operation_cpp := Structured (three_way (Arg "n") (Arg "m"));
@@ -169,6 +183,8 @@ Import Crane.Cpp.
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
 
+(** [Nat.iter n f x] is a counted loop applying [f] [n] times, moving the
+    accumulator, instead of [n] nested calls. *)
 #[export] Instance bde_nat_iter_mapping : OperationMapping (Ref Nat.iter) :=
   {| operation_headers := ["type_traits"; "utility"];
      operation_cpp := Expr "[](unsigned int _crane_n, auto _crane_f, auto _crane_seed) { %ret _crane_acc = std::move(_crane_seed); for (unsigned int _crane_i = 0; _crane_i < _crane_n; _crane_i++) { _crane_acc = _crane_f(std::move(_crane_acc)); } return _crane_acc; }(%arg(n), %arg(f), %arg(x))";
@@ -183,6 +199,7 @@ Import Crane.Cpp.
    constants, mapped above; only [eq_dec] is its own. *)
 From Stdlib Require PeanoNat.
 
+(** [PeanoNat.Nat.eq_dec] is [==]: the [sumbool] is a [bool]. *)
 #[export] Instance bde_peano_nat_eq_dec_mapping : OperationMapping (Ref PeanoNat.Nat.eq_dec) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Equal (Arg "n") (Arg "m"));
@@ -194,7 +211,11 @@ From Stdlib Require PeanoNat.
 
 
 From Corelib Require Import PrimInt63.
+(** Reads a primitive [int] (an [int64_t]) as a [nat]; realised in C++
+    only. *)
 Axiom nat_of_int : int -> nat.
+(** [nat_of_int] is a wrapping conversion to [unsigned int]: values at or
+    above [UINT_MAX + 1] lose their high bits. *)
 #[export] Instance bde_nat_of_int_mapping : OperationMapping (Ref nat_of_int) :=
   {| operation_headers := [];
      operation_cpp := Structured (Convert Wrap ResultType (Arg "x0"));
@@ -206,7 +227,9 @@ Axiom nat_of_int : int -> nat.
 
 
 From Corelib Require Import PrimString.
+(** Decimal rendering of a [nat]; realised in C++ only. *)
 Axiom string_of_nat : nat -> string.
+(** [string_of_nat] is [bsl::to_string]. *)
 #[export] Instance bde_string_of_nat_mapping : OperationMapping (Ref string_of_nat) :=
   {| operation_headers := ["bsl_string.h"];
      operation_cpp := Structured (Call "bsl::to_string" [] [(Arg "x0")]);

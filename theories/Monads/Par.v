@@ -16,15 +16,17 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
-(* A [future] is a value: copied, kept in data, read any number of times.  A
+(** A [future] is a value: copied, kept in data, read any number of times.  A
    [std::shared_future] is that; a [std::future] is read once and moved. *)
 #[export] Instance parE_mapping (T : Type) : TypeMapping (parE T) :=
   event_family []
     [event (Ref (@MkThread)) "std::async(std::launch::async, %a0, %a1).share()";
      event (Ref (@GetThread)) "%a0.get()"].
 
+(** [future] is [std::shared_future], copyable and readable many times. *)
 #[export] Instance future_mapping (A : Type) : TypeMapping (future A) :=
   value_type ["future"] (Apply "std::shared_future" [TypeArg (SourceType A)]) UnknownCopy.
+(** [async] is [std::async] with [std::launch::async], shared. *)
 #[export] Instance async_mapping : OperationMapping (Ref (@async)) :=
   effect_args [] (uses Take ["f"; "a"])
     (Structured (Method (Call "std::async" [] [Verbatim "std::launch::async"; Arg "f"; Arg "a"]) "share" [])).

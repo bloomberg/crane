@@ -41,14 +41,18 @@ Local Open Scope pstring_scope.
 }()";
      event (Ref (@CurrentPath)) "[&]() -> bsl::string { bsl::string s; bdls::FilesystemUtil::getWorkingDirectory(&s); return s; }()"].
 
+(** [create_directory] is [bdls::FilesystemUtil::createDirectories]. *)
 #[export] Instance create_directory_mapping : OperationMapping (Ref (@create_directory)) :=
   effect_cpp ["bdls_filesystemutil.h"] ["path"]
     (Expr "(bdls::FilesystemUtil::createDirectories(%arg(path).c_str(), true) == 0)").
 
+(** [remove_directory] is a recursive [bdls::FilesystemUtil::remove]. *)
 #[export] Instance remove_directory_mapping : OperationMapping (Ref (@remove_directory)) :=
   effect_cpp ["bdls_filesystemutil.h"] ["path"]
     (Expr "(bdls::FilesystemUtil::remove(%arg(path).c_str(), true) == 0)").
 
+(** [list_directory] falls back to [std::filesystem::directory_iterator],
+    keeping at most 65536 names. *)
 #[export] Instance list_directory_mapping : OperationMapping (Ref (@list_directory)) :=
   effect_cpp ["bdls_filesystemutil.h"; "filesystem"; "system_error"] ["path"]
     (Expr "[&]() -> List<bsl::string> {
@@ -62,6 +66,7 @@ Local Open Scope pstring_scope.
   return result;
 }()").
 
+(** [current_path] is [bdls::FilesystemUtil::getWorkingDirectory]. *)
 #[export] Instance current_path_mapping : OperationMapping (Ref (@current_path)) :=
   effect_cpp ["bdls_filesystemutil.h"] []
     (Expr "[&]() -> bsl::string { bsl::string s; bdls::FilesystemUtil::getWorkingDirectory(&s); return s; }()").

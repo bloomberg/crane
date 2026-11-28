@@ -28,6 +28,8 @@ From Stdlib Require Import Ascii List.
 Import ListNotations.
 Local Open Scope pstring_scope.
 
+(** [ascii] is [char]: [Ascii] packs its bits, least significant first,
+    and a match reads each one back out. *)
 #[export] Instance ascii_mapping : TypeMapping ascii :=
   {| type_headers := [];
      type_cpp := Crane.Cpp.Name "char";
@@ -56,6 +58,7 @@ Local Open Scope pstring_scope.
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
+(** [compare] orders the bytes unsigned, as [N_of_ascii] does. *)
 #[export] Instance ascii_compare_mapping : OperationMapping (Ref Ascii.compare) :=
   {| operation_headers := [];
      operation_cpp := Expr "[](char _x, char _y) { return static_cast<%ret>(_x == _y ? 0 : (static_cast<unsigned char>(_x) < static_cast<unsigned char>(_y) ? 1 : 2)); }(%arg(a), %arg(b))";
@@ -64,6 +67,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "a"; argument_use := Read |};
           {| argument_name := "b"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [eqb] is byte equality. *)
 #[export] Instance ascii_eqb_mapping : OperationMapping (Ref Ascii.eqb) :=
   {| operation_headers := ["functional"];
      operation_cpp := Expr "std::equal_to<char>{}(%arg(a), %arg(b))";
@@ -72,6 +76,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "a"; argument_use := Read |};
           {| argument_name := "b"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [ascii_dec] is byte equality, its proofs erased. *)
 #[export] Instance ascii_dec_mapping : OperationMapping (Ref Ascii.ascii_dec) :=
   {| operation_headers := ["functional"];
      operation_cpp := Expr "std::equal_to<char>{}(%arg(a), %arg(b))";

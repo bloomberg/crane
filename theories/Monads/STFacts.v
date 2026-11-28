@@ -31,21 +31,26 @@ Local Open Scope monad_scope.
 Section Interp.
 
   Context {V : nat -> Type} {E : Type -> Type} `{exceptE Err -< E}.
+  (** The effects of a program in the model. *)
   Notation E' := (ST.Event ST.model_refs V +' E).
 
+  (** [Ret] leaves the store alone, up to strong bisimulation. *)
   Lemma interp_ret {R} (r : R) (m : mem V) :
     ST.interp _ (ITreeDefinition.Ret r : itree E' R) m ≅ Ret (m, r).
   Proof. apply interp_state_ret. Qed.
 
+  (** [interp_ret] up to [eutt], the equivalence [spec] uses. *)
   Lemma interp_ret_eutt {R} (r : R) (m : mem V) :
     ST.interp _ (ITreeDefinition.Ret r : itree E' R) m ≈ Ret (m, r).
   Proof. rewrite interp_ret. reflexivity. Qed.
 
+  (** A bind threads the store from the head into the continuation. *)
   Lemma interp_bind {A B} (t : itree E' A) (k : A -> itree E' B) (m : mem V) :
     ST.interp _ (ITree.bind t k) m
     ≅ ITree.bind (ST.interp _ t m) (fun p => ST.interp _ (k (snd p)) (fst p)).
   Proof. apply interp_state_bind. Qed.
 
+  (** A single event is run by the handler. *)
   Lemma interp_trigger {R} (e : E' R) (m : mem V) :
     ST.interp _ (ITree.trigger e) m ≈ ST.handle_leave_rest _ e m.
   Proof. apply interp_state_trigger. Qed.

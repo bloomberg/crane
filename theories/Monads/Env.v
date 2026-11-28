@@ -16,6 +16,8 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
+(** [envE] events: [std::getenv] wrapped into a [std::optional<std::string>],
+    POSIX [setenv]/[unsetenv]. *)
 #[export] Instance envE_mapping (T : Type) : TypeMapping (envE T) :=
   event_family ["cstdlib"; "optional"; "string"]
     [event (Ref (@GetEnv)) "[&]() -> std::optional<std::string> {
@@ -25,6 +27,8 @@ Local Open Scope pstring_scope.
      event (Ref (@SetEnv)) "setenv(%a0.c_str(), %a1.c_str(), 1)";
      event (Ref (@UnsetEnv)) "unsetenv(%a0.c_str())"].
 
+(** [get_env] copies the [std::getenv] result into a
+    [std::optional<std::string>]. *)
 #[export] Instance get_env_mapping : OperationMapping (Ref (@get_env)) :=
   effect_cpp ["cstdlib"; "optional"; "string"] ["name"]
     (Expr "[&]() -> std::optional<std::string> {

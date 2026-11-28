@@ -29,7 +29,7 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
-(* Extract itreeF as a custom inductive: the type maps to ITree<R>::variant_t,
+(** Extract itreeF as a custom inductive: the type maps to ITree<R>::variant_t,
    each constructor builds the corresponding node, and the custom match
    template generates an if/else-if chain using holds_alternative and get_if,
    consistent with how Crane generates all other variant pattern matches.
@@ -77,14 +77,16 @@ Local Open Scope pstring_scope.
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
-(* The ITree library defines Ret/Tau/Vis as Notations. Shadow them with
+(** The ITree library defines Ret/Tau/Vis as Notations. Shadow them with
    Definitions so extraction directives can reference them. *)
 Definition Ret {E : Type -> Type} {R : Type} (x : R) : itree E R := Ret x.
+(** Shadows the [Tau] notation. *)
 Definition Tau {E : Type -> Type} {R : Type} (t : itree E R) : itree E R := Tau t.
+(** Shadows the [Vis] notation. *)
 Definition Vis {E : Type -> Type} {R X : Type} (e : E X) (k : X -> itree E R)
   : itree E R := Vis e k.
 
-(* [itree] is a coinductive record: its single constructor [go] wraps an
+(** [itree] is a coinductive record: its single constructor [go] wraps an
    [itreeF] node, and the node already builds the tree, so [go] is the
    identity.  Without this the notation-level [Ret x] -- which is
    [go (RetF x)] -- reaches C++ as a member [go] of [shared_ptr]. *)
@@ -110,14 +112,15 @@ Definition Vis {E : Type -> Type} {R X : Type} (e : E X) (k : X -> itree E R)
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
+(** [itree] is a monad over [std::shared_ptr<ITree<R>>] trees. *)
 Crane Extract Monad itree [ bind := ITree.bind , ret := Ret ] =>
   "std::shared_ptr<ITree<%t1>>" From "crane_itree.h".
 
-(* Extract bind as free function itree_bind from crane_itree.h *)
+(** [ITree.bind] is [itree_bind], which builds the bound tree. *)
 #[export] Instance bind_mapping : OperationMapping (Ref (@ITree.bind)) :=
   builds ["crane_itree.h"] ["u"; "k"] (Structured (Call "itree_bind" [] [Arg "u"; Arg "k"])).
 
-(* [MonadNotation]'s [x <- c ;; k] and [ret] go through ExtLib's [Monad]
+(** [MonadNotation]'s [x <- c ;; k] and [ret] go through ExtLib's [Monad]
    class rather than through [ITree.bind]/[Ret] -- which of the two a given
    [;;] means is decided by the notation scope in force at that subterm, so
    one function can easily contain both spellings.  The instance is
@@ -132,11 +135,12 @@ Crane Extract Monad itree [ bind := ITree.bind , ret := Ret ] =>
    operations. *)
 #[export] Instance monad_bind_mapping : OperationMapping (Ref (@Monad.bind)) :=
   builds ["crane_itree.h"] ["t"; "k"] (Structured (Call "itree_bind" [] [Arg "t"; Arg "k"])).
+(** [Monad.ret] at [itree] is [itree_ret]. *)
 #[export] Instance monad_ret_mapping : OperationMapping (Ref (@Monad.ret)) :=
   builds ["crane_itree.h"] ["x"] (Structured (Call "itree_ret" [] [Arg "x"])).
 
 
-(* A reified tree keeps the node an event is triggered at, so [trigger] is a
+(** A reified tree keeps the node an event is triggered at, so [trigger] is a
    real [Vis] here (the erased mode, which performs the event on the spot,
    skips it).  The helper deduces the tree's result type at the use site: it is
    an index of the event type and so has no spelling of its own where the
@@ -144,23 +148,26 @@ Crane Extract Monad itree [ bind := ITree.bind , ret := Ret ] =>
 #[export] Instance trigger_mapping : OperationMapping (Ref (@ITree.trigger)) :=
   builds ["crane_itree.h"] ["e"] (Structured (Call "itree_trigger" [] [Arg "e"])).
 
-(* [translate h t] applies [h] to every event of [t].  It is not the
+(** [translate h t] applies [h] to every event of [t].  It is not the
    identity even for an injection: a [Vis] keeps the side an [inl1] or [inr1]
    names, and a handler over the sum reads it.  Its value arguments are the
    handler and the tree; the two event families come first, erased. *)
 #[export] Instance translate_mapping : OperationMapping (Ref (@translate)) :=
   builds ["crane_itree.h"] ["h"; "t"] (Structured (Call "itree_translate" [] [Arg "h"; Arg "t"])).
-(* Extract observe as method call *)
+(** [observe] is the node's [observe] method,
+    exposing the [itreeF] node to match on. *)
 #[export] Instance observe_mapping : OperationMapping (Ref (@observe)) :=
   effect_cpp ["crane_itree.h"] ["t"] (Expr "%arg(t)->observe()").
 
-(* [Ret]/[Tau]/[Vis] are spelled exactly as the [itreeF] constructors they
+(** [Ret]/[Tau]/[Vis] are spelled exactly as the [itreeF] constructors they
    wrap.  They are not inlined into those constructors: [Ret] is the monad's
    registered return, and the plugin's own handling of it is what turns a
    [Ret tt] into [ITree<void>::ret()]. *)
 #[export] Instance Ret_mapping : OperationMapping (Ref (@Ret)) :=
   builds ["crane_itree.h"] ["x"] (Structured (Call "itree_ret" [] [Arg "x"])).
+(** [Tau] is [itree_tau]. *)
 #[export] Instance Tau_mapping : OperationMapping (Ref (@Tau)) :=
   builds ["crane_itree.h"] ["t"] (Structured (Call "itree_tau" [] [Arg "t"])).
+(** [Vis] is [itree_vis]. *)
 #[export] Instance Vis_mapping : OperationMapping (Ref (@Vis)) :=
   builds ["crane_itree.h"] ["e"; "k"] (Structured (Call "itree_vis" [] [Arg "e"; Arg "k"])).

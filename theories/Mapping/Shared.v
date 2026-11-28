@@ -13,8 +13,8 @@ From Stdlib Require Import List.
 Import ListNotations.
 Local Open Scope pstring_scope.
 
-(** [true] is tested by the value itself and is listed first; [false] is
-    what remains. *)
+(** [bool] is C++ [bool]: [true] is tested by the value itself and is
+    listed first; [false] is what remains. *)
 #[export] Instance bool_mapping : TypeMapping bool :=
   {| type_headers := [];
      type_cpp := Crane.Cpp.Name "bool";
@@ -93,6 +93,7 @@ Local Open Scope pstring_scope.
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
+(** [sig2] is its witness too, both proofs erased. *)
 #[export] Instance sig2_mapping (A : Type) (P Q : A -> Prop) : TypeMapping (sig2 P Q) :=
   {| type_headers := [];
      type_cpp := Crane.Cpp.StoredComponent "witness";
@@ -131,11 +132,13 @@ Local Open Scope pstring_scope.
      operation_contract :=
        PureOperation [{| argument_name := "b"; argument_use := Read |}] ReturnValue [] |}.
 
+(** [negb] is [!]. *)
 #[export] Instance negb_mapping : OperationMapping (Ref negb) :=
   {| operation_headers := [];
      operation_cpp := Expr "!(%arg(b))";
      operation_contract :=
        PureOperation [{| argument_name := "b"; argument_use := Read |}] ReturnValue [] |}.
+(** [andb] is [&&]. *)
 #[export] Instance andb_mapping : OperationMapping (Ref andb) :=
   {| operation_headers := [];
      operation_cpp := Expr "(%arg(b1) && %arg(b2))";
@@ -144,6 +147,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "b1"; argument_use := Read |};
           {| argument_name := "b2"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [orb] is [||]. *)
 #[export] Instance orb_mapping : OperationMapping (Ref orb) :=
   {| operation_headers := [];
      operation_cpp := Expr "(%arg(b1) || %arg(b2))";
@@ -153,6 +157,7 @@ Local Open Scope pstring_scope.
           {| argument_name := "b2"; argument_use := Read |}]
          ReturnValue [] |}.
 
+(** [unit] is [std::monostate]; a match on [tt] needs no test. *)
 #[export] Instance unit_mapping : TypeMapping unit :=
   {| type_headers := ["variant"];
      type_cpp := Crane.Cpp.Name "std::monostate";
@@ -173,9 +178,9 @@ Local Open Scope pstring_scope.
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
+From Corelib Require PrimArray.
 (** [PrimArray.array A] is a [persistent_array] (theories/cpp/
     persistent_array.h): a copy-on-write array, read by const reference. *)
-From Corelib Require PrimArray.
 #[export] Instance prim_array_mapping (A : Type) : TypeMapping (PrimArray.array A) :=
   {| type_headers := ["persistent_array.h"];
      type_cpp :=
@@ -191,6 +196,8 @@ From Corelib Require PrimArray.
      type_lifetime := NativeRAII;
      type_release := OrdinaryRelease;
      type_numerals := None |}.
+(** [make n x] is [n] copies of [x], [x] also the default; the length is
+    clamped to [max_length], as in Rocq. *)
 #[export] Instance prim_array_make_mapping : OperationMapping (Ref (@PrimArray.make)) :=
   {| operation_headers := ["persistent_array.h"];
      operation_cpp := Expr "persistent_array<%t0>(%arg(x), %arg(y))";
@@ -199,6 +206,7 @@ From Corelib Require PrimArray.
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [get a i] is [a.get(i)]: the default out of bounds, as in Rocq. *)
 #[export] Instance prim_array_get_mapping : OperationMapping (Ref (@PrimArray.get)) :=
   {| operation_headers := ["persistent_array.h"];
      operation_cpp := Expr "%arg(x).get(%arg(y))";
@@ -207,11 +215,14 @@ From Corelib Require PrimArray.
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [default a] is the element out-of-bounds reads give. *)
 #[export] Instance prim_array_default_mapping : OperationMapping (Ref (@PrimArray.default)) :=
   {| operation_headers := ["persistent_array.h"];
      operation_cpp := Expr "%arg(x).default_value()";
      operation_contract :=
        PureOperation [{| argument_name := "x"; argument_use := Read |}] ReturnValue [] |}.
+(** [set a i x] is [a.set(i, x)], a new array (updated in place only when
+    [a] is an unshared temporary); out of bounds it is [a]. *)
 #[export] Instance prim_array_set_mapping : OperationMapping (Ref (@PrimArray.set)) :=
   {| operation_headers := ["persistent_array.h"];
      operation_cpp := Expr "%arg(x).set(%arg(y), %arg(z))";
@@ -221,11 +232,13 @@ From Corelib Require PrimArray.
           {| argument_name := "y"; argument_use := Read |};
           {| argument_name := "z"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [length a] is [a.length()]. *)
 #[export] Instance prim_array_length_mapping : OperationMapping (Ref (@PrimArray.length)) :=
   {| operation_headers := ["persistent_array.h"];
      operation_cpp := Expr "%arg(x).length()";
      operation_contract :=
        PureOperation [{| argument_name := "x"; argument_use := Read |}] ReturnValue [] |}.
+(** [copy a] is [a.copy()], a deep copy. *)
 #[export] Instance prim_array_copy_mapping : OperationMapping (Ref (@PrimArray.copy)) :=
   {| operation_headers := ["persistent_array.h"];
      operation_cpp := Expr "%arg(x).copy()";

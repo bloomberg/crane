@@ -16,17 +16,22 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
+(** Each [clockE] event reads its clock through [bsls::SystemTime] as an
+    [int64_t] millisecond count. *)
 #[export] Instance clockE_mapping (T : Type) : TypeMapping (clockE T) :=
   event_family ["bsls_systemtime.h"]
     [event (Ref (@SteadyNow)) "static_cast<int64_t>(bsls::SystemTime::nowMonotonicClock().totalMilliseconds())";
      event (Ref (@SystemNow)) "static_cast<int64_t>(bsls::SystemTime::nowRealtimeClock().totalMilliseconds())"].
 
+(** [steady_now] reads [bsls::SystemTime::nowMonotonicClock] in milliseconds. *)
 #[export] Instance steady_now_mapping : OperationMapping (Ref (@steady_now)) :=
   effect_cpp ["bsls_systemtime.h"] []
     (Structured (Convert Exact (Int I64) (Method (Call "bsls::SystemTime::nowMonotonicClock" [] []) "totalMilliseconds" []))).
+(** [system_now] reads [bsls::SystemTime::nowRealtimeClock] in milliseconds. *)
 #[export] Instance system_now_mapping : OperationMapping (Ref (@system_now)) :=
   effect_cpp ["bsls_systemtime.h"] []
     (Structured (Convert Exact (Int I64) (Method (Call "bsls::SystemTime::nowRealtimeClock" [] []) "totalMilliseconds" []))).
+(** [now] is [system_now]: [bsls::SystemTime::nowRealtimeClock] in milliseconds. *)
 #[export] Instance now_mapping : OperationMapping (Ref (@now)) :=
   effect_cpp ["bsls_systemtime.h"] []
     (Structured (Convert Exact (Int I64) (Method (Call "bsls::SystemTime::nowRealtimeClock" [] []) "totalMilliseconds" []))).

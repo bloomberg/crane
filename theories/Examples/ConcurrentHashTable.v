@@ -19,7 +19,10 @@ Import PrimString.PStringNotations.
 Import ListNotations.
 Set Implicit Arguments.
 
+(** An [int] as a [nat], to recurse on a bucket count; it has no Rocq
+    definition, only its C++ mapping. *)
 Axiom nat_of_int : int -> nat.
+(** [nat_of_int i] is [i] converted modulo 2^32 to [uint32_t]. *)
 #[export] Instance nat_of_int_mapping : OperationMapping (Ref nat_of_int) :=
   pure [] ["i"%pstring] (wrap Crane.Cpp.U32 (Crane.Cpp.Arg "i"%pstring)).
 
@@ -27,6 +30,7 @@ Module CHT.
 
 Open Scope int63.
 
+(** The value of the first pair whose key is [eqb]-equal to [k]. *)
 Fixpoint assoc_lookup {K V} (eqb : K -> K -> bool) (k : K) (xs : list (K * V))
   : option V :=
   match xs with
@@ -34,6 +38,7 @@ Fixpoint assoc_lookup {K V} (eqb : K -> K -> bool) (k : K) (xs : list (K * V))
   | (k', v) :: tl => if eqb k k' then Some v else assoc_lookup eqb k tl
   end.
 
+(** Replace the first binding of [k] in place, or append one. *)
 Fixpoint assoc_insert_or_replace {K V}
          (eqb : K -> K -> bool) (k : K) (v : V) (xs : list (K * V))
   : list (K * V) :=
@@ -44,6 +49,7 @@ Fixpoint assoc_insert_or_replace {K V}
       else (k', v') :: assoc_insert_or_replace eqb k v tl
   end.
 
+(** Remove the first binding of [k], returning its value and the rest. *)
 Fixpoint assoc_remove {K V}
          (eqb : K -> K -> bool) (k : K) (xs : list (K * V))
   : (option V * list (K * V)) :=
@@ -55,6 +61,8 @@ Fixpoint assoc_remove {K V}
       else let q := assoc_remove eqb k tl in (fst q, (k', v') :: (snd q))
   end.
 
+(** A hash table: a fixed vector of transactional buckets, each an
+    association list, with the key equality and hash it was built with. *)
 Record CHT (K V : Type) := {
   cht_eqb     : K -> K -> bool;
   cht_hash    : K -> int;
@@ -63,7 +71,7 @@ Record CHT (K V : Type) := {
   cht_fallback: TVar (list (K * V))          (* first bucket as a total fallback *)
 }.
 
-(* Total bucket selection *)
+(** The bucket of [k]: its hash modulo the bucket count. *)
 Definition bucket_of {K V} (t : CHT K V) (k : K)
   :  itree stmE (TVar (list (K * V))) :=
   let i := mod (t.(cht_hash) k) t.(cht_nbuckets) in
@@ -71,13 +79,13 @@ Definition bucket_of {K V} (t : CHT K V) (k : K)
 
 Section STM.
 
-(* Get *)
+(** The value bound to [k]. *)
 Definition stm_get {K V} (t : CHT K V) (k : K) : itree stmE (option V) :=
   b <- bucket_of t k ;;
   xs <- read_tvar b ;;
   Ret (assoc_lookup t.(cht_eqb) k xs).
 
-(* Put / upsert *)
+(** Bind [k] to [v], replacing any old binding. *)
 Definition stm_put {K V} (t : CHT K V) (k : K) (v : V) : itree stmE unit :=
   b <- bucket_of t k ;;
   xs <- read_tvar b ;;
@@ -85,7 +93,7 @@ Definition stm_put {K V} (t : CHT K V) (k : K) (v : V) : itree stmE unit :=
   write_tvar b xs' ;;
   Ret tt.
 
-(* Delete; returns previous value if any *)
+(** Unbind [k], returning its old value; writes only if [k] was bound. *)
 Definition stm_delete {K V} (t : CHT K V) (k : K) : itree stmE (option V) :=
   b <- bucket_of t k ;;
   xs <- read_tvar b ;;
@@ -97,7 +105,7 @@ Definition stm_delete {K V} (t : CHT K V) (k : K) : itree stmE (option V) :=
     Ret (fst p)
   end.
 
-(* Update with a function of the old option; returns the new value *)
+(** Rebind [k] to [f] of its old value, returning the new one. *)
 Definition stm_update {K V}
            (t : CHT K V) (k : K) (f : option V -> V) : itree stmE V :=
   b <- bucket_of t k ;;
@@ -108,6 +116,7 @@ Definition stm_update {K V}
   write_tvar b xs' ;;
   Ret v.
 
+(** [k]'s value, or [dflt] where it is unbound. *)
 Definition stm_get_or {K V} (t : CHT K V) (k : K) (dflt : V) : itree stmE V :=
   v <- stm_get t k ;;
   match v with
@@ -115,15 +124,17 @@ Definition stm_get_or {K V} (t : CHT K V) (k : K) (dflt : V) : itree stmE V :=
   | None => Ret dflt
   end.
 
+(** The larger [int]; a flavour maps it to [std::max] or [bsl::max]. *)
 Definition max : int -> int -> int := fun a b =>
   if ltb a b then b else a.
 
 End STM.
 
+(** Vector and IO events: building a table needs both. *)
 Definition vecIOE := vectorE +' ioE.
 Crane Extract Skip vecIOE.
 
-(* Build N empty buckets *)
+(** A vector of [num] buckets, each a fresh empty [TVar]. *)
 Definition mk_buckets {K V} (num : int) : itree vecIOE (vector (TVar (list (K * V)))) :=
   buckets <- (empty_vector (TVar (list (K * V)))) ;;
   (fix f n := match n with
@@ -134,7 +145,7 @@ Definition mk_buckets {K V} (num : int) : itree vecIOE (vector (TVar (list (K * 
     f n'
   end) (nat_of_int num).
 
-(* Create a new table with at least one bucket; stores eqb/hash in the record *)
+(** A table with [max requested 1] buckets, storing [eqb] and [hash]. *)
 Definition new_hash {K V}
            (eqb : K -> K -> bool) (hash : K -> int) (requested : int)
   : itree vecIOE (CHT K V) :=
@@ -152,19 +163,24 @@ Definition new_hash {K V}
     Ret {| cht_eqb := eqb; cht_hash := hash;
                 cht_buckets := bs; cht_nbuckets := n; cht_fallback := b |}.
 
+(** [stm_put] as its own transaction. *)
 Definition put  {K V} (t : CHT K V) (k : K) (v : V) : itree ioE unit :=
   atomically (stm_put t k v).
 
+(** [stm_get] as its own transaction. *)
 Definition get  {K V} (t : CHT K V) (k : K) : itree ioE (option V) :=
   atomically (stm_get t k).
 
+(** [stm_delete] as its own transaction. *)
 Definition hash_delete {K V} (t : CHT K V) (k : K) : itree ioE (option V) :=
   atomically (stm_delete t k).
 
+(** [stm_update] as its own transaction. *)
 Definition hash_update {K V}
            (t : CHT K V) (k : K) (f : option V -> V) : itree ioE V :=
   atomically (stm_update t k f).
 
+(** [stm_get_or] as its own transaction. *)
 Definition get_or {K V} (t : CHT K V) (k : K) (dflt : V) : itree ioE V :=
   atomically (stm_get_or t k dflt).
 

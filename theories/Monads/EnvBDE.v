@@ -16,6 +16,7 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
+(** As in [Env.v], but [GetEnv] returns a [bsl::optional<bsl::string>]. *)
 #[export] Instance envE_mapping (T : Type) : TypeMapping (envE T) :=
   event_family ["cstdlib"; "bsl_optional.h"; "bsl_string.h"]
     [event (Ref (@GetEnv)) "[&]() -> bsl::optional<bsl::string> {
@@ -25,6 +26,8 @@ Local Open Scope pstring_scope.
      event (Ref (@SetEnv)) "setenv(%a0.c_str(), %a1.c_str(), 1)";
      event (Ref (@UnsetEnv)) "unsetenv(%a0.c_str())"].
 
+(** [get_env] copies the [std::getenv] result into a
+    [bsl::optional<bsl::string>]. *)
 #[export] Instance get_env_mapping : OperationMapping (Ref (@get_env)) :=
   effect_cpp ["cstdlib"; "bsl_optional.h"; "bsl_string.h"] ["name"]
     (Expr "[&]() -> bsl::optional<bsl::string> {

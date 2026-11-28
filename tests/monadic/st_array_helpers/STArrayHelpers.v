@@ -51,9 +51,13 @@ Local Open Scope monad_scope.
 
 Module STArrayHelpers.
 
+  (** Effects of a program whose store holds only [nat]s. *)
   Notation NatE := (ST.Event ST.cpp_refs (fun _ : nat => nat) +' exceptE Err).
+  (** Effects of a program whose store holds only [bool]s. *)
   Notation BoolE := (ST.Event ST.cpp_refs (fun _ : nat => bool) +' exceptE Err).
+  (** An array of [nat]s at the C++ references. *)
   Notation NatArray := (@ST.array ST.cpp_refs nat).
+  (** An array of [bool]s at the C++ references. *)
   Notation BoolArray := (@ST.array ST.cpp_refs bool).
 
   (** Only reads a cell. *)
@@ -69,6 +73,7 @@ Module STArrayHelpers.
   Definition middle (arr : NatArray) (i : nat) : itree NatE unit :=
     ST.write_array arr i 42.
 
+  (** Writes only through [middle], so still takes the writable view. *)
   Definition outer (arr : NatArray) : itree NatE unit :=
     middle arr 0;;
     middle arr 2.
@@ -97,14 +102,15 @@ Module STArrayHelpers.
   (** Reseats the handle to a fresh array of [n] zeros. *)
   Axiom regrow : NatArray -> nat -> itree NatE unit.
 
-  (** Recursive helpers keep the view: a tail-recursive write loop takes the
-      writable view, a non-tail-recursive read the read view. *)
+  (** Zeroes [n] cells from [i]: a tail-recursive write loop keeps the
+      writable view. *)
   Fixpoint zero_from (arr : NatArray) (i n : nat) : itree NatE unit :=
     match n with
     | O => Ret tt
     | S m => ST.write_array arr i 0;; zero_from arr (S i) m
     end.
 
+  (** Sums [n] cells from [i]: a non-tail-recursive read keeps the read view. *)
   Fixpoint sum_from (arr : NatArray) (i n : nat) : itree NatE nat :=
     match n with
     | O => Ret 0
@@ -132,6 +138,7 @@ Module STArrayHelpers.
     b <- ST.read_array arr i;;
     ST.write_array arr i (negb b).
 
+  (** Drives [bump], [outer] and [swap_ends] over an array made from [xs]. *)
   Definition helpers_list (xs : list nat) : list nat :=
     ST.run_cpp
       (arr <- ST.array_of_list xs;;
@@ -140,6 +147,7 @@ Module STArrayHelpers.
        swap_ends arr (length xs - 1);;
        ST.array_to_list arr).
 
+  (** Writes through the array [keep] and [write_then_pick] return, then reads the originals. *)
   Definition keep_list (n : nat) : list nat * list nat :=
     ST.run_cpp
       (arr <- ST.new_array n 3;;
@@ -151,6 +159,7 @@ Module STArrayHelpers.
        others <- ST.array_to_list other;;
        Ret (elems, others)).
 
+  (** Drives [write_and_refill], then reads the array back. *)
   Definition refill_list (n : nat) : nat * list nat :=
     ST.run_cpp
       (arr <- ST.new_array 3 1;;
@@ -159,6 +168,7 @@ Module STArrayHelpers.
        elems <- ST.array_to_list arr;;
        Ret (first, elems)).
 
+  (** Drives the recursive helpers [zero_from] and [sum_from]. *)
   Definition loops_list (n : nat) : nat * list nat :=
     ST.run_cpp
       (arr <- ST.new_array n 2;;
@@ -167,12 +177,14 @@ Module STArrayHelpers.
        elems <- ST.array_to_list arr;;
        Ret (s, elems)).
 
+  (** Checks that the caller sees the array [regrow_then_write] reseated. *)
   Definition regrow_list (n : nat) : list nat :=
     ST.run_cpp
       (arr <- ST.new_array 2 5;;
        regrow_then_write arr n;;
        ST.array_to_list arr).
 
+  (** Flips cells [0] and [2] of a [bool] array made from [bs]. *)
   Definition flip_list (bs : list bool) : list bool :=
     ST.run_cpp
       (arr <- ST.array_of_list bs;;
@@ -180,6 +192,7 @@ Module STArrayHelpers.
        flip arr 2;;
        ST.array_to_list arr).
 
+  (** Flips cell [1] of a [bool] array filled with [false]. *)
   Definition bools_filled (n : nat) : bool * list bool :=
     ST.run_cpp
       (arr <- ST.new_array n false;;
@@ -194,6 +207,7 @@ Import Crane.Mapping.Descriptor.
 From Corelib Require Import PrimString.
 Open Scope pstring_scope.
 
+(** [regrow] assigns a fresh [array_storage] to the handle ([Replace]). *)
 #[export] Instance regrow_mapping : OperationMapping (Ref STArrayHelpers.regrow) :=
   {| operation_headers := ["memory"; "vector"];
      operation_cpp :=
@@ -204,6 +218,7 @@ Open Scope pstring_scope.
           {| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
 
+(** [refill] is [std::ranges::fill] over the storage ([WriteCanonical]). *)
 #[export] Instance refill_mapping : OperationMapping (Ref STArrayHelpers.refill) :=
   {| operation_headers := ["algorithm"];
      operation_cpp := Expr "std::ranges::fill(*%arg(arr), %arg(v))";

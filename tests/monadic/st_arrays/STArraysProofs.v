@@ -33,6 +33,7 @@ Section STArraysProofs.
 
   Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.hmap_ok_halist.
 
+  (** Cell [1] of six fives is [5]. *)
   Lemma array_simp_fixed_init_eq_five :
     ST.run (fun R => array_simp_fixed_init (R := R)) ≈ Ret 5.
   Proof.
@@ -43,6 +44,7 @@ Section STArraysProofs.
     eapply read_array; [ lia | apply Hcells; lia | reflexivity ].
   Qed.
 
+  (** An array from a list reads back its head, length and elements. *)
   Lemma array_simp_list_eq_five_four_lst :
     ST.run (fun R => array_simp_list (R := R)) ≈ Ret (5, 4, [5; 4; 3; 2]).
   Proof.
@@ -55,6 +57,7 @@ Section STArraysProofs.
     apply spec_ret. reflexivity.
   Qed.
 
+  (** The in-place swap computes [list_swap] on every nonempty list. *)
   Lemma swap_first_and_last_list_correct : forall xs, xs <> [] ->
     ST.run (fun R => swap_first_and_last_list (R := R) xs)
     ≈ Ret (list_swap xs 0 (length xs - 1)).
@@ -71,6 +74,7 @@ Section STArraysProofs.
     eapply array_to_list_rep; [ exact Hrep1 | rewrite list_swap_length; reflexivity | reflexivity ].
   Qed.
 
+  (** A concrete instance: swapping [[1; 2]] gives [[2; 1]]. *)
   Lemma swap_list_two_one_eq_one_two :
     ST.run (fun R => swap_first_and_last_list (R := R) [1; 2])
     ≈ (Ret (E := exceptE Err) [2; 1]).

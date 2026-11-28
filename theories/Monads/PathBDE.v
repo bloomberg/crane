@@ -33,18 +33,23 @@ Local Open Scope pstring_scope.
      event (Ref (@IsDirectory)) "bdls::FilesystemUtil::isDirectory(%a0)";
      event (Ref (@IsRegularFile)) "bdls::FilesystemUtil::isRegularFile(%a0)"].
 
+(** [canonical] is [std::filesystem::canonical], empty on error. *)
 #[export] Instance canonical_mapping : OperationMapping (Ref (@canonical)) :=
   effect_cpp ["filesystem"; "system_error"] ["path"]
     (Expr "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::canonical(std::filesystem::path(%arg(path)), _ec); return _ec ? std::string{} : _r.string(); }()").
+(** [relative] is [std::filesystem::relative], empty on error. *)
 #[export] Instance relative_mapping : OperationMapping (Ref (@relative)) :=
   effect_cpp ["filesystem"; "system_error"] ["path"]
     (Expr "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::relative(std::filesystem::path(%arg(path)), _ec); return _ec ? std::string{} : _r.string(); }()").
+(** [absolute] is [std::filesystem::absolute], empty on error. *)
 #[export] Instance absolute_mapping : OperationMapping (Ref (@absolute)) :=
   effect_cpp ["filesystem"; "system_error"] ["path"]
     (Expr "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::absolute(std::filesystem::path(%arg(path)), _ec); return _ec ? std::string{} : _r.string(); }()").
+(** [is_directory] is [bdls::FilesystemUtil::isDirectory]. *)
 #[export] Instance is_directory_mapping : OperationMapping (Ref (@is_directory)) :=
   effect_cpp ["bdls_filesystemutil.h"] ["path"]
     (Expr "bdls::FilesystemUtil::isDirectory(%arg(path))").
+(** [is_regular_file] is [bdls::FilesystemUtil::isRegularFile]. *)
 #[export] Instance is_regular_file_mapping : OperationMapping (Ref (@is_regular_file)) :=
   effect_cpp ["bdls_filesystemutil.h"] ["path"]
     (Expr "bdls::FilesystemUtil::isRegularFile(%arg(path))").

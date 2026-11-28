@@ -16,17 +16,22 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
+(** Each [clockE] event reads its clock through
+    [std::chrono] as an [int64_t] millisecond count. *)
 #[export] Instance clockE_mapping (T : Type) : TypeMapping (clockE T) :=
   event_family ["chrono"]
     [event (Ref (@SteadyNow)) "static_cast<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count())";
      event (Ref (@SystemNow)) "static_cast<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())"].
 
+(** [steady_now] reads [std::chrono::steady_clock] in milliseconds. *)
 #[export] Instance steady_now_mapping : OperationMapping (Ref (@steady_now)) :=
   effect_cpp ["chrono"] []
     (Structured (Convert Exact (Int I64) (Method (Call "std::chrono::duration_cast" [Name "std::chrono::milliseconds"] [Method (Call "std::chrono::steady_clock::now" [] []) "time_since_epoch" []]) "count" []))).
+(** [system_now] reads [std::chrono::system_clock] in milliseconds. *)
 #[export] Instance system_now_mapping : OperationMapping (Ref (@system_now)) :=
   effect_cpp ["chrono"] []
     (Structured (Convert Exact (Int I64) (Method (Call "std::chrono::duration_cast" [Name "std::chrono::milliseconds"] [Method (Call "std::chrono::system_clock::now" [] []) "time_since_epoch" []]) "count" []))).
+(** [now] is [system_now]: [std::chrono::system_clock] in milliseconds. *)
 #[export] Instance now_mapping : OperationMapping (Ref (@now)) :=
   effect_cpp ["chrono"] []
     (Structured (Convert Exact (Int I64) (Method (Call "std::chrono::duration_cast" [Name "std::chrono::milliseconds"] [Method (Call "std::chrono::system_clock::now" [] []) "time_since_epoch" []]) "count" []))).

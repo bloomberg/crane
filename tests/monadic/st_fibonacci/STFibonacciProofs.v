@@ -41,10 +41,12 @@ Fixpoint fib_seq (a b k : nat) : nat :=
   | Datatypes.S k' => fib_seq b (a + b) k'
   end.
 
+(** [fib_seq] is linear in its two seeds. *)
 Lemma fib_seq_add : forall n a b c d,
   fib_seq a b n + fib_seq c d n = fib_seq (a + c) (b + d) n.
 Proof. induction n; intros; simpl; [lia | rewrite IHn; f_equal; lia]. Qed.
 
+(** The doubly recursive definition is the iteration from [(0, 1)]. *)
 Lemma fib_fun_eq_seq : forall n, fib_fun n = fib_seq 0 1 n.
 Proof.
   enough (forall n, fib_fun n = fib_seq 0 1 n
@@ -58,9 +60,11 @@ Qed.
 
 Section FibonacciProofs.
 
+  (** The store holds only [nat]s. *)
   Notation V := (fun _ : nat => nat).
 
-  (** [x] and [y] are different locations, holding [a] and [b]. *)
+  (** [fib_loop] computes [fib_seq] when [x] and [y] are different
+      locations, holding [a] and [b]. *)
   Lemma fib_loop_spec :
     forall k (a b : nat) (m : ST.mem V) (x y : nat),
     x <> y -> read_at x m = Some a -> read_at y m = Some b ->
@@ -80,6 +84,7 @@ Section FibonacciProofs.
 
 End FibonacciProofs.
 
+(** The ST program computes the pure Fibonacci function. *)
 Lemma fib_ST_eq_fib_fun : forall (n : nat),
     Ret (fib_fun n) ≈ ST.run (fun R => fib_ST (R := R) n).
 Proof.

@@ -21,15 +21,19 @@ Local Open Scope monad_scope.
 
 Module STArrayLoops.
 
+  (** Effects of a program whose store holds only [nat]s. *)
   Notation NatE := (ST.Event ST.cpp_refs (fun _ : nat => nat) +' exceptE Err).
+  (** An array of [nat]s at the C++ references. *)
   Notation NatArray := (@ST.array ST.cpp_refs nat).
 
+  (** Zeroes [n] cells from [i]: becomes a [while] loop over the writable view. *)
   Fixpoint zero_from (arr : NatArray) (i n : nat) : itree NatE unit :=
     match n with
     | O => Ret tt
     | S m => ST.write_array arr i 0;; zero_from arr (S i) m
     end.
 
+  (** Sums [n] cells from [i]: becomes an explicit stack holding the read view. *)
   Fixpoint sum_from (arr : NatArray) (i n : nat) : itree NatE nat :=
     match n with
     | O => Ret 0
@@ -39,6 +43,7 @@ Module STArrayLoops.
         Ret (x + r)
     end.
 
+  (** Zeroes cells [1] and [2] of [n] twos, then sums and reads them back. *)
   Definition loops_list (n : nat) : nat * list nat :=
     ST.run_cpp
       (arr <- ST.new_array n 2;;

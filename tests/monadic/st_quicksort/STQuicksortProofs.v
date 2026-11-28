@@ -126,16 +126,20 @@ Qed.
 
 Section QuicksortProofs.
 
+  (** The store holds only [nat]s. *)
   Notation V := (fun _ : nat => nat).
+  (** Effects of a program in the model. *)
   Notation E0 := (ST.Event ST.model_refs V +' exceptE Err).
 
   Transparent HAList.halist_lookup HAList.halist_add HAList.HMap_halist HAList.hmap_ok_halist.
 
+  (** The sort computes in Rocq: [burn] strips the [Tau] steps of the run. *)
   Lemma quicksort_ST_list2154 :
     burn 100 (ST.run (fun R => quicksort_ST_list (R := R) [2; 1; 5; 4]))
     = Ret [1; 2; 4; 5].
   Proof using Type. lazy. reflexivity. Qed.
 
+  (** The same on a longer input, with more fuel. *)
   Lemma sort_list__long :
     burn 300 (ST.run (fun R => quicksort_ST_list (R := R) [8; 4; 6; 9; 7; 3; 1; 2; 5]))
     = Ret [1; 2; 3; 4; 5; 6; 7; 8; 9].
@@ -229,11 +233,11 @@ Section QuicksortProofs.
       + rewrite nth_list_swap_other by lia. apply Hbig_b; lia.
   Qed.
 
-  (** Segment machinery: permutation and pairwise sortedness of a sub-range. *)
-
+  (** The segment [l[a..b]], inclusive at both ends. *)
   Definition seg (l : list nat) (a b : nat) : list nat :=
     firstn (Datatypes.S b - a) (skipn a l).
 
+  (** Element [k] of a segment is element [a + k] of the list. *)
   Lemma nth_seg : forall l a b k,
     k < Datatypes.S b - a -> nth k (seg l a b) 0 = nth (a + k) l 0.
   Proof.
@@ -242,10 +246,12 @@ Section QuicksortProofs.
     apply nth_skipn.
   Qed.
 
+  (** A segment in range has [b + 1 - a] elements. *)
   Lemma length_seg : forall l a b,
     b < length l -> length (seg l a b) = Datatypes.S b - a.
   Proof. intros l a b Hb. unfold seg. rewrite length_firstn, length_skipn. lia. Qed.
 
+  (** A list is its prefix, the segment and its suffix. *)
   Lemma seg_decomp : forall l a b, a <= Datatypes.S b ->
     l = firstn a l ++ seg l a b ++ skipn (Datatypes.S b) l.
   Proof.
@@ -255,6 +261,7 @@ Section QuicksortProofs.
     rewrite skipn_skipn. f_equal. lia.
   Qed.
 
+  (** A permutation fixing everything outside [a..b] permutes the segment. *)
   Lemma seg_perm : forall full full' a b,
     Permutation full full' -> length full' = length full ->
     b < length full -> a <= Datatypes.S b ->
@@ -297,6 +304,7 @@ Section QuicksortProofs.
   Definition SortedSeg (l : list nat) (lo hi : nat) : Prop :=
     forall a b, lo <= a -> a <= b -> b <= hi -> nth a l 0 <= nth b l 0.
 
+  (** A list sorted pairwise over its whole range is [StronglySorted]. *)
   Lemma SortedSeg_StronglySorted : forall l,
     (forall i j, i <= j -> j < length l -> nth i l 0 <= nth j l 0) ->
     StronglySorted le l.
@@ -384,6 +392,7 @@ End QuicksortProofs.
 (** Functional side: [quicksort_fun] returns a sorted permutation, and a
     sorted permutation is unique. *)
 
+(** A list is a permutation of the elements passing [f] and those failing it. *)
 Lemma filter_complement_perm (f : nat -> bool) (l : list nat) :
   Permutation l (List.filter f l ++ List.filter (fun x => negb (f x)) l).
 Proof.
@@ -393,9 +402,11 @@ Proof.
   - etransitivity; [ apply perm_skip, IH |]. apply Permutation_middle.
 Qed.
 
+(** The two filters of [quicksort_fun] are complements. *)
 Lemma leb_negb_ltb : forall x p, (p <=? x) = negb (x <? p).
 Proof. intros x p. destruct (Nat.leb_spec p x), (Nat.ltb_spec x p); auto; lia. Qed.
 
+(** [quicksort_fun] only rearranges its input. *)
 Lemma quicksort_fun_perm : forall l, Permutation l (quicksort_fun l).
 Proof.
   intro l. funelim (quicksort_fun l); [ reflexivity |].
@@ -406,9 +417,11 @@ Proof.
   apply Permutation_app; assumption.
 Qed.
 
+(** [quicksort_fun] invents no elements. *)
 Lemma In_qf : forall x l, In x (quicksort_fun l) -> In x l.
 Proof. intros x l. apply Permutation_in. symmetry. apply quicksort_fun_perm. Qed.
 
+(** Two sorted halves around a pivot that separates them form a sorted list. *)
 Lemma SSorted_app_middle : forall l1 l2 p,
   StronglySorted le l1 -> StronglySorted le l2 ->
   (forall x, In x l1 -> x <= p) -> (forall y, In y l2 -> p <= y) ->
@@ -423,6 +436,7 @@ Proof.
     transitivity p; auto with datatypes.
 Qed.
 
+(** [quicksort_fun] returns a sorted list. *)
 Lemma quicksort_fun_sorted : forall l, StronglySorted le (quicksort_fun l).
 Proof.
   intro l. funelim (quicksort_fun l); [ constructor |].
@@ -433,6 +447,7 @@ Proof.
     destruct Hy as [_ Hle]. apply Nat.leb_le in Hle. lia.
 Qed.
 
+(** Two sorted permutations of each other are equal. *)
 Lemma sorted_perm_unique : forall l1 l2,
   StronglySorted le l1 -> StronglySorted le l2 -> Permutation l1 l2 -> l1 = l2.
 Proof.
@@ -451,6 +466,7 @@ Proof.
     f_equal. apply IH; auto. eapply Permutation_cons_inv. exact Hp.
 Qed.
 
+(** The in-place sort computes the functional one on every input. *)
 Lemma qsort_fun_eq_qsort_ST : forall (l : list nat),
     Ret (quicksort_fun l) ≈ ST.run (fun R => quicksort_ST_list (R := R) l).
 Proof.

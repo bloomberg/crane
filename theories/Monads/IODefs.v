@@ -12,9 +12,13 @@ From Corelib Require Import PrimString.
 From Crane Require Extraction.
 From Crane Require Import Monads.ITree.
 
+(** Console IO on standard input and output. *)
 Inductive consoleE : Type -> Type :=
+(** Write a string with no newline. *)
 | Print : string -> consoleE unit
+(** Write a string and a newline. *)
 | PrintEndline : string -> consoleE unit
+(** Read one line, without its newline. *)
 | GetLine : consoleE string.
 
 (**
@@ -39,22 +43,37 @@ Inductive consoleE : Type -> Type :=
    system temporary directory.
 *)
 Inductive fileE : Type -> Type :=
+(** The whole contents of a file. *)
 | ReadFile : string -> fileE string
+(** Replace a file's contents, creating it if needed. *)
 | WriteFile : string -> string -> fileE unit
+(** Append to a file, creating it if needed. *)
 | AppendFile : string -> string -> fileE unit
+(** Whether anything exists at the path. *)
 | FileExists : string -> fileE bool
+(** Delete the file at the path. *)
 | RemoveFile : string -> fileE unit.
 
+(** The usual IO events: console plus files.
+    Only a Rocq abbreviation, never emitted. *)
 Definition ioE := consoleE +' fileE.
 Crane Extract Skip ioE.
 
+(** Write [s] to standard output. *)
 Definition print {E} `{consoleE -< E} (s : string) : itree E unit := embed (Print s).
+(** Write [s] and a newline to standard output. *)
 Definition print_endline {E} `{consoleE -< E} (s : string) : itree E unit := embed (PrintEndline s).
+(** Read a line from standard input. *)
 Definition get_line {E} `{consoleE -< E} : itree E string := embed GetLine.
 
+(** The contents of the file at [path]. *)
 Definition read {E} `{fileE -< E} (path : string) : itree E string := embed (ReadFile path).
+(** Overwrite the file at [path] with [content]. *)
 Definition write_file {E} `{fileE -< E} (path content : string) : itree E unit := embed (WriteFile path content).
+(** Append [content] to the file at [path]. *)
 Definition append_file {E} `{fileE -< E} (path content : string) : itree E unit := embed (AppendFile path content).
+(** Whether [path] exists. *)
 Definition file_exists {E} `{fileE -< E} (path : string) : itree E bool := embed (FileExists path).
+(** Delete the file at [path]. *)
 Definition remove_file {E} `{fileE -< E} (path : string) : itree E unit := embed (RemoveFile path).
 

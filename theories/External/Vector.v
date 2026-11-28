@@ -15,5 +15,6 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
+(** [vector A] is [std::vector] of [A], read by [const] reference. *)
 #[export] Instance vector_mapping (A : Type) : TypeMapping (vector A) :=
   value_type ["vector"] (Apply "std::vector" [TypeArg (SourceType A)]) UnknownCopy.

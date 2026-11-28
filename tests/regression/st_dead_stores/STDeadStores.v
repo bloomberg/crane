@@ -23,9 +23,12 @@ Import ListNotations.
 Local Open Scope monad_scope.
 
 Section S.
+  (** The programs are polymorphic in [R], as [ST.run] requires. *)
   Context {R : ST.Refs}.
+  (** Effects of a program whose store holds only [nat]s. *)
   Notation E0 := (ST.Event R (fun _ : nat => nat) +' exceptE Err).
 
+  (** A loop helper writes [r] three times; nothing reads it. *)
   Definition written_only : itree E0 nat :=
     r <- ST.new_ref 1;;
     let fix go (k : nat) (p : ST.ref nat) : itree E0 nat :=
@@ -35,6 +38,7 @@ Section S.
       end in
     go 3 r.
 
+  (** The loop parameter [acc] only initialises a reference nothing reads. *)
   Definition read_by_dead_store : itree E0 nat :=
     let fix go (k acc : nat) : itree E0 nat :=
       match k with
@@ -43,11 +47,13 @@ Section S.
       end in
     go 4 0.
 
+  (** [r] is written in one branch and read in neither. *)
   Definition written_in_branch (b : bool) : itree E0 nat :=
     r <- ST.new_ref 0;;
     x <- (if b then ST.write_ref r 5;; Ret 1 else Ret 2);;
     Ret (x + 10).
 
+  (** As [written_in_branch], with the branch's value unused but its update of [s] kept. *)
   Definition written_in_unused_branch (b : bool) : itree E0 nat :=
     r <- ST.new_ref 0;;
     s <- ST.new_ref 3;;
@@ -56,9 +62,13 @@ Section S.
 End S.
 
 Module STDeadStores.
+  (** [written_only], run in C++. *)
   Definition written_only : nat := ST.run_cpp (@written_only ST.cpp_refs).
+  (** [read_by_dead_store], run in C++. *)
   Definition read_by_dead_store : nat := ST.run_cpp (@read_by_dead_store ST.cpp_refs).
+  (** [written_in_branch], run in C++. *)
   Definition written_in_branch (b : bool) : nat := ST.run_cpp (@written_in_branch ST.cpp_refs b).
+  (** [written_in_unused_branch], run in C++. *)
   Definition written_in_unused_branch (b : bool) : nat := ST.run_cpp (@written_in_unused_branch ST.cpp_refs b).
 End STDeadStores.
 

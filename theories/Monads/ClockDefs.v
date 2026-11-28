@@ -14,10 +14,16 @@ From Corelib Require Import PrimInt63.
 From Crane Require Extraction.
 From Crane Require Import Monads.ITree.
 
+(** Clock queries: each event answers with milliseconds since its clock's epoch. *)
 Inductive clockE : Type -> Type :=
+(** Monotonic time, for measuring intervals; its epoch is unspecified. *)
 | SteadyNow : clockE int
+(** Wall-clock time since the Unix epoch. *)
 | SystemNow : clockE int.
 
+(** Read the monotonic clock. *)
 Definition steady_now {E} `{clockE -< E} : itree E int := embed SteadyNow.
+(** Read the wall clock. *)
 Definition system_now {E} `{clockE -< E} : itree E int := embed SystemNow.
+(** The default clock: the wall clock, as [system_now]. *)
 Definition now {E} `{clockE -< E} : itree E int := system_now.

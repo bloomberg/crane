@@ -63,7 +63,6 @@ Local Open Scope string_scope.
 
 
 
-(* Modeled after Ix type in https://hackage.haskell.org/package/base-4.18.1.0/docs/Data-Ix.html#t:Ix *)
 (* TODO: The `sub,zero,fromNat,toNat` functions are there in order
   to be able to talk about ranges of indices, which is required to write
   an in-place quicksort that recurses down into sections of an array.
@@ -71,42 +70,48 @@ Local Open Scope string_scope.
   To make that safer, one could adjust array references to form a "region"
   for which one could manipulate "raw" nats instead.
  *)
+(** Index types, after Haskell's [Data.Ix]
+    (https://hackage.haskell.org/package/base-4.18.1.0/docs/Data-Ix.html#t:Ix):
+    every range is given by inclusive bounds [l] and [u]; [ltu] orders them. *)
 Class Ix (T : Type)
   (ltu : T -> T -> Prop) (* lte *)
   : Type :=
   {
-    (* The list of values defined in the range, defined inclusively *)
+    (** The values from [l] to [u], both included. *)
     range : T -> T -> list T; 
 
-    (* diverge from haskell in using error type *)
+    (** The position of a value in [range l u]; [None] out of range, where
+        Haskell raises an error. *)
     index : T -> T -> T -> option nat; 
 
-    (* decidable equality over the range *)
+    (** Whether a value lies between the bounds. *)
     inRange : T -> T -> T -> Prop; (* NOTE: bool here? *)
 
-    (* the size of the elements in the range *)
+    (** The number of values in the range. *)
     rangeSize : T -> T -> nat;
 
-    (* conversion to nats *)
+    (** The index as a [nat]. *)
     toNat : T -> nat;
 
-    (* conversion from nats *)
+    (** The index of a [nat]. *)
     fromNat : nat -> T;
 
-    (* a constructor for an index plus one. *)
+    (** The next index. *)
     suc : T -> T;
 
-    (* subtraction of two indices *)
+    (** Index subtraction. *)
     sub: T -> T -> T;
 
-    (* function that gives max between indices. *)
+    (** The larger of two indices. *)
     max : T -> T -> T;
 
-    (* zero value, least value to compare with. *)
+    (** The least index. *)
     zero : T; 
   }.
 
+(** [nat] compared by [Nat.compare], deciding [eq] and [Nat.le]. *)
 #[export] Instance cmp_dec_nat : CmpDec eq Nat.le := {| cmp_dec := Nat.compare |}.
+(** [Nat.compare] agrees with [eq] and [Nat.le]. *)
 #[export] Instance cmp_dec_correct : CmpDec_Correct cmp_dec_nat.
   econstructor. intros.
   destruct (cmp_dec x y) eqn:Heq
@@ -128,6 +133,7 @@ Class Ix (T : Type)
   Qed.
 
 
+(** [nat] indices: [range l u] is [seq l (1 + u - l)]. *)
 #[export] Instance nat_ix : Ix nat Nat.le :=
   {|
     range := fun fp sp : nat => seq fp ((1 + sp) - fp);
@@ -149,7 +155,7 @@ Class Ix (T : Type)
   |}.
 
 
-(* taken from https://hackage.haskell.org/package/base-4.18.1.0/docs/Data-Ix.html#t:Ix*)
+(** Fold [f] over the values in [l] from [def]; [None] if any element is [None]. *)
 Definition option_map_list
   {A B : Type}
   (l : list (option A))
@@ -162,6 +168,8 @@ fold (fun (next : option A) (acc : option B) => match next with
                                                 end)
   (Some def) l.
 
+(** The [Data.Ix] laws tying [range], [index],
+    [inRange] and [rangeSize] together. *)
 Class Ix_Correct (T : Type)
   (ltu : T -> T -> Prop) 
   (HI : @Ix T ltu)
@@ -171,34 +179,37 @@ Class Ix_Correct (T : Type)
   {RD : @RelDec.RelDec T eq}
   : Type := 
   { 
+    (** A value is in range exactly when [range] lists it. *)
     inRange_implies_elem : forall (l u i : T),
       inRange l u i <-> (In i (range l u)); 
 
-    (* range (l,u) !! index (l,u) i == i, when inRange (l,u) i *)
+    (** [index] finds an in-range value at its position in [range]. *)
     inRange_elems_are_indexable: forall (l u v : T) (i : nat),
       index l u v = Some i ->
       inRange l u v -> (* TODO: superflous precond?*)
       List.nth_error (range l u) i = Some v;
 
 
-    (* map (index (l,u)) (range (l,u))) == [0..rangeSize (l,u)-1] *)
+    (** [index] numbers [range fp sp] from [0] to [rangeSize fp sp - 1]. *)
     map_over_indices_makes_incr_seq: forall (fp sp : T),
       List.map (index fp sp) (range fp sp)
       =
       List.map Some (seq 0 (rangeSize fp sp));
 
 
-    (* rangeSize (l,u) == length (range (l,u)) *)
+    (** [rangeSize] is the length of [range]. *)
     rangeSize_is_length_of_range : forall (fp sp : T),
       rangeSize fp sp = length (range fp sp);
       
   }.
 
 
+(** Arithmetic used by [nat_ix_correct]. *)
 Lemma add_sub_le n m : n <= m -> n + (m - n) = m.
 Proof. lia. Qed.
 
 
+(** The [nat] instance satisfies the [Data.Ix] laws. *)
 #[export,refine] Instance nat_ix_correct : Ix_Correct nat Nat.le nat_ix :=
   {|
     inRange_implies_elem := _;
@@ -247,5 +258,6 @@ Proof. lia. Qed.
   rewrite length_seq. reflexivity.
 Qed.
 
+(** The law classes are proof-only. *)
 Crane Extract Skip Ix_Correct.
 Crane Extract Skip CmpDec_Correct.

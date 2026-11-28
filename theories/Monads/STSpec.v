@@ -45,12 +45,13 @@ Section Store.
 
   Context {V : nat -> Type}.
 
-  (** The key is written as a pair, so that its code gives the value's type
-      [V c]. *)
+  (** A lookup finds the value just added at its key.  The key is written
+      as a pair, so that its code gives the value's type [V c]. *)
   Lemma lookup_add_eq (l c : nat) (v : V c) (m : mem V) :
     lookup (l, c) (add (l, c) v m) = Some v.
   Proof. exact (hmap_lookup_add_eq (hmap := ST.hmap V) (l, c) v m). Qed.
 
+  (** Adding at one key leaves every other key alone. *)
   Lemma lookup_add_ne (l c l' c' : nat) (v : V c') (m : mem V) :
     (l, c) <> (l', c') -> lookup (l, c) (add (l', c') v m) = lookup (l, c) m.
   Proof. exact (hmap_lookup_add_ne (hmap := ST.hmap V) (l, c) (l', c') v m). Qed.
@@ -61,23 +62,27 @@ Section Store.
     | eq_refl => lookup (l, code V A) m
     end.
 
+  (** Store [a], of type [A], at location [l]. *)
   Definition write_at {A : Type} `{Code V A} (l : nat) (a : A) (m : mem V) : mem V :=
     match code_ok V A in _ = X return X -> mem V with
     | eq_refl => fun a => add (l, code V A) a m
     end a.
 
+  (** Reading a location returns what was last written there. *)
   Lemma read_at_write_at_eq {A} `{Code V A} l a m : read_at l (write_at l a m) = Some a.
   Proof.
     destruct H as [c e]. subst A. cbn [read_at write_at code code_ok].
     apply lookup_add_eq.
   Qed.
 
+  (** Writing one location does not change another. *)
   Lemma read_at_write_at_ne {A} `{Code V A} l l' a m : l <> l' -> read_at l (write_at l' a m) = read_at l m.
   Proof.
     destruct H as [c e]. subst A. cbn [read_at write_at code code_ok]. intros Hne.
     apply lookup_add_ne. intros [=]. contradiction.
   Qed.
 
+  (** The maximum computed by [ST.fresh] never drops below its start. *)
   Lemma fresh_step_ge (l : mem V) :
     forall acc, acc <= fold_halist (nat * nat) (key_type V) (fun k _ acc => Nat.max (fst k) acc) acc l.
   Proof.
@@ -85,6 +90,7 @@ Section Store.
     etransitivity; [| apply IH ]. lia.
   Qed.
 
+  (** Every occupied location lies below [ST.fresh]. *)
   Lemma fresh_gt (m : mem V) : forall k j w, lookup (k, j) m = Some w -> k < ST.fresh m.
   Proof.
     unfold ST.fresh.
@@ -113,15 +119,21 @@ End Store.
 Section Spec.
 
   Context {E : Type -> Type} `{exceptE Err -< E} {V : nat -> Type}.
+  (** The effects of a program in the model. *)
   Notation E' := (ST.Event ST.model_refs V +' E).
 
+  (** [t] run from [m] returns, without raising, a final store and result
+      satisfying [Q]. *)
   Definition spec {A} (t : itree E' A) (m : mem V) (Q : mem V -> A -> Prop) : Prop :=
     exists m' v, ST.interp _ t m ≈ Ret (m', v) /\ Q m' v.
 
+  (** A pure value leaves the store as it is. *)
   Lemma spec_ret {A} (v : A) m (Q : mem V -> A -> Prop) :
     Q m v -> spec (Ret v) m Q.
   Proof. intros HQ. exists m, v. split; [ apply interp_ret_eutt | exact HQ ]. Qed.
 
+  (** Sequencing: the continuation's specification is the postcondition of
+      the first step. *)
   Lemma spec_bind {A B} (t : itree E' A) (k : A -> itree E' B) m Q :
     spec t m (fun m' v => spec (k v) m' Q) ->
     spec (ITree.bind t k) m Q.
@@ -130,6 +142,7 @@ Section Spec.
     exists m2, v2. split; [ eapply interp_bind_ret_l; eassumption | exact HQ ].
   Qed.
 
+  (** Consequence: a postcondition may be weakened. *)
   Lemma spec_weaken {A} (t : itree E' A) m (Q Q' : mem V -> A -> Prop) :
     (forall m' v, Q m' v -> Q' m' v) -> spec t m Q -> spec t m Q'.
   Proof. intros HQ (m' & v & Ht & Hv). exists m', v. auto. Qed.
@@ -140,11 +153,13 @@ Section Spec.
     unfold ST.new_ref, ST.write_ref; cbn [code code_ok];
     rewrite interp_trigger; cbn; reflexivity.
 
+  (** A new reference is the fresh location, holding [v]. *)
   Lemma new_ref {A} `{Code V A} (v : A) m (Q : mem V -> nat -> Prop) :
     Q (write_at (ST.fresh m) v m) (ST.fresh m) ->
     spec (ST.new_ref (R := ST.model_refs) v) m Q.
   Proof. destruct H0 as [c e]. subst A. intros HQ. run_op HQ. Qed.
 
+  (** Reading a reference returns its value and leaves the store alone. *)
   Lemma read_ref {A} `{Code V A} (ref : nat) m v (Q : mem V -> A -> Prop) :
     read_at ref m = Some v -> Q m v ->
     spec (ST.read_ref (R := ST.model_refs) ref) m Q.
@@ -154,13 +169,13 @@ Section Spec.
     reflexivity.
   Qed.
 
+  (** Writing a reference updates its location; it never fails. *)
   Lemma write_ref {A} `{Code V A} (ref : nat) (a : A) m (Q : mem V -> unit -> Prop) :
     Q (write_at ref a m) tt ->
     spec (ST.write_ref (R := ST.model_refs) ref a) m Q.
   Proof. destruct H0 as [c e]. subst A. intros HQ. run_op HQ. Qed.
 
-  (** The handler's array loops leave the cells below their start alone,
-      and put their values from it on. *)
+  (** [fill] leaves the cells below [key] alone. *)
   Lemma fill_below c (v : V c) n : forall key m j c', j < key ->
     lookup (j, c') (fill c v key n m) = lookup (j, c') m.
   Proof.
@@ -168,6 +183,7 @@ Section Spec.
     rewrite IH by lia. apply lookup_add_ne. intros [=]; lia.
   Qed.
 
+  (** [fill] puts [v] in each of the [n] cells from [key]. *)
   Lemma fill_at c (v : V c) n : forall key m k, k < n -> lookup (key + k, c) (fill c v key n m) = Some v.
   Proof.
     induction n as [|n IH]; intros key m k Hk; [ lia |]. cbn [fill]. destruct k as [|k].
@@ -175,6 +191,7 @@ Section Spec.
     - replace (key + S k) with (S key + k) by lia. apply IH. lia.
   Qed.
 
+  (** [fill_list] leaves the cells below [key] alone. *)
   Lemma fill_list_below c (xs : list (V c)) : forall key m j c', j < key ->
     lookup (j, c') (fill_list c key xs m) = lookup (j, c') m.
   Proof.
@@ -182,6 +199,7 @@ Section Spec.
     rewrite IH by lia. apply lookup_add_ne. intros [=]; lia.
   Qed.
 
+  (** [fill_list] puts the [k]th element of [xs] at [key + k]. *)
   Lemma fill_list_at c (xs : list (V c)) : forall key m k, k < length xs ->
     lookup (key + k, c) (fill_list c key xs m) = nth_error xs k.
   Proof.
@@ -191,6 +209,7 @@ Section Spec.
     - replace (key + S k) with (S key + k) by lia. apply IH. lia.
   Qed.
 
+  (** [read_cells] over [seq s len] collects [vs] when the cells hold it. *)
   Lemma read_cells_spec c b (m : mem V) : forall len s (vs : list (V c)),
     length vs = len ->
     (forall k, k < len -> lookup (b + (s + k), c) m = nth_error vs k) ->
@@ -216,6 +235,8 @@ Section Spec.
     - apply HQ. intros k Hk. cbn [read_at code code_ok]. apply fill_at. exact Hk.
   Qed.
 
+  (** An array from a list occupies [length xs] locations from some base,
+      holding [xs] in order. *)
   Lemma array_of_list {A} `{Code V A} (xs : list A) m (Q : mem V -> ST.ArrayLoc A -> Prop) :
     (forall base m', (forall k, k < length xs -> read_at (base + k) m' = nth_error xs k) ->
        Q m' (ST.MkArrayLoc base (length xs))) ->
@@ -226,6 +247,7 @@ Section Spec.
     - apply HQ. intros k Hk. cbn [read_at code code_ok]. apply fill_list_at. exact Hk.
   Qed.
 
+  (** Reading an element in range returns the value at [base + i]. *)
   Lemma read_array {A} `{Code V A} base n i m v (Q : mem V -> A -> Prop) :
     i < n -> read_at (base + i) m = Some v -> Q m v ->
     spec (ST.read_array (R := ST.model_refs) (ST.MkArrayLoc base n) i) m Q.
@@ -235,6 +257,7 @@ Section Spec.
     rewrite (proj2 (Nat.ltb_lt i n) Hi), Hlk. reflexivity.
   Qed.
 
+  (** Writing an element in range updates location [base + i]. *)
   Lemma write_array {A} `{Code V A} base n i (v : A) m (Q : mem V -> unit -> Prop) :
     i < n -> Q (write_at (base + i) v m) tt ->
     spec (ST.write_array (R := ST.model_refs) (ST.MkArrayLoc base n) i v) m Q.
@@ -244,6 +267,7 @@ Section Spec.
     rewrite (proj2 (Nat.ltb_lt i n) Hi). reflexivity.
   Qed.
 
+  (** An array whose cells hold [vs] reads back as [vs]. *)
   Lemma array_to_list {A} `{Code V A} base n (vs : list A) m (Q : mem V -> list A -> Prop) :
     length vs = n -> (forall k, k < n -> read_at (base + k) m = nth_error vs k) -> Q m vs ->
     spec (ST.array_to_list (R := ST.model_refs) (ST.MkArrayLoc base n)) m Q.

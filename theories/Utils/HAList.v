@@ -12,16 +12,22 @@ Import ListNotations.
 Section HAList.
   Context (K : Type) (V : K -> Type).
 
+  (** A dependent association list; [halist_add] keeps keys unique, and
+      [halist_lookup] reads the first binding. *)
   Definition halist := list {k : K & V k}.
 
   Context `{Eq : EqDec K eq}.
 
+  (** Drop every binding of [k]. *)
   Definition halist_remove (k : K) (m : halist) : halist :=
     List.filter (fun k_v => negb (proj1_sig (bool_of_sumbool (projT1 k_v == k)))) m.
 
+  (** Bind [k] to [v] at the front, replacing any old binding. *)
   Definition halist_add (k : K) (v : V k) (m : halist) : halist :=
     existT _ k v :: halist_remove k m.
 
+  (** The first binding of [k], its value cast to [V k] along the decided
+      key equality. *)
   Fixpoint halist_lookup (k : K) (l : halist) : option (V k) :=
     match l with
     | [] => None
@@ -35,6 +41,7 @@ Section HAList.
   Section fold.
     Context {T : Type} (f : forall (k : K), V k -> T -> T).
 
+    (** Fold [f] over the bindings, front to back. *)
     Fixpoint fold_halist (acc : T) (map : halist) : T :=
       match map with
       | [] => acc
@@ -42,9 +49,11 @@ Section HAList.
       end.
   End fold.
 
+  (** Union; [m1]'s bindings win, being added over [m2]. *)
   Definition halist_union (m1 m2 : halist) : halist :=
     fold_halist halist_add m2 m1.
 
+  (** Association lists are an [HMap]. *)
   #[global] Instance HMap_halist : HMap K V halist :=
   { empty  := nil
   ; add    := @halist_add
@@ -54,21 +63,25 @@ Section HAList.
   }.
 
   Section proofs.
+    (** [k] maps to [v] when lookup finds exactly [v]. *)
     Definition mapsto_halist (k : K) (v : V k) (m : halist) : Prop :=
       halist_lookup k m = Some v.
 
+    (** The empty list binds nothing. *)
     Theorem mapsto_empty_halist : forall (k : K) (v : V k), ~ mapsto_halist k v empty.
     Proof.
       intros ?? H.
       inversion H.
     Qed.
 
+    (** [lookup] and [mapsto_halist] agree by definition. *)
     Theorem mapsto_lookup_halist : forall (k : K) (v : V k) (m : halist),
       lookup k m = Some v <-> mapsto_halist k v m.
     Proof.
       reflexivity.
     Qed.
 
+    (** A removed key is unbound. *)
     Theorem mapsto_remove_eq_halist : forall m k v, ~ mapsto_halist k v (halist_remove k m).
     Proof.
       intros m k v.
@@ -82,6 +95,7 @@ Section HAList.
         contradiction.
     Qed.
 
+    (** Removing [k] leaves every other key's binding alone. *)
     Theorem mapsto_remove_neq_halist : forall m k k', k <> k' ->
       forall v', (mapsto_halist k' v' m <-> mapsto_halist k' v' (halist_remove k m)).
     Proof.
@@ -99,6 +113,7 @@ Section HAList.
         + cbn. destruct (x == k') as [? | ?]; [reflexivity|apply IHm].
     Qed.
 
+    (** An added key maps to its new value. *)
     Theorem mapsto_add_eq_halist : forall m k v, mapsto_halist k v (halist_add k v m).
     Proof.
       intros.
@@ -109,6 +124,7 @@ Section HAList.
       - exfalso. apply Hneq. reflexivity.
     Qed.
 
+    (** Adding [k] leaves every other key's binding alone. *)
     Theorem mapsto_add_neq_halist : forall m k v k', k <> k' ->
       forall v', (mapsto_halist k' v' m <-> mapsto_halist k' v' (halist_add k v m)).
     Proof.
@@ -120,6 +136,7 @@ Section HAList.
       - apply mapsto_remove_neq_halist, Hneq.
     Qed.
 
+    (** Association lists meet the [HMapOk] specification. *)
     #[global] Instance hmap_ok_halist : HMapOk HMap_halist :=
       {| mapsto := mapsto_halist
        ; mapsto_empty := mapsto_empty_halist
@@ -132,6 +149,7 @@ Section HAList.
     
   End proofs.
 
+  (** Fold over the bindings as dependent pairs, front to back. *)
   #[global] Instance Foldable_halist : Foldable halist {k : K & V k} :=
     fun _ f => fold_halist (fun k v => f (existT _ k v)).
 

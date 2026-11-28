@@ -50,16 +50,19 @@ Local Open Scope pstring_scope.
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
+(** [R0] is [Real(0.0L)]. *)
 #[export] Instance real_r0_mapping : OperationMapping (Ref R0) :=
   {| operation_headers := ["crane_real.h"];
      operation_cpp := Expr "Real(0.0L)";
      operation_contract :=
        PureOperation [] ReturnValue [] |}.
+(** [R1] is [Real(1.0L)]. *)
 #[export] Instance real_r1_mapping : OperationMapping (Ref R1) :=
   {| operation_headers := ["crane_real.h"];
      operation_cpp := Expr "Real(1.0L)";
      operation_contract :=
        PureOperation [] ReturnValue [] |}.
+(** [Rplus] is floating-point [+], rounded to [long double]. *)
 #[export] Instance real_rplus_mapping : OperationMapping (Ref Rplus) :=
   {| operation_headers := [];
      operation_cpp := Expr "(%arg(r1) + %arg(r2))";
@@ -68,6 +71,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "r1"; argument_use := Read |};
           {| argument_name := "r2"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rmult] is floating-point [*]. *)
 #[export] Instance real_rmult_mapping : OperationMapping (Ref Rmult) :=
   {| operation_headers := [];
      operation_cpp := Expr "(%arg(r1) * %arg(r2))";
@@ -76,6 +80,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "r1"; argument_use := Read |};
           {| argument_name := "r2"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Ropp] is negation. *)
 #[export] Instance real_ropp_mapping : OperationMapping (Ref Ropp) :=
   {| operation_headers := [];
      operation_cpp := Expr "(-%arg(r))";
@@ -83,6 +88,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "r"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rinv] is [1.0L / x]: [Rinv 0] is an infinity, not Rocq's [0]. *)
 #[export] Instance real_rinv_mapping : OperationMapping (Ref Rinv) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_inv(%arg(r))";
@@ -90,6 +96,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "r"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rminus] is floating-point [-]. *)
 #[export] Instance real_rminus_mapping : OperationMapping (Ref Rminus) :=
   {| operation_headers := [];
      operation_cpp := Expr "(%arg(r1) - %arg(r2))";
@@ -98,6 +105,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "r1"; argument_use := Read |};
           {| argument_name := "r2"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rdiv] is floating-point [/]; a zero divisor gives an infinity or NaN. *)
 #[export] Instance real_rdiv_mapping : OperationMapping (Ref Rdiv) :=
   {| operation_headers := [];
      operation_cpp := Expr "(%arg(r1) / %arg(r2))";
@@ -106,6 +114,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "r1"; argument_use := Read |};
           {| argument_name := "r2"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rabs] is [std::fabs]. *)
 #[export] Instance real_rabs_mapping : OperationMapping (Ref Rabs) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_abs(%arg(r))";
@@ -113,6 +122,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "r"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rsqr] is [x * x]. *)
 #[export] Instance real_rsqr_mapping : OperationMapping (Ref Rsqr) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_sqr(%arg(r))";
@@ -120,6 +130,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "r"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rmax] is a [>=] conditional. *)
 #[export] Instance real_rmax_mapping : OperationMapping (Ref Rmax) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_max(%arg(x), %arg(y))";
@@ -128,6 +139,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rmin] is a [<=] conditional. *)
 #[export] Instance real_rmin_mapping : OperationMapping (Ref Rmin) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_min(%arg(x), %arg(y))";
@@ -136,6 +148,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [pow r n] is [std::pow] with an [unsigned int] exponent. *)
 #[export] Instance real_pow_mapping : OperationMapping (Ref pow) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_pow(%arg(r), %arg(n))";
@@ -144,6 +157,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "r"; argument_use := Read |};
           {| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [sqrt] is [std::sqrt]: NaN for a negative argument, where Rocq gives [0]. *)
 #[export] Instance real_sqrt_mapping : OperationMapping (Ref sqrt) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_sqrt(%arg(x))";
@@ -151,6 +165,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [sin] is [std::sin]. *)
 #[export] Instance real_sin_mapping : OperationMapping (Ref sin) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_sin(%arg(x))";
@@ -158,6 +173,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [cos] is [std::cos]. *)
 #[export] Instance real_cos_mapping : OperationMapping (Ref cos) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_cos(%arg(x))";
@@ -165,6 +181,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [tan] is [std::tan]. *)
 #[export] Instance real_tan_mapping : OperationMapping (Ref tan) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_tan(%arg(x))";
@@ -172,6 +189,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [asin] is [std::asin]: NaN outside [[-1, 1]]. *)
 #[export] Instance real_asin_mapping : OperationMapping (Ref asin) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_asin(%arg(x))";
@@ -179,6 +197,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [acos] is [std::acos]: NaN outside [[-1, 1]]. *)
 #[export] Instance real_acos_mapping : OperationMapping (Ref acos) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_acos(%arg(x))";
@@ -186,6 +205,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [atan] is [std::atan]. *)
 #[export] Instance real_atan_mapping : OperationMapping (Ref atan) :=
   {| operation_headers := [];
      operation_cpp := Expr "r_atan(%arg(x))";
@@ -193,11 +213,13 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [PI] is [Real::pi()], computed as [acos(-1)]. *)
 #[export] Instance real_pi_mapping : OperationMapping (Ref PI) :=
   {| operation_headers := [];
      operation_cpp := Expr "Real::pi()";
      operation_contract :=
        PureOperation [] ReturnValue [] |}.
+(** [Rle_dec] is [<=]: the [sumbool] is a [bool]. *)
 #[export] Instance real_rle_dec_mapping : OperationMapping (Ref Rle_dec) :=
   {| operation_headers := [];
      operation_cpp := Expr "(%arg(r1) <= %arg(r2))";
@@ -206,6 +228,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "r1"; argument_use := Read |};
           {| argument_name := "r2"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rlt_dec] is [<]: the [sumbool] is a [bool]. *)
 #[export] Instance real_rlt_dec_mapping : OperationMapping (Ref Rlt_dec) :=
   {| operation_headers := [];
      operation_cpp := Expr "(%arg(r1) < %arg(r2))";
@@ -214,6 +237,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "r1"; argument_use := Read |};
           {| argument_name := "r2"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Req_EM_T] is floating-point [==]. *)
 #[export] Instance real_req_em_t_mapping : OperationMapping (Ref Req_EM_T) :=
   {| operation_headers := [];
      operation_cpp := Expr "(%arg(r1) == %arg(r2))";
@@ -222,6 +246,7 @@ Local Open Scope pstring_scope.
          [{| argument_name := "r1"; argument_use := Read |};
           {| argument_name := "r2"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [INR] is [Real::from_nat], for whatever C++ type [nat] maps to. *)
 #[export] Instance real_inr_mapping : OperationMapping (Ref INR) :=
   {| operation_headers := [];
      operation_cpp := Expr "Real::from_nat(%arg(n))";
@@ -229,6 +254,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [IZR] is [Real::from_z], for whatever C++ type [Z] maps to. *)
 #[export] Instance real_izr_mapping : OperationMapping (Ref IZR) :=
   {| operation_headers := [];
      operation_cpp := Expr "Real::from_z(%arg(z))";
@@ -236,6 +262,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "z"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [IPR] is [Real::from_pos], for whatever C++ type [positive] maps to. *)
 #[export] Instance real_ipr_mapping : OperationMapping (Ref IPR) :=
   {| operation_headers := [];
      operation_cpp := Expr "Real::from_pos(%arg(p))";
@@ -243,6 +270,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "p"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [IPR_2 p], Rocq's compact [2 * p], is [from_pos(p)] added to itself. *)
 #[export] Instance real_ipr_2_mapping : OperationMapping (Ref IPR_2) :=
   {| operation_headers := [];
      operation_cpp := Expr "(Real::from_pos(%arg(p)) + Real::from_pos(%arg(p)))";
@@ -250,6 +278,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "p"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rabst] is the identity: there is no constructive real to convert. *)
 #[export] Instance real_rabst_mapping : OperationMapping (Ref Rabst) :=
   {| operation_headers := [];
      operation_cpp := Expr "%arg(x)";
@@ -257,6 +286,7 @@ Local Open Scope pstring_scope.
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Rrepr] is the identity: there is no constructive real to convert. *)
 #[export] Instance real_rrepr_mapping : OperationMapping (Ref Rrepr) :=
   {| operation_headers := [];
      operation_cpp := Expr "%arg(x)";
@@ -265,9 +295,8 @@ Local Open Scope pstring_scope.
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
 
-(* --- Skip R implementation modules ---
-   RbaseSymbolsImpl and RinvImpl define R via constructive reals.
-   Since all their exported constants are mapped above, skip
-   the module structures to prevent broken C++ generation. *)
+(** [RbaseSymbolsImpl] and [RinvImpl] build [R] from constructive reals;
+    every constant they export is mapped above, so their module structures
+    are skipped rather than extracted into broken C++. *)
 Crane Extract Skip Module Rdefinitions.RbaseSymbolsImpl.
 Crane Extract Skip Module Rdefinitions.RinvImpl.

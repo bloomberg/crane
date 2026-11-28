@@ -14,6 +14,8 @@ From Crane Require Export Monads.IODefs.
 Import ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
+(** C++ for [read]: the whole file, or the empty string and a message on
+    [std::cerr] if it cannot be opened. *)
 Definition read_file_cpp : string := "[&]() -> std::string {
   std::ifstream file(%arg(path));
   if (!file) {
@@ -25,34 +27,41 @@ Definition read_file_cpp : string := "[&]() -> std::string {
       std::istreambuf_iterator<char>());
 }()".
 
+(** C++ for [write_file]: truncate and write through a [std::ofstream]. *)
 Definition write_file_cpp : string := "[&]() {
   std::ofstream file(%arg(path));
   file << %arg(content);
 }()".
 
+(** C++ for [append_file]: write through a [std::ofstream] in append mode. *)
 Definition append_file_cpp : string := "[&]() {
   std::ofstream file(%arg(path), std::ios::app);
   file << %arg(content);
 }()".
 
-(* [file_exists]/[remove_file] use the non-throwing [std::error_code] overload:
+(** [file_exists]/[remove_file] use the non-throwing [std::error_code] overload:
    the Rocq effects return plain [bool]/[unit] with no error channel, so an
    invalid, inaccessible, or raced path must not raise a [std::filesystem_error]
    that terminates the generated process (CWE-248 / CWE-755). *)
 Definition file_exists_cpp : string :=
   "[&]() -> bool { std::error_code _ec; return std::filesystem::exists(std::filesystem::path(%arg(path)), _ec); }()".
+(** C++ for [remove_file]: [std::filesystem::remove], ignoring failure. *)
 Definition remove_file_cpp : string :=
   "[&]() { std::error_code _ec; std::filesystem::remove(std::filesystem::path(%arg(path)), _ec); }()".
 
+(** C++ for [GetLine]: one [std::getline] from [std::cin]. *)
 Definition get_line_cpp : string :=
   "[&]() -> std::string { std::string s; std::getline(std::cin, s); return s; }()".
 
+(** [consoleE] events on [std::cout] and [std::cin]. *)
 #[export] Instance consoleE_mapping (X : Type) : TypeMapping (consoleE X) :=
   event_family ["iostream"]
     [event (Ref (@Print)) "std::cout << %a0";
      event (Ref (@PrintEndline)) "std::cout << %a0 << '\n'";
      event (Ref (@GetLine)) get_line_cpp].
 
+(** [fileE] events through [std::fstream] and
+    [std::filesystem], as the [_cpp] texts above. *)
 #[export] Instance fileE_mapping (X : Type) : TypeMapping (fileE X) :=
   event_family ["fstream"; "iostream"; "iterator"; "filesystem"; "system_error"]
     [event (Ref (@ReadFile)) "[&]() -> std::string {
@@ -76,19 +85,28 @@ Definition get_line_cpp : string :=
      event (Ref (@FileExists)) "[&]() -> bool { std::error_code _ec; return std::filesystem::exists(std::filesystem::path(%a0), _ec); }()";
      event (Ref (@RemoveFile)) "[&]() { std::error_code _ec; std::filesystem::remove(std::filesystem::path(%a0), _ec); }()"].
 
+(** [print] streams to [std::cout]. *)
 #[export] Instance print_mapping : OperationMapping (Ref (@print)) :=
   effect_cpp ["iostream"] ["s"] (Structured (Binop Shl (Verbatim "std::cout") (Arg "s"))).
+(** [print_endline] streams the string and
+    ['\n'] to [std::cout], without flushing. *)
 #[export] Instance print_endline_mapping : OperationMapping (Ref (@print_endline)) :=
   effect_cpp ["iostream"] ["s"] (Structured (Binop Shl (Binop Shl (Verbatim "std::cout") (Arg "s")) (Verbatim "'\n'"))).
+(** [get_line] reads into the result with [std::getline]. *)
 #[export] Instance get_line_mapping : OperationMapping (Ref (@get_line)) :=
   effect_cpp ["iostream"] [] (WithBody "" "std::getline(std::cin, %result)").
+(** [read] is [read_file_cpp]. *)
 #[export] Instance read_mapping : OperationMapping (Ref (@read)) :=
   effect_cpp ["fstream"; "iostream"; "iterator"] ["path"] (Expr read_file_cpp).
+(** [write_file] is [write_file_cpp]. *)
 #[export] Instance write_file_mapping : OperationMapping (Ref (@write_file)) :=
   effect_cpp ["fstream"] ["path"; "content"] (Expr write_file_cpp).
+(** [append_file] is [append_file_cpp]. *)
 #[export] Instance append_file_mapping : OperationMapping (Ref (@append_file)) :=
   effect_cpp ["fstream"] ["path"; "content"] (Expr append_file_cpp).
+(** [file_exists] is [file_exists_cpp]. *)
 #[export] Instance file_exists_mapping : OperationMapping (Ref (@file_exists)) :=
   effect_cpp ["filesystem"; "system_error"] ["path"] (Expr file_exists_cpp).
+(** [remove_file] is [remove_file_cpp]. *)
 #[export] Instance remove_file_mapping : OperationMapping (Ref (@remove_file)) :=
   effect_cpp ["filesystem"; "system_error"] ["path"] (Expr remove_file_cpp).

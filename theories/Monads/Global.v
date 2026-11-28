@@ -1,5 +1,11 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Global mutable state: references whose values are typed by an index.
+    A program triggers [Event T V] events; a reference made at index [idx]
+    holds values of type [V idx].  [run] interprets the program over a
+    heterogeneous map from (location, index) keys to values; extraction maps
+    the reference type to a [std::shared_ptr] and every operation to a
+    direct C++ access, so the events disappear. *)
 
 From Stdlib Require Import
   Arith.PeanoNat
@@ -52,9 +58,8 @@ From Crane Require Import
   Utils.HMap
 .
 
-
-(* Global Ref Class*)
-
+(** How references are represented over a location type [T]: the model
+    builds a reference from a location and reads the location back. *)
 Class RefClass (T : Type) : Type :=
   {
     ref : forall A : Type, Type;
@@ -62,26 +67,24 @@ Class RefClass (T : Type) : Type :=
     ref_index : forall A : Type, ref A -> T;
   }.
 
-
-(* GlobalRef Event *)
-
 Section NatRefDefs.
 
   Variable (T : Type).
-  
 
+  (** A reference located at a natural number; [A] is a phantom type. *)
   Variant NatRef : Type -> Type :=
   | MkNatRef (A : Type) (idx : nat) : NatRef A.
 
-  
+  (** The location of a [NatRef]. *)
   Definition nat_ref_index (A : Type) (ref : NatRef A) : nat :=
    match ref with
    | MkNatRef _ idx => idx
-   end. 
+   end.
 
 
 End NatRefDefs.
 
+(** References located at natural numbers. *)
 #[global] Instance nat_ref_class : RefClass nat :=
   {| ref := NatRef;
     make_ref := MkNatRef ;
@@ -89,8 +92,10 @@ End NatRefDefs.
 
 Section EventDefine.
   Variable (T : Type).
-  Context `{RefClass T}. 
+  Context `{RefClass T}.
 
+(** The global-state effect: a reference made at index [idx] holds values
+    of type [V idx]. *)
 Variant Event (V : T -> Type) : Type -> Type :=
   | NewRef (idx : T) (v : V idx) : Event V (ref (V idx))
   | ReadRef (idx : T) : ref (V idx) -> Event V (V idx)
@@ -107,35 +112,40 @@ Section Construction.
   Context `{Ix_Correct T ltu}.
   Context `{RefClass T}.
   Context {V : T -> Type}.
-  Context `{Event T V -< E}. 
+  Context `{Event T V -< E}.
   Context `{exceptE Err -< E}.
 
 
-  (* NOTE: explicit index here because we cannot infer it automatically, yet. *)
+  (** A fresh reference at index [idx] holding [v].  The index is explicit
+      because it cannot be inferred from [v]'s type. *)
   Definition new_ref (idx : T) (v : (V idx)) : itree E (ref (V idx)) :=
     trigger (NewRef T V idx v).
 
+  (** The value [ref] holds. *)
   Definition read_ref {idx : T} (ref : ref (V idx)) : itree E (V idx) :=
     trigger (ReadRef T V idx ref).
 
+  (** Overwrite the value [ref] holds. *)
   Definition write_ref {idx : T} (ref : ref (V idx)) (a : (V idx)) : itree E unit :=
     trigger (WriteRef T V idx ref a).
 
 
-  (* key type definitions *)
-
+  (** A store key: a location paired with the index typing its value. *)
   Definition pkey (J K : Type) := (J * K)%type.
+  (** The type of the value stored at a key: [V] of its index. *)
   Definition pkey_type {J K} (V : K -> Type) (pk : pkey J K) := V (snd pk).
-  Definition idx_key := pkey T. 
+  (** Keys whose locations are of type [T]. *)
+  Definition idx_key := pkey T.
+  (** The type of the value stored at an [idx_key]. *)
   Definition idx_key_type {K} (V : K -> Type) (ik : idx_key K) := V (snd ik).
 
   Context {M : Type}.
   Context `{HMap (idx_key T) (idx_key_type V) M}.
   Context `{Foldable M (sigT (idx_key_type V))}.
 
-  (* Handler for GlobalRef *)
-  
-  Definition handle `{EqDec T eq} 
+  (** The model: a new reference takes the location one past the largest in
+      use; a read of a missing key fails with [Err]. *)
+  Definition handle `{EqDec T eq}
     : forall (A : Type), Event T V A -> Monads.stateT M (itree E) A :=
     fun _ e mem =>
     match e with
@@ -151,8 +161,7 @@ Section Construction.
     end.
 
 
-  (* Interpretation in Rocq *)
-    
+  (** [handle] on global-state events, the other events passed through. *)
   Definition handle_leave_rest
     (A : Type) (e : (Event T V +' E) A)
     : Monads.stateT M (itree (E)) A :=
@@ -160,13 +169,17 @@ Section Construction.
     | inl1 e0 => handle A e0
     | inr1 e0 => fun st : M => r <- trigger e0;; Ret (st, r)
     end.
-  
+
+  (** The default store: an association list keyed by index. *)
   #[global] Instance hmap_from_idx :
     HMap T V (halist T V) := @HMap_halist T V eq_equivalence _.
 
+  (** The association-list store satisfies the [HMap] laws. *)
   #[global] Instance map_idx_correct :
     HMapOk hmap_from_idx := hmap_ok_halist T V.
 
+  (** Interpret the global-state events of a tree into a state monad over
+      the store. *)
   Definition interp
     : itree (Event T V +' E) ~> Monads.stateT M (itree (E)) :=
     interp_state handle_leave_rest.
@@ -174,6 +187,8 @@ Section Construction.
 End Construction.
 
 
+(** Run a program from the empty store, returning the final store and the
+    result. *)
 Definition run {A : Type}
   {T : Type} {ltu : T -> T -> Prop}
   `{Ix T ltu}
@@ -185,8 +200,6 @@ Definition run {A : Type}
   (t : itree ((Event T V) +' E) A)
   : itree E ((halist (idx_key T) (idx_key_type V)) * A) :=
   interp ltu _ t HMap.empty.
-
-(* CPP Bindings *)
 
 Crane Extract Skip Event.
 Crane Extract Skip make_ref.
@@ -201,6 +214,8 @@ Crane Extraction Implicit new_ref [idx].
 Crane Extraction Implicit read_ref [idx].
 Crane Extraction Implicit write_ref [idx].
 
+(** A reference is a mutable handle passed by const reference; copying it
+    shares the cell. *)
 #[global] Instance ref_mapping (T : Type) (H : RefClass T) (A : Type)
   : TypeMapping (@ref T H A) :=
   {| type_headers := ["memory"%pstring];
@@ -217,6 +232,7 @@ Crane Extraction Implicit write_ref [idx].
      type_release := OrdinaryRelease;
      type_numerals := None |}%pstring.
 
+(** [new_ref] allocates the cell with [std::make_shared]. *)
 #[global] Instance new_ref_mapping : OperationMapping (Ref (@new_ref)) :=
   {| operation_headers := ["memory"];
      operation_cpp := Expr "std::make_shared<%stored(contents)>(%arg(v))";
@@ -229,6 +245,7 @@ Crane Extraction Implicit write_ref [idx].
                 initial_multiplicity := InitialiseOnce |}])
          [] |}%pstring.
 
+(** [read_ref] dereferences the handle. *)
 #[global] Instance read_ref_mapping : OperationMapping (Ref (@read_ref)) :=
   {| operation_headers := [];
      operation_cpp := Expr "*%arg(ref)";
@@ -238,6 +255,7 @@ Crane Extraction Implicit write_ref [idx].
          ReturnValue
          [ReadsComponent {| path_argument := "ref"; path_components := ["contents"] |}] |}%pstring.
 
+(** [write_ref] assigns through the handle. *)
 #[global] Instance write_ref_mapping : OperationMapping (Ref (@write_ref)) :=
   {| operation_headers := [];
      operation_cpp := Expr "*%arg(ref) = %arg(a)";

@@ -99,6 +99,7 @@ Definition n_mapping : TypeMapping N :=
                numeral_converters := [Ref N.of_num_uint] |} |}.
 
 (* Pos operations *)
+(** [Pos.add] is [+] on [unsigned int]; wraps at 2^32. *)
 Definition pos_add_mapping : OperationMapping (Ref Pos.add) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Add Unchecked) (Arg "x") (Arg "y"));
@@ -107,6 +108,7 @@ Definition pos_add_mapping : OperationMapping (Ref Pos.add) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.sub] is [x - y], or [1] when [x <= y], as in Rocq. *)
 Definition pos_sub_mapping : OperationMapping (Ref Pos.sub) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Binop Greater (Arg "x") (Arg "y")) (Binop (Sub Unchecked) (Arg "x") (Arg "y")) (IntLit U32 1));
@@ -115,6 +117,7 @@ Definition pos_sub_mapping : OperationMapping (Ref Pos.sub) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.mul] is [*] on [unsigned int]; wraps at 2^32. *)
 Definition pos_mul_mapping : OperationMapping (Ref Pos.mul) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Mul Unchecked) (Arg "x") (Arg "y"));
@@ -123,6 +126,7 @@ Definition pos_mul_mapping : OperationMapping (Ref Pos.mul) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.succ] is [x + 1]; wraps at 2^32. *)
 Definition pos_succ_mapping : OperationMapping (Ref Pos.succ) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Add Unchecked) (Arg "x") (IntLit U32 1));
@@ -130,6 +134,7 @@ Definition pos_succ_mapping : OperationMapping (Ref Pos.succ) :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.pred] is [x - 1], keeping [Pos.pred 1 = 1]. *)
 Definition pos_pred_mapping : OperationMapping (Ref Pos.pred) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Binop Greater (Arg "x") (IntLit U32 1)) (Binop (Sub Unchecked) (Arg "x") (IntLit U32 1)) (IntLit U32 1));
@@ -137,6 +142,7 @@ Definition pos_pred_mapping : OperationMapping (Ref Pos.pred) :=
        PureOperation
          [{| argument_name := "x"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.eqb] is [==]. *)
 Definition pos_eqb_mapping : OperationMapping (Ref Pos.eqb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Equal (Arg "p") (Arg "q"));
@@ -145,6 +151,7 @@ Definition pos_eqb_mapping : OperationMapping (Ref Pos.eqb) :=
          [{| argument_name := "p"; argument_use := Read |};
           {| argument_name := "q"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.ltb] is [<]. *)
 Definition pos_ltb_mapping : OperationMapping (Ref Pos.ltb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Less (Arg "x") (Arg "y"));
@@ -153,6 +160,7 @@ Definition pos_ltb_mapping : OperationMapping (Ref Pos.ltb) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.leb] is [<=]. *)
 Definition pos_leb_mapping : OperationMapping (Ref Pos.leb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop LessEq (Arg "x") (Arg "y"));
@@ -161,6 +169,7 @@ Definition pos_leb_mapping : OperationMapping (Ref Pos.leb) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.compare] is two [<] tests yielding [Lt], [Gt] or [Eq]. *)
 Definition pos_compare_mapping : OperationMapping (Ref Pos.compare) :=
   {| operation_headers := [];
      operation_cpp := Structured (three_way (Arg "x") (Arg "y"));
@@ -169,6 +178,7 @@ Definition pos_compare_mapping : OperationMapping (Ref Pos.compare) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.eq_dec] is [==]: the [sumbool] is a [bool]. *)
 Definition pos_eq_dec_mapping : OperationMapping (Ref Pos.eq_dec) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Equal (Arg "x") (Arg "y"));
@@ -177,6 +187,7 @@ Definition pos_eq_dec_mapping : OperationMapping (Ref Pos.eq_dec) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.min] is the flavour's [min] ([std::min] or [bsl::min]). *)
 Definition pos_min_mapping (f : Flavour) : OperationMapping (Ref Pos.min) :=
   {| operation_headers := [(flavour_algorithm f)];
      operation_cpp := Structured (Call (flavour_min f) [] [(Arg "p"); (Arg "p'")]);
@@ -185,6 +196,7 @@ Definition pos_min_mapping (f : Flavour) : OperationMapping (Ref Pos.min) :=
          [{| argument_name := "p"; argument_use := Read |};
           {| argument_name := "p'"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.max] is the flavour's [max] ([std::max] or [bsl::max]). *)
 Definition pos_max_mapping (f : Flavour) : OperationMapping (Ref Pos.max) :=
   {| operation_headers := [(flavour_algorithm f)];
      operation_cpp := Structured (Call (flavour_max f) [] [(Arg "p"); (Arg "p'")]);
@@ -195,6 +207,7 @@ Definition pos_max_mapping (f : Flavour) : OperationMapping (Ref Pos.max) :=
          ReturnValue [] |}.
 
 (* N operations *)
+(** [N.add] is [+] on [unsigned int]; wraps at 2^32. *)
 Definition n_add_mapping : OperationMapping (Ref N.add) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Add Unchecked) (Arg "n") (Arg "m"));
@@ -203,6 +216,7 @@ Definition n_add_mapping : OperationMapping (Ref N.add) :=
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.sub] is [n - m], or [0] when [n < m]. *)
 Definition n_sub_mapping : OperationMapping (Ref N.sub) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Binop GreaterEq (Arg "n") (Arg "m")) (Binop (Sub Unchecked) (Arg "n") (Arg "m")) (IntLit U32 0));
@@ -211,6 +225,7 @@ Definition n_sub_mapping : OperationMapping (Ref N.sub) :=
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.mul] is [*] on [unsigned int]; wraps at 2^32. *)
 Definition n_mul_mapping : OperationMapping (Ref N.mul) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Mul Unchecked) (Arg "n") (Arg "m"));
@@ -219,6 +234,7 @@ Definition n_mul_mapping : OperationMapping (Ref N.mul) :=
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.div] is C++ [/], with Rocq's [a / 0 = 0]. *)
 Definition n_div_mapping : OperationMapping (Ref N.div) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Binop Equal (Arg "b") (IntLit U32 0)) (IntLit U32 0) (Binop Div (Arg "a") (Arg "b")));
@@ -227,6 +243,7 @@ Definition n_div_mapping : OperationMapping (Ref N.div) :=
          [{| argument_name := "a"; argument_use := Read |};
           {| argument_name := "b"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.modulo] is C++ [%], with Rocq's [a mod 0 = a]. *)
 Definition n_modulo_mapping : OperationMapping (Ref N.modulo) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Binop Equal (Arg "b") (IntLit U32 0)) (Arg "a") (Binop Mod (Arg "a") (Arg "b")));
@@ -235,6 +252,7 @@ Definition n_modulo_mapping : OperationMapping (Ref N.modulo) :=
          [{| argument_name := "a"; argument_use := Read |};
           {| argument_name := "b"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.succ] is [n + 1]; wraps at 2^32. *)
 Definition n_succ_mapping : OperationMapping (Ref N.succ) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Add Unchecked) (Arg "n") (IntLit U32 1));
@@ -242,6 +260,7 @@ Definition n_succ_mapping : OperationMapping (Ref N.succ) :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.pred] is [n - 1], keeping [N.pred 0 = 0]. *)
 Definition n_pred_mapping : OperationMapping (Ref N.pred) :=
   {| operation_headers := [];
      operation_cpp := Structured (Cond (Binop Equal (Arg "n") (IntLit U32 0)) (IntLit U32 0) (Binop (Sub Unchecked) (Arg "n") (IntLit U32 1)));
@@ -249,6 +268,7 @@ Definition n_pred_mapping : OperationMapping (Ref N.pred) :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.eqb] is [==]. *)
 Definition n_eqb_mapping : OperationMapping (Ref N.eqb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Equal (Arg "n") (Arg "m"));
@@ -257,6 +277,7 @@ Definition n_eqb_mapping : OperationMapping (Ref N.eqb) :=
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.ltb] is [<]. *)
 Definition n_ltb_mapping : OperationMapping (Ref N.ltb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Less (Arg "x") (Arg "y"));
@@ -265,6 +286,7 @@ Definition n_ltb_mapping : OperationMapping (Ref N.ltb) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.leb] is [<=]. *)
 Definition n_leb_mapping : OperationMapping (Ref N.leb) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop LessEq (Arg "x") (Arg "y"));
@@ -273,6 +295,7 @@ Definition n_leb_mapping : OperationMapping (Ref N.leb) :=
          [{| argument_name := "x"; argument_use := Read |};
           {| argument_name := "y"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.compare] is two [<] tests yielding [Lt], [Gt] or [Eq]. *)
 Definition n_compare_mapping : OperationMapping (Ref N.compare) :=
   {| operation_headers := [];
      operation_cpp := Structured (three_way (Arg "n") (Arg "m"));
@@ -281,6 +304,7 @@ Definition n_compare_mapping : OperationMapping (Ref N.compare) :=
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.eq_dec] is [==]: the [sumbool] is a [bool]. *)
 Definition n_eq_dec_mapping : OperationMapping (Ref N.eq_dec) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop Equal (Arg "n") (Arg "m"));
@@ -289,6 +313,7 @@ Definition n_eq_dec_mapping : OperationMapping (Ref N.eq_dec) :=
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "m"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.min] is the flavour's [min] ([std::min] or [bsl::min]). *)
 Definition n_min_mapping (f : Flavour) : OperationMapping (Ref N.min) :=
   {| operation_headers := [(flavour_algorithm f)];
      operation_cpp := Structured (Call (flavour_min f) [] [(Arg "n"); (Arg "n'")]);
@@ -297,6 +322,7 @@ Definition n_min_mapping (f : Flavour) : OperationMapping (Ref N.min) :=
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "n'"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.max] is the flavour's [max] ([std::max] or [bsl::max]). *)
 Definition n_max_mapping (f : Flavour) : OperationMapping (Ref N.max) :=
   {| operation_headers := [(flavour_algorithm f)];
      operation_cpp := Structured (Call (flavour_max f) [] [(Arg "n"); (Arg "n'")]);
@@ -305,6 +331,7 @@ Definition n_max_mapping (f : Flavour) : OperationMapping (Ref N.max) :=
          [{| argument_name := "n"; argument_use := Read |};
           {| argument_name := "n'"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.double] is [n * 2]; wraps at 2^32. *)
 Definition n_double_mapping : OperationMapping (Ref N.double) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Mul Unchecked) (Arg "n") (IntLit U32 2));
@@ -312,6 +339,7 @@ Definition n_double_mapping : OperationMapping (Ref N.double) :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.succ_double] is [x * 2 + 1]; wraps at 2^32. *)
 Definition n_succ_double_mapping : OperationMapping (Ref N.succ_double) :=
   {| operation_headers := [];
      operation_cpp := Structured (Binop (Add Unchecked) (Binop (Mul Unchecked) (Arg "x") (IntLit U32 2)) (IntLit U32 1));
@@ -323,6 +351,7 @@ Definition n_succ_double_mapping : OperationMapping (Ref N.succ_double) :=
 (* Conversions.  A [nat] is whatever the [nat] mapping in force makes it
    ([uint64_t] under [Mapping.NatInt]), so the conversions into it name
    the type their call yields, [ResultType], rather than this mapping's width. *)
+(** [N.of_nat] wraps the [nat] into [unsigned int], dropping high bits. *)
 Definition n_of_nat_mapping : OperationMapping (Ref N.of_nat) :=
   {| operation_headers := [];
      operation_cpp := Structured (Convert Wrap ResultType (Arg "n"));
@@ -330,6 +359,7 @@ Definition n_of_nat_mapping : OperationMapping (Ref N.of_nat) :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [N.to_nat] converts exactly: a [nat] is at least as wide. *)
 Definition n_to_nat_mapping : OperationMapping (Ref N.to_nat) :=
   {| operation_headers := [];
      operation_cpp := Structured (Convert Exact ResultType (Arg "a"));
@@ -337,6 +367,8 @@ Definition n_to_nat_mapping : OperationMapping (Ref N.to_nat) :=
        PureOperation
          [{| argument_name := "a"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.of_nat] sends [0] to [1], as in Rocq; the conversion asserts the
+    [nat] fits an [unsigned int]. *)
 Definition pos_of_nat_mapping : OperationMapping (Ref Pos.of_nat) :=
   {| operation_headers := [];
      operation_cpp := Structured (Convert Exact ResultType (Cond (Binop Equal (Arg "n") (IntLit U32 0)) (IntLit U32 1) (Arg "n")));
@@ -344,6 +376,7 @@ Definition pos_of_nat_mapping : OperationMapping (Ref Pos.of_nat) :=
        PureOperation
          [{| argument_name := "n"; argument_use := Read |}]
          ReturnValue [] |}.
+(** [Pos.to_nat] converts exactly: a [nat] is at least as wide. *)
 Definition pos_to_nat_mapping : OperationMapping (Ref Pos.to_nat) :=
   {| operation_headers := [];
      operation_cpp := Structured (Convert Exact ResultType (Arg "x"));

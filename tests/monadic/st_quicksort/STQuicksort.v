@@ -32,8 +32,11 @@ Local Open Scope monad_scope.
 
 Section Quicksort.
 
+  (** The programs are polymorphic in [R], as [ST.run] requires. *)
   Context {R : ST.Refs}.
+  (** The store holds only [nat]s. *)
   Notation V := (fun _ : nat => nat).
+  (** Effects of a program over that store. *)
   Notation E0 := (ST.Event R V +' exceptE Err).
 
   (** The Lomuto scan of [arr[i..hi-1]] against the pivot value [pv]: an
@@ -87,8 +90,9 @@ Section Quicksort.
     end.
   Proof. all: apply Nat.ltb_lt in Hlt; try (destruct p as [q Hq]; cbn [proj1_sig]); lia. Defined.
 
-  (** [Acc_intro_generator] puts [2^10] layers of [Acc_intro] in front of
-      [lt_wf], so that the sort also computes in Rocq. *)
+  (** Sorts [xs] through an array.  [Acc_intro_generator] puts [2^10]
+      layers of [Acc_intro] in front of [lt_wf], so that the sort also
+      computes in Rocq. *)
   Definition quicksort_ST_list (xs : list nat) : itree E0 (list nat) :=
     match xs with
     | [] => Ret []
@@ -100,10 +104,12 @@ Section Quicksort.
 
 End Quicksort.
 
+(** Filtering never lengthens a list: the measure for [quicksort_fun]. *)
 Lemma filter_length {A} (f : A -> bool) (l : list A) :
   length (List.filter f l) <= length l.
 Proof. induction l; simpl; [lia | destruct (f a); simpl; lia]. Qed.
 
+(** The textbook functional quicksort, pivoting on the head. *)
 Equations? quicksort_fun (l : list nat) : list nat by wf (length l) lt :=
   quicksort_fun [] => [];
   quicksort_fun (p :: xs) =>
@@ -117,31 +123,39 @@ Defined.
 
 Module STQuicksort.
   Transparent quicksort_fun.
+  (** [quicksort_fun], unfolded so it extracts here. *)
   Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
+  (** [quicksort_ST_list] at the C++ references. *)
   Definition quicksort_ST_mine :=
     Eval unfold quicksort_ST_list in
       (@quicksort_ST_list ST.cpp_refs).
 
+  (** [List.nth] on [nat], extracted for the C++ test driver. *)
   Definition nth := Eval unfold List.nth in (@List.nth nat).
 
   Import PrimString.
 
+  (** The elements of [l], each followed by [", "]. *)
   Fixpoint list_to_string_helper (l : list nat) : PrimString.string :=
     match l with
     | nil => ""
     | x :: xs => PrimString.cat (string_of_nat x) (PrimString.cat ", " (list_to_string_helper xs))
     end.
 
+  (** [l] printed between brackets, for comparing the two sorts. *)
   Definition list_to_string (l : list nat) : PrimString.string :=
     PrimString.cat "[ " (PrimString.cat (list_to_string_helper l) " ]").
 
+  (** An unsorted input shared by both sorts. *)
   Definition input_lst1 := [212498; 127; 5981; 2749812; 74879; 126; 4; 51; 2412; 10645].
 
+  (** [input_lst1] sorted in place, printed; benchmarked against the pure sort. *)
   Definition test_quicksort_ST (_ : unit) : PrimString.string :=
     ST.run_cpp
       (out <- quicksort_ST_mine input_lst1;;
        Ret (list_to_string out)).
 
+  (** [input_lst1] sorted by [quicksort_fun], printed. *)
   Definition test_quicksort_fun (_ : unit) : PrimString.string :=
     list_to_string (quicksort_fun input_lst1).
 End STQuicksort.

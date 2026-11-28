@@ -1,5 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Equational laws for [Global.interp]: how it unfolds on [Ret], [Tau],
+    [Vis], [trigger] and [bind], under strong and weak bisimulation. *)
 
 From Stdlib Require Import
   Arith.PeanoNat
@@ -66,17 +68,19 @@ Section InterpTheorems.
   Context `{Ix_Correct T ltu}.
   Context `{Global.RefClass T}.
   Context {V : T -> Type}.
-  Context `{Global.Event T V -< E}. 
+  Context `{Global.Event T V -< E}.
   Context `{exceptE Err -< E}.
 
 
+  (** The store [Global.run] starts from: an association list. *)
   Definition mem := halist (@idx_key T T) (idx_key_type V).
 
-  
+
   Context `{HMap (@idx_key T T) (idx_key_type V) mem}.
 
 
 
+  (** One step of [Global.interp], on an observed tree. *)
   Definition interp_ {R}
     (ot : itree' (Global.Event T V +' E) R)
     (l : mem)
@@ -89,6 +93,7 @@ Section InterpTheorems.
         Tau (Global.interp _ _ (k (snd x)) (fst x))
     end.
 
+  (** [Global.interp] is its one-step unfolding [interp_], up to [eq_itree]. *)
   Lemma unfold_interp {R}
     (t : itree (Global.Event T V +' E) R)
     (l : mem) :
@@ -110,26 +115,30 @@ Section InterpTheorems.
       reflexivity.
   Qed.
 
+  (** Interpreting [ret] returns the store unchanged. *)
   Lemma interp_monad_ret:  forall {R : Type} (val: R) (l : mem),
       Global.interp (E := E) _ _ (ret val) l ≅ ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp. reflexivity.
     Qed.
 
+  (** Interpreting [Ret] returns the store unchanged. *)
   Lemma interp_ret: forall {R : Type} (val: R) (l : mem),
       Global.interp (E := E) _ _ (Ret val) l ≅ Ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp. reflexivity.
     Qed.
 
+  (** [interp_ret] up to weak bisimulation. *)
   Lemma interp_ret_eutt: forall {R : Type} (val: R) (l : mem),
       Global.interp (E := E) _ _ (Ret val) l ≈ Ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp. reflexivity.
     Qed.
 
+  (** A visible event is handled, then the continuation runs on the new store. *)
   Lemma interp_vis
-    {R U} 
+    {R U}
     (e : (Global.Event T V +' E) R)
     (k : R -> itree (Global.Event T V +' E) U)
     (l : mem)
@@ -140,7 +149,8 @@ Section InterpTheorems.
       intros. rewrite unfold_interp. reflexivity.
     Qed.
 
-    
+
+  (** A silent step stays a silent step. *)
   Lemma interp_tau {R : Type}
       (t : itree (Global.Event T V +' E) R)
       (l : mem)
@@ -150,11 +160,13 @@ Section InterpTheorems.
     Qed.
 
 
+  (** [Ret] and the monad's [ret] are the same tree. *)
   Lemma Ret_is_ret {R : Type} (x : R) : ((Ret x) : itree E R)  = ret x.
     Proof using Type. reflexivity. Qed.
-    
+
+  (** A triggered event is just its handler, up to weak bisimulation. *)
   Lemma interp_trigger
-    {R : Type} 
+    {R : Type}
     (e : (Global.Event T V +' E) R)
     (l : mem) :
     Global.interp ltu _ (ITree.trigger e) l ≈ Global.handle_leave_rest ltu _ e l.
@@ -171,11 +183,13 @@ Section InterpTheorems.
         apply interp_ret_eutt.
     Qed.
 
-    
+
+(** Strong bisimulation of interpreted trees, with equal stores and results. *)
 Definition eq_itree_eqv_global {R E} (x1 x2 : itree (E) (mem * R)) : Prop :=
   @eq_itree (E) _ _ eq x1 x2.
 
 
+(** [Global.interp] respects strong bisimulation of the tree. *)
 Global Instance eq_itree_interp {R : Type} :
 Proper (@eq_itree (Global.Event T V +' E) R R eq ==> eq ==> eq_itree_eqv_global)
         (Global.interp ltu R).
@@ -192,8 +206,10 @@ Proof.
         constructor; auto with paco itree.
   Qed.
 
-    
-Lemma interp_bind {U R} 
+
+(** Interpreting a [bind] threads the store from the first part to the
+    continuation. *)
+Lemma interp_bind {U R}
   (t : itree (Global.Event T V +' E) R)
   (k : R -> itree (Global.Event T V +' E) U)
   (mem : mem)
@@ -221,7 +237,8 @@ Lemma interp_bind {U R}
       auto with paco.
 Qed.
 
-Lemma interp_bind_eutt {U R} 
+(** [interp_bind] up to weak bisimulation. *)
+Lemma interp_bind_eutt {U R}
   (t : itree (Global.Event T V +' E) R)
   (k : R -> itree (Global.Event T V +' E) U)
   (mem : mem)
@@ -249,7 +266,8 @@ Lemma interp_bind_eutt {U R}
       auto with paco.
 Qed.
 
-Lemma interp_bind_eutt' {U R} 
+(** The same statement as [interp_bind_eutt], kept for existing callers. *)
+Lemma interp_bind_eutt' {U R}
   (t : itree (Global.Event T V +' E) R)
   (k : R -> itree (Global.Event T V +' E) U)
   (mem : mem)
@@ -278,6 +296,8 @@ Lemma interp_bind_eutt' {U R}
 Qed.
 
 
+(** If the first part interprets to [t2] and every continuation to [k2],
+    the bind interprets to their bind. *)
 Lemma eutt_eq_bind_interp {U R}
   (k2 : (mem * R) -> itree E (mem * U))
   (lmem : mem)
@@ -292,12 +312,13 @@ Lemma eutt_eq_bind_interp {U R}
   ITree.bind t2 k2.
 Proof.
   intros t1_eq keq.
-  rewrite (interp_bind_eutt t1 k1).                                                                                
+  rewrite (interp_bind_eutt t1 k1).
   apply eutt_eq_bind'; [assumption | intuition].
 Qed.
 
 End InterpTheorems.
 
+(** A [nat] reference remembers the location it was made at. *)
 Lemma idx_ref_same_idx : forall (n : nat) A,
   Global.ref_index A (Global.make_ref A n) = n.
 Proof. reflexivity. Qed.

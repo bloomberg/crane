@@ -10,6 +10,7 @@ Section HMaps.
   Context (K : Type) (V : K -> Type).
   Context (map : Type).
 
+  (** Finite maps carried by [map], the value at key [k] of type [V k]. *)
   Class HMap : Type :=
   { empty  : map
   ; add    : forall (k : K), V k -> map -> map
@@ -18,6 +19,8 @@ Section HMaps.
   ; union  : map -> map -> map
   }.
 
+  (** The specification of an [HMap], through the points-to relation
+      [mapsto]: [add] and [remove] change only the key they name. *)
   Class HMapOk (M : HMap) : Type :=
   { mapsto : forall (k : K), V k -> map -> Prop
   ; mapsto_empty : forall k v, ~mapsto k v empty
@@ -30,17 +33,21 @@ Section HMaps.
 
   Context `{M : HMap}.
 
+  (** Whether [k] is bound. *)
   Definition contains (k : K) (m : map) : bool :=
     match lookup k m with
     | None => false
     | Some _ => true
     end.
 
+  (** The map binding only [k]. *)
   Definition singleton (k : K) (v : V k) : map :=
     add k v empty.
 
   Context {F : Foldable map (sigT V)}.
 
+  (** [m1] and [m2] merged; where both bind [k], the value is [f k v1 v2],
+      [v1] from [m1]. *)
   Definition combine (f : forall (k : K), V k -> V k -> V k) (m1 m2 : map) : map :=
     fold (fun k_v acc =>
       let '(existT _ k v) := k_v in
@@ -49,6 +56,7 @@ Section HMaps.
       | Some v' => add k (f k v v') acc
       end) m2 m1.
 
+  (** The bindings of [m] that satisfy [f]. *)
   Definition filter (f : forall (k : K), V k -> bool) (m : map) : map :=
     fold (fun k_v acc =>
       let '(existT _ k v) := k_v in

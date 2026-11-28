@@ -59,9 +59,12 @@ Class Code (V : nat -> Type) (A : Type) : Type := {
 Arguments code V A {Code}.
 Arguments code_ok V A {Code}.
 
+(** In a single-type store every value sits at code [0]. *)
 #[global] Instance code_const (A : Type) : Code (fun _ : nat => A) A :=
   {| code := 0; code_ok := eq_refl |}.
 
+(** The primitive effects, each naming the code [c] of the values it
+    touches; programs use the code-free operations below instead. *)
 Variant Event (R : Refs) (V : nat -> Type) : Type -> Type :=
 | NewRef (c : nat) (v : V c) : Event R V (@ref R (V c))
 | ReadRef (c : nat) (r : @ref R (V c)) : Event R V (V c)
@@ -74,46 +77,57 @@ Variant Event (R : Refs) (V : nat -> Type) : Type -> Type :=
 
 Section Operations.
 
+  (** The operations work in any effect type [E] that includes the store
+      events. *)
   Context {R : Refs} {V : nat -> Type} {E : Type -> Type} `{Event R V -< E}.
 
-  (** Each operation stores [A] at [code V A], through [code_ok]. *)
+  (** A fresh reference holding [v].  Each operation stores [A] at
+      [code V A], casting through [code_ok]. *)
   Definition new_ref {A : Type} `{Code V A} (v : A) : itree E (ref A) :=
     match code_ok V A in _ = X return X -> itree E (ref X) with
     | eq_refl => fun v => trigger (NewRef R V (code V A) v)
     end v.
 
+  (** The current contents of [r]. *)
   Definition read_ref {A : Type} `{Code V A} (r : ref A) : itree E A :=
     match code_ok V A in _ = X return ref X -> itree E X with
     | eq_refl => fun r => trigger (ReadRef R V (code V A) r)
     end r.
 
+  (** Overwrite the contents of [r] with [a]. *)
   Definition write_ref {A : Type} `{Code V A} (r : ref A) (a : A) : itree E unit :=
     match code_ok V A in _ = X return ref X -> X -> itree E unit with
     | eq_refl => fun r a => trigger (WriteRef R V (code V A) r a)
     end r a.
 
-  (** An array of [n] elements, indexed from [0]. *)
+  (** A fresh array of [n] elements, each [def], indexed from [0]. *)
   Definition new_array {A : Type} `{Code V A} (n : nat) (def : A) : itree E (array A) :=
     match code_ok V A in _ = X return X -> itree E (array X) with
     | eq_refl => fun def => trigger (NewArray R V (code V A) n def)
     end def.
 
+  (** A fresh array holding [elems], in order. *)
   Definition array_of_list {A : Type} `{Code V A} (elems : list A) : itree E (array A) :=
     match code_ok V A in _ = X return list X -> itree E (array X) with
     | eq_refl => fun elems => trigger (ArrayOfList R V (code V A) elems)
     end elems.
 
+  (** The element at position [i]; an index out of range fails in the
+      model and is unchecked in C++. *)
   Definition read_array {A : Type} `{Code V A} (arr : array A) (i : nat) : itree E A :=
     match code_ok V A in _ = X return array X -> itree E X with
     | eq_refl => fun arr => trigger (ReadArray R V (code V A) arr i)
     end arr.
 
+  (** Overwrite the element at position [i] with [v]; the size never
+      changes. *)
   Definition write_array {A : Type} `{Code V A} (arr : array A) (i : nat) (v : A)
     : itree E unit :=
     match code_ok V A in _ = X return array X -> X -> itree E unit with
     | eq_refl => fun arr v => trigger (WriteArray R V (code V A) arr i v)
     end arr v.
 
+  (** A snapshot of the elements, in order; later writes do not change it. *)
   Definition array_to_list {A : Type} `{Code V A} (arr : array A) : itree E (list A) :=
     match code_ok V A in _ = X return array X -> itree E (list X) with
     | eq_refl => fun arr => trigger (ArrayToList R V (code V A) arr)
@@ -147,8 +161,10 @@ Arguments MkArrayLoc {A} base size.
 (** A reference is a location; an array its first location and size. *)
 Definition model_refs : Refs := {| ref := fun _ => nat; array := ArrayLoc |}.
 
-(** The store maps a location and a code to a value of the code's type. *)
+(** A store key is a location and a code; its value has the code's type. *)
 Definition key_type (V : nat -> Type) (k : nat * nat) : Type := V (snd k).
+
+(** The store: a heterogeneous association list from keys to values. *)
 Definition mem (V : nat -> Type) : Type := halist (nat * nat) (key_type V).
 
 (** Decided by a transparent term, so that a lookup in a closed store
@@ -156,16 +172,20 @@ Definition mem (V : nat -> Type) : Type := halist (nat * nat) (key_type V).
 Definition key_eq_dec (x y : nat * nat) : {x = y} + {x <> y}.
 Proof. decide equality; apply Nat.eq_dec. Defined.
 
+(** Keys compared by [key_eq_dec], for the [halist] map. *)
 #[global] Instance key_eq_dec_instance : EqDec (nat * nat) eq := key_eq_dec.
 
+(** The store's map operations: [halist] lookup and update. *)
 #[global] Instance hmap (V : nat -> Type) : HMap (nat * nat) (key_type V) (mem V) :=
   @HMap_halist (nat * nat) (key_type V) eq_equivalence key_eq_dec_instance.
 
+(** The map laws hold for the store, so the [HMap] lemmas apply to it. *)
 #[global] Instance hmap_ok (V : nat -> Type) : HMapOk (hmap V) :=
   hmap_ok_halist (nat * nat) (key_type V).
 
 Section Model.
 
+  (** The model raises its failures in [E]. *)
   Context {V : nat -> Type} {E : Type -> Type} `{exceptE Err -< E}.
 
   (** The location a new reference or array starts at: one past the largest
@@ -198,6 +218,8 @@ Section Model.
       end
     end.
 
+  (** One event as a store transformer; a missing cell or an index out of
+      range raises [Err] through [failwith]. *)
   Definition handle : Event model_refs V ~> stateT (mem V) (itree E) :=
     fun _ e m =>
     match e with
@@ -232,6 +254,8 @@ Section Model.
       end
     end.
 
+  (** [handle] on store events; every other event is passed through with
+      the store unchanged. *)
   Definition handle_leave_rest : (Event model_refs V +' E) ~> stateT (mem V) (itree E) :=
     fun _ e m =>
     match e with
@@ -239,6 +263,7 @@ Section Model.
     | inr1 e0 => r <- trigger e0;; Ret (m, r)
     end.
 
+  (** A whole program as a store transformer. *)
   Definition interp : itree (Event model_refs V +' E) ~> stateT (mem V) (itree E) :=
     interp_state handle_leave_rest.
 
@@ -264,8 +289,12 @@ Axiom cpp_refs : Refs.
 Axiom run_cpp : forall {V : nat -> Type} {A : Type},
   itree (Event cpp_refs V +' exceptE Err) A -> A.
 
+(** The events and the code proofs have no C++: the operations are mapped
+    directly. *)
 Crane Extract Skip Event.
 Crane Extract Skip code_ok.
+
+(** [run_cpp t] is just [t]: its effects already happened. *)
 #[global] Instance run_cpp_mapping : OperationMapping (Ref (@run_cpp)) := pass_through [] "t" [].
 (** [Refs] holds only types, so it is a one-constructor enum in C++. *)
 #[global] Instance cpp_refs_mapping : OperationMapping (Ref cpp_refs) :=
@@ -297,6 +326,7 @@ Crane Extraction Implicit read_array [R].
 Crane Extraction Implicit write_array [R].
 Crane Extraction Implicit array_to_list [R].
 
+(** A reference is a [std::shared_ptr<A>], viewed as [const A*] or [A*]. *)
 #[global] Instance ref_mapping (R : Refs) (A : Type)
   : TypeMapping (@ref R A) :=
   {| type_headers := ["memory"%pstring];
@@ -329,6 +359,7 @@ Crane Extraction Implicit array_to_list [R].
   : LocalStorage (@ref R A) :=
   {| local_view := "&%value"; local_tag := tt |}%pstring.
 
+(** [new_ref] is [std::make_shared], taking ownership of [v]. *)
 #[global] Instance new_ref_mapping : OperationMapping (Ref (@new_ref)) :=
   {| operation_headers := ["memory"];
      operation_cpp := Structured (Call "std::make_shared" [StoredComponent "contents"] [(Arg "v")]);
@@ -341,6 +372,7 @@ Crane Extraction Implicit array_to_list [R].
                 initial_multiplicity := InitialiseOnce |}])
          [] |}%pstring.
 
+(** [read_ref] dereferences the read view. *)
 #[global] Instance read_ref_mapping : OperationMapping (Ref (@read_ref)) :=
   {| operation_headers := [];
      operation_cpp := Expr "*%arg(r)";
@@ -350,6 +382,8 @@ Crane Extraction Implicit array_to_list [R].
          ReturnValue
          [ReadsComponent {| path_argument := "r"; path_components := ["contents"] |}] |}%pstring.
 
+(** [write_ref] assigns through the writable view, invalidating borrows of
+    the old contents. *)
 #[global] Instance write_ref_mapping : OperationMapping (Ref (@write_ref)) :=
   {| operation_headers := [];
      operation_cpp := Expr "*%arg(r) = %arg(a)";
@@ -361,6 +395,8 @@ Crane Extraction Implicit array_to_list [R].
          [WritesComponent {| path_argument := "r"; path_components := ["contents"] |} (Some "a");
           InvalidatesElementBorrows {| path_argument := "r"; path_components := ["contents"] |}] |}%pstring.
 
+(** An array is a [std::shared_ptr<crane::array_storage<A>>], viewed as
+    [std::span<const A>] or [std::span<A>]. *)
 #[global] Instance array_mapping (R : Refs) (A : Type) : TypeMapping (@array R A) :=
   {| type_headers := ["crane_st.h"; "memory"];
      type_cpp :=
@@ -393,6 +429,7 @@ Crane Extraction Implicit array_to_list [R].
      type_release := OrdinaryRelease;
      type_numerals := None |}%pstring.
 
+(** [new_array] builds an [array_storage] of [n] copies of [def]. *)
 #[global] Instance new_array_mapping : OperationMapping (Ref (@new_array)) :=
   {| operation_headers := ["crane_st.h"; "memory"; "cstddef"];
      operation_cpp :=
@@ -407,6 +444,8 @@ Crane Extraction Implicit array_to_list [R].
                 initial_multiplicity := InitialiseMany |}])
          [] |}%pstring.
 
+(** [array_of_list] is [crane::st::new_list_array], copying the list's
+    elements. *)
 #[global] Instance array_of_list_mapping : OperationMapping (Ref (@array_of_list)) :=
   {| operation_headers := ["crane_st.h"];
      operation_cpp :=
@@ -420,7 +459,8 @@ Crane Extraction Implicit array_to_list [R].
                 initial_multiplicity := InitialiseMany |}])
          [] |}%pstring.
 
-(** [Read] gives the template the read view, [std::span<const A>]. *)
+(** [read_array] is an unchecked index into the read view,
+    [std::span<const A>]. *)
 #[global] Instance read_array_mapping : OperationMapping (Ref (@read_array)) :=
   {| operation_headers := ["span"];
      operation_cpp := Structured (Index (Arg "arr") (Arg "i"));
@@ -431,9 +471,9 @@ Crane Extraction Implicit array_to_list [R].
          ReturnValue
          [ReadsComponent {| path_argument := "arr"; path_components := ["contents"] |}] |}%pstring.
 
-(** [Write] gives the template the writable view, [std::span<A>].  Writing
-    an element does not reallocate the storage: it invalidates borrows of
-    the old element, not views of the array. *)
+(** [write_array] assigns through the writable view, [std::span<A>].
+    Writing an element does not reallocate the storage: it invalidates
+    borrows of the old element, not views of the array. *)
 #[global] Instance write_array_mapping : OperationMapping (Ref (@write_array)) :=
   {| operation_headers := ["span"];
      operation_cpp := Expr "%arg(arr)[%arg(i)] = %arg(v)";
@@ -446,6 +486,7 @@ Crane Extraction Implicit array_to_list [R].
          [WritesComponent {| path_argument := "arr"; path_components := ["contents"] |} (Some "v");
           InvalidatesElementBorrows {| path_argument := "arr"; path_components := ["contents"] |}] |}%pstring.
 
+(** [array_to_list] is [crane::st::elems], building a fresh [List]. *)
 #[global] Instance array_to_list_mapping : OperationMapping (Ref (@array_to_list)) :=
   {| operation_headers := ["crane_st.h"];
      operation_cpp := Structured (Call "crane::st::elems" [Apply "List" [TypeArg (StoredComponent "contents")]] [(Arg "arr")]);
@@ -457,7 +498,8 @@ Crane Extraction Implicit array_to_list [R].
 
 Crane Extraction Implicit swap_array [R].
 
-(** [Write] gives the template the writable view, [std::span<A>]. *)
+(** [swap_array] is one [std::swap] in the writable view, [std::span<A>],
+    rather than the two reads and two writes of its definition. *)
 #[global] Instance swap_array_mapping : OperationMapping (Ref (@swap_array)) :=
   {| operation_headers := ["span"; "utility"];
      operation_cpp := Structured (Call "std::swap" [] [(Index (Arg "arr") (Arg "i")); (Index (Arg "arr") (Arg "j"))]);

@@ -24,7 +24,9 @@ Local Open Scope monad_scope.
 
 Section Fibonacci.
 
+  (** The programs are polymorphic in [R], as [ST.run] requires. *)
   Context {R : ST.Refs}.
+  (** Effects of a program whose store holds only [nat]s. *)
   Notation E0 := (ST.Event R (fun _ : nat => nat) +' exceptE Err).
 
   (** Run [k] steps of [(x, y) := (y, x + y)] and return [x]. *)
@@ -39,6 +41,7 @@ Section Fibonacci.
         fib_loop k' x y
     end.
 
+  (** The [n]th Fibonacci number, computed in two references. *)
   Definition fib_ST (n : nat) : itree E0 nat :=
     if Nat.ltb n 2
     then Ret n
@@ -49,6 +52,7 @@ Section Fibonacci.
 
 End Fibonacci.
 
+(** The [n]th Fibonacci number by the doubly recursive definition. *)
 Definition fib_fun (n : nat) : nat :=
   let fix fib' (n : nat) :=
     match n with
@@ -59,7 +63,9 @@ Definition fib_fun (n : nat) : nat :=
   fib' n.
 
 Module STFibonacci.
+  (** [fib_ST] at the C++ references, its loop unfolded in place. *)
   Definition fib_ST := Eval unfold fib_ST, fib_loop in (@fib_ST ST.cpp_refs).
+  (** [fib_fun], unfolded so it extracts here. *)
   Definition fib_fun := Eval unfold fib_fun in fib_fun.
 End STFibonacci.
 

@@ -48,12 +48,15 @@ Fixpoint upd (l : list nat) (i v : nat) : list nat :=
   | h :: t, Datatypes.S i' => h :: upd t i' v
   end.
 
+(** An in-place write keeps the size. *)
 Lemma upd_length : forall l i v, length (upd l i v) = length l.
 Proof. induction l; intros [|i] v; simpl; auto. Qed.
 
+(** The written position holds the new value. *)
 Lemma nth_upd_eq : forall l i v, i < length l -> nth i (upd l i v) 0 = v.
 Proof. induction l; intros [|i] v H; simpl in *; try lia; auto. apply IHl; lia. Qed.
 
+(** Every other position is unchanged. *)
 Lemma nth_upd_neq : forall l i j v, i <> j -> nth j (upd l i v) 0 = nth j l 0.
 Proof.
   induction l as [|a l IHl]; intros i j v H; [ destruct j; reflexivity |].
@@ -64,9 +67,11 @@ Qed.
 Definition list_swap (l : list nat) (i j : nat) : list nat :=
   upd (upd l i (nth j l 0)) j (nth i l 0).
 
+(** A swap keeps the size. *)
 Lemma list_swap_length : forall l i j, length (list_swap l i j) = length l.
 Proof. intros. unfold list_swap. rewrite !upd_length. reflexivity. Qed.
 
+(** After a swap, position [i] holds the old element at [j]. *)
 Lemma nth_list_swap_left : forall l i j,
   i < length l -> nth i (list_swap l i j) 0 = nth j l 0.
 Proof.
@@ -75,6 +80,7 @@ Proof.
   - rewrite nth_upd_neq, nth_upd_eq by lia. reflexivity.
 Qed.
 
+(** After a swap, position [j] holds the old element at [i]. *)
 Lemma nth_list_swap_right : forall l i j,
   j < length l -> nth j (list_swap l i j) 0 = nth i l 0.
 Proof.
@@ -82,6 +88,7 @@ Proof.
   rewrite nth_upd_eq by (rewrite upd_length; lia). reflexivity.
 Qed.
 
+(** A swap leaves every other position alone. *)
 Lemma nth_list_swap_other : forall l i j k,
   k <> i -> k <> j -> nth k (list_swap l i j) 0 = nth k l 0.
 Proof. intros. unfold list_swap. rewrite !nth_upd_neq by lia. reflexivity. Qed.
@@ -106,6 +113,7 @@ Proof.
     apply nth_list_swap_other; assumption.
 Qed.
 
+(** Indexing past a prefix [pre] at every position of [l] rebuilds [l]. *)
 Lemma map_nth_seq_gen : forall (l pre : list nat),
   List.map (fun p => nth p (pre ++ l) 0) (seq (length pre) (length l)) = l.
 Proof.
@@ -116,6 +124,7 @@ Proof.
     rewrite <- app_assoc, length_app, Nat.add_1_r in IH. exact IH.
 Qed.
 
+(** Reading every index of a list in order rebuilds the list. *)
 Lemma map_nth_seq : forall (l : list nat),
   List.map (fun p => nth p l 0) (seq 0 (length l)) = l.
 Proof. intro l. apply (map_nth_seq_gen l []). Qed.
@@ -123,12 +132,14 @@ Proof. intro l. apply (map_nth_seq_gen l []). Qed.
 Section NatArrays.
 
   Context {E : Type -> Type} `{exceptE Err -< E}.
+  (** The store holds only [nat]s. *)
   Notation V := (fun _ : nat => nat).
 
   (** The cells [base .. base + |full| - 1] hold [full]. *)
   Definition arr_rep (m : mem V) (base : nat) (full : list nat) : Prop :=
     forall k, k < length full -> read_at (V := V) (base + k) m = Some (nth k full 0).
 
+  (** Writing cell [base + i] of a represented array represents [upd]. *)
   Lemma arr_rep_write : forall base full i v m,
     arr_rep m base full -> i < length full ->
     arr_rep (write_at (V := V) (base + i) v m) base (upd full i v).
@@ -139,6 +150,7 @@ Section NatArrays.
     - rewrite read_at_write_at_ne by lia. rewrite nth_upd_neq by lia. apply Hrep. lia.
   Qed.
 
+  (** The two writes of [ST.swap_array] represent [list_swap]. *)
   Lemma arr_rep_swap : forall base full l r m,
     arr_rep m base full -> l < length full -> r < length full ->
     arr_rep (write_at (V := V) (base + r) (nth l full 0)
@@ -148,8 +160,9 @@ Section NatArrays.
     intros. apply arr_rep_write; [ apply arr_rep_write | rewrite upd_length ]; auto.
   Qed.
 
-  (** The array operations as [spec] rules over [arr_rep]: what a program
-      knows of an array is the list it represents. *)
+  (** Reading index [i] returns element [i] of the represented list.  This
+      and the next rules restate the array operations over [arr_rep]: what
+      a program knows of an array is the list it represents. *)
   Lemma read_array_rep base n full i m (Q : mem V -> nat -> Prop) :
     arr_rep m base full -> length full = n -> i < n -> Q m (nth i full 0) ->
     spec (E := E) (ST.read_array (R := ST.model_refs) (V := V) (ST.MkArrayLoc base n) i) m Q.
@@ -157,6 +170,7 @@ Section NatArrays.
     intros Hrep Hlen Hi HQ. eapply read_array; [ exact Hi | apply Hrep; lia | exact HQ ].
   Qed.
 
+  (** Swapping two indices in range represents [list_swap]. *)
   Lemma swap_array_rep base n full l r m (Q : mem V -> unit -> Prop) :
     arr_rep m base full -> length full = n -> l < n -> r < n ->
     (forall m', arr_rep m' base (list_swap full l r) -> Q m' tt) ->
@@ -170,6 +184,7 @@ Section NatArrays.
     apply HQ, arr_rep_swap; [ exact Hrep | lia | lia ].
   Qed.
 
+  (** Reading back a represented array returns its list. *)
   Lemma array_to_list_rep base n full m (Q : mem V -> list nat -> Prop) :
     arr_rep m base full -> length full = n -> Q m full ->
     spec (E := E) (ST.array_to_list (R := ST.model_refs) (V := V) (ST.MkArrayLoc base n)) m Q.
@@ -178,6 +193,7 @@ Section NatArrays.
     intros k Hk. rewrite Hrep by lia. symmetry. apply nth_error_nth'. lia.
   Qed.
 
+  (** An array made from [xs] represents [xs]. *)
   Lemma array_of_list_rep xs m (Q : mem V -> ST.ArrayLoc nat -> Prop) :
     (forall base m', arr_rep m' base xs -> Q m' (ST.MkArrayLoc base (length xs))) ->
     spec (E := E) (ST.array_of_list (R := ST.model_refs) (V := V) xs) m Q.

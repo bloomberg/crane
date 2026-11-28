@@ -28,6 +28,9 @@ Import ListNotations.
 Local Open Scope pstring_scope.
 Import Crane.Cpp.
 
+(** [string] is [std::string], read by [const] reference or through a
+    [std::string_view] read view, materialised as a [std::string] where it
+    escapes. *)
 #[export] Instance std_string_mapping : TypeMapping PrimString.string :=
   {| type_headers := ["string"; "string_view"];
      type_cpp := Crane.Cpp.Name "std::string";
@@ -46,6 +49,7 @@ Import Crane.Cpp.
      type_release := OrdinaryRelease;
      type_numerals := None |}.
 
+(** [length s] is [s.size()]. *)
 #[export] Instance string_length_mapping : OperationMapping (Ref PrimString.length) :=
   {| operation_headers := ["cstdint"; "string_view"];
      operation_cpp := Structured (exact I64 (Method (Arg "s") "size" []));
@@ -91,6 +95,7 @@ Import Crane.Cpp.
           {| argument_name := "c"; argument_use := Read |}]
          ReturnValue [] |}.
 
+(** [max_length] is Rocq's bound, 16777211 (2^24 - 5). *)
 #[export] Instance string_max_length_mapping : OperationMapping (Ref PrimString.max_length) :=
   {| operation_headers := ["cstdint"];
      operation_cpp := Structured (IntLit I64 16777211);

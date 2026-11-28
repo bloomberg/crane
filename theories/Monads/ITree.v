@@ -20,6 +20,7 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
+(** Erased mode: [itree E R] is its result type [R], and [go] is the identity. *)
 #[export] Instance itree_mapping (E : Type -> Type) (R : Type) : TypeMapping (itree E R) :=
   {| type_headers := [];
      type_cpp := Crane.Cpp.SourceType R;
@@ -32,9 +33,12 @@ Local Open Scope pstring_scope.
      type_lifetime := NativeRAII;
      type_release := OrdinaryRelease;
      type_numerals := None |}.
+(** Tree nodes are erased too: [RetF] and [TauF]
+    are their argument; [VisF] has no C++. *)
 #[export] Instance itreeF_mapping (E : Type -> Type) (R T : Type) : TypeMapping (itreeF E R T) :=
   event_family []
     [event (Ref (@RetF E R T)) "%a0"; event (Ref (@TauF E R T)) "%a0"; event (Ref (@VisF E R T)) ""].
+(** An erased tree has no structure to observe. *)
 Crane Extract Skip observe.
 
 (** An event is performed where it is written, so the trigger around it has
@@ -53,6 +57,7 @@ Crane Extract Skip ITree.trigger.
     behavior as the Notation it shadows. *)
 Definition Ret {E : Type -> Type} {R : Type} (x : R) : itree E R := Ret x.
 
+(** [itree] is a monad whose computations extract to their result type ([%t1]). *)
 Crane Extract Monad itree [ bind := ITree.bind , ret := Ret ] => "%t1".
 
 (** ITree's general recursion, [rec body a]: each [call x] of the body is a
@@ -64,7 +69,10 @@ Crane Extract Monad itree [ bind := ITree.bind , ret := Ret ] => "%t1".
 #[export] Instance rec_mapping : OperationMapping (Ref (@ITree.Interp.Recursion.rec)) :=
   effect_cpp ["crane_fn.h"] ["body"; "a"]
     (Structured (Call "crane::rec" [TypeParameter "A"; TypeParameter "B"] [Arg "body"; Arg "a"])).
+(** [call] is [crane::rec_call]: run the
+    innermost [rec] handler of its types on [a]. *)
 #[export] Instance call_mapping : OperationMapping (Ref (@ITree.Interp.Recursion.call)) :=
   effect_cpp ["crane_fn.h"] ["a"]
     (Structured (Call "crane::rec_call" [TypeParameter "A"; TypeParameter "B"] [Arg "a"])).
+(** [callE] events never reach C++: [call] is mapped directly. *)
 Crane Extract Skip ITree.Interp.Recursion.callE.

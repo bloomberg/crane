@@ -43,6 +43,8 @@ Inductive Declaration : Type :=
 | Ref : forall {T : Type}, T -> Declaration.
 
 Module Crane.
+(** The structured C++ grammar: types ([TypeExpr]) and operation bodies
+    ([Term]). *)
 Module Cpp.
 
 (** The C++ integer types: [int8_t] ... [uint64_t], [std::size_t], [char],
@@ -98,6 +100,8 @@ Inductive Conversion : Type :=
 Inductive Overflow : Type :=
 | Unchecked | Wrapping | Saturating.
 
+(** C++'s binary operators; an arithmetic operator carries its overflow
+    behaviour, and [Shl]/[Shr] are [<<]/[>>]. *)
 Inductive BinOp : Type :=
 | Add (overflow : Overflow)
 | Sub (overflow : Overflow)
@@ -107,6 +111,7 @@ Inductive BinOp : Type :=
 | And | Or
 | BitAnd | BitOr | BitXor | Shl | Shr.
 
+(** [-e], [!e] and [~e]. *)
 Inductive UnOp : Type :=
 | Negate | Not | BitNot.
 
@@ -145,6 +150,10 @@ Inductive Construction : Type :=
 | WithBody (initialiser body : string)
 | Structured (body : Crane.Cpp.Term).
 
+(** What a copy costs: [BitCopy] a scalar or raw handle, [RetainIdentity] a
+    shared identity (as [shared_ptr]), [DuplicateValue] an independent and
+    possibly expensive copy (a container), [CopyComponents cs] what the named
+    components cost (as [std::optional]), [UnknownCopy] nothing promised. *)
 Inductive CopyModel : Type :=
 | BitCopy
 | RetainIdentity
@@ -152,27 +161,38 @@ Inductive CopyModel : Type :=
 | CopyComponents (components : list string)
 | UnknownCopy.
 
+(** How a read takes a value: by value, by [const] reference, or by value
+    exactly when every listed component is read by value. *)
 Inductive ReadStyle : Type :=
 | ReadByValue
 | ReadByConstReference
 | ReadByComponents (components : list string).
 
+(** How a handle (a pointer-like value) is passed for a read or a write
+    through it: by value, or by [const] reference to spare a reference-count
+    update. *)
 Inductive HandlePass : Type :=
 | HandleByValue
 | HandleByConstReference.
 
+(** A parameter form, given directly: [T], [const T&], [T&], or C++ text
+    ([ExactParameter], which warns). *)
 Inductive PhysicalParameter : Type :=
 | CanonicalByValue
 | CanonicalByConstReference
 | CanonicalByMutableReference
 | ExactParameter (cpp : string).
 
+(** The parameter form of each capability; [None] withholds writing or
+    replacing. *)
 Record ExplicitAccessSpec : Type := {
   explicit_read : PhysicalParameter;
   explicit_write : option PhysicalParameter;
   explicit_replace : option PhysicalParameter
 }.
 
+(** How the canonical value is read, written through and replaced: a value
+    or a handle, read-only or mutable, or each form given explicitly. *)
 Inductive AccessModel : Type :=
 | ReadOnlyValue (read_style : ReadStyle)
 | MutableValue (read_style : ReadStyle)
@@ -180,25 +200,37 @@ Inductive AccessModel : Type :=
 | MutableHandle (handle_pass : HandlePass)
 | ExplicitAccess (specification : ExplicitAccessSpec).
 
+(** Whether copies are one value ([Structural]), alias one mutable identity
+    ([Identity]), or neither is promised; independent of [CopyModel]. *)
 Inductive ValueModel : Type :=
 | Structural
 | Identity
 | Unspecified.
 
+(** Who releases the resource: the C++ value itself ([NativeRAII]), a
+    region, code outside the program, or explicit retain and release
+    operations. *)
 Inductive LifetimeModel : Type :=
 | NativeRAII
 | RegionOwned (region : Declaration)
 | ExternallyOwned
 | ManualShared (retain : Declaration) (release : Declaration).
 
+(** How a generated inductive's destructor drains a field held in this
+    container: [DrainWith] text over [%scrut] pushes each child with
+    [%yield(e)]; [OrdinaryRelease] treats the field as a smart pointer. *)
 Inductive ReleasePlan : Type :=
 | OrdinaryRelease
 | DrainWith (cpp : string).
 
+(** A view that is only read, or one that is written through. *)
 Inductive ViewMode : Type :=
 | ReadOnlyView
 | WritableView.
 
+(** Where a view escapes (returned, stored, passed canonically):
+    [MaterialiseView] builds an owning value from [%view], [BorrowOnly]
+    refuses, for an owner with an identity. *)
 Inductive ViewEscape (T : Type) : Type :=
 | MaterialiseView (construction : Construction)
 | BorrowOnly.
@@ -229,30 +261,42 @@ Inductive Views (T : Type) : Type :=
 Arguments ReadViews {T} read_view.
 Arguments ReadWriteViews {T} read_view write_view read_from_write.
 
+(** A component's type: a parameter of the mapped type, or the type of
+    field [field] (from 0, after the parameters) of a constructor. *)
 Inductive ComponentType : Type :=
 | KnownType (T : Type)
 | FieldType (constructor : Declaration) (field : nat).
 
+(** A named part of a value, whose C++ type templates write
+    [%stored(name)]. *)
 Record Component : Type := {
   component_name : string;
   component_type : ComponentType
 }.
 
+(** How a match binds a field: as a new owned value, a reference into the
+    scrutinee, or a read view of the field. *)
 Inductive Projection : Type :=
 | OwnedProjection (cpp : string)
 | CanonicalBorrowProjection (cpp : string)
 | ReadViewProjection (cpp : string).
 
+(** Whether a constructor's test and projections may read a view of the
+    scrutinee ([PreferredObservation]) or need the canonical value. *)
 Inductive ObservationRequirement : Type :=
 | PreferredObservation
 | CanonicalObservation.
 
+(** How a match recognises a constructor: [case_test] over [%scrut], and a
+    projection for each field index it binds. *)
 Record ConstructorView : Type := {
   view_requirement : ObservationRequirement;
   case_test : string;
   case_fields : list (nat * Projection)
 }.
 
+(** How a constructor is built ([%aN] its argument [N]) and, if it can be
+    matched, recognised. *)
 Record ConstructorMapping : Type := {
   ctor_source : Declaration;
   ctor_build : Construction;
@@ -266,6 +310,9 @@ Inductive TypeInterface : Type :=
 | AbstractInterface
 | AlgebraicInterface (constructors : list ConstructorMapping).
 
+(** What a constructor does to a literal's value: 0, 1, successor, double,
+    double plus one, or the value (or its negation) of a field of another
+    inductive with numerals. *)
 Inductive NumeralAction : Type :=
 | NumeralZero
 | NumeralOne
@@ -275,22 +322,29 @@ Inductive NumeralAction : Type :=
 | NumeralIdentity (field : nat)
 | NumeralNegate (field : nat).
 
+(** The numeral action of one constructor. *)
 Record NumeralCase : Type := {
   numeral_constructor : Declaration;
   numeral_action : NumeralAction
 }.
 
+(** How a literal is written: its digits between [prefix] and [suffix]
+    (as [UINT64_C(3)]), or [callee] applied to its decimal string. *)
 Inductive NumeralEmitter : Type :=
 | IntegerToken (prefix suffix : string)
 | DecimalConstructor (callee : string).
 
+(** How literals of [T] are read off constructors and written;
+    [numeral_converters] are functions (as [Nat.of_num_uint]) whose calls
+    Crane treats as numerals of [T]. *)
 Record NumeralSpec (T : Type) : Type := {
   numeral_cases : list NumeralCase;
   numeral_emitter : NumeralEmitter;
   numeral_converters : list Declaration
 }.
 
-(** The mapping of a source type. *)
+(** The mapping of a source type: its one canonical C++ type, and how its
+    values are copied, accessed, viewed, built, matched and released. *)
 Class TypeMapping (T : Type) : Type := {
   type_headers : list string;
   type_cpp : Crane.Cpp.TypeExpr;
@@ -308,6 +362,9 @@ Class TypeMapping (T : Type) : Type := {
   type_numerals : option (NumeralSpec T)
 }.
 
+(** How an operation uses an argument; it decides the parameter form the
+    argument is passed in ([Read] may take a view, [ReadCanonical] may not,
+    [Take] owns it, [Replace] may reseat the caller's value). *)
 Inductive InputUse : Type :=
 | Ignore
 | Read
@@ -318,31 +375,41 @@ Inductive InputUse : Type :=
 | Replace
 | OpaqueUse.
 
+(** One retained argument of an operation, [%arg(name)] in its template. *)
 Record ArgumentSpec : Type := {
   argument_name : string;
   argument_use : InputUse
 }.
 
+(** A component reached from an argument through nested component names. *)
 Record ComponentPath : Type := {
   path_argument : string;
   path_components : list string
 }.
 
+(** Whether a fresh identity's component is initialised from its source
+    once or may be several times. *)
 Inductive InitialMultiplicity : Type :=
 | InitialiseOnce
 | InitialiseMany.
 
+(** A component of a fresh identity and the argument, if any, it is
+    initialised from. *)
 Record ComponentInitialiser : Type := {
   initial_component : string;
   initial_source_argument : option string;
   initial_multiplicity : InitialMultiplicity
 }.
 
+(** What a borrowed result is: a reference to the canonical value, a read
+    view, or a writable view. *)
 Inductive BorrowForm : Type :=
 | CanonicalBorrow
 | ReadViewBorrow
 | WritableViewBorrow.
 
+(** What an operation returns: a new value, a borrow of an argument's
+    component, an argument's identity, a fresh identity, or unknown. *)
 Inductive ResultSpec : Type :=
 | ReturnValue
 | ReturnBorrowed
@@ -354,6 +421,9 @@ Inductive ResultSpec : Type :=
     (initialisers : list ComponentInitialiser)
 | ReturnOpaque.
 
+(** What an operation does beyond its arguments' uses.
+    [InvalidatesElementBorrows] is an element assignment, which leaves
+    views valid; [InvalidatesViews] is a reallocation. *)
 Inductive OperationFact : Type :=
 | ReadsComponent (target : ComponentPath)
 | WritesComponent (target : ComponentPath) (source_argument : option string)
@@ -363,6 +433,9 @@ Inductive OperationFact : Type :=
 | ReleasesIdentity (argument : string)
 | ExternalEffect (name : string).
 
+(** An operation's contract.  A [PureOperation] may not write, replace,
+    return a fresh identity, retain outside its result, release or have an
+    external effect; an [OpaqueOperation] promises nothing. *)
 Inductive OperationContract : Type :=
 | PureOperation
     (arguments : list ArgumentSpec) (result : ResultSpec) (facts : list OperationFact)

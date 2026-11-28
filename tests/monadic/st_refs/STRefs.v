@@ -23,9 +23,12 @@ Local Open Scope monad_scope.
 
 Section NatRefs.
 
+  (** The programs are polymorphic in [R], as [ST.run] requires. *)
   Context {R : ST.Refs}.
+  (** Effects of a program whose store holds only [nat]s. *)
   Notation E0 := (ST.Event R (fun _ : nat => nat) +' exceptE Err).
 
+  (** Two references read back their own initial values. *)
   Definition new_and_read_both_nat : itree E0 (nat * nat) :=
     r1 <- ST.new_ref 5;;
     r2 <- ST.new_ref 6;;
@@ -33,6 +36,7 @@ Section NatRefs.
     x2 <- ST.read_ref r2;;
     Ret (x1, x2).
 
+  (** A new reference reads back its initial value. *)
   Definition tree_simp_nat : itree E0 nat :=
     v <- ST.new_ref 5;;
     ST.read_ref v.
@@ -41,6 +45,7 @@ Section NatRefs.
       it. *)
   Fail Definition location_of (v : ST.ref nat) : nat := v.
 
+  (** A reference reads back its last write. *)
   Definition tree_simp_another_nat : itree E0 nat :=
     v <- ST.new_ref 5;;
     ST.write_ref v 6;;
@@ -54,6 +59,7 @@ Section NatRefs.
     ST.write_ref v b;;
     ST.write_ref w a.
 
+  (** [swap] on two fresh references, read back. *)
   Definition swapped : itree E0 (nat * nat) :=
     v <- ST.new_ref 1;;
     w <- ST.new_ref 2;;
@@ -66,9 +72,12 @@ End NatRefs.
 
 Section BoolRefs.
 
+  (** The programs are polymorphic in [R], as [ST.run] requires. *)
   Context {R : ST.Refs}.
+  (** Effects of a program whose store holds only [bool]s. *)
   Notation E0 := (ST.Event R (fun _ : nat => bool) +' exceptE Err).
 
+  (** Two [bool] references read back their own initial values. *)
   Definition new_and_read_both_bool : itree E0 (bool * bool) :=
     r1 <- ST.new_ref false;;
     r2 <- ST.new_ref true;;
@@ -76,6 +85,7 @@ Section BoolRefs.
     x2 <- ST.read_ref r2;;
     Ret (x1, x2).
 
+  (** A new [bool] reference reads back its initial value. *)
   Definition tree_simp_bool : itree E0 bool :=
     v <- ST.new_ref true;;
     ST.read_ref v.
@@ -87,11 +97,17 @@ End BoolRefs.
 Fail Definition leaked := ST.run (fun R => ST.new_ref (R := R) (V := fun _ : nat => nat) 5).
 
 Module STRefs.
+  (** [new_and_read_both_nat], run in C++. *)
   Definition new_and_read_both_nat : nat * nat := ST.run_cpp (new_and_read_both_nat (R := ST.cpp_refs)).
+  (** [tree_simp_nat], run in C++. *)
   Definition tree_simp_nat : nat := ST.run_cpp (tree_simp_nat (R := ST.cpp_refs)).
+  (** [tree_simp_another_nat], run in C++. *)
   Definition tree_simp_another_nat : nat := ST.run_cpp (tree_simp_another_nat (R := ST.cpp_refs)).
+  (** [swapped], run in C++. *)
   Definition swapped : nat * nat := ST.run_cpp (swapped (R := ST.cpp_refs)).
+  (** [new_and_read_both_bool], run in C++. *)
   Definition new_and_read_both_bool : bool * bool := ST.run_cpp (new_and_read_both_bool (R := ST.cpp_refs)).
+  (** [tree_simp_bool], run in C++. *)
   Definition tree_simp_bool : bool := ST.run_cpp (tree_simp_bool (R := ST.cpp_refs)).
 End STRefs.
 

@@ -35,6 +35,7 @@ Section STRefsProofs.
         | apply spec_bind
         | reflexivity ]).
 
+  (** [tree_simp_nat] returns its initial [5]. *)
   Lemma tree_simp_nat_eq_five :
     ST.run (fun R => tree_simp_nat (R := R)) ≈ Ret 5.
   Proof.
@@ -43,6 +44,7 @@ Section STRefsProofs.
     unfold tree_simp_nat. run_closed.
   Qed.
 
+  (** Two references do not alias: each keeps its own value. *)
   Lemma tree_new_and_read_both_nat_eq_five_six :
     ST.run (fun R => new_and_read_both_nat (R := R)) ≈ Ret (5, 6).
   Proof.
@@ -51,6 +53,7 @@ Section STRefsProofs.
     unfold new_and_read_both_nat. run_closed.
   Qed.
 
+  (** A write replaces the initial value. *)
   Lemma tree_simp_another_nat_eq_six :
     ST.run (fun R => tree_simp_another_nat (R := R)) ≈ Ret 6.
   Proof.
@@ -59,6 +62,7 @@ Section STRefsProofs.
     unfold tree_simp_another_nat. run_closed.
   Qed.
 
+  (** [swap] exchanges the two contents. *)
   Lemma swapped_eq_two_one :
     ST.run (fun R => swapped (R := R)) ≈ Ret (2, 1).
   Proof.
@@ -67,6 +71,7 @@ Section STRefsProofs.
     unfold swapped, swap. run_closed.
   Qed.
 
+  (** Two [bool] references keep their own values. *)
   Lemma new_and_read_both_bool_eq_false_true :
     ST.run (fun R => new_and_read_both_bool (R := R)) ≈ Ret (false, true).
   Proof.
@@ -75,6 +80,7 @@ Section STRefsProofs.
     unfold new_and_read_both_bool. run_closed.
   Qed.
 
+  (** [tree_simp_bool] returns its initial [true]. *)
   Lemma tree_simp_bool_eq_true :
     ST.run (fun R => tree_simp_bool (R := R)) ≈ Ret true.
   Proof.

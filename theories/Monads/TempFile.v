@@ -30,6 +30,8 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
+(** [tempFileE] events, created under [std::filesystem::temp_directory_path] as
+    the module note describes. *)
 #[export] Instance tempFileE_mapping (T : Type) : TypeMapping (tempFileE T) :=
   event_family ["filesystem"; "random"; "string"; "fcntl.h"; "sys/stat.h"; "unistd.h"; "cerrno"; "stdexcept"]
     [event (Ref (@CreateTempFile)) "[&]() -> std::string {
@@ -66,6 +68,8 @@ Local Open Scope pstring_scope.
   }
 }()"].
 
+(** [create_temp_file]: [mkdir] a fresh 0700 directory,
+    then [open] the file in it with [O_EXCL]. *)
 #[export] Instance create_temp_file_mapping : OperationMapping (Ref (@create_temp_file)) :=
   effect_cpp ["filesystem"; "random"; "string"; "fcntl.h"; "sys/stat.h"; "unistd.h"; "cerrno"; "stdexcept"] ["prefix"]
     (Expr "[&]() -> std::string {
@@ -89,6 +93,8 @@ Local Open Scope pstring_scope.
   }
 }()").
 
+(** [create_temp_dir]: [mkdir] a fresh 0700
+    directory, retrying on name collision. *)
 #[export] Instance create_temp_dir_mapping : OperationMapping (Ref (@create_temp_dir)) :=
   effect_cpp ["filesystem"; "random"; "string"; "sys/stat.h"; "cerrno"; "stdexcept"] ["prefix"]
     (Expr "[&]() -> std::string {

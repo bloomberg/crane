@@ -22,9 +22,12 @@ Import ListNotations.
 Local Open Scope monad_scope.
 
 Section Pairs.
+  (** The program is polymorphic in [R], as [ST.run] requires. *)
   Context {R : ST.Refs}.
+  (** Effects of a program whose store holds only pairs. *)
   Notation E0 := (ST.Event R (fun _ : nat => prod nat nat) +' exceptE Err).
 
+  (** One part of a pair from a reference plus one from an array. *)
   Definition pair_parts : itree E0 nat :=
     r <- ST.new_ref (3, 4);;
     a <- ST.new_array 2 (5, 6);;
@@ -34,9 +37,12 @@ Section Pairs.
 End Pairs.
 
 Section Nats.
+  (** The programs are polymorphic in [R], as [ST.run] requires. *)
   Context {R : ST.Refs}.
+  (** Effects of a program whose store holds only [nat]s. *)
   Notation E0 := (ST.Event R (fun _ : nat => nat) +' exceptE Err).
 
+  (** The [n]th Fibonacci number by [n] parallel updates of two references. *)
   Definition fib_step (n : nat) : itree E0 nat :=
     a <- ST.new_ref 0;;
     b <- ST.new_ref 1;;
@@ -53,15 +59,18 @@ Section Nats.
     go n;;
     ST.read_ref a.
 
+  (** One step of [sum_with]: add element [i] to [acc]. *)
   Definition add_at (arr : ST.array nat) (acc i : nat) : itree E0 nat :=
     v <- ST.read_array arr i;;
     Ret (acc + v).
 
+  (** Sums an array by [ST.for_each_with] over its indices: [3 + 3 + 10 + 3]. *)
   Definition sum_with : itree E0 nat :=
     arr <- ST.new_array 4 3;;
     ST.write_array arr 2 10;;
     ST.for_each_with (seq 0 4) 0 (add_at arr).
 
+  (** Recurses first, then stores the result at [k' mod 4] and adds [k]. *)
   Fixpoint count_back (arr : ST.array nat) (k : nat) : itree E0 nat :=
     match k with
     | O => Ret 0
@@ -71,26 +80,35 @@ Section Nats.
         Ret (r + k)
     end.
 
+  (** [count_back] over a fresh four-element array. *)
   Definition run_count_back : itree E0 nat :=
     arr <- ST.new_array 4 0;;
     count_back arr 5.
 
+  (** Ignores its reference. *)
   Definition ignore_ref (r : ST.ref nat) (n : nat) : itree E0 nat := Ret (n + 1).
 
+  (** Writes [r], then hands it to [ignore_ref]. *)
   Definition pass_view (r : ST.ref nat) : itree E0 nat :=
     ST.write_ref r 2;;
     ignore_ref r 4.
 
+  (** [pass_view] on a fresh reference. *)
   Definition unused_param : itree E0 nat :=
     r <- ST.new_ref 0;;
     pass_view r.
 End Nats.
 
 Module STReadableForms.
+  (** [pair_parts], run in C++. *)
   Definition pair_parts : nat := ST.run_cpp (@pair_parts ST.cpp_refs).
+  (** [fib_step], run in C++. *)
   Definition fib_step (n : nat) : nat := ST.run_cpp (@fib_step ST.cpp_refs n).
+  (** [sum_with], run in C++. *)
   Definition sum_with : nat := ST.run_cpp (@sum_with ST.cpp_refs).
+  (** [run_count_back], run in C++. *)
   Definition count_back : nat := ST.run_cpp (@run_count_back ST.cpp_refs).
+  (** [unused_param], run in C++. *)
   Definition unused_param : nat := ST.run_cpp (@unused_param ST.cpp_refs).
 End STReadableForms.
 

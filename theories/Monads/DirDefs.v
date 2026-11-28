@@ -33,16 +33,24 @@ From Crane Require Import Monads.ITree.
    restrict which paths are reachable.
 *)
 Inductive dirE : Type -> Type :=
+(** Create a directory and any missing parents; [true] on success. *)
 | CreateDirectory : string -> dirE bool
+(** Remove a directory tree recursively; [true] on success. *)
 | RemoveDirectory : string -> dirE bool
+(** The entry names (not full paths) of a directory, in no particular order. *)
 | ListDirectory : string -> dirE (list string)
+(** The process's working directory. *)
 | CurrentPath : dirE string.
 
+(** Create [path] with its missing parents. *)
 Definition create_directory {E} `{dirE -< E} (path : string) : itree E bool :=
   embed (CreateDirectory path).
+(** Recursively delete [path]; see the security note on [dirE]. *)
 Definition remove_directory {E} `{dirE -< E} (path : string) : itree E bool :=
   embed (RemoveDirectory path).
+(** The entry names of the directory [path]. *)
 Definition list_directory {E} `{dirE -< E} (path : string) : itree E (list string) :=
   embed (ListDirectory path).
+(** The working directory. *)
 Definition current_path {E} `{dirE -< E} : itree E string :=
   embed CurrentPath.

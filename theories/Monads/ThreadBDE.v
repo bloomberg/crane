@@ -16,19 +16,25 @@ From Stdlib Require List.
 Import List.ListNotations Crane.Cpp.
 Local Open Scope pstring_scope.
 
+(** [threadE] events: [bsl::thread::join], [bsl::this_thread::sleep_for]. *)
 #[export] Instance threadE_mapping (T : Type) : TypeMapping (threadE T) :=
   event_family ["bsl_thread.h"; "chrono"]
     [event (Ref (@Join)) "%a0.join()";
      event (Ref (@Sleep)) "bsl::this_thread::sleep_for(std::chrono::milliseconds(%a0))"].
 
+(** [thread] is [bsl::thread]. Unlike the std flavor's shared future it is
+    move-only and must be joined exactly once. *)
 #[export] Instance thread_mapping : TypeMapping (thread) :=
   value_type ["bsl_thread.h"] (Name "bsl::thread") UnknownCopy.
+(** [spawn] constructs a [bsl::thread] running [f a]. *)
 #[export] Instance spawn_mapping : OperationMapping (Ref (@spawn)) :=
   effect_args ["bsl_thread.h"] (uses Take ["f"; "a"])
     (Structured (Build (Name "bsl::thread") [Arg "f"; Arg "a"])).
+(** [join] is [bsl::thread::join]. *)
 #[export] Instance join_mapping : OperationMapping (Ref (@join)) :=
   effect_cpp [] ["t"]
     (Structured (Method (Arg "t") "join" [])).
+(** [sleep] is [bsl::this_thread::sleep_for] in milliseconds. *)
 #[export] Instance sleep_mapping : OperationMapping (Ref (@sleep)) :=
   effect_cpp ["bsl_thread.h"; "chrono"] ["d"]
     (Structured (Call "bsl::this_thread::sleep_for" [] [Build (Name "std::chrono::milliseconds") [Arg "d"]])).

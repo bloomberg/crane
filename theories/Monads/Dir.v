@@ -42,14 +42,18 @@ Local Open Scope pstring_scope.
 }()";
      event (Ref (@CurrentPath)) "[&]() -> std::string { std::error_code _ec; auto _p = std::filesystem::current_path(_ec); return _ec ? std::string{} : _p.string(); }()"].
 
+(** [create_directory] is [std::filesystem::create_directories]. *)
 #[export] Instance create_directory_mapping : OperationMapping (Ref (@create_directory)) :=
   effect_cpp ["filesystem"; "system_error"] ["path"]
     (Expr "[&]() -> bool { std::error_code _ec; std::filesystem::create_directories(std::filesystem::path(%arg(path)), _ec); return !_ec; }()").
 
+(** [remove_directory] is [std::filesystem::remove_all]. *)
 #[export] Instance remove_directory_mapping : OperationMapping (Ref (@remove_directory)) :=
   effect_cpp ["filesystem"; "system_error"] ["path"]
     (Expr "[&]() -> bool { std::error_code _ec; std::filesystem::remove_all(std::filesystem::path(%arg(path)), _ec); return !_ec; }()").
 
+(** [list_directory] walks a [std::filesystem::directory_iterator],
+    keeping at most 65536 names. *)
 #[export] Instance list_directory_mapping : OperationMapping (Ref (@list_directory)) :=
   effect_cpp ["filesystem"; "system_error"; "cstddef"; "utility"] ["path"]
     (Expr "[&]() -> List<std::string> {
@@ -63,6 +67,7 @@ Local Open Scope pstring_scope.
   return result;
 }()").
 
+(** [current_path] is [std::filesystem::current_path], empty on error. *)
 #[export] Instance current_path_mapping : OperationMapping (Ref (@current_path)) :=
   effect_cpp ["filesystem"; "system_error"] []
     (Expr "[&]() -> std::string { std::error_code _ec; auto _p = std::filesystem::current_path(_ec); return _ec ? std::string{} : _p.string(); }()").
