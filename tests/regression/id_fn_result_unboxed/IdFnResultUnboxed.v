@@ -8,7 +8,10 @@
     [crane::obj] ("no member named 'v'", also seen as a Crane Bake failure),
     nor did a match through a mapping's case template ([std::pair]):
     [bad_any_cast] on the boxed [pair<obj, obj>], nor did a record
-    projection: [.px] on a [crane::obj].
+    projection: [.px] on a [crane::obj].  A conditional standing for the
+    record was recovered at the type the enclosing body returns, [nat],
+    rather than at the record's (under [CRANE_CHECK_IR], "destination,
+    unbox").
 
     Fixed: a call applying more arguments than its declaration takes does not
     hand back the declaration's box ([Erasure.glob_declared_cod_erases]), and
@@ -46,6 +49,9 @@ Definition pair_sum : nat := match (id (fun k : nat => (k, 2))) 5 with (a, b) =>
 Definition pair_list_sum : nat :=
   match (id (fun k : nat => [(k, 3)])) 5 with (a, b) :: _ => a + b | [] => 0 end.
 
+Definition pick {A : Type} (b : bool) (x y : A) : A := if b then x else y.
+Definition record_of_if : nat :=
+  px (if pick true true true then (id (fun y : pt => y)) (mkpt 3 true) else mkpt 0 true).
 Definition record_field : nat := px ((id (fun k : nat => mkpt k true)) 6).
 
 End IdFnResultUnboxed.

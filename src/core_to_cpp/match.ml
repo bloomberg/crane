@@ -1557,6 +1557,15 @@ let gen_custom_cpp_case cx (slot : Slot.slot) env (k : Destination.t) (typ : Cor
     ({!Match_types.recover_erased_scrutinee}).  An instance is a type, not a
     value, and is left alone. *)
 let inspected_record cx ~ret env ~is_typeclass ~typ t =
+  (* Not a tail position: what the enclosing body returns says nothing
+     about the record, which is of the type matched (as for a custom
+     match's scrutinee, {!gen_custom_cpp_case}). *)
+  let ret =
+    if is_typeclass then ret
+    else
+      let own = Types.cpp_of_core cx env typ in
+      if Cpp_ir.Types.prints_as_any own then ret else Some own
+  in
   let x = gen_expr_typed cx (Slot.at ~ret ()) env t in
   if is_typeclass then x.expr else Match_types.recover_erased_scrutinee cx env ~is_magic:false typ x
 

@@ -15,5 +15,6 @@ int main() {
   assert(M::pair_sum == 7);
   assert(M::pair_list_sum == 8);
   assert(M::record_field == 6);
+  assert(M::record_of_if == 3);
   return 0;
 }
