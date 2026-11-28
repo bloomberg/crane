@@ -1148,6 +1148,24 @@ let eta_fun cx (slot : Slot.slot) env f args :
                callable whose C++ type only template deduction knows, and it
                may hand back a box.  The position says what the value is; the
                tolerant cast passes through one that was never boxed. *)
+            (* An argument lowering typed a box -- what a callable recovered
+               from one hands back -- is opened at the parameter the
+               codomain takes it at, where that states a type. *)
+            let excess =
+              let doms =
+                match Option.map (fun c -> Types.cpp_of_core cx env (expand_core_fun_alias c)) cod_inst with
+                | Some (Function (dom, _)) -> dom
+                | _ -> []
+              in
+              List.mapi
+                (fun i (x : Cpp_ir.Typed.t) ->
+                  match (x.ty, List.nth_opt doms i) with
+                  | Typed t, Some d
+                    when Erasure.classify_erasure cx (Some t) = `Boxed && Coerce.states_unboxed_target d ->
+                    Coerce.coerce cx ~from:Any ~into:d x.expr
+                  | _ -> x.expr )
+                excess_typed
+            in
             let excess = erase_params_into_boxes excess in
             let n_first =
               match written_cod with
@@ -2150,9 +2168,17 @@ let eta_fun cx (slot : Slot.slot) env f args :
           in
           let ret = if Option.has_some dom then dom else ret in
           let expected_ty = match x with Core.Expr.Match _ -> dom | _ -> None in
-          gen_expr_typed cx
-            (Slot.at ~ret ?expected_ty ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} ())
-            env x
+          let value =
+            gen_expr_typed cx
+              (Slot.at ~ret ?expected_ty ~slot:{arg_slot with Slot.expected_core_ty = declared_core_dom i} ())
+              env x
+          in
+          (* A value lowering typed a box -- what a callable recovered from
+             one hands back -- is opened at the parameter's type. *)
+          ( match (value.ty, dom) with
+          | Typed t, Some d when Erasure.classify_erasure cx (Some t) = `Boxed && Coerce.states_unboxed_target d ->
+            Cpp_ir.Typed.typed d (Coerce.coerce cx ~from:Any ~into:d value.expr)
+          | _ -> value )
       in
       let expr = value.expr in
       match List.nth_opt callee_param_tys i with

@@ -11,13 +11,15 @@
     projection: [.px] on a [crane::obj].  A conditional standing for the
     record was recovered at the type the enclosing body returns, [nat],
     rather than at the record's (under [CRANE_CHECK_IR], "destination,
-    unbox").
+    unbox").  Passed on to a function value -- [hd_or d l x], [cf x] for a
+    local [cf] -- the box stayed shut ("no matching function for call").
 
     Fixed: a call applying more arguments than its declaration takes does not
     hand back the declaration's box ([Erasure.glob_declared_cod_erases]), and
     a scrutinee lowering typed a box is opened at the matched type
     ([Match_types.recover_erased_scrutinee], [Match.gen_custom_cpp_case],
-    [Match.inspected_record]). *)
+    [Match.inspected_record]), and an argument lowering typed a box is
+    opened at the parameter's type ([Application]). *)
 From Crane Require Extraction.
 From Crane Require Import Mapping.NatInt Mapping.Std.
 From Stdlib Require Import List.
@@ -52,6 +54,11 @@ Definition pair_list_sum : nat :=
 Definition pick {A : Type} (b : bool) (x y : A) : A := if b then x else y.
 Definition record_of_if : nat :=
   px (if pick true true true then (id (fun y : pt => y)) (mkpt 3 true) else mkpt 0 true).
+Definition hd_or {A : Type} (d : A) (l : list A) : A := match l with [] => d | x :: _ => x end.
+Definition excess_argument : nat :=
+  (hd_or (fun k : nat => k + 7) (@nil (nat -> nat))) ((id (fun k : nat => k * 2)) 5).
+Definition local_callee_argument : nat :=
+  let cf := (fun k : nat => k + 1) in cf 0 + cf ((id (fun l : nat => l * 2)) 4).
 Definition record_field : nat := px ((id (fun k : nat => mkpt k true)) 6).
 
 End IdFnResultUnboxed.
