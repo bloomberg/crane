@@ -1,21 +1,27 @@
-(** A CDCL SAT solver written directly in [itree vecE].
+(** A CDCL SAT solver over [Global] arrays and references
+    (theories/Monads/Global.v): two-watched-literal propagation, first-UIP
+    learning with non-chronological backjumping, phase saving,
+    recency-ordered decisions and geometric restarts.
 
-    Two-watched-literal propagation, first-UIP learning with
-    non-chronological backjumping, phase saving, recency-ordered decisions
-    and geometric restarts.  All mutable state lives in [vec]s, so every
-    read and write is an event: Crane performs it in place, OCaml extraction
-    builds a [Vis] node for it and hands it to the interpreter.
+    Every piece of mutable state is a [Global] array or reference.  Crane
+    erases the tree and compiles each access to a direct array access; the
+    proofs read the same program through [Global]'s model, where an access
+    out of bounds fails.  The entry point is [solve_dimacs], which also
+    parses the file.
 
     Encoding: variable [v] has literals [2v] (positive) and [2v+1]
     (negative).  A variable's value is 0 (unassigned), 1 (true) or
     2 (false); a literal's value is read off the same three. *)
-From Stdlib Require Import PeanoNat Bool List.
+From Stdlib Require Import PeanoNat Bool List PrimString.
 Import ListNotations.
 Local Open Scope bool_scope.
-From Crane Require Import Monads.ITree.
-Require Import SatVec.
+From ITree Require Import ITree Events.Exception.
+From Crane Require Monads.Global.
+From Crane Require Import Monads.ITree Monads.Error Monads.Indices.
 
 Module Solver.
+
+(** * Literals *)
 
 (** The variable of a literal. *)
 Definition lvar (l : nat) : nat := Nat.div l 2.
@@ -25,481 +31,555 @@ Definition lneg (l : nat) : nat :=
 (** The literal of [v] that a value of [a] (1 or 2) makes true. *)
 Definition lit_of (v a : nat) : nat := if Nat.eqb a 1 then 2 * v else 2 * v + 1.
 
-(** The solver state: handles to every vector, created once by [run]. *)
+(** * State
+
+    The clause database is one arena of [nat]s holding each clause as a
+    record [len; lit_0; ...; lit_(len-1)]; a clause is named by the offset
+    of its record.  The arena sits in a reference because it moves to
+    larger storage when a learnt clause does not fit.  Each literal's watch
+    list is an array of clause offsets with a length in [wlen] and a
+    capacity in [wcap]; it too moves when full.  The trail, the trail
+    limits and the learnt clause have fixed capacities, since each holds a
+    variable at most once.  The scalar counters live in [misc]. *)
+
+(** Cells holding [nat]s.  [Vn] and [Va] are notations, not definitions,
+    so that [Vn 0] reduces to [nat] where Crane reads it. *)
+Notation Vn := (fun _ : nat => nat).
+(** A fixed-size array of [nat]s. *)
+Definition narr : Type := Global.array nat (Vn 0).
+(** Cells holding [nat] arrays: the arena reference and the watch lists. *)
+Notation Va := (fun _ : nat => narr).
+
+(** The solver's effects: [nat] cells, array cells, and failure. *)
+Notation E := (Global.Event nat Vn +' Global.Event nat Va +' exceptE Err).
+
+(** Give up: a loop ran out of fuel.  No answer comes back; the driver
+    reports UNKNOWN. *)
+Definition out_of_fuel : itree E nat := failwith "out of fuel"%pstring.
+
+(** Handles to every array, made once by [new_state]. *)
 Record state := mk_state {
-  clauses : vec (vec nat);   (** clause database; a reason's implied literal is at 0 *)
-  watches : vec (vec nat);   (** per literal: the clauses watching it at 0 or 1 *)
-  assigns : vec nat;         (** per variable: 0, 1 or 2 *)
-  level : vec nat;           (** per variable: decision level of its assignment *)
-  reason : vec nat;          (** per variable: clause index + 1, or 0 for none *)
-  phase : vec nat;           (** per variable: the value it last had *)
-  stamp : vec nat;           (** per variable: conflict count when last bumped *)
-  seen : vec nat;            (** per variable: scratch for [analyze] *)
-  trail : vec nat;           (** assigned literals, in order *)
-  trail_lim : vec nat;       (** per decision level: trail length at its decision *)
-  misc : vec nat             (** 0: queue head, 1: conflicts, 2: restart limit,
-                                 3: conflicts since restart *)
+  arena : Global.ref (Va 0);       (** the clause arena *)
+  wdata : Global.array nat (Va 0); (** per literal: its watch list's storage *)
+  wlen : narr;                     (** per literal: its watch list's length *)
+  wcap : narr;                     (** per literal: its watch list's capacity *)
+  assigns : narr;                  (** per variable: 0, 1 or 2 *)
+  level : narr;                    (** per variable: decision level of its assignment *)
+  reason : narr;                   (** per variable: clause offset + 1, or 0 for none *)
+  phase : narr;                    (** per variable: the value it last had *)
+  stamp : narr;                    (** per variable: conflict count when last bumped *)
+  seen : narr;                     (** per variable: scratch for conflict analysis *)
+  trail : narr;                    (** assigned literals, in order; capacity [nvars] *)
+  trail_lim : narr;                (** per decision level: trail length at its decision *)
+  learnt : narr;                   (** the clause being learnt; capacity [nvars + 1] *)
+  misc : narr                      (** the counters below *)
 }.
 
-(** The propagation queue head: a trail position. *)
+(** [misc] slot: the propagation queue head, a trail position. *)
 Definition QHEAD := 0.
-(** Conflicts so far. *)
+(** [misc] slot: conflicts so far. *)
 Definition CONFLICTS := 1.
-(** Conflicts allowed before the next restart. *)
+(** [misc] slot: conflicts allowed before the next restart. *)
 Definition RLIMIT := 2.
-(** Conflicts since the last restart. *)
+(** [misc] slot: conflicts since the last restart. *)
 Definition RCOUNT := 3.
+(** [misc] slot: the trail's length. *)
+Definition TLEN := 4.
+(** [misc] slot: the number of decision levels. *)
+Definition TLLEN := 5.
+(** [misc] slot: the used length of the arena. *)
+Definition ALEN := 6.
+(** [misc] slot: the size of the arena's storage. *)
+Definition ACAP := 7.
+(** [misc] slot: the learnt clause's length. *)
+Definition LLEN := 8.
+(** The number of [misc] slots. *)
+Definition NMISC := 9.
+
+(** The length of [l], plus [n]; tail-recursive. *)
+Fixpoint tlen {A} (l : list A) (n : nat) : nat :=
+  match l with [] => n | _ :: l' => tlen l' (S n) end.
+
+(** Copy elements [i .. i + n) of [src] to the same positions of [dst]. *)
+Fixpoint copy (src dst : narr) (i n : nat) : itree E unit :=
+  match n with
+  | O => Ret tt
+  | S n' =>
+    x <- Global.read_array src i ;;
+    Global.write_array dst i x ;;
+    copy src dst (i + 1) n'
+  end.
 
 Section Ops.
 (** Every operation below acts on this one state. *)
 Variable s : state.
 
+(** * Counters and assignments *)
+
+(** Read [misc] slot [k]. *)
+Definition get (k : nat) : itree E nat := Global.read_array (misc s) k.
+(** Write [misc] slot [k]. *)
+Definition put (k x : nat) : itree E unit := Global.write_array (misc s) k x.
+
 (** The value of a literal: 0 unassigned, 1 true, 2 false. *)
-Definition lit_value (l : nat) : itree vecE nat :=
-  a <- vget (assigns s) (lvar l) ;;
+Definition lit_value (l : nat) : itree E nat :=
+  a <- Global.read_array (assigns s) (lvar l) ;;
   Ret (if Nat.eqb a 0 then 0
        else if Nat.eqb (Nat.modulo l 2) 0 then a else 3 - a).
 
 (** The current decision level: the number of trail limits. *)
-Definition decision_level : itree vecE nat := vlen (trail_lim s).
+Definition decision_level : itree E nat := get TLLEN.
 
-(** Make [l] true with reason [r] (clause index + 1, 0 for a decision),
-    at the current level, and push it on the trail. *)
-Definition enqueue (l : nat) (r : nat) : itree vecE unit :=
+(** Make [l] true with reason [r] (clause offset + 1, 0 for none) at the
+    current level, and push it on the trail. *)
+Definition enqueue (l r : nat) : itree E unit :=
   let v := lvar l in
-  vset (assigns s) v (if Nat.eqb (Nat.modulo l 2) 0 then 1 else 2) ;;
+  Global.write_array (assigns s) v (if Nat.eqb (Nat.modulo l 2) 0 then 1 else 2) ;;
   dl <- decision_level ;;
-  vset (level s) v dl ;;
-  vset (reason s) v r ;;
-  vpush (trail s) l.
+  Global.write_array (level s) v dl ;;
+  Global.write_array (reason s) v r ;;
+  tl <- get TLEN ;;
+  Global.write_array (trail s) tl l ;;
+  put TLEN (tl + 1).
 
-(** The first [k >= 2] at which [c] has a literal that is not false, + 1. *)
-Fixpoint find_watch (fuel : nat) (c : vec nat) (k len : nat) : itree vecE nat :=
-  match fuel with
-  | O => vabort 1
-  | S f =>
-    if Nat.leb len k then Ret 0
-    else
-      l <- vget c k ;;
-      v <- lit_value l ;;
-      if Nat.eqb v 2 then find_watch f c (k + 1) len else Ret (k + 1)
+(** * Watch lists *)
+
+(** Append clause [co] to the watch list of [l], moving the list to
+    storage twice as large (+ 4) when it is full. *)
+Definition watch (l co : nat) : itree E unit :=
+  n <- Global.read_array (wlen s) l ;;
+  cap <- Global.read_array (wcap s) l ;;
+  w <- Global.read_array (wdata s) l ;;
+  (if Nat.ltb n cap then Global.write_array w n co
+   else
+     let cap' := 2 * cap + 4 in
+     w' <- Global.new_array 0 cap' 0 ;;
+     copy w w' 0 n ;;
+     Global.write_array w' n co ;;
+     Global.write_array (wdata s) l w' ;;
+     Global.write_array (wcap s) l cap') ;;
+  Global.write_array (wlen s) l (n + 1).
+
+(** Watch the first two literals of clause [co] of arena [a]. *)
+Definition attach (a : narr) (co : nat) : itree E unit :=
+  c0 <- Global.read_array a (co + 1) ;;
+  c1 <- Global.read_array a (co + 2) ;;
+  watch c0 co ;;
+  watch c1 co.
+
+(** * Propagation *)
+
+(** Among the [m] literals of clause [co] from position [k] on, the first
+    one that is not false: its position + 1, or 0 if there is none. *)
+Fixpoint find_watch (a : narr) (co k m : nat) : itree E nat :=
+  match m with
+  | O => Ret 0
+  | S m' =>
+    l <- Global.read_array a (co + 1 + k) ;;
+    v <- lit_value l ;;
+    if Nat.eqb v 2 then find_watch a co (k + 1) m' else Ret (k + 1)
   end.
 
-(** Slide [ws[i..n)] down to [ws[j..)] and cut the list there. *)
-Fixpoint copy_rest (fuel : nat) (ws : vec nat) (i j n : nat) : itree vecE unit :=
-  match fuel with
-  | O => vabort 2
-  | S f =>
-    if Nat.leb n i then vshrink ws j
-    else x <- vget ws i ;; vset ws j x ;; copy_rest f ws (i + 1) (j + 1) n
+(** Slide the last [m] entries of [fl]'s watch list [ws], from [i] on,
+    down to [j], and cut the list after them. *)
+Fixpoint copy_rest (fl : nat) (ws : narr) (i j m : nat) : itree E unit :=
+  match m with
+  | O => Global.write_array (wlen s) fl j
+  | S m' =>
+    x <- Global.read_array ws i ;;
+    Global.write_array ws j x ;;
+    copy_rest fl ws (i + 1) (j + 1) m'
   end.
 
-(** Visit the clauses watching [fl], which has just become false.  Each
-    either finds another literal to watch, is satisfied, becomes unit, or
-    is the conflict -- whose index + 1 is returned (0 for none). *)
-Fixpoint prop_watch (fuel : nat) (fl : nat) (ws : vec nat) (i j n : nat)
-  : itree vecE nat :=
-  match fuel with
-  | O => vabort 3
-  | S f =>
-    if Nat.leb n i then vshrink ws j ;; Ret 0
+(** Visit the last [m] clauses of the watch list [ws] of [fl], which has
+    just become false, from [i] on; the clauses kept so far fill [ws] up
+    to [j].  Each clause finds another literal to watch, is satisfied,
+    becomes unit, or is the conflict, whose offset + 1 is returned (0 for
+    none).  No clause is added meanwhile, so the arena [a] stays current. *)
+Fixpoint prop_watch (a : narr) (fl : nat) (ws : narr) (i j m : nat) : itree E nat :=
+  match m with
+  | O => Global.write_array (wlen s) fl j ;; Ret 0
+  | S m' =>
+    co <- Global.read_array ws i ;;
+    (* Put [fl] second, so that the first literal is the other watch. *)
+    c0 <- Global.read_array a (co + 1) ;;
+    (if Nat.eqb c0 fl
+     then c1 <- Global.read_array a (co + 2) ;;
+          Global.write_array a (co + 1) c1 ;;
+          Global.write_array a (co + 2) fl
+     else Ret tt) ;;
+    first <- Global.read_array a (co + 1) ;;
+    fv <- lit_value first ;;
+    if Nat.eqb fv 1 then
+      Global.write_array ws j co ;;
+      prop_watch a fl ws (i + 1) (j + 1) m'
     else
-      ci <- vget ws i ;;
-      c <- vget (clauses s) ci ;;
-      c0 <- vget c 0 ;;
-      (if Nat.eqb c0 fl
-       then c1 <- vget c 1 ;; vset c 0 c1 ;; vset c 1 fl
-       else Ret tt) ;;
-      first <- vget c 0 ;;
-      fv <- lit_value first ;;
-      if Nat.eqb fv 1 then
-        vset ws j ci ;; prop_watch f fl ws (i + 1) (j + 1) n
-      else
-        len <- vlen c ;;
-        k1 <- find_watch fuel c 2 len ;;
-        if Nat.eqb k1 0 then
-          vset ws j ci ;;
-          if Nat.eqb fv 2 then
-            copy_rest fuel ws (i + 1) (j + 1) n ;; Ret (ci + 1)
-          else
-            enqueue first (ci + 1) ;; prop_watch f fl ws (i + 1) (j + 1) n
+      len <- Global.read_array a co ;;
+      k1 <- find_watch a co 2 (len - 2) ;;
+      if Nat.eqb k1 0 then
+        Global.write_array ws j co ;;
+        if Nat.eqb fv 2 then
+          copy_rest fl ws (i + 1) (j + 1) m' ;;
+          Ret (co + 1)
         else
-          let k := k1 - 1 in
-          ck <- vget c k ;;
-          vset c 1 ck ;;
-          vset c k fl ;;
-          w <- vget (watches s) ck ;;
-          vpush w ci ;;
-          prop_watch f fl ws (i + 1) j n
+          enqueue first (co + 1) ;;
+          prop_watch a fl ws (i + 1) (j + 1) m'
+      else
+        let k := k1 - 1 in
+        ck <- Global.read_array a (co + 1 + k) ;;
+        Global.write_array a (co + 2) ck ;;
+        Global.write_array a (co + 1 + k) fl ;;
+        watch ck co ;;
+        prop_watch a fl ws (i + 1) j m'
   end.
 
-(** Unit propagation to a fixpoint; the conflict clause's index + 1, or 0. *)
-Fixpoint propagate (fuel : nat) : itree vecE nat :=
+(** Unit propagation to a fixpoint: the conflict clause's offset + 1, or
+    0 when there is none. *)
+Fixpoint propagate (fuel : nat) : itree E nat :=
   match fuel with
-  | O => vabort 4
+  | O => out_of_fuel
   | S f =>
-    qh <- vget (misc s) QHEAD ;;
-    tl <- vlen (trail s) ;;
+    qh <- get QHEAD ;;
+    tl <- get TLEN ;;
     if Nat.leb tl qh then Ret 0
     else
-      p <- vget (trail s) qh ;;
-      vset (misc s) QHEAD (qh + 1) ;;
+      p <- Global.read_array (trail s) qh ;;
+      put QHEAD (qh + 1) ;;
       let fl := lneg p in
-      ws <- vget (watches s) fl ;;
-      n <- vlen ws ;;
-      confl <- prop_watch fuel fl ws 0 0 n ;;
+      ws <- Global.read_array (wdata s) fl ;;
+      n <- Global.read_array (wlen s) fl ;;
+      a <- Global.read_ref (arena s) ;;
+      confl <- prop_watch a fl ws 0 0 n ;;
       if Nat.eqb confl 0 then propagate f else Ret confl
   end.
 
-(** Undo the trail from [lim] up, saving each variable's phase. *)
-Fixpoint unassign (fuel : nat) (i lim : nat) : itree vecE unit :=
-  match fuel with
-  | O => vabort 5
-  | S f =>
-    if Nat.leb i lim then Ret tt
-    else
-      l <- vget (trail s) (i - 1) ;;
-      let v := lvar l in
-      a <- vget (assigns s) v ;;
-      vset (phase s) v a ;;
-      vset (assigns s) v 0 ;;
-      vset (reason s) v 0 ;;
-      unassign f (i - 1) lim
+(** * Backjumping *)
+
+(** Undo the [m] trail entries below position [i], saving each
+    variable's phase. *)
+Fixpoint unassign (i m : nat) : itree E unit :=
+  match m with
+  | O => Ret tt
+  | S m' =>
+    l <- Global.read_array (trail s) (i - 1) ;;
+    let v := lvar l in
+    a <- Global.read_array (assigns s) v ;;
+    Global.write_array (phase s) v a ;;
+    Global.write_array (assigns s) v 0 ;;
+    Global.write_array (reason s) v 0 ;;
+    unassign (i - 1) m'
   end.
 
-(** Backjump to decision level [lvl]: undo the trail above where level
-    [lvl + 1] began, and resume propagation from there. *)
-Definition backtrack (fuel lvl : nat) : itree vecE unit :=
+(** Backjump to decision level [lvl]. *)
+Definition backtrack (lvl : nat) : itree E unit :=
   dl <- decision_level ;;
   if Nat.leb dl lvl then Ret tt
   else
-    lim <- vget (trail_lim s) lvl ;;
-    tl <- vlen (trail s) ;;
-    unassign fuel tl lim ;;
-    vshrink (trail s) lim ;;
-    vshrink (trail_lim s) lvl ;;
-    vset (misc s) QHEAD lim.
+    lim <- Global.read_array (trail_lim s) lvl ;;
+    tl <- get TLEN ;;
+    unassign tl (tl - lim) ;;
+    put TLEN lim ;;
+    put TLLEN lvl ;;
+    put QHEAD lim.
 
-(** Mark the literals of [c] from [j] on; those at the current level count
-    towards [pathC], the rest go into [learnt].  The new [pathC]. *)
-Fixpoint analyze_lits (fuel : nat) (c : vec nat) (j len dl pathC : nat)
-    (learnt : vec nat) (now : nat) : itree vecE nat :=
-  match fuel with
-  | O => vabort 6
-  | S f =>
-    if Nat.leb len j then Ret pathC
-    else
-      q <- vget c j ;;
-      let v := lvar q in
-      sv <- vget (seen s) v ;;
-      lv <- vget (level s) v ;;
-      if Nat.eqb sv 0 && Nat.ltb 0 lv then
-        vset (seen s) v 1 ;;
-        vset (stamp s) v now ;;
-        if Nat.leb dl lv then analyze_lits f c (j + 1) len dl (pathC + 1) learnt now
-        else vpush learnt q ;; analyze_lits f c (j + 1) len dl pathC learnt now
-      else analyze_lits f c (j + 1) len dl pathC learnt now
+(** * Conflict analysis *)
+
+(** Append [q] to the learnt clause.  Each variable goes in once, so it
+    never holds more than [nvars + 1] literals. *)
+Definition push_learnt (q : nat) : itree E unit :=
+  n <- get LLEN ;;
+  Global.write_array (learnt s) n q ;;
+  put LLEN (n + 1).
+
+(** Mark the [m] literals of clause [co] from position [j] on, stamping
+    them with [now]; those at the current level [dl] count towards
+    [pathC], the others go into the learnt clause.  The new [pathC]. *)
+Fixpoint analyze_lits (a : narr) (co j m dl pathC now : nat) : itree E nat :=
+  match m with
+  | O => Ret pathC
+  | S m' =>
+    q <- Global.read_array a (co + 1 + j) ;;
+    let v := lvar q in
+    sv <- Global.read_array (seen s) v ;;
+    lv <- Global.read_array (level s) v ;;
+    if Nat.eqb sv 0 && Nat.ltb 0 lv then
+      Global.write_array (seen s) v 1 ;;
+      Global.write_array (stamp s) v now ;;
+      if Nat.leb dl lv then analyze_lits a co (j + 1) m' dl (pathC + 1) now
+      else push_learnt q ;; analyze_lits a co (j + 1) m' dl pathC now
+    else analyze_lits a co (j + 1) m' dl pathC now
   end.
 
 (** The highest trail position at or below [i] whose variable is marked. *)
-Fixpoint next_seen (fuel : nat) (i : nat) : itree vecE nat :=
+Fixpoint next_seen (fuel i : nat) : itree E nat :=
   match fuel with
-  | O => vabort 7
+  | O => out_of_fuel
   | S f =>
-    l <- vget (trail s) i ;;
-    sv <- vget (seen s) (lvar l) ;;
+    l <- Global.read_array (trail s) i ;;
+    sv <- Global.read_array (seen s) (lvar l) ;;
     if Nat.eqb sv 0 then next_seen f (i - 1) else Ret i
   end.
 
-(** Walk the implication graph back from [confl] to the first UIP, which
-    is returned; the other literals of the learnt clause are in [learnt]. *)
-Fixpoint analyze_loop (fuel : nat) (confl : nat) (start : nat) (index : nat)
-    (pathC dl : nat) (learnt : vec nat) (now : nat) : itree vecE nat :=
+(** Walk the implication graph back from clause [confl], skipping its
+    first [start] literals, to the first UIP, which is returned; the other
+    literals of the learnt clause go into [learnt].  The walk goes down
+    the trail from [index], with [pathC] marked literals of level [dl]
+    still to resolve. *)
+Fixpoint analyze_loop (fuel : nat) (a : narr) (confl start index pathC dl now : nat)
+  : itree E nat :=
   match fuel with
-  | O => vabort 8
+  | O => out_of_fuel
   | S f =>
-    c <- vget (clauses s) confl ;;
-    len <- vlen c ;;
-    pathC' <- analyze_lits fuel c start len dl pathC learnt now ;;
+    len <- Global.read_array a confl ;;
+    pathC' <- analyze_lits a confl start (len - start) dl pathC now ;;
     idx <- next_seen fuel index ;;
-    p <- vget (trail s) idx ;;
+    p <- Global.read_array (trail s) idx ;;
     let v := lvar p in
-    r <- vget (reason s) v ;;
-    vset (seen s) v 0 ;;
+    r <- Global.read_array (reason s) v ;;
+    Global.write_array (seen s) v 0 ;;
     if Nat.leb pathC' 1 then Ret p
-    else analyze_loop f (r - 1) 1 (idx - 1) (pathC' - 1) dl learnt now
+    else analyze_loop f a (r - 1) 1 (idx - 1) (pathC' - 1) dl now
   end.
 
-(** Clear the marks of [learnt[1..]] and find the deepest level among them,
-    moving the literal at that level to position 1.  That level. *)
-Fixpoint finish_learnt (fuel : nat) (learnt : vec nat) (i len best bestlv : nat)
-  : itree vecE nat :=
-  match fuel with
-  | O => vabort 9
-  | S f =>
-    if Nat.leb len i then
-      (if Nat.ltb 1 best then
-         b <- vget learnt best ;; x <- vget learnt 1 ;;
-         vset learnt 1 b ;; vset learnt best x
-       else Ret tt) ;;
-      Ret bestlv
-    else
-      q <- vget learnt i ;;
-      let v := lvar q in
-      vset (seen s) v 0 ;;
-      lv <- vget (level s) v ;;
-      if Nat.ltb bestlv lv then finish_learnt f learnt (i + 1) len i lv
-      else finish_learnt f learnt (i + 1) len best bestlv
+(** Clear the marks of the [m] learnt literals from position [i] on and
+    find the deepest level among them, [best] being the position of the
+    deepest so far and [bestlv] its level.  At the end that literal moves
+    to position 1, and its level is returned. *)
+Fixpoint finish_learnt (i m best bestlv : nat) : itree E nat :=
+  match m with
+  | O =>
+    (if Nat.ltb 1 best then Global.swap_array (learnt s) 1 best else Ret tt) ;;
+    Ret bestlv
+  | S m' =>
+    q <- Global.read_array (learnt s) i ;;
+    let v := lvar q in
+    Global.write_array (seen s) v 0 ;;
+    lv <- Global.read_array (level s) v ;;
+    if Nat.ltb bestlv lv then finish_learnt (i + 1) m' i lv
+    else finish_learnt (i + 1) m' best bestlv
   end.
 
-(** Watch the first two literals of clause [ci], whose vector is [c]. *)
-Definition attach (ci : nat) (c : vec nat) : itree vecE unit :=
-  c0 <- vget c 0 ;; c1 <- vget c 1 ;;
-  w0 <- vget (watches s) c0 ;; vpush w0 ci ;;
-  w1 <- vget (watches s) c1 ;; vpush w1 ci.
+(** * Learning *)
 
-(** Learn from conflict [confl] (an index) and backjump. *)
-Definition learn (fuel confl : nat) : itree vecE unit :=
+(** Room for [need] more cells in the arena: when they do not fit, move it
+    to storage twice as large, or just large enough if that is more.  The
+    arena, and the offset the next clause goes at. *)
+Definition reserve (need : nat) : itree E (narr * nat) :=
+  a <- Global.read_ref (arena s) ;;
+  n <- get ALEN ;;
+  cap <- get ACAP ;;
+  if Nat.leb (n + need) cap then Ret (a, n)
+  else
+    let cap' := Nat.max (2 * cap) (n + need) in
+    a' <- Global.new_array 0 cap' 0 ;;
+    copy a a' 0 n ;;
+    Global.write_ref (arena s) a' ;;
+    put ACAP cap' ;;
+    Ret (a', n).
+
+(** Copy the [m] learnt literals from position [i] on into clause [co] of
+    arena [a]. *)
+Fixpoint store_learnt (a : narr) (co i m : nat) : itree E unit :=
+  match m with
+  | O => Ret tt
+  | S m' =>
+    q <- Global.read_array (learnt s) i ;;
+    Global.write_array a (co + 1 + i) q ;;
+    store_learnt a co (i + 1) m'
+  end.
+
+(** Learn a clause from the conflict clause [confl], backjump, and assert
+    the clause's first-UIP literal. *)
+Definition learn (fuel confl : nat) : itree E unit :=
   dl <- decision_level ;;
-  now <- vget (misc s) CONFLICTS ;;
-  learnt <- vmake 1 0 ;;
-  tl <- vlen (trail s) ;;
-  p <- analyze_loop fuel confl 0 (tl - 1) 0 dl learnt now ;;
+  now <- get CONFLICTS ;;
+  put LLEN 1 ;;
+  tl <- get TLEN ;;
+  a <- Global.read_ref (arena s) ;;
+  p <- analyze_loop fuel a confl 0 (tl - 1) 0 dl now ;;
   let uip := lneg p in
-  vset learnt 0 uip ;;
-  len <- vlen learnt ;;
-  bt <- finish_learnt fuel learnt 1 len 0 0 ;;
-  backtrack fuel bt ;;
+  Global.write_array (learnt s) 0 uip ;;
+  len <- get LLEN ;;
+  bt <- finish_learnt 1 (len - 1) 0 0 ;;
+  backtrack bt ;;
   if Nat.eqb len 1 then enqueue uip 0
   else
-    ci <- vlen (clauses s) ;;
-    vpush (clauses s) learnt ;;
-    attach ci learnt ;;
-    enqueue uip (ci + 1).
+    '(a', co) <- reserve (1 + len) ;;
+    Global.write_array a' co len ;;
+    store_learnt a' co 0 len ;;
+    put ALEN (co + 1 + len) ;;
+    attach a' co ;;
+    enqueue uip (co + 1).
 
-(** The unassigned variable most recently seen in a conflict, + 1; 0 when
-    every variable is assigned. *)
-Fixpoint pick (fuel : nat) (v n best beststamp : nat) : itree vecE nat :=
-  match fuel with
-  | O => vabort 10
-  | S f =>
-    if Nat.leb n v then Ret best
-    else
-      a <- vget (assigns s) v ;;
-      if Nat.eqb a 0 then
-        st <- vget (stamp s) v ;;
-        if Nat.eqb best 0 || Nat.ltb beststamp st
-        then pick f (v + 1) n (v + 1) st
-        else pick f (v + 1) n best beststamp
-      else pick f (v + 1) n best beststamp
+(** * Search *)
+
+(** Among the [m] variables from [v] on, the unassigned one most recently
+    seen in a conflict, + 1, against the best so far: [best] (+ 1, 0 for
+    none) with stamp [beststamp]. *)
+Fixpoint pick (v m best beststamp : nat) : itree E nat :=
+  match m with
+  | O => Ret best
+  | S m' =>
+    a <- Global.read_array (assigns s) v ;;
+    if Nat.eqb a 0 then
+      st <- Global.read_array (stamp s) v ;;
+      if Nat.eqb best 0 || Nat.ltb beststamp st
+      then pick (v + 1) m' (v + 1) st
+      else pick (v + 1) m' best beststamp
+    else pick (v + 1) m' best beststamp
   end.
 
-(** At most [budget] rounds of propagating, then deciding or learning.
-    1: satisfiable, 0: unsatisfiable, 2: out of budget. *)
-Fixpoint search (fuel : nat) (budget nvars : nat) : itree vecE nat :=
+(** Open a decision level and assign [v] its saved phase. *)
+Definition decide (v : nat) : itree E unit :=
+  ph <- Global.read_array (phase s) v ;;
+  tl <- get TLEN ;;
+  dl <- get TLLEN ;;
+  Global.write_array (trail_lim s) dl tl ;;
+  put TLLEN (dl + 1) ;;
+  enqueue (lit_of v ph) 0.
+
+(** Count a conflict towards the restart limit; on reaching it, restart
+    and raise the limit by half. *)
+Definition restart_tick : itree E unit :=
+  rc <- get RCOUNT ;;
+  rl <- get RLIMIT ;;
+  if Nat.leb rl (rc + 1)
+  then put RCOUNT 0 ;;
+       put RLIMIT (rl + Nat.div rl 2) ;;
+       backtrack 0
+  else put RCOUNT (rc + 1).
+
+(** Propagate, then decide or learn, for at most [budget] steps over the
+    variables [0 .. nvars): 1 satisfiable, 0 unsatisfiable, 2 out of
+    budget. *)
+Fixpoint search (fuel budget nvars : nat) : itree E nat :=
   match budget with
   | O => Ret 2
   | S b =>
     confl <- propagate fuel ;;
     if Nat.eqb confl 0 then
-      v1 <- pick fuel 0 nvars 0 0 ;;
+      v1 <- pick 0 nvars 0 0 ;;
       if Nat.eqb v1 0 then Ret 1
-      else
-        let v := v1 - 1 in
-        ph <- vget (phase s) v ;;
-        tl <- vlen (trail s) ;;
-        vpush (trail_lim s) tl ;;
-        enqueue (lit_of v ph) 0 ;;
-        search fuel b nvars
+      else decide (v1 - 1) ;; search fuel b nvars
     else
       dl <- decision_level ;;
       if Nat.eqb dl 0 then Ret 0
       else
-        k <- vget (misc s) CONFLICTS ;;
-        vset (misc s) CONFLICTS (k + 1) ;;
+        k <- get CONFLICTS ;;
+        put CONFLICTS (k + 1) ;;
         learn fuel (confl - 1) ;;
-        rc <- vget (misc s) RCOUNT ;;
-        rl <- vget (misc s) RLIMIT ;;
-        (if Nat.leb rl (rc + 1)
-         then vset (misc s) RCOUNT 0 ;;
-              vset (misc s) RLIMIT (rl + Nat.div rl 2) ;;
-              backtrack fuel 0
-         else vset (misc s) RCOUNT (rc + 1)) ;;
+        restart_tick ;;
         search fuel b nvars
   end.
 
-(** Whether one of the [len] literals of [input] from [pos] on is true. *)
-Fixpoint clause_sat (fuel : nat) (input : vec nat) (pos len : nat) : itree vecE bool :=
-  match fuel with
-  | O => vabort 11
-  | S f =>
-    match len with
-    | O => Ret false
-    | S len' =>
-      l <- vget input pos ;;
+(** * Loading and checking *)
+
+(** Write the literals [c] into arena [a] from [pos] on. *)
+Fixpoint store_lits (a : narr) (c : list nat) (pos : nat) : itree E unit :=
+  match c with
+  | [] => Ret tt
+  | l :: c' => Global.write_array a pos l ;; store_lits a c' (pos + 1)
+  end.
+
+(** Load the clauses [F] into arena [a] from offset [pos] on, where there
+    is room for them: watch the first two literals of each longer clause
+    and assert each unit clause at level 0.  False when [F] is already
+    contradictory. *)
+Fixpoint load (a : narr) (F : list (list nat)) (pos : nat) : itree E bool :=
+  match F with
+  | [] => Ret true
+  | c :: F' =>
+    let len := tlen c 0 in
+    Global.write_array a pos len ;;
+    store_lits a c (pos + 1) ;;
+    put ALEN (pos + 1 + len) ;;
+    match c with
+    | [] => Ret false
+    | [l] =>
       v <- lit_value l ;;
-      if Nat.eqb v 1 then Ret true else clause_sat f input (pos + 1) len'
+      if Nat.eqb v 2 then Ret false
+      else (if Nat.eqb v 0 then enqueue l 0 else Ret tt) ;;
+           load a F' (pos + 1 + len)
+    | _ => attach a pos ;; load a F' (pos + 1 + len)
     end
   end.
 
-(** Whether the assignment satisfies the clauses of [input] from [pos] up
-    to [n].  It reads the caller's clauses rather than the database, whose
-    clauses propagation has reordered in place, so that trusting a model
-    needs nothing from the search beyond its leaving [input] alone. *)
-Fixpoint check_model (fuel : nat) (input : vec nat) (pos n : nat) : itree vecE bool :=
-  match fuel with
-  | O => vabort 12
-  | S f =>
-    if Nat.leb n pos then Ret true
-    else
-      len <- vget input pos ;;
-      ok <- clause_sat fuel input (pos + 1) len ;;
-      if ok then check_model f input (pos + 1 + len) n else Ret false
+(** Whether the assignment makes a literal of [c] true. *)
+Fixpoint clause_sat (c : list nat) : itree E bool :=
+  match c with
+  | [] => Ret false
+  | l :: c' => v <- lit_value l ;; if Nat.eqb v 1 then Ret true else clause_sat c'
   end.
 
-(** Copy [len] literals of [input] from [pos] into a fresh clause. *)
-Fixpoint read_lits (fuel : nat) (input : vec nat) (c : vec nat) (pos len : nat)
-  : itree vecE unit :=
-  match fuel with
-  | O => vabort 13
-  | S f =>
-    match len with
-    | O => Ret tt
-    | S len' => l <- vget input pos ;; vpush c l ;; read_lits f input c (pos + 1) len'
-    end
-  end.
-
-(** Load the clauses of [input] -- each its length, then its literals.
-    A unit clause is enqueued at level 0; false when the input is
-    already contradictory. *)
-Fixpoint load (fuel : nat) (input : vec nat) (pos n : nat) : itree vecE bool :=
-  match fuel with
-  | O => vabort 14
-  | S f =>
-    if Nat.leb n pos then Ret true
-    else
-      len <- vget input pos ;;
-      c <- vmake 0 0 ;;
-      read_lits fuel input c (pos + 1) len ;;
-      ci <- vlen (clauses s) ;;
-      vpush (clauses s) c ;;
-      if Nat.eqb len 0 then Ret false
-      else if Nat.eqb len 1 then
-        l <- vget c 0 ;;
-        v <- lit_value l ;;
-        if Nat.eqb v 2 then Ret false
-        else (if Nat.eqb v 0 then enqueue l 0 else Ret tt) ;;
-             load f input (pos + 1 + len) n
-      else attach ci c ;; load f input (pos + 1 + len) n
+(** Whether the assignment satisfies every clause of [F]. *)
+Fixpoint check_model (F : list (list nat)) : itree E bool :=
+  match F with
+  | [] => Ret true
+  | c :: F' => ok <- clause_sat c ;; if ok then check_model F' else Ret false
   end.
 
 End Ops.
 
-(** [n] distinct empty vectors, pushed onto [acc]. *)
-Fixpoint fresh_vecs (fuel : nat) (acc : vec (vec nat)) (n : nat) : itree vecE unit :=
-  match fuel with
-  | O => vabort 15
-  | S f =>
-    match n with
-    | O => Ret tt
-    | S n' => w <- vmake 0 0 ;; vpush acc w ;; fresh_vecs f acc n'
-    end
-  end.
+(** * Running *)
 
-(** Whether the [len] literals of [input] from [pos] are all below [lim]. *)
-Fixpoint valid_lits (fuel : nat) (input : vec nat) (lim pos len : nat)
-  : itree vecE bool :=
-  match fuel with
-  | O => vabort 16
-  | S f =>
-    match len with
-    | O => Ret true
-    | S len' =>
-      l <- vget input pos ;;
-      if Nat.ltb l lim then valid_lits f input lim (pos + 1) len' else Ret false
-    end
-  end.
+(** A fresh state over [nvars] variables with an arena of size [cap]:
+    nothing assigned, every phase false, every watch list empty. *)
+Definition new_state (nvars cap : nat) : itree E state :=
+  a <- Global.new_array 0 cap 0 ;;
+  ar <- Global.new_ref 0 a ;;
+  empty <- Global.new_array 0 0 0 ;;
+  wd <- Global.new_array 0 (2 * nvars) empty ;;
+  wl <- Global.new_array 0 (2 * nvars) 0 ;;
+  wc <- Global.new_array 0 (2 * nvars) 0 ;;
+  asg <- Global.new_array 0 nvars 0 ;;
+  lvl <- Global.new_array 0 nvars 0 ;;
+  rsn <- Global.new_array 0 nvars 0 ;;
+  ph <- Global.new_array 0 nvars 2 ;;
+  st <- Global.new_array 0 nvars 0 ;;
+  sn <- Global.new_array 0 nvars 0 ;;
+  tr <- Global.new_array 0 nvars 0 ;;
+  tlim <- Global.new_array 0 nvars 0 ;;
+  lr <- Global.new_array 0 (nvars + 1) 0 ;;
+  m <- Global.new_array 0 NMISC 0 ;;
+  Global.write_array m RLIMIT 100 ;;
+  Global.write_array m ACAP cap ;;
+  Ret (mk_state ar wd wl wc asg lvl rsn ph st sn tr tlim lr m).
 
-(** Whether [input] from [pos] up to [n], which is at most its length, is a
-    list of clauses, each its length and then its literals, all below
-    [lim], with the last clause ending exactly at [n]. *)
-Fixpoint valid_clauses (fuel : nat) (input : vec nat) (lim pos n : nat)
-  : itree vecE bool :=
-  match fuel with
-  | O => vabort 17
-  | S f =>
-    if Nat.leb n pos then Ret true
-    else
-      len <- vget input pos ;;
-      if Nat.leb (pos + 1 + len) n then
-        ok <- valid_lits fuel input lim (pos + 1) len ;;
-        if ok then valid_clauses f input lim (pos + 1 + len) n else Ret false
-      else Ret false
-  end.
+(** The arena size the clauses [F] take: per clause, its length and then
+    its literals. *)
+Definition cnf_size (F : list (list nat)) : nat :=
+  fold_left (fun n c => n + 1 + tlen c 0) F 0.
 
-(** [solve] on input that [valid_clauses] has accepted.  Result:
-    [code + 8 * conflicts], with [code] as for [solve]. *)
-Definition run (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
-  : itree vecE nat :=
-  e <- vmake 0 0 ;;
-  cs <- vmake 0 e ;;
-  ws <- vmake 0 e ;;
-  fresh_vecs fuel ws (2 * nvars) ;;
-  asg <- vmake nvars 0 ;;
-  lvl <- vmake nvars 0 ;;
-  rsn <- vmake nvars 0 ;;
-  ph <- vmake nvars 2 ;;
-  st <- vmake nvars 0 ;;
-  sn <- vmake nvars 0 ;;
-  tr <- vmake 0 0 ;;
-  tlim <- vmake 0 0 ;;
-  m <- vmake 4 0 ;;
-  vset m RLIMIT 100 ;;
-  let s := mk_state cs ws asg lvl rsn ph st sn tr tlim m in
-  ok <- load s fuel input 0 ninput ;;
+(** Solve the clauses [F] over the variables [0 .. nvars):
+    [code + 8 * conflicts], where [code] is 1 satisfiable (with the model
+    checked against [F]), 3 a model that failed that check, 0
+    unsatisfiable, 2 out of budget. *)
+Definition run (fuel budget nvars : nat) (F : list (list nat)) : itree E nat :=
+  s <- new_state nvars (cnf_size F) ;;
+  a <- Global.read_ref (arena s) ;;
+  ok <- load s a F 0 ;;
   code <-
     (if ok then
        r <- search s fuel budget nvars ;;
        if Nat.eqb r 1 then
-         good <- check_model s fuel input 0 ninput ;;
+         good <- check_model s F ;;
          Ret (if good then 1 else 3)
        else Ret r
      else Ret 0) ;;
-  k <- vget m CONFLICTS ;;
+  k <- get s CONFLICTS ;;
   Ret (code + 8 * k).
 
-(** Solve the [ninput]-long clause list [input] over [nvars] variables,
-    taking at most [budget] propagate-decide-or-learn steps.  Result:
-    [code + 8 * conflicts], where [code] is 1 for a model the solver has
-    checked against every clause of [input], 3 for a model that failed that
-    check, 0 for unsatisfiable, 2 for out of budget and 4 for input that is
-    not a clause list over [nvars] variables. The check makes the input
-    safe to index, so no caller has to be trusted to validate it. *)
-Definition solve (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
-  : itree vecE nat :=
-  len <- vlen input ;;
-  ok <- (if Nat.leb ninput len then valid_clauses fuel input (2 * nvars) 0 ninput
-         else Ret false) ;;
-  if ok then run fuel budget nvars input ninput else Ret 4.
+(** * Parsing DIMACS
 
-
-(** * Reading DIMACS
-
-    [solve_dimacs] is the entry point the drivers call: it takes the bytes
-    of a DIMACS file, parses them in Rocq, and either answers 4 (not a CNF
-    file in the accepted format, see [DimacsSpec.dimacs]) or runs the solver
-    on the parsed formula over exactly the variables it mentions.  The
-    parser is pure and every list function on its path is tail-recursive,
-    so the extracted code needs constant stack whatever the input. *)
+    The parser is pure and every list function on its path is
+    tail-recursive, so the extracted code needs constant stack whatever
+    the input.  [DimacsSpec] proves that it accepts exactly the files of
+    [DimacsSpec.dimacs] and returns their formula. *)
 
 (** Whitespace: space (byte 32) and bytes 9 to 13 ([\t] to [\r]). *)
 Definition is_space (b : nat) : bool := Nat.eqb b 32 || (Nat.leb 9 b && Nat.leb b 13).
 (** An ASCII decimal digit, ['0'] (48) to ['9'] (57). *)
 Definition is_digit (b : nat) : bool := Nat.leb 48 b && Nat.leb b 57.
-
-(** The length of [l], plus [n]. *)
-Fixpoint tlen {A} (l : list A) (n : nat) : nat :=
-  match l with [] => n | _ :: l' => tlen l' (S n) end.
 
 (** [bs] cut at every byte [sep] accepts, the pieces in order: [rev acc]
     then [rev cur ++] the first piece of [bs] and the rest. *)
@@ -622,42 +702,24 @@ Definition parse (bs : list nat) : option (nat * list (list nat)) :=
   | _ => None
   end.
 
+(** * Entry point *)
+
 (** The first [i] elements of [bytes], onto [acc]. *)
-Fixpoint read_bytes (bytes : vec nat) (i : nat) (acc : list nat) : itree vecE (list nat) :=
+Fixpoint read_bytes (bytes : narr) (i : nat) (acc : list nat) : itree E (list nat) :=
   match i with
   | O => Ret acc
-  | S i' => b <- vget bytes i' ;; read_bytes bytes i' (b :: acc)
+  | S i' => b <- Global.read_array bytes i' ;; read_bytes bytes i' (b :: acc)
   end.
 
-(** Append the literals [c] to [input]. *)
-Fixpoint write_lits (input : vec nat) (c : list nat) : itree vecE unit :=
-  match c with
-  | [] => Ret tt
-  | l :: c' => vpush input l ;; write_lits input c'
-  end.
-
-(** Append [F] to [input], each clause as its length and then its
-    literals; the length [input] ends up with, starting from [pos]. *)
-Fixpoint write_cnf (input : vec nat) (F : list (list nat)) (pos : nat) : itree vecE nat :=
-  match F with
-  | [] => Ret pos
-  | c :: F' =>
-    let n := tlen c 0 in
-    vpush input n ;; write_lits input c ;; write_cnf input F' (pos + 1 + n)
-  end.
-
-(** Solve the DIMACS file whose bytes are [bytes], taking at most [budget]
-    steps.  Result: [code + 8 * conflicts], with [code] as for [solve]; 4
-    exactly when the bytes are not a DIMACS CNF file. *)
-Definition solve_dimacs (fuel budget : nat) (bytes : vec nat) : itree vecE nat :=
-  n <- vlen bytes ;;
-  bs <- read_bytes bytes n [] ;;
+(** Solve the DIMACS file whose [nbytes] bytes are in [bytes]:
+    [code + 8 * conflicts] as for [run], or 4 exactly when the bytes are
+    not a DIMACS CNF file.  An array has no length, so the caller passes
+    it. *)
+Definition solve_dimacs (fuel budget : nat) (bytes : narr) (nbytes : nat) : itree E nat :=
+  bs <- read_bytes bytes nbytes [] ;;
   match parse bs with
   | None => Ret 4
-  | Some (nvars, F) =>
-    input <- vmake 0 0 ;;
-    ninput <- write_cnf input F 0 ;;
-    run fuel budget nvars input ninput
+  | Some (nvars, F) => run fuel budget nvars F
   end.
 
 End Solver.

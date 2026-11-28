@@ -1,11 +1,11 @@
 #!/bin/bash
-# Time every solver build on every instance in inst/; median of REPS runs.
+# Time each solver build on every instance in inst/; median of REPS runs.
 # Each binary times only its solve call (not parsing, extraction or
 # compilation).  Writes results.csv: instance,solver,result,conflicts,median_s
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPS="${REPS:-3}"
-SOLVERS=(${SOLVERS:-solver_cpp solver_cpp_global solver_direct_ml_fl solver_direct_ml solver_ml_fl solver_ml})
+SOLVERS=(${SOLVERS:-solver_cpp solver_ml})
 OUT="$HERE/results.csv"
 echo "instance,solver,result,conflicts,median_s" > "$OUT"
 for f in "$HERE"/inst/*.cnf; do

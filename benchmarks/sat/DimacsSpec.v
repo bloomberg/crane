@@ -21,7 +21,7 @@
     - The number of clauses must be exactly [nc].
 
     The formula is in the solver's encoding: DIMACS literal [x] is
-    [2 * (x - 1)] and [-x] is [2 * (x - 1) + 1], so [SolverSat.satisfies]
+    [2 * (x - 1)] and [-x] is [2 * (x - 1) + 1], so [Cnf.satisfies]
     applies to it directly (DIMACS variable [x] is the solver's [x - 1]).
 
     The definitions below say this declaratively, by plain structural
@@ -29,7 +29,7 @@
     extracted, and [parse_sound], [parse_complete] and [dimacs_det] say it
     accepts exactly these files and returns exactly their formula. *)
 From Stdlib Require Import List PeanoNat Lia Bool.
-Require Import SatVec VecSem Solver SolverSat.
+Require Import Solver Cnf.
 Import ListNotations.
 Import Solver.
 
