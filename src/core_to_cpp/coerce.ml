@@ -300,9 +300,13 @@ let decide cx from into = decide_with (aliases_in cx) from into
     synthesised wrong, or a value C++ converts by itself. *)
 let unrelated cx (from : Cpp_ir.Lowered.Value_type.t) (into : Cpp_ir.Lowered.Slot_type.t) =
   let al = aliases_in cx in
-  let undecided t = has_obligation t || Cpp_ir.Types.prints_as_any t || al.boxed_source t in
+  let undecided (t : Cpp_ir.Lowered.Type.t) =
+    has_obligation t || Cpp_ir.Types.prints_as_any t || al.boxed_source t || t = Auto
+  in
   (* Equal where both decide: an erased or undecided part on either side
-     says nothing the other could contradict. *)
+     says nothing the other could contradict.  [auto] is a type C++ deduces
+     -- a closure's result its body does not write -- so it too says
+     nothing. *)
   let rec agree (a : Cpp_ir.Lowered.Type.t) (b : Cpp_ir.Lowered.Type.t) =
     undecided a || undecided b || cpp_ty_eq a b || a = b
     ||

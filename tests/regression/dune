@@ -16498,6 +16498,17 @@
   (deps id_any_cast_flat_fn.t.exe)
   (action (run ./id_any_cast_flat_fn.t.exe))))
 
+(subdir fit_closure_auto_result
+ (rule
+  (targets fit_closure_auto_result.t.exe)
+  (deps FitClosureAutoResult.vo fit_closure_auto_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fit_closure_auto_result.t.exe fit_closure_auto_result.t.cpp fit_closure_auto_result.cpp)))
+ (rule
+  (alias runtest)
+  (deps fit_closure_auto_result.t.exe)
+  (action (run ./fit_closure_auto_result.t.exe))))
+
 (subdir id_fn_result_unboxed
  (rule
   (targets id_fn_result_unboxed.t.exe)
