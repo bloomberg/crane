@@ -58,8 +58,10 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
+/// The loop h allocates a reference from acc that nothing reads.
 uint64_t st_1();
 
 struct STDeadRefLoopParam {
+  /// st_1 run in C++: 53.
   static inline const uint64_t result = st_1();
 };

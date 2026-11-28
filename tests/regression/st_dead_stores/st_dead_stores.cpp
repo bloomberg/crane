@@ -1,5 +1,6 @@
 #include "st_dead_stores.h"
 
+/// written_only, run in C++.
 uint64_t written_only() {
   uint64_t _lc1_k = UINT64_C(3);
   // Loop replaces the tail recursion: each recursive call updates the loop
@@ -15,6 +16,7 @@ uint64_t written_only() {
   }
 }
 
+/// read_by_dead_store, run in C++.
 uint64_t read_by_dead_store() {
   uint64_t _lc1_k = UINT64_C(4);
   // Loop replaces the tail recursion: each recursive call updates the loop
@@ -30,6 +32,7 @@ uint64_t read_by_dead_store() {
   }
 }
 
+/// written_in_branch, run in C++.
 uint64_t written_in_branch(bool b) {
   uint64_t x = [&]() -> uint64_t {
     if (b) {
@@ -41,6 +44,7 @@ uint64_t written_in_branch(bool b) {
   return x + UINT64_C(10);
 }
 
+/// written_in_unused_branch, run in C++.
 uint64_t written_in_unused_branch(bool b) {
   uint64_t s = UINT64_C(3);
   [&]() -> uint64_t {
@@ -54,10 +58,12 @@ uint64_t written_in_unused_branch(bool b) {
   return s;
 }
 
+/// written_in_branch, run in C++.
 uint64_t STDeadStores::written_in_branch(bool b) {
   return ::written_in_branch(b);
 }
 
+/// written_in_unused_branch, run in C++.
 uint64_t STDeadStores::written_in_unused_branch(bool b) {
   return ::written_in_unused_branch(b);
 }

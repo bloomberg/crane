@@ -145,8 +145,11 @@ template <typename T1> struct code_const {
 };
 
 struct STArrayLoops {
+  /// Zeroes n cells from i: becomes a while loop over the writable view.
   static void zero_from(std::span<uint64_t> arr, uint64_t i, uint64_t n);
+  /// Sums n cells from i: becomes an explicit stack holding the read view.
   static uint64_t sum_from(std::span<const uint64_t> arr, uint64_t i,
                            uint64_t n);
+  /// Zeroes cells 1 and 2 of n twos, then sums and reads them back.
   static std::pair<uint64_t, List<uint64_t>> loops_list(uint64_t n);
 };

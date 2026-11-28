@@ -1,5 +1,6 @@
 #include "st_readable_forms.h"
 
+/// pair_parts, run in C++.
 uint64_t pair_parts() {
   std::pair<uint64_t, uint64_t> r = std::make_pair(UINT64_C(3), UINT64_C(4));
   std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
@@ -10,6 +11,7 @@ uint64_t pair_parts() {
   return x + y;
 }
 
+/// fib_step, run in C++.
 uint64_t fib_step(uint64_t n) {
   uint64_t a = UINT64_C(0);
   uint64_t b = UINT64_C(1);
@@ -34,11 +36,13 @@ uint64_t fib_step(uint64_t n) {
   return a;
 }
 
+/// One step of sum_with: add element i to acc.
 uint64_t add_at(std::span<const uint64_t> arr, uint64_t acc, uint64_t i) {
   uint64_t v = arr[i];
   return acc + v;
 }
 
+/// sum_with, run in C++.
 uint64_t sum_with() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(4uz, UINT64_C(3));
@@ -52,6 +56,7 @@ uint64_t sum_with() {
       });
 }
 
+/// run_count_back, run in C++.
 uint64_t count_back(std::span<uint64_t> arr, uint64_t k) {
   // Explicit stack replaces the non-tail recursion of count_back: _call frames
   // are pending calls, _after frames resume a caller.
@@ -93,24 +98,29 @@ uint64_t count_back(std::span<uint64_t> arr, uint64_t k) {
   return _result;
 }
 
+/// count_back over a fresh four-element array.
 uint64_t run_count_back() {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(4uz, UINT64_C(0));
   return count_back(std::span{*arr}, UINT64_C(5));
 }
 
+/// Ignores its reference.
 uint64_t ignore_ref(const uint64_t *, uint64_t n) { return n + UINT64_C(1); }
 
+/// Writes r, then hands it to ignore_ref.
 uint64_t pass_view(uint64_t *r0) {
   *r0 = UINT64_C(2);
   return ignore_ref(r0, UINT64_C(4));
 }
 
+/// unused_param, run in C++.
 uint64_t unused_param() {
   uint64_t r0 = UINT64_C(0);
   return pass_view(&r0);
 }
 
+/// fib_step, run in C++.
 uint64_t STReadableForms::fib_step(uint64_t n) { return ::fib_step(n); }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {

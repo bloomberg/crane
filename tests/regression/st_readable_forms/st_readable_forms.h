@@ -159,21 +159,35 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
+/// pair_parts, run in C++.
 uint64_t pair_parts();
+/// fib_step, run in C++.
 uint64_t fib_step(uint64_t n);
+/// One step of sum_with: add element i to acc.
 uint64_t add_at(std::span<const uint64_t> arr, uint64_t acc, uint64_t i);
+/// sum_with, run in C++.
 uint64_t sum_with();
+/// run_count_back, run in C++.
 uint64_t count_back(std::span<uint64_t> arr, uint64_t k);
+/// count_back over a fresh four-element array.
 uint64_t run_count_back();
+/// Ignores its reference.
 uint64_t ignore_ref(const uint64_t *_x0, uint64_t n);
+/// Writes r, then hands it to ignore_ref.
 uint64_t pass_view(uint64_t *r0);
+/// unused_param, run in C++.
 uint64_t unused_param();
 
 struct STReadableForms {
+  /// pair_parts, run in C++.
   static inline const uint64_t pair_parts = ::pair_parts();
+  /// fib_step, run in C++.
   static uint64_t fib_step(uint64_t n);
+  /// sum_with, run in C++.
   static inline const uint64_t sum_with = ::sum_with();
+  /// run_count_back, run in C++.
   static inline const uint64_t count_back = run_count_back();
+  /// unused_param, run in C++.
   static inline const uint64_t unused_param = ::unused_param();
 };
 

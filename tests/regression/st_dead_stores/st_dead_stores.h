@@ -59,14 +59,22 @@ template <typename T1> struct code_const {
   constexpr static uint64_t code() { return UINT64_C(0); }
 };
 
+/// written_only, run in C++.
 uint64_t written_only();
+/// read_by_dead_store, run in C++.
 uint64_t read_by_dead_store();
+/// written_in_branch, run in C++.
 uint64_t written_in_branch(bool b);
+/// written_in_unused_branch, run in C++.
 uint64_t written_in_unused_branch(bool b);
 
 struct STDeadStores {
+  /// written_only, run in C++.
   static inline const uint64_t written_only = ::written_only();
+  /// read_by_dead_store, run in C++.
   static inline const uint64_t read_by_dead_store = ::read_by_dead_store();
+  /// written_in_branch, run in C++.
   static uint64_t written_in_branch(bool b);
+  /// written_in_unused_branch, run in C++.
   static uint64_t written_in_unused_branch(bool b);
 };

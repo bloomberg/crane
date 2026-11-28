@@ -16,6 +16,7 @@ void STArrayHelpers::middle(std::span<uint64_t> arr, uint64_t i) {
   arr[i] = UINT64_C(42);
 }
 
+/// Writes only through middle, so still takes the writable view.
 void STArrayHelpers::outer(std::span<uint64_t> arr) {
   middle(arr, UINT64_C(0));
   middle(arr, UINT64_C(2));
@@ -56,8 +57,8 @@ std::shared_ptr<crane::array_storage<uint64_t>> STArrayHelpers::keep(
   return arr;
 }
 
-/// Recursive helpers keep the view: a tail-recursive write loop takes the
-/// writable view, a non-tail-recursive read the read view.
+/// Zeroes n cells from i: a tail-recursive write loop keeps the
+/// writable view.
 void STArrayHelpers::zero_from(std::span<uint64_t> arr, uint64_t i,
                                uint64_t n) {
   if (n <= 0) {
@@ -70,6 +71,7 @@ void STArrayHelpers::zero_from(std::span<uint64_t> arr, uint64_t i,
   }
 }
 
+/// Sums n cells from i: a non-tail-recursive read keeps the read view.
 uint64_t STArrayHelpers::sum_from(std::span<const uint64_t> arr, uint64_t i,
                                   uint64_t n) {
   if (n <= 0) {
@@ -102,6 +104,7 @@ void STArrayHelpers::flip(std::span<bool> arr, uint64_t i) {
   arr[i] = !(b);
 }
 
+/// Drives bump, outer and swap_ends over an array made from xs.
 List<uint64_t> STArrayHelpers::helpers_list(const List<uint64_t> &xs) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       crane::st::new_list_array<uint64_t>(xs);
@@ -113,6 +116,8 @@ List<uint64_t> STArrayHelpers::helpers_list(const List<uint64_t> &xs) {
   return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
 }
 
+/// Writes through the array keep and write_then_pick return, then reads the
+/// originals.
 std::pair<List<uint64_t>, List<uint64_t>>
 STArrayHelpers::keep_list(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
@@ -130,6 +135,7 @@ STArrayHelpers::keep_list(uint64_t n) {
   return std::make_pair(std::move(elems), std::move(others));
 }
 
+/// Drives write_and_refill, then reads the array back.
 std::pair<uint64_t, List<uint64_t>> STArrayHelpers::refill_list(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(3uz, UINT64_C(1));
@@ -140,6 +146,7 @@ std::pair<uint64_t, List<uint64_t>> STArrayHelpers::refill_list(uint64_t n) {
   return std::make_pair(first, std::move(elems));
 }
 
+/// Drives the recursive helpers zero_from and sum_from.
 std::pair<uint64_t, List<uint64_t>> STArrayHelpers::loops_list(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(
@@ -151,6 +158,7 @@ std::pair<uint64_t, List<uint64_t>> STArrayHelpers::loops_list(uint64_t n) {
   return std::make_pair(s, std::move(elems));
 }
 
+/// Checks that the caller sees the array regrow_then_write reseated.
 List<uint64_t> STArrayHelpers::regrow_list(uint64_t n) {
   std::shared_ptr<crane::array_storage<uint64_t>> arr =
       std::make_shared<crane::array_storage<uint64_t>>(2uz, UINT64_C(5));
@@ -158,6 +166,7 @@ List<uint64_t> STArrayHelpers::regrow_list(uint64_t n) {
   return crane::st::elems<List<uint64_t>>(std::span{std::as_const(*arr)});
 }
 
+/// Flips cells 0 and 2 of a bool array made from bs.
 List<bool> STArrayHelpers::flip_list(const List<bool> &bs) {
   std::shared_ptr<crane::array_storage<bool>> arr =
       crane::st::new_list_array<bool>(bs);
@@ -166,6 +175,7 @@ List<bool> STArrayHelpers::flip_list(const List<bool> &bs) {
   return crane::st::elems<List<bool>>(std::span{std::as_const(*arr)});
 }
 
+/// Flips cell 1 of a bool array filled with false.
 std::pair<bool, List<bool>> STArrayHelpers::bools_filled(uint64_t n) {
   std::shared_ptr<crane::array_storage<bool>> arr =
       std::make_shared<crane::array_storage<bool>>(static_cast<std::size_t>(n),
